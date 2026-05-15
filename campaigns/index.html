@@ -4127,5 +4127,11 @@ function toggleFaq(btn) {
 </script>
 
 
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+    <script>
+      document.documentElement.style.scrollBehavior = 'auto';
+      const lenis = new Lenis({ lerp: 0.08, smoothWheel: true, smoothTouch: false });
+      (function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(0);
+    </script>
 </body>
 </html>

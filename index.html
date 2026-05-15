@@ -985,13 +985,21 @@
         /* ─── SCROLL REVEAL ─── */
         .reveal {
             opacity: 0;
-            transform: translateY(28px);
-            transition: opacity .75s cubic-bezier(.16,1,.3,1), transform .75s cubic-bezier(.16,1,.3,1);
+            transform: translateY(44px) scale(0.97);
+            filter: blur(6px);
+            transition:
+                opacity 0.95s cubic-bezier(.16,1,.3,1),
+                transform 0.95s cubic-bezier(.16,1,.3,1),
+                filter 0.7s ease;
         }
-        .reveal.visible { opacity: 1; transform: none; }
-        .reveal-delay-1 { transition-delay: .1s; }
-        .reveal-delay-2 { transition-delay: .2s; }
-        .reveal-delay-3 { transition-delay: .3s; }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+        .reveal-delay-1 { transition-delay: .12s; }
+        .reveal-delay-2 { transition-delay: .24s; }
+        .reveal-delay-3 { transition-delay: .36s; }
 
         /* ─── MOBILE ─── */
         @media (max-width: 960px) {
@@ -1431,28 +1439,50 @@
     </div>
 </footer>
 
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
 <script>
-// ── Nav scroll
-const nav = document.getElementById('nav');
-window.addEventListener('scroll', () => {
-    nav.classList.toggle('scrolled', window.scrollY > 40);
-}, { passive: true });
+// ── 1. Lenis smooth scroll ────────────────────────────────────────────────────
+document.documentElement.style.scrollBehavior = 'auto';
+const lenis = new Lenis({ lerp: 0.08, smoothWheel: true, smoothTouch: false });
+(function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(0);
 
-// ── Scroll reveal
+// ── 2. Nav ────────────────────────────────────────────────────────────────────
+const nav = document.getElementById('nav');
+lenis.on('scroll', ({ scroll }) => {
+    nav.classList.toggle('scrolled', scroll > 40);
+});
+
+// ── 3. Hero parallax (depth layers) ──────────────────────────────────────────
+const heroGrid  = document.querySelector('.hero-grid');
+const heroInner = document.querySelector('.hero-inner');
+const heroSt    = document.querySelector('.hero-status');
+if (heroGrid) {
+    [heroGrid, heroInner, heroSt].forEach(el => { if (el) el.style.willChange = 'transform'; });
+    lenis.on('scroll', ({ scroll: y }) => {
+        // background moves slowest → foreground fastest = real depth
+        heroGrid.style.transform  = `translateY(${y * 0.2}px)`;
+        if (heroInner) heroInner.style.transform = `translateY(${y * 0.38}px)`;
+        if (heroSt)    heroSt.style.transform    = `translateY(${y * 0.26}px)`;
+    });
+}
+
+// ── 4. Section reveals — blur + scale + slide ─────────────────────────────────
 const revealObs = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
-}, { threshold: 0.12 });
+    entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); }
+    });
+}, { threshold: 0.09 });
 document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
 
-// ── Smooth anchor scroll
+// ── 5. Anchor scroll via Lenis ────────────────────────────────────────────────
 document.querySelectorAll('a[href="#services"]').forEach(a => {
     a.addEventListener('click', e => {
         e.preventDefault();
-        document.getElementById('services').scrollIntoView({ behavior: 'smooth' });
+        lenis.scrollTo(document.getElementById('services'), { offset: -80, duration: 1.2 });
     });
 });
 
-// ── Magnetic buttons
+// ── 6. Magnetic buttons ───────────────────────────────────────────────────────
 document.querySelectorAll('.btn-magnetic').forEach(btn => {
     btn.addEventListener('mousemove', e => {
         const r = btn.getBoundingClientRect();
@@ -1470,37 +1500,31 @@ document.querySelectorAll('.btn-magnetic').forEach(btn => {
     });
 });
 
-// ── Hero count-up (on load)
+// ── 7. Count-up ───────────────────────────────────────────────────────────────
 function countUp(el, target, duration, prefix, suffix) {
     const start = performance.now();
-    const tick = now => {
+    (function tick(now) {
         const p = Math.min((now - start) / duration, 1);
         const ease = 1 - Math.pow(1 - p, 3);
-        const val = Math.round(ease * target);
-        el.textContent = (prefix || '') + val + (suffix || '');
+        el.textContent = (prefix || '') + Math.round(ease * target) + (suffix || '');
         if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
+    })(performance.now());
 }
-
 window.addEventListener('load', () => {
     setTimeout(() => {
         document.querySelectorAll('.count-up').forEach(el => {
-            const target = +el.dataset.target;
-            const prefix = el.dataset.prefix || '';
-            const suffix = el.dataset.suffix || '';
-            countUp(el, target, 1600, prefix, suffix);
+            countUp(el, +el.dataset.target, 1600, el.dataset.prefix || '', el.dataset.suffix || '');
         });
     }, 1400);
 });
 
-// ── Orb parallax on mouse move
+// ── 8. Orb mouse parallax ─────────────────────────────────────────────────────
 const orb1 = document.querySelector('.orb-1');
 window.addEventListener('mousemove', e => {
     if (!orb1) return;
     const x = (e.clientX / window.innerWidth - 0.5) * 24;
     const y = (e.clientY / window.innerHeight - 0.5) * 16;
-    orb1.style.transform = `translateX(calc(-50% + ${x}px)) translateY(${y}px) scale(1)`;
+    orb1.style.transform = `translateX(calc(-50% + ${x}px)) translateY(${y}px)`;
 }, { passive: true });
 </script>
 

@@ -1048,5 +1048,16 @@
     </script>
 
 
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+    <script>
+      document.documentElement.style.scrollBehavior = 'auto';
+      const lenis = new Lenis({ lerp: 0.08, smoothWheel: true, smoothTouch: false });
+      (function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(0);
+      // Section reveals
+      const _io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); _io.unobserve(e.target); } });
+      }, { threshold: 0.09 });
+      document.querySelectorAll('.reveal').forEach(el => _io.observe(el));
+    </script>
 </body>
 </html>
