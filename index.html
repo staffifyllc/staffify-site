@@ -1005,7 +1005,11 @@
             .footer-grid { grid-template-columns: 1fr; gap: 28px; }
             .stats-banner-inner { grid-template-columns: 1fr 1fr; }
         }
-    </style>
+    
+        /* Scroll snap */
+        html { scroll-snap-type: y proximity; }
+        section { scroll-snap-align: start; }
+        </style>
 </head>
 <body>
 
@@ -1496,18 +1500,6 @@ window.addEventListener('mousemove', e => {
 </script>
 
 
-    <!-- Lenis smooth scroll -->
-    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
-    <script>
-      // Disable CSS scroll-behavior so Lenis has full control
-      document.documentElement.style.scrollBehavior = 'auto';
-      const lenis = new Lenis({
-        lerp: 0.1,
-        smoothWheel: true,
-        smoothTouch: false,
-      });
-      function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-      requestAnimationFrame(raf);
-    </script>
+
 </body>
 </html>
