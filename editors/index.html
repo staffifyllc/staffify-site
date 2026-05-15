@@ -91,7 +91,7 @@
         }
         .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
 
-        /* ── HERO ── */
+        /* ── PREMIUM HERO ── */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -99,97 +99,176 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 130px 40px 100px;
-            background:
-                radial-gradient(ellipse 90% 60% at 50% -10%, rgba(26,189,225,0.18) 0%, transparent 65%),
-                var(--black);
+            padding: 120px 40px 80px;
             position: relative;
             overflow: hidden;
+            background: #000;
         }
 
-        .hero::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(26,189,225,0.4), transparent);
-        }
-
-        .orb {
-            position: absolute;
-            top: -220px; left: 50%;
-            transform: translateX(-50%);
-            width: 700px; height: 700px;
-            background: radial-gradient(circle, rgba(26,189,225,0.12) 0%, transparent 65%);
+        .hero-grid {
+            position: absolute; inset: 0;
+            background-image: radial-gradient(circle, rgba(26,189,225,0.13) 1px, transparent 1px);
+            background-size: 36px 36px;
+            mask-image: radial-gradient(ellipse 80% 90% at 50% 40%, rgba(0,0,0,0.55) 0%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 90% at 50% 40%, rgba(0,0,0,0.55) 0%, transparent 75%);
+            opacity: 0;
+            animation: gridReveal 1.8s ease-out 0.3s forwards;
             pointer-events: none;
-            animation: breathe 6s ease-in-out infinite;
         }
-        @keyframes breathe {
-            0%,100% { transform: translateX(-50%) scale(1); opacity: .8; }
-            50% { transform: translateX(-50%) scale(1.12); opacity: 1; }
+        @keyframes gridReveal { to { opacity: 1; } }
+
+        .orb-1 {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(26,189,225,0.13) 0%, transparent 65%);
+            filter: blur(60px);
+            top: -200px; left: 50%; transform: translateX(-50%);
+            animation: orbBreath 9s ease-in-out infinite;
+        }
+        .orb-2 {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(20,86,164,0.12) 0%, transparent 65%);
+            filter: blur(80px);
+            bottom: 80px; right: 10%;
+            animation: orbBreath 11s ease-in-out 2s infinite;
+        }
+        @keyframes orbBreath {
+            0%,100% { transform: scale(1); opacity: .7; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+        .orb-1 { transform: translateX(-50%); }
+
+        .scan-line {
+            position: absolute; left: 0; right: 0; height: 1px; pointer-events: none;
+            background: linear-gradient(90deg, transparent 0%, rgba(26,189,225,0.5) 20%, rgba(26,189,225,0.5) 80%, transparent 100%);
+            animation: scan 7s ease-in-out 1.8s infinite;
+        }
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            3% { opacity: 0.7; }
+            90% { opacity: 0.3; }
+            100% { top: 100%; opacity: 0; }
         }
 
-        .hero-eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: var(--c);
-            margin-bottom: 28px;
-            position: relative;
+        .corner {
+            position: absolute; width: 22px; height: 22px;
+            border-color: rgba(26,189,225,0.3); border-style: solid;
+            opacity: 0; animation: cornerFade .6s ease-out forwards;
         }
-        .pulse-dot {
-            width: 7px; height: 7px;
-            background: var(--c);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-        }
-        @keyframes pulse {
-            0%,100% { box-shadow: 0 0 0 0 rgba(26,189,225,0.6); }
-            50% { box-shadow: 0 0 0 6px rgba(26,189,225,0); }
-        }
+        .corner-tl { top: 72px; left: 40px; border-width: 1px 0 0 1px; animation-delay: 1.2s; }
+        .corner-tr { top: 72px; right: 40px; border-width: 1px 1px 0 0; animation-delay: 1.3s; }
+        .corner-bl { bottom: 32px; left: 40px; border-width: 0 0 1px 1px; animation-delay: 1.4s; }
+        .corner-br { bottom: 32px; right: 40px; border-width: 0 1px 1px 0; animation-delay: 1.5s; }
+        @keyframes cornerFade { to { opacity: 1; } }
 
-        .hero h1 {
-            font-size: clamp(44px, 6.5vw, 88px);
-            font-weight: 900;
-            line-height: 1.02;
-            letter-spacing: -2px;
-            margin-bottom: 12px;
-            max-width: 900px;
-            position: relative;
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            border: 1px solid rgba(26,189,225,0.3); border-radius: 980px;
+            padding: 6px 18px; font-size: 11px; font-weight: 600;
+            letter-spacing: .12em; color: rgba(26,189,225,1); text-transform: uppercase;
+            margin-bottom: 36px; position: relative;
+            opacity: 0; animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .35s both;
         }
+        .badge-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #1abde1; animation: bpulse 2s ease-in-out infinite;
+        }
+        @keyframes bpulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-        .hero-accent {
+        /* Word-by-word reveal */
+        .text-row { overflow: hidden; line-height: 1.0; display: block; }
+        .text-inner {
             display: block;
-            font-size: clamp(18px, 2.2vw, 28px);
-            font-weight: 700;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            color: var(--c);
+            animation: slideUp 0.9s cubic-bezier(.16,1,.3,1) both;
+            animation-delay: var(--d, 0s);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(108%); filter: blur(4px); opacity: 0; }
+            to   { transform: translateY(0); filter: blur(0); opacity: 1; }
+        }
+
+        .hero-headline {
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .hero-pre {
+            font-size: clamp(16px, 1.6vw, 20px);
+            color: rgba(161,161,166,1);
+            font-weight: 400;
             margin-bottom: 8px;
         }
-
-        .hero-rule {
-            width: 80px;
-            height: 3px;
-            background: linear-gradient(90deg, var(--c), var(--c4));
-            border: none;
-            border-radius: 2px;
-            margin: 20px auto 28px;
+        .hero-main {
+            font-size: clamp(52px, 7.5vw, 96px);
+            font-weight: 900;
+            letter-spacing: -3px;
+            line-height: 1.0;
+            color: #fff;
+        }
+        .hero-accent-line {
+            font-size: clamp(52px, 7.5vw, 96px);
+            font-weight: 900;
+            letter-spacing: -3px;
+            line-height: 1.0;
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .hero-sub {
-            font-size: clamp(16px, 1.6vw, 19px);
-            color: var(--muted);
-            max-width: 560px;
+        .hero-rule-new {
+            width: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(26,189,225,0.6), transparent);
+            margin: 24px auto;
+            animation: ruleExpand 1s cubic-bezier(.16,1,.3,1) 1.1s forwards;
+        }
+        @keyframes ruleExpand { to { width: 120px; } }
+
+        .hero-sub-new {
+            font-size: clamp(16px, 1.5vw, 18px);
+            color: rgba(161,161,166,1);
+            max-width: 560px; margin: 0 auto 48px;
             line-height: 1.75;
-            margin-bottom: 44px;
-            font-weight: 400;
-            position: relative;
+            opacity: 0; animation: fadeUp .8s cubic-bezier(.16,1,.3,1) 1.0s both;
         }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-ctas-new {
+            display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+            opacity: 0; animation: fadeUp .8s cubic-bezier(.16,1,.3,1) 1.15s both;
+        }
+
+        .btn-mag {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #1abde1; color: #000;
+            font-size: 15px; font-weight: 700;
+            padding: 16px 34px; border-radius: 980px;
+            text-decoration: none;
+            box-shadow: 0 0 40px rgba(26,189,225,0.3);
+            transition: transform .5s cubic-bezier(.16,1,.3,1), box-shadow .3s;
+            position: relative; overflow: hidden;
+        }
+        .btn-mag::after {
+            content:''; position:absolute; inset:0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+            transform: translateX(-100%); transition: transform .5s;
+        }
+        .btn-mag:hover::after { transform: translateX(100%); }
+        .btn-mag:hover { box-shadow: 0 0 60px rgba(26,189,225,0.5); }
+
+        .btn-ghost-new {
+            display: inline-flex; align-items: center; gap: 8px;
+            border: 1px solid rgba(255,255,255,0.18); color: #fff;
+            font-size: 15px; font-weight: 500;
+            padding: 16px 32px; border-radius: 980px;
+            text-decoration: none;
+            transition: border-color .2s, transform .3s cubic-bezier(.16,1,.3,1);
+        }
+        .btn-ghost-new:hover { border-color: rgba(26,189,225,0.5); transform: translateY(-2px); }
 
         .btn-primary {
             background: var(--c);
@@ -679,13 +758,31 @@
 
     <!-- HERO -->
     <section class="hero">
-        <div class="orb"></div>
-        <div class="hero-eyebrow"><span class="pulse-dot"></span> VIDEO EDITING, REIMAGINED</div>
-        <h1 class="reveal">On-Demand<br>Video Editors</h1>
-        <span class="hero-accent reveal">Without the Per Project Price Tag</span>
-        <hr class="hero-rule reveal">
-        <p class="hero-sub reveal">Turn unpredictable editing expenses into a predictable monthly investment. Scale up or down based on your workload &mdash; no surprises, no scrambling.</p>
-        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary reveal">Hire Staffify</a>
+        <div class="hero-grid"></div>
+        <div class="orb-1"></div>
+        <div class="orb-2"></div>
+        <div class="scan-line"></div>
+        <div class="corner corner-tl"></div>
+        <div class="corner corner-tr"></div>
+        <div class="corner corner-bl"></div>
+        <div class="corner corner-br"></div>
+
+        <div class="hero-badge"><span class="badge-dot"></span> Video Editing, Reimagined</div>
+
+        <div class="hero-headline">
+            <div class="text-row hero-pre"><span class="text-inner" style="--d:.35s">Dedicated editors. Flat monthly rate.</span></div>
+            <div class="text-row hero-main"><span class="text-inner" style="--d:.5s">On-Demand</span></div>
+            <div class="text-row hero-accent-line"><span class="text-inner" style="--d:.65s">Video Editors.</span></div>
+        </div>
+
+        <div class="hero-rule-new"></div>
+
+        <p class="hero-sub-new">Turn unpredictable editing expenses into a predictable monthly investment. Scale up or down based on your workload — no surprises, no scrambling.</p>
+
+        <div class="hero-ctas-new">
+            <a href="https://calendly.com/go-staffify/discovery-call" class="btn-mag">Hire Staffify →</a>
+            <a href="#pricing" class="btn-ghost-new">See Pricing ↓</a>
+        </div>
     </section>
 
     <!-- PREDICTABLE COSTS -->
@@ -905,13 +1002,19 @@
 
         document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-        // Parallax orb on mouse move
-        document.addEventListener('mousemove', (e) => {
-            const orb = document.querySelector('.orb');
-            if (!orb) return;
-            const x = (e.clientX / window.innerWidth - 0.5) * 30;
-            const y = (e.clientY / window.innerHeight - 0.5) * 20;
-            orb.style.transform = `translateX(calc(-50% + ${x}px)) translateY(${y}px)`;
+        // Magnetic CTA buttons
+        document.querySelectorAll('.btn-mag').forEach(btn => {
+            btn.addEventListener('mousemove', e => {
+                const r = btn.getBoundingClientRect();
+                const x = (e.clientX - r.left - r.width/2) * 0.15;
+                const y = (e.clientY - r.top - r.height/2) * 0.15;
+                btn.style.transform = `translate(${x}px,${y}px)`;
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transition = 'transform 0.5s cubic-bezier(.16,1,.3,1)';
+                btn.style.transform = '';
+                setTimeout(() => btn.style.transition = '', 500);
+            });
         });
 
         // YouTube click-to-load

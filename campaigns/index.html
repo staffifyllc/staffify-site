@@ -93,7 +93,7 @@
         }
         .nav-cta:hover { opacity: .85; }
 
-        /* ── HERO ── */
+        /* ── PREMIUM HERO ── */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -108,95 +108,165 @@
         }
 
         .hero-grid {
-            position: absolute;
-            inset: 0;
-            background-image: radial-gradient(circle, rgba(26,189,225,0.12) 1px, transparent 1px);
+            position: absolute; inset: 0;
+            background-image: radial-gradient(circle, rgba(26,189,225,0.13) 1px, transparent 1px);
             background-size: 36px 36px;
-            mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, rgba(0,0,0,0.5) 0%, transparent 70%);
-            -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, rgba(0,0,0,0.5) 0%, transparent 70%);
-            animation: gridIn 1.5s ease-out .2s both;
-        }
-        @keyframes gridIn { from { opacity:0; } to { opacity:1; } }
-
-        .hero-orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
+            mask-image: radial-gradient(ellipse 80% 90% at 50% 40%, rgba(0,0,0,0.55) 0%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 90% at 50% 40%, rgba(0,0,0,0.55) 0%, transparent 75%);
+            opacity: 0;
+            animation: gridReveal 1.8s ease-out 0.3s forwards;
             pointer-events: none;
         }
-        .orb1 {
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, rgba(26,189,225,0.15) 0%, transparent 70%);
-            top: -100px; left: 50%;
-            transform: translateX(-50%);
-            animation: breathe 8s ease-in-out infinite;
+        @keyframes gridReveal { to { opacity: 1; } }
+
+        .orb-1 {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(26,189,225,0.13) 0%, transparent 65%);
+            filter: blur(60px);
+            top: -200px; left: 50%; transform: translateX(-50%);
+            animation: orbBreath 9s ease-in-out infinite;
         }
-        @keyframes breathe {
-            0%,100% { transform: translateX(-50%) scale(1); }
-            50% { transform: translateX(-50%) scale(1.15); }
+        .orb-2 {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(20,86,164,0.12) 0%, transparent 65%);
+            filter: blur(80px);
+            bottom: 80px; right: 10%;
+            animation: orbBreath 11s ease-in-out 2s infinite;
         }
+        @keyframes orbBreath {
+            0%,100% { transform: scale(1); opacity: .7; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+        .orb-1 { transform: translateX(-50%); }
+
+        .scan-line {
+            position: absolute; left: 0; right: 0; height: 1px; pointer-events: none;
+            background: linear-gradient(90deg, transparent 0%, rgba(26,189,225,0.5) 20%, rgba(26,189,225,0.5) 80%, transparent 100%);
+            animation: scan 7s ease-in-out 1.8s infinite;
+        }
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            3% { opacity: 0.7; }
+            90% { opacity: 0.3; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .corner {
+            position: absolute; width: 22px; height: 22px;
+            border-color: rgba(26,189,225,0.3); border-style: solid;
+            opacity: 0; animation: cornerFade .6s ease-out forwards;
+        }
+        .corner-tl { top: 72px; left: 40px; border-width: 1px 0 0 1px; animation-delay: 1.2s; }
+        .corner-tr { top: 72px; right: 40px; border-width: 1px 1px 0 0; animation-delay: 1.3s; }
+        .corner-bl { bottom: 32px; left: 40px; border-width: 0 0 1px 1px; animation-delay: 1.4s; }
+        .corner-br { bottom: 32px; right: 40px; border-width: 0 1px 1px 0; animation-delay: 1.5s; }
+        @keyframes cornerFade { to { opacity: 1; } }
 
         .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            border: 1px solid rgba(26,189,225,0.3);
-            border-radius: 980px;
-            padding: 6px 16px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: .12em;
-            color: var(--c);
-            text-transform: uppercase;
-            margin-bottom: 36px;
-            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .3s both;
+            display: inline-flex; align-items: center; gap: 8px;
+            border: 1px solid rgba(26,189,225,0.3); border-radius: 980px;
+            padding: 6px 18px; font-size: 11px; font-weight: 600;
+            letter-spacing: .12em; color: rgba(26,189,225,1); text-transform: uppercase;
+            margin-bottom: 36px; position: relative;
+            opacity: 0; animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .35s both;
         }
         .badge-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: var(--c);
-            animation: pulse 2s ease-in-out infinite;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #1abde1; animation: bpulse 2s ease-in-out infinite;
         }
-        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+        @keyframes bpulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-        .hero-eyebrow {
-            font-size: 18px;
+        .text-row { overflow: hidden; line-height: 1.0; display: block; }
+        .text-inner {
+            display: block;
+            animation: slideUp 0.9s cubic-bezier(.16,1,.3,1) both;
+            animation-delay: var(--d, 0s);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(108%); filter: blur(4px); opacity: 0; }
+            to   { transform: translateY(0); filter: blur(0); opacity: 1; }
+        }
+
+        .hero-headline { margin-bottom: 10px; position: relative; }
+
+        .hero-pre {
+            font-size: clamp(16px, 1.6vw, 20px);
+            color: rgba(161,161,166,1);
             font-weight: 400;
-            color: var(--muted);
-            margin-bottom: 16px;
-            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .4s both;
+            margin-bottom: 8px;
         }
-
-        .hero-title {
-            font-size: clamp(52px, 8vw, 96px);
+        .hero-main {
+            font-size: clamp(52px, 7.5vw, 96px);
             font-weight: 900;
-            line-height: 1.0;
             letter-spacing: -3px;
-            margin-bottom: 24px;
-            animation: fadeUp .9s cubic-bezier(.16,1,.3,1) .5s both;
+            line-height: 1.0;
+            color: #fff;
+        }
+        .hero-accent-line {
+            font-size: clamp(52px, 7.5vw, 96px);
+            font-weight: 900;
+            letter-spacing: -3px;
+            line-height: 1.0;
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .hero-sub {
-            font-size: 18px;
-            color: var(--muted);
-            max-width: 560px;
-            margin: 0 auto 48px;
-            line-height: 1.7;
-            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .65s both;
+        .hero-rule-new {
+            width: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(26,189,225,0.6), transparent);
+            margin: 24px auto;
+            animation: ruleExpand 1s cubic-bezier(.16,1,.3,1) 1.1s forwards;
+        }
+        @keyframes ruleExpand { to { width: 120px; } }
+
+        .hero-sub-new {
+            font-size: clamp(16px, 1.5vw, 18px);
+            color: rgba(161,161,166,1);
+            max-width: 560px; margin: 0 auto 48px;
+            line-height: 1.75;
+            opacity: 0; animation: fadeUp .8s cubic-bezier(.16,1,.3,1) 1.0s both;
         }
 
         @keyframes fadeUp {
-            from { opacity:0; transform: translateY(24px); }
-            to   { opacity:1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .hero-ctas {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            flex-wrap: wrap;
-            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .75s both;
+        .hero-ctas-new {
+            display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+            opacity: 0; animation: fadeUp .8s cubic-bezier(.16,1,.3,1) 1.15s both;
         }
+
+        .btn-mag {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #1abde1; color: #000;
+            font-size: 15px; font-weight: 700;
+            padding: 16px 34px; border-radius: 980px;
+            text-decoration: none;
+            box-shadow: 0 0 40px rgba(26,189,225,0.3);
+            transition: transform .5s cubic-bezier(.16,1,.3,1), box-shadow .3s;
+            position: relative; overflow: hidden;
+        }
+        .btn-mag::after {
+            content:''; position:absolute; inset:0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+            transform: translateX(-100%); transition: transform .5s;
+        }
+        .btn-mag:hover::after { transform: translateX(100%); }
+        .btn-mag:hover { box-shadow: 0 0 60px rgba(26,189,225,0.5); }
+
+        .btn-ghost-new {
+            display: inline-flex; align-items: center; gap: 8px;
+            border: 1px solid rgba(255,255,255,0.18); color: #fff;
+            font-size: 15px; font-weight: 500;
+            padding: 16px 32px; border-radius: 980px;
+            text-decoration: none;
+            transition: border-color .2s, transform .3s cubic-bezier(.16,1,.3,1);
+        }
+        .btn-ghost-new:hover { border-color: rgba(26,189,225,0.5); transform: translateY(-2px); }
 
         .btn-primary {
             display: inline-flex;
@@ -820,25 +890,29 @@
 <!-- HERO -->
 <section class="hero">
     <div class="hero-grid"></div>
-    <div class="hero-orb orb1"></div>
+    <div class="orb-1"></div>
+    <div class="orb-2"></div>
+    <div class="scan-line"></div>
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
 
-    <div class="hero-badge">
-        <span class="badge-dot"></span>
-        Powered by AI Automation
+    <div class="hero-badge"><span class="badge-dot"></span> Powered by AI Automation</div>
+
+    <div class="hero-headline">
+        <div class="text-row hero-pre"><span class="text-inner" style="--d:.35s">Automated outbound. Zero effort.</span></div>
+        <div class="text-row hero-main"><span class="text-inner" style="--d:.5s">We Send.</span></div>
+        <div class="text-row hero-accent-line"><span class="text-inner" style="--d:.65s">You Close.</span></div>
     </div>
 
-    <p class="hero-eyebrow">Automated Outbound. Zero Effort.</p>
+    <div class="hero-rule-new"></div>
 
-    <h1 class="hero-title">
-        We Send.<br>
-        <span class="g">You Close.</span>
-    </h1>
+    <p class="hero-sub-new">Staffify fills your pipeline through intelligent, automated outreach — without adding a single task to your plate.</p>
 
-    <p class="hero-sub">Staffify fills your pipeline through intelligent, automated outreach — without adding a single task to your plate.</p>
-
-    <div class="hero-ctas">
-        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary">Start Your Campaign →</a>
-        <a href="#how-it-works" class="btn-ghost">See how it works ↓</a>
+    <div class="hero-ctas-new">
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-mag">Start Your Campaign →</a>
+        <a href="#how-it-works" class="btn-ghost-new">See How It Works ↓</a>
     </div>
 
     <div class="hero-stats">
@@ -1237,6 +1311,21 @@
     const nav = document.getElementById('nav');
     window.addEventListener('scroll', () => {
         nav.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Magnetic CTA buttons
+    document.querySelectorAll('.btn-mag').forEach(btn => {
+        btn.addEventListener('mousemove', e => {
+            const r = btn.getBoundingClientRect();
+            const x = (e.clientX - r.left - r.width/2) * 0.15;
+            const y = (e.clientY - r.top - r.height/2) * 0.15;
+            btn.style.transform = `translate(${x}px,${y}px)`;
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transition = 'transform 0.5s cubic-bezier(.16,1,.3,1)';
+            btn.style.transform = '';
+            setTimeout(() => btn.style.transition = '', 500);
+        });
     });
 
     // Scroll reveal
