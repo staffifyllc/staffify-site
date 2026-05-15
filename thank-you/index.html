@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're In — Staffify</title>
+
+    <!-- ── SOCIAL / OG META ── -->
+    <meta name="description" content="You're in. Your Staffify lead generation campaign is being set up. Complete your onboarding to get your first meetings booked.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="/campaigns/thank-you">
+    <meta property="og:title" content="You're In — Staffify">
+    <meta property="og:description" content="Your account is being set up. Fill out the onboarding form to get your first campaign live and start booking meetings.">
+    <meta property="og:image" content="/campaigns/og-image.svg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="Staffify">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="/campaigns/og-image.svg">
+    <meta name="theme-color" content="#000000">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Google Ads Conversion Tag - fires on page load when booking is confirmed -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18080348527"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'AW-18080348527');
+        gtag('event', 'conversion', {'send_to': 'AW-18080348527/eDl5CML1t5scEO_ysK1D'});
+    </script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --c: #1abde1;
+            --c2: #0fa3c5;
+            --black: #000000;
+            --near-black: #0a0a0a;
+            --subtle: #6e6e73;
+            --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.1);
+            --white: #ffffff;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        .nav-logo img {
+            height: 26px;
+            width: auto;
+            display: block;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            padding: 140px 40px 80px;
+            text-align: center;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(26,189,225,0.08);
+            border: 1px solid rgba(26,189,225,0.22);
+            border-radius: 40px;
+            padding: 6px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--c);
+            letter-spacing: 0.3px;
+            margin-bottom: 32px;
+        }
+        .badge-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--c);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%,100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        .hero h1 {
+            font-size: clamp(40px, 6vw, 72px);
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            line-height: 1.05;
+            margin-bottom: 20px;
+        }
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-sub {
+            font-size: 17px;
+            color: var(--muted);
+            line-height: 1.75;
+            max-width: 520px;
+            margin: 0 auto 48px;
+        }
+
+        /* ── STEPS ── */
+        .steps {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 72px;
+        }
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            max-width: 180px;
+            position: relative;
+        }
+        .step + .step::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 20px;
+            width: 1px; height: 40%;
+            background: var(--divider);
+        }
+        .step-icon {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: rgba(26,189,225,0.08);
+            border: 1px solid rgba(26,189,225,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+        .step-icon.done {
+            background: rgba(26,189,225,0.15);
+            border-color: var(--c);
+        }
+        .step-lbl {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-align: center;
+        }
+        .step-lbl.done { color: var(--c); }
+        .step-lbl.active { color: var(--white); }
+
+        /* ── FORM SECTION ── */
+        .form-section {
+            padding: 0 20px 120px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .form-card {
+            background: #0a0a0c;
+            border: 1px solid rgba(26,189,225,0.15);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 0 80px rgba(26,189,225,0.05);
+        }
+
+        .form-header {
+            padding: 32px 36px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .form-icon {
+            width: 48px; height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #1abde1 0%, #1456a4 100%);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .form-header-text h2 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            margin-bottom: 4px;
+        }
+        .form-header-text p {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .form-wrap {
+            padding: 0;
+            background: #fff;
+        }
+        .form-wrap iframe {
+            display: block;
+            width: 100%;
+            min-height: 860px;
+            border: none;
+        }
+
+        /* ── FOOTER NOTE ── */
+        .footer-note {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--subtle);
+            font-size: 13px;
+        }
+        .footer-note a {
+            color: var(--c);
+            text-decoration: none;
+        }
+
+        @media (max-width: 700px) {
+            nav { padding: 0 20px; }
+            .hero { padding: 120px 24px 60px; }
+            .steps { gap: 0; }
+            .step { max-width: 90px; }
+            .step-icon { width: 36px; height: 36px; font-size: 15px; }
+            .step-lbl { font-size: 10px; }
+            .form-section { padding: 0 16px 80px; }
+            .form-header { padding: 24px 20px 20px; gap: 12px; }
+            .form-header-text h2 { font-size: 17px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="index.html" class="nav-logo">
+        <img src="staffify-logo.svg" alt="Staffify">
+    </a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="badge">
+        <div class="badge-dot"></div>
+        Payment confirmed
+    </div>
+    <h1>You're in.<br><span class="g">Let's build your pipeline.</span></h1>
+    <p class="hero-sub">
+        Your account is being set up. To get your first campaign live, fill out the onboarding form below — it takes about 3 minutes and gives us everything we need to start generating leads for you.
+    </p>
+
+    <!-- Progress steps -->
+    <div class="steps">
+        <div class="step">
+            <div class="step-icon done">✓</div>
+            <div class="step-lbl done">Plan selected</div>
+        </div>
+        <div class="step">
+            <div class="step-icon done">✓</div>
+            <div class="step-lbl done">Payment confirmed</div>
+        </div>
+        <div class="step">
+            <div class="step-icon" style="background:rgba(26,189,225,0.15);border-color:var(--c);animation:ring 2s infinite;">📋</div>
+            <div class="step-lbl active">Fill onboarding form</div>
+        </div>
+        <div class="step">
+            <div class="step-icon">🚀</div>
+            <div class="step-lbl">Campaign goes live</div>
+        </div>
+    </div>
+</div>
+
+@keyframes ring {
+    0%,100% { box-shadow: 0 0 0 0 rgba(26,189,225,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(26,189,225,0); }
+}
+
+<!-- FORM -->
+<div class="form-section">
+    <div class="form-card">
+        <div class="form-header">
+            <div class="form-icon">📋</div>
+            <div class="form-header-text">
+                <h2>Onboarding questionnaire</h2>
+                <p>Takes ~3 minutes · Your answers shape your entire campaign</p>
+            </div>
+        </div>
+        <div class="form-wrap" id="form-container">
+            <div style="text-align:center;padding:60px 20px;color:#a1a1a6;">
+                <div style="font-size:24px;margin-bottom:12px;">⏳</div>
+                <div>Setting up your onboarding form...</div>
+            </div>
+        </div>
+        <script>
+            // After Stripe payment, generate an onboarding token and load the Staffify form
+            (async function() {
+                const params = new URLSearchParams(window.location.search);
+                const sessionId = params.get('session_id');
+                const container = document.getElementById('form-container');
+
+                if (sessionId) {
+                    // Stripe checkout completed — get token via post-checkout
+                    try {
+                        // Call post-checkout which creates a token and returns redirect URL
+                        const r = await fetch('https://campaign-dashboard-green.vercel.app/api/post-checkout?session_id=' + encodeURIComponent(sessionId) + '&json=1');
+                        if (r.redirected) {
+                            // post-checkout redirected — extract token from the redirect URL
+                            const url = new URL(r.url);
+                            const token = url.searchParams.get('token');
+                            if (token) {
+                                container.innerHTML = '<iframe src="https://campaign-dashboard-green.vercel.app/onboard?token=' + token + '&embedded=1" frameborder="0" style="display:block;width:100%;min-height:2400px;border:none;" loading="lazy"></iframe>';
+                                return;
+                            }
+                        }
+                        // Fallback: redirect to post-checkout which handles the full flow
+                        window.location.href = 'https://campaign-dashboard-green.vercel.app/api/post-checkout?session_id=' + encodeURIComponent(sessionId);
+                    } catch(e) {
+                        window.location.href = 'https://campaign-dashboard-green.vercel.app/api/post-checkout?session_id=' + encodeURIComponent(sessionId);
+                    }
+                } else {
+                    // No session_id — show a manual link to request onboarding
+                    container.innerHTML = '<div style="text-align:center;padding:40px 20px;"><p style="color:#fff;font-size:16px;margin-bottom:20px;">Payment confirmed. Click below to start your onboarding.</p><a href="mailto:hello@gostaffify.com?subject=Onboarding%20Request&body=I%20just%20signed%20up%20and%20need%20my%20onboarding%20link." style="display:inline-block;background:#1abde1;color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;">Request Onboarding Link</a></div>';
+                }
+            })();
+        </script>
+    </div>
+</div>
+
+<div class="footer-note">
+    Questions? Email us at <a href="mailto:hello@staffify.com">hello@staffify.com</a>
+</div>
+
+<style>
+@keyframes ring {
+    0%,100% { box-shadow: 0 0 0 0 rgba(26,189,225,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(26,189,225,0); }
+}
+</style>
+
+</body>
+</html>
