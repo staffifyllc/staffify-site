@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply | Staffify Talent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --c: #1abde1;
+            --c2: #0fa3c5;
+            --c3: #0d82b8;
+            --c4: #1456a4;
+            --black: #000;
+            --near-black: #0a0a0a;
+            --card: #111;
+            --card2: #161616;
+            --mid: #3a3a3c;
+            --subtle: #6e6e73;
+            --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08);
+            --white: #fff;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+            transition: background .3s;
+        }
+        nav.scrolled { background: rgba(0,0,0,0.92); }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 28px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); font-weight: 500; }
+        .nav-cta { background: var(--c); color: #000; font-size: 13px; font-weight: 700; padding: 8px 18px; border-radius: 980px; text-decoration: none; transition: opacity .2s; }
+        .nav-cta:hover { opacity: .85; }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 40px 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-grid {
+            position: absolute; inset: 0;
+            background-image: radial-gradient(circle, rgba(26,189,225,0.1) 1px, transparent 1px);
+            background-size: 36px 36px;
+            mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, rgba(0,0,0,0.5) 0%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, rgba(0,0,0,0.5) 0%, transparent 70%);
+            animation: gridIn 1.5s ease-out .2s both;
+        }
+        @keyframes gridIn { from{opacity:0} to{opacity:1} }
+
+        .hero-orb {
+            position: absolute;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(26,189,225,0.12) 0%, transparent 70%);
+            filter: blur(60px);
+            top: -150px; left: 50%;
+            transform: translateX(-50%);
+            animation: breathe 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes breathe { 0%,100%{transform:translateX(-50%) scale(1)} 50%{transform:translateX(-50%) scale(1.1)} }
+
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            border: 1px solid rgba(26,189,225,0.3);
+            border-radius: 980px; padding: 6px 16px;
+            font-size: 11px; font-weight: 600; letter-spacing: .12em;
+            color: var(--c); text-transform: uppercase; margin-bottom: 32px;
+            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .3s both;
+        }
+        .badge-dot { width:6px; height:6px; border-radius:50%; background:var(--c); animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+        .hero-title {
+            font-size: clamp(48px, 7.5vw, 92px);
+            font-weight: 900;
+            line-height: 1.0;
+            letter-spacing: -3px;
+            margin-bottom: 24px;
+            animation: fadeUp .9s cubic-bezier(.16,1,.3,1) .45s both;
+        }
+
+        .hero-sub {
+            font-size: 18px; color: var(--muted);
+            max-width: 580px; margin: 0 auto 48px;
+            line-height: 1.75;
+            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .6s both;
+        }
+
+        @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
+
+        .hero-ctas {
+            display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .75s both;
+        }
+
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--c); color: #000; font-size: 15px; font-weight: 700;
+            padding: 16px 32px; border-radius: 980px; text-decoration: none;
+            transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(26,189,225,0.3); }
+
+        .btn-ghost {
+            display: inline-flex; align-items: center; gap: 8px;
+            border: 1px solid rgba(255,255,255,0.2); color: var(--white);
+            font-size: 15px; font-weight: 500; padding: 16px 32px;
+            border-radius: 980px; text-decoration: none;
+            transition: border-color .2s, transform .3s cubic-bezier(.16,1,.3,1);
+        }
+        .btn-ghost:hover { border-color: rgba(255,255,255,0.5); transform: translateY(-2px); }
+
+        /* ── REVEAL ── */
+        .reveal {
+            opacity: 0; transform: translateY(28px);
+            transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
+        }
+        .reveal.visible { opacity:1; transform:none; }
+        .rd1 { transition-delay: .1s; }
+        .rd2 { transition-delay: .2s; }
+        .rd3 { transition-delay: .3s; }
+        .rd4 { transition-delay: .4s; }
+
+        /* ── SECTION COMMON ── */
+        .section-label { font-size:11px; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--c); display:block; margin-bottom:14px; }
+        .section-title { font-size:clamp(36px,5vw,62px); font-weight:900; line-height:1.05; letter-spacing:-2px; margin-bottom:20px; }
+        .section-sub { font-size:18px; color:var(--muted); line-height:1.7; max-width:600px; }
+
+        /* ── VALUE PROPS ── */
+        .values-section {
+            padding: 120px 40px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+        }
+        .values-inner { max-width:1200px; margin:0 auto; }
+        .values-grid {
+            display: grid; grid-template-columns: repeat(3,1fr); gap: 1px;
+            background: var(--divider);
+            border: 1px solid var(--divider); border-radius:20px; overflow:hidden;
+            margin-top: 56px;
+        }
+        .value-card {
+            background: var(--card); padding: 44px 36px;
+        }
+        .value-icon { font-size: 28px; margin-bottom: 20px; }
+        .value-title { font-size:20px; font-weight:800; letter-spacing:-.4px; margin-bottom:12px; }
+        .value-text { font-size:14px; color:var(--muted); line-height:1.75; }
+
+        /* ── FOUR GATES ── */
+        .gates-section { padding: 120px 40px; max-width:1200px; margin:0 auto; }
+        .gates-grid {
+            display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+            background:var(--divider);
+            border:1px solid var(--divider); border-radius:20px; overflow:hidden;
+            margin-top:56px;
+        }
+        .gate {
+            background: var(--card); padding:36px 28px; position:relative;
+        }
+        .gate-num {
+            font-size: 11px; font-weight:700; letter-spacing:.12em;
+            text-transform:uppercase; color:var(--c); margin-bottom:20px; display:block;
+        }
+        .gate-icon { font-size:24px; margin-bottom:16px; }
+        .gate-title { font-size:17px; font-weight:800; margin-bottom:10px; }
+        .gate-text { font-size:13px; color:var(--muted); line-height:1.7; }
+
+        /* ── ROLES ── */
+        .roles-section {
+            background: var(--near-black);
+            padding: 120px 40px;
+            border-top: 1px solid var(--divider);
+        }
+        .roles-inner { max-width: 1200px; margin: 0 auto; }
+        .roles-grid {
+            display: grid; grid-template-columns: repeat(2,1fr); gap: 1px;
+            background: var(--divider);
+            border: 1px solid var(--divider); border-radius: 20px; overflow: hidden;
+            margin-top: 56px;
+        }
+        .role-card {
+            background: var(--card); padding: 28px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            text-decoration: none; color: var(--white);
+            transition: background .2s;
+            border-bottom: 1px solid var(--divider);
+        }
+        .role-card:last-child, .role-card:nth-last-child(2):nth-child(odd) { border-bottom: none; }
+        .roles-grid .role-card:nth-child(odd) { border-right: 1px solid var(--divider); }
+        .role-card:hover { background: #1a1a1a; }
+        .role-left {}
+        .role-title { font-size:16px; font-weight:700; margin-bottom:6px; }
+        .role-meta { font-size:12px; color:var(--muted); }
+        .role-arrow {
+            width:32px; height:32px; border-radius:50%;
+            border: 1px solid var(--divider);
+            display:flex; align-items:center; justify-content:center;
+            font-size:14px; color:var(--c); flex-shrink:0;
+            transition: background .2s, border-color .2s;
+        }
+        .role-card:hover .role-arrow { background: rgba(26,189,225,0.12); border-color: rgba(26,189,225,0.4); }
+
+        .roles-general {
+            margin-top: 24px;
+            border: 1px solid var(--divider);
+            border-radius: 16px;
+            padding: 28px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            text-decoration: none; color: var(--white);
+            transition: border-color .2s;
+        }
+        .roles-general:hover { border-color: rgba(26,189,225,0.3); }
+        .roles-general-text { font-size:15px; font-weight:600; }
+        .roles-general-sub { font-size:13px; color:var(--muted); margin-top:4px; }
+
+        /* ── REQUIREMENTS ── */
+        .req-section { padding:120px 40px; max-width:1200px; margin:0 auto; }
+        .req-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:56px; }
+        .req-card {
+            background:var(--card); border:1px solid var(--divider); border-radius:16px;
+            padding:32px; display:flex; gap:20px; align-items:flex-start;
+            transition: border-color .2s;
+        }
+        .req-card:hover { border-color: rgba(26,189,225,0.2); }
+        .req-icon { font-size:24px; flex-shrink:0; margin-top:2px; }
+        .req-title { font-size:16px; font-weight:700; margin-bottom:8px; }
+        .req-text { font-size:14px; color:var(--muted); line-height:1.7; }
+
+        /* ── PROCESS ── */
+        .process-section {
+            background: var(--near-black);
+            padding: 120px 40px;
+            border-top: 1px solid var(--divider);
+        }
+        .process-inner { max-width:1200px; margin:0 auto; }
+        .process-steps {
+            display:grid; grid-template-columns:repeat(4,1fr); gap:0;
+            margin-top:64px; position:relative;
+        }
+        .process-step { padding:0 24px; position:relative; }
+        .process-step::before {
+            content:''; position:absolute; top:22px; left:calc(50% + 22px);
+            right:calc(-50% + 22px); height:1px; background:var(--divider);
+        }
+        .process-step:last-child::before { display:none; }
+        .step-circle {
+            width:44px; height:44px; border-radius:50%;
+            border:1px solid rgba(26,189,225,0.4);
+            background: rgba(26,189,225,0.08);
+            display:flex; align-items:center; justify-content:center;
+            font-size:14px; font-weight:800; color:var(--c);
+            margin:0 auto 20px;
+        }
+        .process-step-title { font-size:15px; font-weight:700; text-align:center; margin-bottom:8px; }
+        .process-step-sub { font-size:13px; color:var(--muted); text-align:center; line-height:1.6; }
+        .process-step-time { font-size:11px; color:var(--c); font-weight:600; text-align:center; margin-top:10px; letter-spacing:.06em; }
+
+        /* ── CTA ── */
+        .cta-section {
+            text-align:center; padding:140px 40px;
+            border-top:1px solid var(--divider);
+        }
+        .cta-section .section-title { font-size:clamp(40px,6vw,72px); }
+        .cta-section .section-sub { margin:24px auto 48px; }
+
+        /* ── FOOTER ── */
+        footer { background:#000; border-top:1px solid var(--divider); padding:60px 40px 40px; }
+        .footer-inner { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:60px; }
+        .footer-brand-name { font-size:22px; font-weight:900; color:var(--c); letter-spacing:-0.5px; margin-bottom:12px; }
+        .footer-brand-desc { font-size:14px; color:var(--muted); line-height:1.7; }
+        .footer-col h4 { font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--subtle); margin-bottom:16px; }
+        .footer-col ul { list-style:none; display:flex; flex-direction:column; gap:10px; }
+        .footer-col a { font-size:14px; color:var(--muted); text-decoration:none; transition:color .2s; }
+        .footer-col a:hover { color:var(--white); }
+        .footer-bottom { max-width:1200px; margin:40px auto 0; padding-top:24px; border-top:1px solid var(--divider); display:flex; justify-content:space-between; font-size:12px; color:var(--subtle); }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+    <a href="/" class="nav-logo">Staffify</a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/campaigns/">Auto Lead Gen</a></li>
+        <li><a href="/academy/">Academy</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-orb"></div>
+
+    <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Top 1% Global Talent
+    </div>
+
+    <h1 class="hero-title">
+        Think you're<br>in the <span class="g">top 1%?</span><br>Prove it.
+    </h1>
+
+    <p class="hero-sub">Staffify pairs full-time, vetted remote professionals with growing teams that need them. We're ruthless about who we represent — every candidate clears four gates before a client ever sees their name.</p>
+
+    <div class="hero-ctas">
+        <a href="https://recruiting.gostaffify.com/apply" class="btn-primary">Apply Now →</a>
+        <a href="#roles" class="btn-ghost">See Open Roles ↓</a>
+    </div>
+</section>
+
+<!-- VALUE PROPS -->
+<div class="values-section">
+    <div class="values-inner">
+        <div class="reveal" style="text-align:center;">
+            <span class="section-label">Who We Are</span>
+            <h2 class="section-title">We do one thing<br>exceptionally well.</h2>
+            <p class="section-sub" style="margin:0 auto;">Place the right person with the right team. Built for retention, not churn.</p>
+        </div>
+        <div class="values-grid" style="margin-top:56px;">
+            <div class="value-card reveal rd1">
+                <div class="value-icon">📅</div>
+                <div class="value-title">Built for retention, not churn</div>
+                <p class="value-text">Our typical placement runs over a year. We pre-screen for culture fit, not just skill — if someone doesn't click with the client's style, we don't send them.</p>
+            </div>
+            <div class="value-card reveal rd2">
+                <div class="value-icon">🤖</div>
+                <div class="value-title">AI on the inside, humans on the front line</div>
+                <p class="value-text">Every applicant's intro video gets auto-scored for English clarity. Test projects get an AI advisory grade. A recruiter still makes the call — but the signal is real.</p>
+            </div>
+            <div class="value-card reveal rd3">
+                <div class="value-icon">🛡️</div>
+                <div class="value-title">Our reputation is your guarantee</div>
+                <p class="value-text">Every placement carries a lifetime replacement promise. If it doesn't work out — for any reason — we restaff at no extra cost. Bad fit costs us, not you.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FOUR GATES -->
+<div class="gates-section">
+    <div class="reveal" style="text-align:center;">
+        <span class="section-label">What "Top 1%" Actually Means</span>
+        <h2 class="section-title">Four gates.<br>Most don't clear all four.</h2>
+        <p class="section-sub" style="margin:0 auto;">We don't tell applicants they're good. We verify it.</p>
+    </div>
+    <div class="gates-grid reveal" style="margin-top:56px;">
+        <div class="gate">
+            <span class="gate-num">Gate 01</span>
+            <div class="gate-icon">🎙️</div>
+            <div class="gate-title">AI Fit + English Screen</div>
+            <p class="gate-text">Intro video transcribed and scored by AI on clarity, fluency, accent, audio, and energy. Below an objective threshold? Auto-decline. No exceptions.</p>
+        </div>
+        <div class="gate">
+            <span class="gate-num">Gate 02</span>
+            <div class="gate-icon">✏️</div>
+            <div class="gate-title">Paid Skill Assessment</div>
+            <p class="gate-text">A short, role-specific test project. Editors edit. Designers design. Admins work through a real-world scenario. We pay you for your time.</p>
+        </div>
+        <div class="gate">
+            <span class="gate-num">Gate 03</span>
+            <div class="gate-icon">👤</div>
+            <div class="gate-title">Recruiter Review</div>
+            <p class="gate-text">A human looks at every passing submission. Background, reliability signals, work-history coherence, response speed. Gut check meets data.</p>
+        </div>
+        <div class="gate">
+            <span class="gate-num">Gate 04</span>
+            <div class="gate-icon">🎯</div>
+            <div class="gate-title">Client-Fit Match</div>
+            <p class="gate-text">We don't shotgun candidates at clients. Every shortlist is hand-curated for the role's exact brief — usually 2–3 names, never 20.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ROLES -->
+<div class="roles-section" id="roles">
+    <div class="roles-inner">
+        <div class="reveal" style="text-align:center;">
+            <span class="section-label">For VAs · Apply</span>
+            <h2 class="section-title">Tap your specialty.<br><span class="g">17 open roles</span> right now.</h2>
+            <p class="section-sub" style="margin:0 auto;">You'll fill out a short specialty-aware form (~10 minutes) and we'll route you to the right openings.</p>
+        </div>
+        <div class="roles-grid reveal" style="margin-top:56px;">
+            <a href="https://recruiting.gostaffify.com/apply?role=video-editor" class="role-card">
+                <div class="role-left">
+                    <div class="role-title">Video Editor</div>
+                    <div class="role-meta">Rolling intake · Any timezone</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+            <a href="https://recruiting.gostaffify.com/apply?role=real-estate-video-editor" class="role-card">
+                <div class="role-left">
+                    <div class="role-title">Real Estate Video Editor</div>
+                    <div class="role-meta">Rolling intake · Any timezone</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+            <a href="https://recruiting.gostaffify.com/apply?role=talking-head-editor" class="role-card">
+                <div class="role-left">
+                    <div class="role-title">Talking Head Video Editor</div>
+                    <div class="role-meta">Rolling intake · Any timezone</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+            <a href="https://recruiting.gostaffify.com/apply?role=final-cut-editor" class="role-card">
+                <div class="role-left">
+                    <div class="role-title">Final Cut Video Editor</div>
+                    <div class="role-meta">Rolling intake · Any timezone</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+            <a href="https://recruiting.gostaffify.com/apply?role=admin" class="role-card">
+                <div class="role-left">
+                    <div class="role-title">Admin</div>
+                    <div class="role-meta">7 openings · Any timezone</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+            <a href="https://recruiting.gostaffify.com/apply?role=transaction-coordinator" class="role-card">
+                <div class="role-left">
+                    <div class="role-title">Transaction Coordinator</div>
+                    <div class="role-meta">Rolling intake · Any timezone</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+            <a href="https://recruiting.gostaffify.com/apply?role=graphic-designer" class="role-card">
+                <div class="role-left">
+                    <div class="role-title">Graphic Designer</div>
+                    <div class="role-meta">Rolling intake · Any timezone</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+            <a href="https://recruiting.gostaffify.com/apply?role=sales-agent" class="role-card">
+                <div class="role-left">
+                    <div class="role-title">Sales Agent</div>
+                    <div class="role-meta">Rolling intake · Any timezone</div>
+                </div>
+                <div class="role-arrow">→</div>
+            </a>
+        </div>
+        <a href="https://recruiting.gostaffify.com/apply" class="roles-general reveal" style="margin-top:16px; background:var(--card); border-color:var(--divider);">
+            <div>
+                <div class="roles-general-text">Don't see your specialty?</div>
+                <div class="roles-general-sub">Fill out the general application — we'll match you as openings come up.</div>
+            </div>
+            <div class="role-arrow">→</div>
+        </a>
+    </div>
+</div>
+
+<!-- REQUIREMENTS -->
+<div class="req-section">
+    <div class="reveal" style="text-align:center;">
+        <span class="section-label">What It Takes</span>
+        <h2 class="section-title">The bar is real.<br>The bar is the only thing in your way.</h2>
+    </div>
+    <div class="req-grid">
+        <div class="req-card reveal rd1">
+            <div class="req-icon">🗣️</div>
+            <div>
+                <div class="req-title">Conversational+ English</div>
+                <p class="req-text">You'll be on calls with English-speaking clients across multiple time zones. We score this via your intro video — not a self-rated dropdown.</p>
+            </div>
+        </div>
+        <div class="req-card reveal rd2">
+            <div class="req-icon">📶</div>
+            <div>
+                <div class="req-title">Reliable Internet</div>
+                <p class="req-text">At least 25 Mbps down / 10 Mbps up. We run a speed test from the apply page to verify. No exceptions.</p>
+            </div>
+        </div>
+        <div class="req-card reveal rd3">
+            <div class="req-icon">🖥️</div>
+            <div>
+                <div class="req-title">Dedicated Workspace</div>
+                <p class="req-text">A quiet place to work full-time hours. No coffee shops, no shared spaces during calls. Professionalism shows.</p>
+            </div>
+        </div>
+        <div class="req-card reveal rd4">
+            <div class="req-icon">💼</div>
+            <div>
+                <div class="req-title">Real Samples of Work</div>
+                <p class="req-text">Editors & designers: a portfolio link with finished work. Admin: examples from past roles count. Show us, don't tell us.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PROCESS -->
+<div class="process-section">
+    <div class="process-inner">
+        <div class="reveal" style="text-align:center;">
+            <span class="section-label">What Happens After You Apply</span>
+            <h2 class="section-title">Four steps.<br>Honest timelines.</h2>
+        </div>
+        <div class="process-steps reveal" style="margin-top:64px;">
+            <div class="process-step">
+                <div class="step-circle">01</div>
+                <div class="process-step-title">Apply</div>
+                <p class="process-step-sub">10-minute form. Intro video + work samples.</p>
+                <div class="process-step-time">Same day</div>
+            </div>
+            <div class="process-step">
+                <div class="step-circle">02</div>
+                <div class="process-step-title">AI Screen</div>
+                <p class="process-step-sub">We score English + fit against open roles automatically.</p>
+                <div class="process-step-time">Within hours</div>
+            </div>
+            <div class="process-step">
+                <div class="step-circle">03</div>
+                <div class="process-step-title">Test Project</div>
+                <p class="process-step-sub">A short paid task tied to a real role's brief.</p>
+                <div class="process-step-time">2–3 days</div>
+            </div>
+            <div class="process-step">
+                <div class="step-circle">04</div>
+                <div class="process-step-title">Placement</div>
+                <p class="process-step-sub">If a client picks you, you start within the week. Paid weekly from day one.</p>
+                <div class="process-step-time">Within the week</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section reveal">
+    <span class="section-label">Ready?</span>
+    <h2 class="section-title">Top 1% of talent.<br><span class="g">Placed with people who deserve it.</span></h2>
+    <p class="section-sub" style="margin:24px auto 48px;">Every answer counts. Make it count.</p>
+    <a href="https://recruiting.gostaffify.com/apply" class="btn-primary" style="font-size:16px; padding:18px 40px;">Apply Now — It's Free →</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand-name">Staffify</div>
+            <p class="footer-brand-desc">Operational infrastructure for growing businesses. Elite overseas teams with real systems, real accountability, and real results.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/campaigns/">Auto Lead Gen</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/academy/">Academy</a></li>
+                <li><a href="/book/">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+                <li><a href="/apply/">Join as Talent</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+    // Nav scroll
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 40));
+
+    // Scroll reveal
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
