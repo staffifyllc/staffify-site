@@ -1495,18 +1495,6 @@ window.addEventListener('mousemove', e => {
 }, { passive: true });
 </script>
 
-    <!-- Lenis smooth scroll -->
-    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
-    <script>
-      const lenis = new Lenis({
-        duration: 1.4,
-        easing: function(t) { return Math.min(1, 1.001 - Math.pow(2, -10 * t)); },
-        smooth: true,
-        smoothTouch: false,
-        touchMultiplier: 2,
-      });
-      function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-      requestAnimationFrame(raf);
-    </script>
+
 </body>
 </html>
