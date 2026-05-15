@@ -2549,7 +2549,174 @@
             .faq-section { padding: 72px 20px; }
             .faq-q { font-size: 15px; padding: 18px 0; }
         }
-    
+
+        /* ── Two Modes Section ─────────────────────────────────────── */
+        .modes-section {
+            padding: 100px 24px;
+            background: var(--near-black, #0a0a0a);
+        }
+        .modes-inner { max-width: 1100px; margin: 0 auto; }
+        .modes-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 0;
+        }
+        .mode-card {
+            background: var(--card, #111);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 20px;
+            padding: 40px 36px;
+            position: relative;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .mode-card:hover { border-color: rgba(26,189,225,0.2); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+        .mode-card-featured {
+            border-color: rgba(26,189,225,0.25);
+            background: linear-gradient(135deg, #0d1520 0%, #111 60%);
+        }
+        .mode-popular {
+            position: absolute;
+            top: -13px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(90deg, #1abde1, #1456a4);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 5px 16px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .mode-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.35);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 3px 10px;
+            margin-bottom: 16px;
+        }
+        .mode-badge-va { color: var(--c, #1abde1); border-color: rgba(26,189,225,0.25); }
+        .mode-icon-wrap { font-size: 32px; margin-bottom: 16px; }
+        .mode-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 14px;
+            color: #fff;
+        }
+        .mode-desc {
+            font-size: 15px;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.65;
+            margin-bottom: 28px;
+        }
+        .mode-features {
+            list-style: none;
+            margin-bottom: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .mode-features li { font-size: 14px; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 10px; }
+        .mck { color: rgba(255,255,255,0.3); font-weight: 700; }
+        .mck-va { color: var(--c, #1abde1); }
+        .mode-cta-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.3);
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        .mode-btn {
+            display: block;
+            text-align: center;
+            padding: 13px 24px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .mode-btn-outline {
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.7);
+        }
+        .mode-btn-outline:hover { border-color: rgba(255,255,255,0.35); color: #fff; }
+        .mode-btn-solid {
+            background: linear-gradient(90deg, #1abde1, #1456a4);
+            color: #fff;
+        }
+        .mode-btn-solid:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 8px 30px rgba(26,189,225,0.3); }
+        @media (max-width: 768px) {
+            .modes-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── SDR VA Upsell ─────────────────────────────────────────── */
+        .sdr-upsell {
+            margin: 56px auto 0;
+            max-width: 800px;
+            background: linear-gradient(135deg, rgba(26,189,225,0.06) 0%, rgba(20,86,164,0.08) 100%);
+            border: 1px solid rgba(26,189,225,0.2);
+            border-radius: 24px;
+            padding: 48px 48px;
+            text-align: center;
+        }
+        .sdr-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--c, #1abde1);
+            border: 1px solid rgba(26,189,225,0.3);
+            border-radius: 6px;
+            padding: 4px 12px;
+            margin-bottom: 20px;
+        }
+        .sdr-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: #fff;
+            margin-bottom: 14px;
+        }
+        .sdr-desc {
+            font-size: 16px;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.65;
+            max-width: 600px;
+            margin: 0 auto 32px;
+        }
+        .sdr-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 32px;
+            justify-content: center;
+            margin-bottom: 36px;
+        }
+        .sdr-feat { font-size: 14px; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 8px; }
+        .sdr-ck { color: var(--c, #1abde1); font-weight: 700; }
+        .sdr-cta {
+            display: inline-block;
+            background: linear-gradient(90deg, #1abde1, #1456a4);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 15px 36px;
+            border-radius: 50px;
+            text-decoration: none;
+            transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        .sdr-cta:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 12px 40px rgba(26,189,225,0.3); }
+        @media (max-width: 600px) {
+            .sdr-upsell { padding: 36px 24px; }
+            .sdr-title { font-size: 22px; }
+        }
+
         </style>
 </head>
 <body>
@@ -2572,15 +2739,14 @@
     <div class="orb" aria-hidden="true"></div>
     <div class="hero-eyebrow">
         <span class="pulse-dot" aria-hidden="true"></span>
-        Now Enrolling Service Business Clients &nbsp;·&nbsp; Limited Spots
+        Staffify Lead Intelligence &nbsp;·&nbsp; Automated or VA-Powered &nbsp;·&nbsp; You Choose
     </div>
     <h1 id="hero-heading">
-        Reach Your Next<br>
-        <span class="g">1,000 Clients.</span><br>
-        Automatically.
+        Your outbound engine.<br>
+        <span class="g">Run it your way.</span>
     </h1>
     <p class="hero-sub">
-        Done-for-you B2B email outreach that books qualified meetings on your calendar — so you close deals, not cold calls.
+        Staffify Lead Intelligence finds your ideal prospects, runs a 7-email sequence, and fills your pipeline — fully automated. Or add a dedicated Staffify VA who calls your warm leads while they're hot, and books the meetings for you.
     </p>
     <!-- Social proof avatars — shown above fold on mobile, keeps scroll engagement -->
     <div class="hero-social-proof">
@@ -2648,6 +2814,55 @@
         </div>
     </div>
 </div>
+
+<!-- ═══ TWO MODES ═══ -->
+<section class="modes-section" aria-label="Choose your mode">
+    <div class="modes-inner">
+        <div class="section-label reveal" style="text-align:center;">How It Works</div>
+        <h2 class="section-title reveal" style="text-align:center;">One system. <span class="g">Two modes.</span></h2>
+        <p class="section-sub reveal" style="text-align:center;max-width:560px;margin:0 auto 56px;">Start automated and let the system run. Or layer in a dedicated Staffify SDR VA who turns warm email replies into booked meetings — on your calendar, without you lifting a finger.</p>
+        <div class="modes-grid">
+
+            <!-- MODE A: AUTOMATED -->
+            <div class="mode-card reveal">
+                <div class="mode-badge">Mode A</div>
+                <div class="mode-icon-wrap">⚡</div>
+                <h3 class="mode-title">Intelligence · Automated</h3>
+                <p class="mode-desc">Our AI builds your verified contact list, writes a 7-email personalized sequence, and runs your campaign. Warm replies land directly in your inbox — ready for you to close.</p>
+                <ul class="mode-features">
+                    <li><span class="mck">✓</span> AI-verified contact targeting</li>
+                    <li><span class="mck">✓</span> 7-email personalized sequence</li>
+                    <li><span class="mck">✓</span> 30-day campaign cycle</li>
+                    <li><span class="mck">✓</span> Replies routed to your inbox</li>
+                    <li><span class="mck">✓</span> Real-time campaign dashboard</li>
+                    <li><span class="mck">✓</span> Deliverability protection</li>
+                </ul>
+                <div class="mode-cta-label">Starts at $1,000/campaign</div>
+                <a href="#pricing" class="mode-btn mode-btn-outline">See Pricing →</a>
+            </div>
+
+            <!-- MODE B: SDR VA -->
+            <div class="mode-card mode-card-featured reveal reveal-delay-2">
+                <div class="mode-popular">Most Effective</div>
+                <div class="mode-badge mode-badge-va">Mode B</div>
+                <div class="mode-icon-wrap">🎯</div>
+                <h3 class="mode-title">Intelligence + SDR VA</h3>
+                <p class="mode-desc">Everything in Automated — plus a dedicated Staffify VA who calls your warm email prospects while they're engaged. They qualify, follow up, and book meetings directly on your calendar.</p>
+                <ul class="mode-features">
+                    <li><span class="mck mck-va">✓</span> Everything in Automated</li>
+                    <li><span class="mck mck-va">✓</span> Dedicated Staffify SDR VA</li>
+                    <li><span class="mck mck-va">✓</span> VA calls warm email prospects</li>
+                    <li><span class="mck mck-va">✓</span> Meetings booked on your calendar</li>
+                    <li><span class="mck mck-va">✓</span> AI-vetted, top 1% talent</li>
+                    <li><span class="mck mck-va">✓</span> Full campaign + VA managed for you</li>
+                </ul>
+                <div class="mode-cta-label">Custom pricing · Book a call</div>
+                <a href="#" onclick="return openCalendly(event)" class="mode-btn mode-btn-solid">Add SDR VA →</a>
+            </div>
+
+        </div>
+    </div>
+</section>
 
 <!-- ═══ CINEMATIC CALLOUT ═══ -->
 <section class="callout reveal" aria-label="Value proposition">
@@ -3083,11 +3298,11 @@
 <section id="pricing" class="pricing-section" aria-labelledby="pricing-heading">
     <div class="section-label">Pricing</div>
     <h2 id="pricing-heading" class="section-title">
-        Choose the campaign that<br>
-        <span class="g">grows your pipeline</span>
+        Mode A: Intelligence · Automated<br>
+        <span class="g">Pick your campaign size</span>
     </h2>
     <p class="section-sub">
-        7-Email Sequence &bull; 30-Day Campaign &bull; Verified Contacts &bull; Replies to Your Inbox
+        7-Email Sequence &bull; 30-Day Campaign &bull; Verified Contacts &bull; AI-Powered Targeting &bull; Replies to Your Inbox
     </p>
 
     <div class="pricing-toggle">
@@ -3202,6 +3417,20 @@
         <div class="ti"><span class="ti-dot">✓</span> Automated Follow-Ups</div>
         <div class="ti"><span class="ti-dot">✓</span> No Setup Fees</div>
         <div class="ti"><span class="ti-dot">✓</span> Unlimited Users</div>
+    </div>
+
+    <!-- SDR VA UPSELL -->
+    <div class="sdr-upsell">
+        <div class="sdr-badge">Mode B · Intelligence + SDR VA</div>
+        <h3 class="sdr-title">Want meetings booked — not just replies?</h3>
+        <p class="sdr-desc">Add a dedicated Staffify SDR VA to any plan. They plug into your campaign, call warm prospects while interest is hot, and book meetings directly on your calendar. You show up, close, and collect.</p>
+        <div class="sdr-features">
+            <div class="sdr-feat"><span class="sdr-ck">✓</span> Dedicated SDR VA — top 1% vetted</div>
+            <div class="sdr-feat"><span class="sdr-ck">✓</span> Calls warm email prospects same day</div>
+            <div class="sdr-feat"><span class="sdr-ck">✓</span> Meetings booked on your calendar</div>
+            <div class="sdr-feat"><span class="sdr-ck">✓</span> Fully managed — zero training needed</div>
+        </div>
+        <a href="#" onclick="return openCalendly(event)" class="sdr-cta">Book a Call to Add SDR VA →</a>
     </div>
 
     <div style="text-align:center;padding:32px 20px 0;color:#6e6e73;font-size:15px;">
