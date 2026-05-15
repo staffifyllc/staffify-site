@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staffify — More Done. Less Stress.</title>
-    <meta name="description" content="Staffify gives growing businesses the people, systems, and tools to scale without the chaos. Video editors, executive admins, and automated lead generation.">
+    <title>Staffify — Operational Infrastructure for Growing Businesses</title>
+    <meta name="description" content="Staffify builds elite overseas teams that integrate directly into your operations — with real systems, real accountability, and real results.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -17,13 +17,12 @@
             --c3: #0d82b8;
             --c4: #1456a4;
             --black: #000000;
-            --near-black: #0a0a0a;
+            --near-black: #080808;
             --card: #0d0d0d;
-            --card2: #111111;
             --mid: #3a3a3c;
             --subtle: #6e6e73;
             --muted: #a1a1a6;
-            --divider: rgba(255,255,255,0.08);
+            --divider: rgba(255,255,255,0.07);
             --divider2: rgba(255,255,255,0.12);
             --white: #ffffff;
             --off-white: #f5f5f7;
@@ -32,22 +31,23 @@
         html { scroll-behavior: smooth; }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--black);
             color: var(--white);
             line-height: 1.6;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .g {
-            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            background: linear-gradient(105deg, #1abde1 0%, #0fa3c5 25%, #0d82b8 55%, #1456a4 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        /* ── NAV ── */
+        /* ─── NAV ─── */
         nav {
             position: fixed;
             top: 0; left: 0; right: 0;
@@ -57,26 +57,49 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 48px;
-            background: rgba(0,0,0,0.72);
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            border-bottom: 1px solid var(--divider);
+            background: rgba(0,0,0,0);
+            backdrop-filter: saturate(180%) blur(0px);
+            -webkit-backdrop-filter: saturate(180%) blur(0px);
+            border-bottom: 1px solid transparent;
+            transition: background .4s, backdrop-filter .4s, border-color .4s;
+        }
+        nav.scrolled {
+            background: rgba(0,0,0,0.78);
+            backdrop-filter: saturate(180%) blur(24px);
+            -webkit-backdrop-filter: saturate(180%) blur(24px);
+            border-bottom-color: var(--divider);
         }
 
         .nav-logo {
-            font-size: 22px;
+            font-size: 21px;
             font-weight: 900;
             color: var(--c);
             text-decoration: none;
             letter-spacing: -0.5px;
+            opacity: 0;
+            animation: fadeDown .6s cubic-bezier(.16,1,.3,1) 0.2s forwards;
+        }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links li {
+            opacity: 0;
+            animation: fadeDown .6s cubic-bezier(.16,1,.3,1) forwards;
+        }
+        .nav-links li:nth-child(1) { animation-delay: .25s; }
+        .nav-links li:nth-child(2) { animation-delay: .3s; }
+        .nav-links li:nth-child(3) { animation-delay: .35s; }
+        .nav-links li:nth-child(4) { animation-delay: .4s; }
+        .nav-links li:nth-child(5) { animation-delay: .45s; }
         .nav-links a {
-            color: var(--muted);
+            color: rgba(255,255,255,0.55);
             text-decoration: none;
             font-size: 13px;
             font-weight: 400;
+            letter-spacing: 0.01em;
             transition: color .2s;
         }
         .nav-links a:hover { color: var(--white); }
@@ -89,11 +112,17 @@
             font-size: 13px;
             font-weight: 600;
             text-decoration: none;
-            transition: all .2s;
+            transition: background .2s, transform .2s, box-shadow .2s;
+            opacity: 0;
+            animation: fadeDown .6s cubic-bezier(.16,1,.3,1) .5s forwards;
         }
-        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+        .nav-cta:hover {
+            background: var(--c2);
+            transform: scale(1.04);
+            box-shadow: 0 0 24px rgba(26,189,225,0.4);
+        }
 
-        /* ── HERO ── */
+        /* ─── HERO ─── */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -101,208 +130,413 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 120px 24px 80px;
+            padding: 120px 24px 100px;
             position: relative;
             overflow: hidden;
+            background: var(--black);
         }
 
+        /* Dot grid */
+        .hero-grid {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(26,189,225,0.14) 1px, transparent 1px);
+            background-size: 36px 36px;
+            -webkit-mask-image: radial-gradient(ellipse 80% 90% at 50% 40%, rgba(0,0,0,0.5) 0%, transparent 75%);
+            mask-image: radial-gradient(ellipse 80% 90% at 50% 40%, rgba(0,0,0,0.5) 0%, transparent 75%);
+            opacity: 0;
+            animation: gridReveal 1.8s ease-out 0.3s forwards;
+            pointer-events: none;
+        }
+        @keyframes gridReveal {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        /* Ambient orbs */
         .orb {
             position: absolute;
             border-radius: 50%;
-            filter: blur(120px);
+            filter: blur(90px);
             pointer-events: none;
+            animation: orbBreath 8s ease-in-out infinite;
         }
         .orb-1 {
-            width: 700px; height: 700px;
-            background: radial-gradient(circle, rgba(26,189,225,0.12) 0%, transparent 70%);
-            top: -200px; left: -200px;
+            width: 800px; height: 800px;
+            background: radial-gradient(circle, rgba(26,189,225,0.09) 0%, transparent 65%);
+            top: -300px; left: 50%; transform: translateX(-50%);
+            animation-delay: 0s;
         }
         .orb-2 {
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(20,86,164,0.15) 0%, transparent 70%);
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(20,86,164,0.12) 0%, transparent 65%);
             bottom: -100px; right: -100px;
+            animation-delay: -3s;
         }
         .orb-3 {
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(13,130,184,0.1) 0%, transparent 70%);
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            width: 340px; height: 340px;
+            background: radial-gradient(circle, rgba(13,130,184,0.08) 0%, transparent 65%);
+            top: 30%; left: -80px;
+            animation-delay: -5s;
+        }
+        @keyframes orbBreath {
+            0%, 100% { transform: scale(1) translateX(var(--tx,0)); opacity: 0.8; }
+            50% { transform: scale(1.15) translateX(var(--tx,0)); opacity: 1; }
+        }
+        .orb-1 { --tx: -50%; }
+
+        /* Scan line */
+        .scan-line {
+            position: absolute;
+            left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent 0%, rgba(26,189,225,0.5) 20%, rgba(26,189,225,0.5) 80%, transparent 100%);
+            top: 0;
+            opacity: 0;
+            pointer-events: none;
+            animation: scan 7s ease-in-out 2s infinite;
+        }
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            3% { opacity: 0.7; }
+            90% { opacity: 0.3; }
+            100% { top: 100%; opacity: 0; }
         }
 
+        /* Corner brackets */
+        .corner {
+            position: absolute;
+            width: 22px; height: 22px;
+            border-color: rgba(26,189,225,0.3);
+            border-style: solid;
+            opacity: 0;
+            animation: cornerReveal 0.8s cubic-bezier(.16,1,.3,1) forwards;
+            pointer-events: none;
+        }
+        .corner-tl { top: 72px; left: 40px; border-width: 1px 0 0 1px; animation-delay: 1.2s; }
+        .corner-tr { top: 72px; right: 40px; border-width: 1px 1px 0 0; animation-delay: 1.3s; }
+        .corner-bl { bottom: 32px; left: 40px; border-width: 0 0 1px 1px; animation-delay: 1.4s; }
+        .corner-br { bottom: 32px; right: 40px; border-width: 0 1px 1px 0; animation-delay: 1.5s; }
+        @keyframes cornerReveal {
+            from { opacity: 0; transform: scale(0.6); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        /* Status line */
+        .hero-status {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.2);
+            white-space: nowrap;
+            opacity: 0;
+            animation: fadeIn 0.8s ease 2s forwards;
+        }
+        .status-dot {
+            width: 5px; height: 5px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #22c55e;
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+        @keyframes statusPulse {
+            0%, 100% { box-shadow: 0 0 4px #22c55e; }
+            50% { box-shadow: 0 0 10px #22c55e, 0 0 20px rgba(34,197,94,0.4); }
+        }
+
+        /* Hero content */
+        .hero-inner {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Eyebrow */
         .hero-eyebrow {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background: rgba(26,189,225,0.08);
-            border: 1px solid rgba(26,189,225,0.2);
+            gap: 9px;
+            background: rgba(26,189,225,0.07);
+            border: 1px solid rgba(26,189,225,0.18);
             border-radius: 20px;
-            padding: 6px 16px;
-            font-size: 12px;
+            padding: 7px 18px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--c);
-            letter-spacing: 0.08em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            margin-bottom: 32px;
+            margin-bottom: 40px;
+            opacity: 0;
+            animation: fadeUp 0.7s cubic-bezier(.16,1,.3,1) 0.3s forwards;
         }
-        .eyebrow-dot {
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .pulse-dot {
             width: 6px; height: 6px;
             background: var(--c);
             border-radius: 50%;
-            animation: pulse 2s infinite;
+            box-shadow: 0 0 0 0 rgba(26,189,225,0.6);
+            animation: pulseDot 2s ease-in-out infinite;
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
+        @keyframes pulseDot {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(26,189,225,0.6); }
+            50% { box-shadow: 0 0 0 5px rgba(26,189,225,0); }
         }
 
-        .hero h1 {
-            font-size: clamp(64px, 9vw, 120px);
+        /* Headline — word-by-word slide up reveal */
+        .hero-headline {
+            margin-bottom: 32px;
+        }
+
+        .text-row {
+            overflow: hidden;
+            line-height: 1.0;
+            display: block;
+        }
+        .text-row + .text-row { margin-top: 4px; }
+
+        .text-inner {
+            display: block;
+            transform: translateY(108%);
+            animation: slideUp 0.9s cubic-bezier(.16,1,.3,1) both;
+            animation-delay: var(--d, 0s);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(108%); filter: blur(4px); }
+            to   { transform: translateY(0); filter: blur(0); }
+        }
+
+        .hero-line-pre {
+            font-size: clamp(14px, 1.6vw, 18px);
+            font-weight: 500;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: -0.01em;
+            margin-bottom: 12px;
+        }
+
+        .hero-line-main {
+            font-size: clamp(68px, 9.5vw, 128px);
             font-weight: 900;
-            letter-spacing: -0.04em;
-            line-height: 0.95;
-            margin-bottom: 28px;
+            letter-spacing: -0.045em;
+            line-height: 0.92;
+            color: var(--white);
         }
 
+        .hero-line-accent {
+            font-size: clamp(64px, 9vw, 122px);
+            font-weight: 900;
+            letter-spacing: -0.045em;
+            line-height: 0.92;
+        }
+
+        /* Rule */
+        .hero-rule {
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--c), var(--c4));
+            border-radius: 2px;
+            margin: 28px auto 28px;
+            animation: ruleExpand 0.8s cubic-bezier(.16,1,.3,1) 0.9s forwards;
+        }
+        @keyframes ruleExpand {
+            to { width: 72px; }
+        }
+
+        /* Sub */
         .hero-sub {
-            font-size: clamp(16px, 2vw, 20px);
-            color: var(--muted);
-            max-width: 560px;
+            font-size: clamp(15px, 1.7vw, 19px);
+            color: rgba(255,255,255,0.5);
+            max-width: 540px;
+            line-height: 1.65;
             font-weight: 400;
-            line-height: 1.6;
-            margin-bottom: 48px;
+            opacity: 0;
+            animation: fadeUp 0.8s cubic-bezier(.16,1,.3,1) 1s forwards;
         }
 
+        /* CTAs */
         .hero-actions {
             display: flex;
-            gap: 16px;
+            gap: 14px;
             align-items: center;
             flex-wrap: wrap;
             justify-content: center;
+            margin-top: 40px;
+            opacity: 0;
+            animation: fadeUp 0.8s cubic-bezier(.16,1,.3,1) 1.15s forwards;
         }
 
         .btn-primary {
             background: var(--c);
             color: #fff;
-            padding: 16px 36px;
+            padding: 15px 34px;
             border-radius: 50px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 700;
             text-decoration: none;
-            transition: all .25s;
+            transition: transform .15s, box-shadow .15s, background .15s;
             display: inline-block;
+            position: relative;
+            overflow: hidden;
         }
-        .btn-primary:hover { background: var(--c2); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(26,189,225,0.35); }
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform .5s ease;
+        }
+        .btn-primary:hover::after { transform: translateX(100%); }
+        .btn-primary:hover {
+            background: var(--c2);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 14px 40px rgba(26,189,225,0.38);
+        }
 
         .btn-ghost {
-            color: var(--white);
-            padding: 16px 36px;
+            color: rgba(255,255,255,0.75);
+            padding: 15px 34px;
             border-radius: 50px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 500;
             text-decoration: none;
-            border: 1px solid var(--divider2);
-            transition: all .25s;
-            display: inline-block;
+            border: 1px solid rgba(255,255,255,0.14);
+            transition: all .2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-        .btn-ghost:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
+        .btn-ghost:hover {
+            border-color: rgba(255,255,255,0.28);
+            color: var(--white);
+            background: rgba(255,255,255,0.04);
+        }
 
-        .hero-scroll-hint {
-            position: absolute;
-            bottom: 36px;
-            left: 50%;
-            transform: translateX(-50%);
+        /* Hero stats */
+        .hero-stats {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-top: 52px;
+            opacity: 0;
+            animation: fadeUp 0.8s cubic-bezier(.16,1,.3,1) 1.3s forwards;
+        }
+
+        .hstat {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
-            color: var(--subtle);
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }
-        .scroll-line {
-            width: 1px;
-            height: 40px;
-            background: linear-gradient(to bottom, transparent, var(--c), transparent);
-            animation: scrollLine 2s ease-in-out infinite;
-        }
-        @keyframes scrollLine {
-            0%, 100% { opacity: 0.3; transform: scaleY(0.7); }
-            50% { opacity: 1; transform: scaleY(1); }
-        }
-
-        /* ── STATS TICKER ── */
-        .stats-bar {
-            background: var(--card);
-            border-top: 1px solid var(--divider);
-            border-bottom: 1px solid var(--divider);
-            padding: 32px 48px;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 0 20px;
+            padding: 0 28px;
             position: relative;
         }
-        .stat-item:not(:last-child)::after {
+        .hstat:not(:last-child)::after {
             content: '';
             position: absolute;
-            right: 0; top: 10%; bottom: 10%;
+            right: 0;
+            top: 10%; bottom: 10%;
             width: 1px;
-            background: var(--divider2);
+            background: rgba(255,255,255,0.1);
         }
 
-        .stat-num {
-            font-size: 42px;
-            font-weight: 900;
-            letter-spacing: -0.04em;
-            color: var(--c);
+        .hstat-num {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--white);
+            letter-spacing: -0.03em;
             line-height: 1;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
-        .stat-label {
-            font-size: 13px;
-            color: var(--muted);
-            font-weight: 400;
+        .hstat-num .accent { color: var(--c); }
+
+        .hstat-label {
+            font-size: 10.5px;
+            color: rgba(255,255,255,0.35);
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            text-transform: uppercase;
         }
 
-        /* ── SECTION HEADERS ── */
+        /* ─── MARQUEE ─── */
+        .marquee-section {
+            padding: 20px 0;
+            overflow: hidden;
+            background: rgba(26,189,225,0.03);
+            border-top: 1px solid rgba(26,189,225,0.08);
+            border-bottom: 1px solid rgba(26,189,225,0.08);
+        }
+        .marquee-track {
+            display: flex;
+            width: max-content;
+            animation: marquee 35s linear infinite;
+        }
+        @keyframes marquee {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+        .marquee-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 36px;
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.25);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .marquee-item span { color: var(--c); }
+        .marquee-item::after {
+            content: '';
+            width: 3px; height: 3px;
+            background: rgba(26,189,225,0.5);
+            border-radius: 50%;
+        }
+
+        /* ─── WHAT WE DO ─── */
         section { padding: 120px 24px; }
 
         .section-eyebrow {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.16em;
             text-transform: uppercase;
             color: var(--c);
-            margin-bottom: 16px;
+            margin-bottom: 18px;
             text-align: center;
+            opacity: 0.85;
         }
-
         .section-title {
             font-size: clamp(36px, 5vw, 60px);
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            line-height: 1.1;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1.05;
             text-align: center;
             margin-bottom: 16px;
         }
-
         .section-sub {
             font-size: 17px;
-            color: var(--muted);
+            color: rgba(255,255,255,0.45);
             text-align: center;
             max-width: 500px;
             margin: 0 auto 72px;
             font-weight: 400;
-            line-height: 1.65;
+            line-height: 1.7;
         }
 
-        /* ── SERVICES SECTION ── */
+        /* Services grid */
         .services-section { background: var(--near-black); }
 
         .services-grid {
@@ -310,422 +544,473 @@
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 2px;
-            background: var(--divider);
+            gap: 1px;
+            background: rgba(255,255,255,0.06);
             border-radius: 24px;
             overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
         .service-card {
             background: var(--card);
-            padding: 48px 40px 52px;
+            padding: 44px 36px 48px;
             display: flex;
             flex-direction: column;
             position: relative;
             transition: background .3s;
             text-decoration: none;
             color: inherit;
+            overflow: hidden;
         }
-        .service-card:hover { background: #141414; }
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--c), transparent);
+            opacity: 0;
+            transition: opacity .35s;
+        }
+        .service-card:hover { background: #111; }
+        .service-card:hover::before { opacity: 1; }
 
         .service-card-num {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
-            letter-spacing: 0.15em;
-            color: var(--subtle);
+            letter-spacing: 0.18em;
+            color: rgba(255,255,255,0.2);
             text-transform: uppercase;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
 
         .service-icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            background: rgba(26,189,225,0.1);
-            border: 1px solid rgba(26,189,225,0.2);
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            background: rgba(26,189,225,0.08);
+            border: 1px solid rgba(26,189,225,0.15);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 24px;
+            margin-bottom: 22px;
         }
-        .service-icon svg { width: 24px; height: 24px; stroke: var(--c); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+        .service-icon svg { width: 22px; height: 22px; stroke: var(--c); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
         .service-name {
-            font-size: 22px;
+            font-size: 21px;
             font-weight: 800;
             letter-spacing: -0.03em;
             line-height: 1.2;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
-
         .service-desc {
-            font-size: 14px;
-            color: var(--muted);
-            line-height: 1.65;
+            font-size: 13.5px;
+            color: rgba(255,255,255,0.45);
+            line-height: 1.7;
             flex: 1;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
-
         .service-features {
             display: flex;
             flex-direction: column;
-            gap: 9px;
-            margin-bottom: 36px;
+            gap: 8px;
+            margin-bottom: 32px;
         }
-
         .service-feature {
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 13px;
-            color: var(--muted);
+            font-size: 12.5px;
+            color: rgba(255,255,255,0.45);
         }
         .service-feature::before {
             content: '';
-            width: 5px; height: 5px;
+            width: 4px; height: 4px;
             background: var(--c);
             border-radius: 50%;
             flex-shrink: 0;
+            opacity: 0.7;
         }
-
         .service-price {
-            font-size: 13px;
-            color: var(--subtle);
-            margin-bottom: 20px;
-            font-weight: 500;
+            font-size: 12px;
+            color: rgba(255,255,255,0.25);
+            margin-bottom: 18px;
         }
-        .service-price strong {
-            color: var(--white);
-            font-size: 18px;
-            font-weight: 700;
-        }
-
+        .service-price strong { color: rgba(255,255,255,0.8); font-size: 16px; font-weight: 700; }
         .service-link {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
+            gap: 7px;
+            font-size: 12.5px;
             font-weight: 600;
             color: var(--c);
             text-decoration: none;
             transition: gap .2s;
         }
-        .service-link:hover { gap: 12px; }
+        .service-card:hover .service-link { gap: 11px; }
 
-        /* ── HOW IT WORKS ── */
-        .how-section { background: var(--black); }
+        /* ─── DIFF SECTION ─── */
+        .diff-section {
+            background: var(--black);
+        }
 
-        .steps-grid {
+        .diff-grid {
+            max-width: 1060px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .diff-card {
+            background: var(--card);
+            padding: 52px 44px;
+        }
+
+        .diff-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .diff-label.bad { color: rgba(255,100,100,0.7); }
+        .diff-label.good { color: var(--c); }
+        .diff-label-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .diff-label.bad .diff-label-dot { background: rgba(255,100,100,0.7); }
+        .diff-label.good .diff-label-dot { background: var(--c); }
+
+        .diff-title {
+            font-size: clamp(22px, 2.5vw, 30px);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+        .diff-card.bad .diff-title { color: rgba(255,255,255,0.35); }
+
+        .diff-items { display: flex; flex-direction: column; gap: 12px; }
+        .diff-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .diff-item.bad { color: rgba(255,255,255,0.3); }
+        .diff-item.good { color: rgba(255,255,255,0.8); }
+        .diff-icon {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .diff-icon.x { background: rgba(255,100,100,0.12); color: rgba(255,100,100,0.7); }
+        .diff-icon.check { background: rgba(26,189,225,0.12); color: var(--c); }
+
+        /* ─── HOW IT WORKS ─── */
+        .how-section { background: var(--near-black); border-top: 1px solid var(--divider); }
+
+        .steps-container {
             max-width: 960px;
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 48px;
+            gap: 0;
             position: relative;
         }
-
-        .steps-grid::before {
-            content: '';
+        .steps-connector {
             position: absolute;
-            top: 36px;
-            left: calc(16.66% + 24px);
-            right: calc(16.66% + 24px);
+            top: 35px;
+            left: calc(16.66% + 20px);
+            right: calc(16.66% + 20px);
             height: 1px;
-            background: linear-gradient(90deg, var(--c), rgba(26,189,225,0.2));
+            background: linear-gradient(90deg, var(--c) 0%, rgba(26,189,225,0.15) 100%);
         }
 
-        .step-card {
-            text-align: center;
-        }
+        .step-card { text-align: center; padding: 0 24px; }
 
         .step-num {
-            width: 72px;
-            height: 72px;
+            width: 70px; height: 70px;
             border-radius: 50%;
-            border: 1px solid var(--divider2);
-            background: var(--card);
+            border: 1px solid rgba(26,189,225,0.2);
+            background: rgba(26,189,225,0.05);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            font-weight: 900;
-            color: var(--c);
-            margin: 0 auto 24px;
+            margin: 0 auto 28px;
             position: relative;
             z-index: 1;
         }
-
+        .step-num-inner {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--c);
+        }
         .step-title {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
             letter-spacing: -0.02em;
             margin-bottom: 12px;
         }
-
         .step-desc {
-            font-size: 14px;
-            color: var(--muted);
-            line-height: 1.6;
+            font-size: 13.5px;
+            color: rgba(255,255,255,0.4);
+            line-height: 1.65;
         }
 
-        /* ── FEATURE MARQUEE ── */
-        .marquee-section {
-            padding: 60px 0;
-            overflow: hidden;
-            background: var(--near-black);
-            border-top: 1px solid var(--divider);
-            border-bottom: 1px solid var(--divider);
+        /* ─── STATS BANNER ─── */
+        .stats-banner {
+            background: linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #0a1628 100%);
+            border-top: 1px solid rgba(26,189,225,0.12);
+            border-bottom: 1px solid rgba(26,189,225,0.12);
+            padding: 80px 24px;
         }
-
-        .marquee-track {
-            display: flex;
+        .stats-banner-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 0;
-            animation: marquee 30s linear infinite;
-            width: max-content;
         }
-
-        @keyframes marquee {
-            from { transform: translateX(0); }
-            to { transform: translateX(-50%); }
+        .bstat {
+            text-align: center;
+            padding: 0 20px;
+            position: relative;
         }
-
-        .marquee-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0 40px;
-            white-space: nowrap;
-            font-size: 14px;
-            color: var(--muted);
-            font-weight: 500;
-        }
-        .marquee-item::after {
+        .bstat:not(:last-child)::after {
             content: '';
-            width: 4px;
-            height: 4px;
-            background: var(--c);
-            border-radius: 50%;
+            position: absolute;
+            right: 0; top: 10%; bottom: 10%;
+            width: 1px;
+            background: rgba(26,189,225,0.12);
         }
-        .marquee-item span { color: var(--white); font-weight: 600; }
+        .bstat-num {
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            color: var(--c);
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+        .bstat-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 500;
+            line-height: 1.4;
+        }
 
-        /* ── PROOF / TESTIMONIALS ── */
+        /* ─── TESTIMONIALS ─── */
         .proof-section { background: var(--black); }
-
         .proof-grid {
             max-width: 1100px;
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
+            gap: 20px;
         }
-
         .proof-card {
             background: var(--card);
-            border: 1px solid var(--divider);
+            border: 1px solid rgba(255,255,255,0.06);
             border-radius: 20px;
-            padding: 36px 32px;
+            padding: 36px 30px;
             display: flex;
             flex-direction: column;
-            transition: border-color .2s, transform .2s;
+            transition: border-color .25s, transform .25s;
         }
-        .proof-card:hover { border-color: rgba(26,189,225,0.25); transform: translateY(-4px); }
-
-        .proof-quote {
-            font-size: 24px;
-            color: var(--c);
-            margin-bottom: 16px;
+        .proof-card:hover {
+            border-color: rgba(26,189,225,0.2);
+            transform: translateY(-4px);
         }
-
-        .proof-text {
-            font-size: 15px;
-            color: var(--off-white);
-            line-height: 1.65;
-            flex: 1;
-            margin-bottom: 28px;
-        }
-
-        .proof-author {
+        .proof-stars {
             display: flex;
-            align-items: center;
-            gap: 14px;
+            gap: 3px;
+            margin-bottom: 18px;
         }
-
+        .proof-star {
+            width: 14px; height: 14px;
+            fill: #f59e0b;
+        }
+        .proof-text {
+            font-size: 14.5px;
+            color: rgba(255,255,255,0.75);
+            line-height: 1.7;
+            flex: 1;
+            margin-bottom: 24px;
+        }
+        .proof-author { display: flex; align-items: center; gap: 12px; }
         .proof-avatar {
-            width: 40px;
-            height: 40px;
+            width: 38px; height: 38px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--c), var(--c4));
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 700;
             color: #fff;
             flex-shrink: 0;
         }
+        .proof-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+        .proof-role { font-size: 11px; color: rgba(255,255,255,0.35); }
 
-        .proof-name {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 2px;
-        }
-
-        .proof-role {
-            font-size: 12px;
-            color: var(--subtle);
-        }
-
-        /* ── CTA SECTION ── */
+        /* ─── CTA SECTION ─── */
         .cta-section {
             background: var(--near-black);
             padding: 140px 24px;
             text-align: center;
             position: relative;
             overflow: hidden;
+            border-top: 1px solid var(--divider);
         }
-
         .cta-orb {
             position: absolute;
-            border-radius: 50%;
-            filter: blur(100px);
-            pointer-events: none;
-        }
-        .cta-orb-1 {
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(26,189,225,0.12) 0%, transparent 70%);
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(26,189,225,0.07) 0%, transparent 65%);
+            filter: blur(60px);
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
+            pointer-events: none;
         }
-
         .cta-title {
-            font-size: clamp(38px, 5vw, 64px);
+            font-size: clamp(40px, 5.5vw, 68px);
             font-weight: 900;
-            letter-spacing: -0.04em;
-            line-height: 1.05;
+            letter-spacing: -0.045em;
+            line-height: 1.0;
             margin-bottom: 20px;
             position: relative;
         }
-
         .cta-sub {
             font-size: 18px;
-            color: var(--muted);
-            max-width: 480px;
+            color: rgba(255,255,255,0.4);
+            max-width: 460px;
             margin: 0 auto 48px;
-            line-height: 1.6;
+            line-height: 1.65;
             position: relative;
         }
-
         .cta-contact {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 32px;
-            margin-top: 40px;
+            margin-top: 36px;
             flex-wrap: wrap;
+            position: relative;
         }
-
-        .contact-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: var(--subtle);
+        .contact-link {
+            font-size: 13px;
+            color: rgba(255,255,255,0.3);
             text-decoration: none;
             transition: color .2s;
+            display: flex;
+            align-items: center;
+            gap: 7px;
         }
-        .contact-item:hover { color: var(--muted); }
-        .contact-item svg { width: 16px; height: 16px; stroke: var(--c); fill: none; stroke-width: 2; }
+        .contact-link:hover { color: rgba(255,255,255,0.6); }
+        .contact-link svg { stroke: var(--c); fill: none; stroke-width: 1.5; width: 14px; height: 14px; }
 
-        /* ── FOOTER ── */
+        /* ─── FOOTER ─── */
         footer {
             background: var(--black);
             border-top: 1px solid var(--divider);
             padding: 60px 48px 40px;
         }
-
         .footer-grid {
             max-width: 1100px;
-            margin: 0 auto;
+            margin: 0 auto 56px;
             display: grid;
             grid-template-columns: 2fr 1fr 1fr 1fr;
             gap: 48px;
-            margin-bottom: 60px;
         }
-
+        .footer-brand .nav-logo { opacity: 1; animation: none; display: inline-block; margin-bottom: 12px; }
         .footer-brand p {
             font-size: 13px;
-            color: var(--subtle);
-            line-height: 1.7;
-            margin-top: 12px;
-            max-width: 280px;
+            color: rgba(255,255,255,0.25);
+            line-height: 1.75;
+            max-width: 270px;
         }
-
         .footer-col h4 {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.14em;
             text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 20px;
+            color: rgba(255,255,255,0.3);
+            margin-bottom: 18px;
         }
-
-        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 11px; }
         .footer-col a {
-            font-size: 14px;
-            color: var(--subtle);
+            font-size: 13.5px;
+            color: rgba(255,255,255,0.35);
             text-decoration: none;
             transition: color .2s;
         }
-        .footer-col a:hover { color: var(--white); }
-
+        .footer-col a:hover { color: rgba(255,255,255,0.8); }
         .footer-bottom {
             max-width: 1100px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-top: 32px;
+            padding-top: 28px;
             border-top: 1px solid var(--divider);
-            font-size: 12px;
-            color: var(--subtle);
+            font-size: 11.5px;
+            color: rgba(255,255,255,0.2);
         }
 
-        /* ── SCROLL REVEAL ── */
+        /* ─── SCROLL REVEAL ─── */
         .reveal {
             opacity: 0;
-            transform: translateY(32px);
-            transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+            transform: translateY(28px);
+            transition: opacity .75s cubic-bezier(.16,1,.3,1), transform .75s cubic-bezier(.16,1,.3,1);
         }
         .reveal.visible { opacity: 1; transform: none; }
         .reveal-delay-1 { transition-delay: .1s; }
         .reveal-delay-2 { transition-delay: .2s; }
         .reveal-delay-3 { transition-delay: .3s; }
 
-        /* ── MOBILE ── */
-        @media (max-width: 900px) {
+        /* ─── MOBILE ─── */
+        @media (max-width: 960px) {
             nav { padding: 0 24px; }
             .nav-links { display: none; }
-            .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 24px 0; padding: 40px 24px; }
-            .stat-item:nth-child(2)::after, .stat-item:nth-child(4)::after { display: none; }
-            .services-grid { grid-template-columns: 1fr; }
-            .steps-grid { grid-template-columns: 1fr; }
-            .steps-grid::before { display: none; }
-            .proof-grid { grid-template-columns: 1fr; }
+            .services-grid, .diff-grid, .steps-container, .proof-grid { grid-template-columns: 1fr; }
+            .steps-connector { display: none; }
+            .stats-banner-inner { grid-template-columns: repeat(2, 1fr); gap: 40px 0; }
+            .bstat:nth-child(2)::after, .bstat:nth-child(4)::after { display: none; }
             .footer-grid { grid-template-columns: 1fr 1fr; }
-            section { padding: 80px 24px; }
+            .corner { display: none; }
+            .hero-stats { flex-wrap: wrap; gap: 20px; justify-content: center; }
+            .hstat::after { display: none; }
+            section { padding: 80px 20px; }
+            .hero-line-main { font-size: clamp(52px, 12vw, 80px); }
+            .hero-line-accent { font-size: clamp(48px, 11vw, 76px); }
         }
-
         @media (max-width: 600px) {
-            .hero h1 { font-size: 52px; }
-            .stat-num { font-size: 32px; }
-            .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+            .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+            .stats-banner-inner { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
 <body>
 
-<!-- ── NAV ── -->
-<nav>
+<!-- ─── NAV ─── -->
+<nav id="nav">
     <a href="/" class="nav-logo">Staffify</a>
     <ul class="nav-links">
         <li><a href="/editors/">Video Editors</a></li>
@@ -737,113 +1022,157 @@
     <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
 </nav>
 
-<!-- ── HERO ── -->
+<!-- ─── HERO ─── -->
 <section class="hero">
+    <!-- Background layers -->
+    <div class="hero-grid"></div>
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
+    <div class="scan-line"></div>
 
-    <div class="hero-eyebrow">
-        <span class="eyebrow-dot"></span>
-        Workforce Infrastructure for Growing Businesses
+    <!-- Corner brackets -->
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+
+    <!-- Main content -->
+    <div class="hero-inner">
+        <div class="hero-eyebrow">
+            <span class="pulse-dot"></span>
+            Implementation Partner &nbsp;·&nbsp; Not a Staffing Agency
+        </div>
+
+        <div class="hero-headline">
+            <!-- Pre-statement -->
+            <div class="text-row hero-line-pre">
+                <span class="text-inner" style="--d:0.35s">Your business doesn't need another VA.</span>
+            </div>
+
+            <!-- Main headline -->
+            <div class="text-row hero-line-main" style="margin-top:10px;">
+                <span class="text-inner" style="--d:0.5s">It needs</span>
+            </div>
+            <div class="text-row hero-line-accent">
+                <span class="text-inner g" style="--d:0.65s">Operational</span>
+            </div>
+            <div class="text-row hero-line-accent">
+                <span class="text-inner g" style="--d:0.8s">Infrastructure.</span>
+            </div>
+        </div>
+
+        <div class="hero-rule"></div>
+
+        <p class="hero-sub">
+            Staffify builds elite overseas teams that integrate directly into your operations — with real systems, real accountability, and real results.
+        </p>
+
+        <div class="hero-actions">
+            <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary btn-magnetic">
+                Book a Discovery Call
+            </a>
+            <a href="#services" class="btn-ghost btn-magnetic">
+                See Our Services
+                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+        </div>
+
+        <div class="hero-stats">
+            <div class="hstat">
+                <div class="hstat-num"><span class="count-up accent" data-target="95" data-suffix="%">0%</span></div>
+                <div class="hstat-label">Retention after 1yr</div>
+            </div>
+            <div class="hstat">
+                <div class="hstat-num"><span class="count-up" data-target="60" data-prefix="40–" data-suffix="% less">60% less</span></div>
+                <div class="hstat-label">vs traditional hiring</div>
+            </div>
+            <div class="hstat">
+                <div class="hstat-num">2 <span style="font-size:14px;font-weight:500;color:rgba(255,255,255,0.4)">wks</span></div>
+                <div class="hstat-label">Avg onboarding</div>
+            </div>
+            <div class="hstat">
+                <div class="hstat-num">$<span class="count-up" data-target="0">0</span></div>
+                <div class="hstat-label">HR & payroll overhead</div>
+            </div>
+        </div>
     </div>
 
-    <h1>
-        More Done.<br>
-        <span class="g">Less Stress.</span>
-    </h1>
-
-    <p class="hero-sub">
-        Staffify gives ambitious companies the people, systems, and tools to scale — without the chaos.
-    </p>
-
-    <div class="hero-actions">
-        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary">Book a Discovery Call</a>
-        <a href="#services" class="btn-ghost">See Our Services</a>
-    </div>
-
-    <div class="hero-scroll-hint">
-        <div class="scroll-line"></div>
+    <!-- Status line -->
+    <div class="hero-status">
+        <span class="status-dot"></span>
+        Operational &nbsp;·&nbsp; Accepting New Clients &nbsp;·&nbsp; Miami, FL
     </div>
 </section>
 
-<!-- ── STATS BAR ── -->
-<div class="stats-bar">
-    <div class="stat-item reveal">
-        <div class="stat-num">$12</div>
-        <div class="stat-label">Starting hourly rate</div>
-    </div>
-    <div class="stat-item reveal reveal-delay-1">
-        <div class="stat-num">95%</div>
-        <div class="stat-label">Client retention rate</div>
-    </div>
-    <div class="stat-item reveal reveal-delay-2">
-        <div class="stat-num">2 wks</div>
-        <div class="stat-label">Average onboarding</div>
-    </div>
-    <div class="stat-item reveal reveal-delay-3">
-        <div class="stat-num">$0</div>
-        <div class="stat-label">HR & payroll overhead</div>
-    </div>
-</div>
-
-<!-- ── MARQUEE ── -->
+<!-- ─── MARQUEE ─── -->
 <div class="marquee-section">
     <div class="marquee-track">
-        <div class="marquee-item"><span>Video Editors</span> On-demand & dedicated</div>
-        <div class="marquee-item"><span>Executive Admins</span> Full-time professionals</div>
-        <div class="marquee-item"><span>Auto Lead Gen</span> Automated outbound</div>
-        <div class="marquee-item"><span>Payroll Handled</span> We manage all HR</div>
-        <div class="marquee-item"><span>2-Week Onboarding</span> Move fast</div>
-        <div class="marquee-item"><span>95% Retention</span> People who stay</div>
-        <div class="marquee-item"><span>Video Editors</span> On-demand & dedicated</div>
-        <div class="marquee-item"><span>Executive Admins</span> Full-time professionals</div>
-        <div class="marquee-item"><span>Auto Lead Gen</span> Automated outbound</div>
-        <div class="marquee-item"><span>Payroll Handled</span> We manage all HR</div>
-        <div class="marquee-item"><span>2-Week Onboarding</span> Move fast</div>
-        <div class="marquee-item"><span>95% Retention</span> People who stay</div>
+        <div class="marquee-item"><span>Role Design</span></div>
+        <div class="marquee-item"><span>SOP Creation</span></div>
+        <div class="marquee-item"><span>Workflow Mapping</span></div>
+        <div class="marquee-item"><span>Video Editors</span></div>
+        <div class="marquee-item"><span>Executive Admins</span></div>
+        <div class="marquee-item"><span>Auto Lead Gen</span></div>
+        <div class="marquee-item"><span>Employer of Record</span></div>
+        <div class="marquee-item"><span>Payroll Handled</span></div>
+        <div class="marquee-item"><span>95% Retention</span></div>
+        <div class="marquee-item"><span>2-Week Onboarding</span></div>
+        <div class="marquee-item"><span>Real Accountability</span></div>
+        <div class="marquee-item"><span>Performance Tracking</span></div>
+        <!-- Duplicate for infinite loop -->
+        <div class="marquee-item"><span>Role Design</span></div>
+        <div class="marquee-item"><span>SOP Creation</span></div>
+        <div class="marquee-item"><span>Workflow Mapping</span></div>
+        <div class="marquee-item"><span>Video Editors</span></div>
+        <div class="marquee-item"><span>Executive Admins</span></div>
+        <div class="marquee-item"><span>Auto Lead Gen</span></div>
+        <div class="marquee-item"><span>Employer of Record</span></div>
+        <div class="marquee-item"><span>Payroll Handled</span></div>
+        <div class="marquee-item"><span>95% Retention</span></div>
+        <div class="marquee-item"><span>2-Week Onboarding</span></div>
+        <div class="marquee-item"><span>Real Accountability</span></div>
+        <div class="marquee-item"><span>Performance Tracking</span></div>
     </div>
 </div>
 
-<!-- ── SERVICES ── -->
+<!-- ─── SERVICES ─── -->
 <section class="services-section" id="services">
-    <div class="section-eyebrow reveal">What We Do</div>
-    <h2 class="section-title reveal">Everything you need to scale.</h2>
-    <p class="section-sub reveal">Three services. One infrastructure partner. Zero guesswork.</p>
+    <div class="section-eyebrow reveal">What We Build</div>
+    <h2 class="section-title reveal">Three ways to install<br>leverage into your business.</h2>
+    <p class="section-sub reveal">Every service is built around systems first. People second. Results always.</p>
 
     <div class="services-grid">
-        <!-- Video Editors -->
-        <a href="/editors/" class="service-card">
+        <a href="/editors/" class="service-card reveal">
             <div class="service-card-num">01</div>
             <div class="service-icon">
                 <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </div>
             <div class="service-name">Video Editors</div>
             <p class="service-desc">
-                Professional, trained editors who know your brand. Get polished content delivered fast — reels, ads, long-form, and more.
+                Dedicated editors who know your brand and move fast. Flat monthly rate — no per-project pricing, no scrambling.
             </p>
             <div class="service-features">
                 <div class="service-feature">Reels, TikToks & short-form</div>
                 <div class="service-feature">YouTube & long-form content</div>
-                <div class="service-feature">Ad creatives & promo cuts</div>
-                <div class="service-feature">Fast turnaround, flat monthly</div>
+                <div class="service-feature">AI-enhanced editing</div>
+                <div class="service-feature">Flat monthly — no surprises</div>
             </div>
             <div class="service-price">Starting at <strong>flat monthly</strong></div>
             <span class="service-link">
-                Explore Video Editing
-                <svg viewBox="0 0 24 24" width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                Explore
+                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </span>
         </a>
 
-        <!-- Exec Admins -->
-        <a href="/admins/" class="service-card">
+        <a href="/admins/" class="service-card reveal reveal-delay-1">
             <div class="service-card-num">02</div>
             <div class="service-icon">
                 <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
             <div class="service-name">Executive Admins</div>
             <p class="service-desc">
-                Dedicated, full-time professionals who handle your communications, scheduling, and client relationships — so you never drop the ball.
+                Full-time, dedicated admins who handle your communications end-to-end. Your clients always reach a real, professional voice.
             </p>
             <div class="service-features">
                 <div class="service-feature">Email & phone management</div>
@@ -853,71 +1182,139 @@
             </div>
             <div class="service-price">Starting at <strong>$12/hr</strong></div>
             <span class="service-link">
-                Explore Exec Admins
-                <svg viewBox="0 0 24 24" width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                Explore
+                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </span>
         </a>
 
-        <!-- Auto Lead Gen -->
-        <a href="https://campaigns.gostaffify.com/" class="service-card">
+        <a href="https://campaigns.gostaffify.com/" class="service-card reveal reveal-delay-2">
             <div class="service-card-num">03</div>
             <div class="service-icon">
                 <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </div>
-            <div class="service-name">Auto Lead Generation</div>
+            <div class="service-name">Auto Lead Gen</div>
             <p class="service-desc">
                 Automated outbound campaigns that find, nurture, and convert your ideal clients — without you lifting a finger.
             </p>
             <div class="service-features">
                 <div class="service-feature">Targeted prospect lists</div>
                 <div class="service-feature">Multi-channel outreach</div>
-                <div class="service-feature">Automated follow-up sequences</div>
+                <div class="service-feature">Automated follow-up</div>
                 <div class="service-feature">Weekly performance reporting</div>
             </div>
             <div class="service-price">From <strong>$1,000/mo</strong></div>
             <span class="service-link">
-                Explore Lead Gen
-                <svg viewBox="0 0 24 24" width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                Explore
+                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </span>
         </a>
     </div>
 </section>
 
-<!-- ── HOW IT WORKS ── -->
-<section class="how-section">
-    <div class="section-eyebrow reveal">The Process</div>
-    <h2 class="section-title reveal">Up and running in two weeks.</h2>
-    <p class="section-sub reveal">No lengthy contracts. No endless onboarding. We move fast so you can too.</p>
+<!-- ─── THE DIFFERENCE ─── -->
+<section class="diff-section">
+    <div class="section-eyebrow reveal">The Staffify Difference</div>
+    <h2 class="section-title reveal">Most companies fail with VAs.<br>Here's why we don't.</h2>
+    <p class="section-sub reveal">They hire first. We build the infrastructure first — then recruit talent into it.</p>
 
-    <div class="steps-grid">
-        <div class="step-card reveal">
-            <div class="step-num">1</div>
-            <div class="step-title">Book a Discovery Call</div>
-            <p class="step-desc">15 minutes. We learn your business, your goals, and which service is the right fit. No pressure.</p>
+    <div class="diff-grid">
+        <div class="diff-card bad reveal">
+            <div class="diff-label bad">
+                <span class="diff-label-dot"></span>
+                The old way
+            </div>
+            <div class="diff-title">Hire a random VA. Hope for the best.</div>
+            <div class="diff-items">
+                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>No systems or SOPs in place before hiring</span></div>
+                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Freelancers with no accountability structure</span></div>
+                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Managers become babysitters</span></div>
+                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Missed deadlines, poor communication</span></div>
+                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Constant turnover, restart from zero</span></div>
+                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Talent problem? No — infrastructure problem.</span></div>
+            </div>
         </div>
-        <div class="step-card reveal reveal-delay-1">
-            <div class="step-num">2</div>
-            <div class="step-title">We Build Your Team</div>
-            <p class="step-desc">We match you with trained professionals who fit your workflow. We handle all HR, payroll, and onboarding.</p>
-        </div>
-        <div class="step-card reveal reveal-delay-2">
-            <div class="step-num">3</div>
-            <div class="step-title">Scale With Confidence</div>
-            <p class="step-desc">Your team is ready. Your systems are running. You focus on growth — we take care of everything else.</p>
+        <div class="diff-card reveal reveal-delay-1">
+            <div class="diff-label good">
+                <span class="diff-label-dot"></span>
+                The Staffify way
+            </div>
+            <div class="diff-title">Build the foundation. Then install the team.</div>
+            <div class="diff-items">
+                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Role design & workflow mapping before hire one</span></div>
+                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Real-world candidate testing before placement</span></div>
+                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Slack-based support with ongoing oversight</span></div>
+                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Performance metrics & productivity tracking</span></div>
+                <div class="diff-item good"><span class="diff-icon check">✓</span><span>95% retention — people who actually stay</span></div>
+                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Perpetual free restaffing support</span></div>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- ── TESTIMONIALS ── -->
+<!-- ─── HOW IT WORKS ─── -->
+<section class="how-section">
+    <div class="section-eyebrow reveal">The Process</div>
+    <h2 class="section-title reveal">Infrastructure first.<br>Team second.</h2>
+    <p class="section-sub reveal">Up and running in two weeks. No babysitting required.</p>
+
+    <div class="steps-container">
+        <div class="steps-connector"></div>
+        <div class="step-card reveal">
+            <div class="step-num"><div class="step-num-inner">1</div></div>
+            <div class="step-title">Discovery Call</div>
+            <p class="step-desc">15 minutes. We learn your operation, your goals, and design the right role around real leverage — not just task-filling.</p>
+        </div>
+        <div class="step-card reveal reveal-delay-1">
+            <div class="step-num"><div class="step-num-inner">2</div></div>
+            <div class="step-title">Build the Foundation</div>
+            <p class="step-desc">We architect the role, map the workflows, and build the SOPs. Then we recruit, test, and place top-tier talent into that foundation.</p>
+        </div>
+        <div class="step-card reveal reveal-delay-2">
+            <div class="step-num"><div class="step-num-inner">3</div></div>
+            <div class="step-title">Scale With Confidence</div>
+            <p class="step-desc">Your team runs. We stay embedded with Slack-based support, performance tracking, and restaffing if you ever need it.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ─── STATS BANNER ─── -->
+<div class="stats-banner">
+    <div class="stats-banner-inner">
+        <div class="bstat reveal">
+            <div class="bstat-num count-up-scroll" data-target="95" data-suffix="%">95%</div>
+            <div class="bstat-label">Retention rate<br>after 365 days</div>
+        </div>
+        <div class="bstat reveal reveal-delay-1">
+            <div class="bstat-num">40–60%</div>
+            <div class="bstat-label">Lower cost vs<br>traditional hiring</div>
+        </div>
+        <div class="bstat reveal reveal-delay-2">
+            <div class="bstat-num">2 wks</div>
+            <div class="bstat-label">Average<br>onboarding time</div>
+        </div>
+        <div class="bstat reveal reveal-delay-3">
+            <div class="bstat-num">$0</div>
+            <div class="bstat-label">HR, payroll &<br>compliance overhead</div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── TESTIMONIALS ─── -->
 <section class="proof-section">
-    <div class="section-eyebrow reveal">What Clients Say</div>
+    <div class="section-eyebrow reveal">Client Results</div>
     <h2 class="section-title reveal">Built on results.</h2>
-    <p class="section-sub reveal">Business owners who stopped doing everything themselves.</p>
+    <p class="section-sub reveal">Business owners who finally got their time back.</p>
 
     <div class="proof-grid">
         <div class="proof-card reveal">
-            <div class="proof-quote">"</div>
-            <p class="proof-text">We were drowning in scheduling and follow-ups. Our Staffify admin took over in the first week and our show rate went up 30%. Game changer.</p>
+            <div class="proof-stars">
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <p class="proof-text">"We were drowning in scheduling and follow-ups. Our Staffify admin took over in the first week and our show rate went up 30%. The infrastructure they built was the difference — not just the hire."</p>
             <div class="proof-author">
                 <div class="proof-avatar">MR</div>
                 <div>
@@ -927,8 +1324,14 @@
             </div>
         </div>
         <div class="proof-card reveal reveal-delay-1">
-            <div class="proof-quote">"</div>
-            <p class="proof-text">Our content output went from 2 videos a week to 15. The editors understand our brand and the quality is consistently top tier.</p>
+            <div class="proof-stars">
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <p class="proof-text">"Content went from 2 videos a week to 15. The editors understand our brand without us babysitting every project. Staffify built the whole workflow — we just review and approve."</p>
             <div class="proof-author">
                 <div class="proof-avatar">JT</div>
                 <div>
@@ -938,8 +1341,14 @@
             </div>
         </div>
         <div class="proof-card reveal reveal-delay-2">
-            <div class="proof-quote">"</div>
-            <p class="proof-text">The lead gen campaign paid for itself in the first month. We had 12 qualified calls booked before we even fully launched. Crazy ROI.</p>
+            <div class="proof-stars">
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <p class="proof-text">"Lead gen paid for itself in the first month. 12 qualified calls booked before we even fully launched. The ROI was immediate — and the system keeps running without me touching it."</p>
             <div class="proof-author">
                 <div class="proof-avatar">AL</div>
                 <div>
@@ -951,38 +1360,37 @@
     </div>
 </section>
 
-<!-- ── CTA SECTION ── -->
+<!-- ─── CTA ─── -->
 <section class="cta-section">
-    <div class="cta-orb cta-orb-1"></div>
+    <div class="cta-orb"></div>
     <h2 class="cta-title reveal">
-        Ready to delegate the work<br>
-        <span class="g">holding you back?</span>
+        This isn't outsourcing.<br>
+        <span class="g">This is leverage.</span>
     </h2>
-    <p class="cta-sub reveal">Book a free 15-minute discovery call. We'll figure out exactly what you need.</p>
+    <p class="cta-sub reveal">Book a free 15-minute discovery call. We'll figure out exactly where to install leverage in your business.</p>
     <div class="reveal">
-        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary" style="font-size:17px;padding:20px 48px;">
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary btn-magnetic" style="font-size:16px;padding:18px 44px;">
             Book a Discovery Call →
         </a>
     </div>
-
     <div class="cta-contact reveal">
-        <a href="tel:3056369210" class="contact-item">
-            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.58 1.25h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.65a16 16 0 0 0 6.29 6.29l.91-.9a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <a href="tel:3056369210" class="contact-link">
+            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.58 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.65a16 16 0 0 0 6.29 6.29l.91-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
             (305) 636-9210
         </a>
-        <a href="mailto:hello@gostaffify.com" class="contact-item">
+        <a href="mailto:hello@gostaffify.com" class="contact-link">
             <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             hello@gostaffify.com
         </a>
     </div>
 </section>
 
-<!-- ── FOOTER ── -->
+<!-- ─── FOOTER ─── -->
 <footer>
     <div class="footer-grid">
         <div class="footer-brand">
-            <a href="/" class="nav-logo" style="display:inline-block;margin-bottom:0;">Staffify</a>
-            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+            <a href="/" class="nav-logo">Staffify</a>
+            <p>Operational infrastructure for growing businesses. Elite overseas teams with real systems, real accountability, and real results.</p>
         </div>
         <div class="footer-col">
             <h4>Services</h4>
@@ -1015,18 +1423,76 @@
 </footer>
 
 <script>
-    // Scroll reveal
-    const reveals = document.querySelectorAll('.reveal');
-    const observer = new IntersectionObserver(entries => {
-        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
-    }, { threshold: 0.12 });
-    reveals.forEach(el => observer.observe(el));
+// ── Nav scroll
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
 
-    // Smooth scroll for #services anchor
-    document.querySelector('a[href="#services"]').addEventListener('click', e => {
+// ── Scroll reveal
+const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+// ── Smooth anchor scroll
+document.querySelectorAll('a[href="#services"]').forEach(a => {
+    a.addEventListener('click', e => {
         e.preventDefault();
         document.getElementById('services').scrollIntoView({ behavior: 'smooth' });
     });
+});
+
+// ── Magnetic buttons
+document.querySelectorAll('.btn-magnetic').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+        const r = btn.getBoundingClientRect();
+        const x = (e.clientX - r.left - r.width / 2) * 0.18;
+        const y = (e.clientY - r.top - r.height / 2) * 0.18;
+        btn.style.transform = `translate(${x}px, ${y}px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+        btn.style.transition = 'transform 0.5s cubic-bezier(.16,1,.3,1), box-shadow .15s, background .15s';
+        btn.style.transform = '';
+        setTimeout(() => { btn.style.transition = ''; }, 500);
+    });
+    btn.addEventListener('mouseenter', () => {
+        btn.style.transition = 'transform 0.1s ease, box-shadow .15s, background .15s';
+    });
+});
+
+// ── Hero count-up (on load)
+function countUp(el, target, duration, prefix, suffix) {
+    const start = performance.now();
+    const tick = now => {
+        const p = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        const val = Math.round(ease * target);
+        el.textContent = (prefix || '') + val + (suffix || '');
+        if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
+
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        document.querySelectorAll('.count-up').forEach(el => {
+            const target = +el.dataset.target;
+            const prefix = el.dataset.prefix || '';
+            const suffix = el.dataset.suffix || '';
+            countUp(el, target, 1600, prefix, suffix);
+        });
+    }, 1400);
+});
+
+// ── Orb parallax on mouse move
+const orb1 = document.querySelector('.orb-1');
+window.addEventListener('mousemove', e => {
+    if (!orb1) return;
+    const x = (e.clientX / window.innerWidth - 0.5) * 24;
+    const y = (e.clientY / window.innerHeight - 0.5) * 16;
+    orb1.style.transform = `translateX(calc(-50% + ${x}px)) translateY(${y}px) scale(1)`;
+}, { passive: true });
 </script>
 
 </body>
