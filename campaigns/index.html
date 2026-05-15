@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Lead Gen | Staffify</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --c: #1abde1;
+            --c2: #0fa3c5;
+            --c3: #0d82b8;
+            --c4: #1456a4;
+            --black: #000000;
+            --near-black: #0a0a0a;
+            --card: #111111;
+            --card2: #161616;
+            --mid: #3a3a3c;
+            --subtle: #6e6e73;
+            --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08);
+            --white: #ffffff;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+            transition: background .3s;
+        }
+        nav.scrolled { background: rgba(0,0,0,0.92); }
+
+        .nav-logo {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--c);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links { display: flex; gap: 28px; list-style: none; }
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 400;
+            transition: color .2s;
+        }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); font-weight: 500; }
+
+        .nav-cta {
+            background: var(--c);
+            color: #000;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 18px;
+            border-radius: 980px;
+            text-decoration: none;
+            transition: opacity .2s;
+        }
+        .nav-cta:hover { opacity: .85; }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 40px 80px;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .hero-grid {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(26,189,225,0.12) 1px, transparent 1px);
+            background-size: 36px 36px;
+            mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, rgba(0,0,0,0.5) 0%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, rgba(0,0,0,0.5) 0%, transparent 70%);
+            animation: gridIn 1.5s ease-out .2s both;
+        }
+        @keyframes gridIn { from { opacity:0; } to { opacity:1; } }
+
+        .hero-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+        }
+        .orb1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(26,189,225,0.15) 0%, transparent 70%);
+            top: -100px; left: 50%;
+            transform: translateX(-50%);
+            animation: breathe 8s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0%,100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.15); }
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(26,189,225,0.3);
+            border-radius: 980px;
+            padding: 6px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .12em;
+            color: var(--c);
+            text-transform: uppercase;
+            margin-bottom: 36px;
+            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .3s both;
+        }
+        .badge-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--c);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+        .hero-eyebrow {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--muted);
+            margin-bottom: 16px;
+            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .4s both;
+        }
+
+        .hero-title {
+            font-size: clamp(52px, 8vw, 96px);
+            font-weight: 900;
+            line-height: 1.0;
+            letter-spacing: -3px;
+            margin-bottom: 24px;
+            animation: fadeUp .9s cubic-bezier(.16,1,.3,1) .5s both;
+        }
+
+        .hero-sub {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 560px;
+            margin: 0 auto 48px;
+            line-height: 1.7;
+            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .65s both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity:0; transform: translateY(24px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .75s both;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--c);
+            color: #000;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 16px 32px;
+            border-radius: 980px;
+            text-decoration: none;
+            transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(26,189,225,0.35);
+        }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--white);
+            font-size: 15px;
+            font-weight: 500;
+            padding: 16px 32px;
+            border-radius: 980px;
+            text-decoration: none;
+            transition: border-color .2s, transform .3s cubic-bezier(.16,1,.3,1);
+        }
+        .btn-ghost:hover { border-color: rgba(255,255,255,0.5); transform: translateY(-2px); }
+
+        /* Hero Stats */
+        .hero-stats {
+            display: flex;
+            gap: 0;
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+            margin-top: 80px;
+            width: 100%;
+            max-width: 860px;
+            animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .9s both;
+        }
+        .hero-stat {
+            flex: 1;
+            padding: 28px 24px;
+            text-align: center;
+            border-right: 1px solid var(--divider);
+        }
+        .hero-stat:last-child { border-right: none; }
+        .hero-stat-num {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            color: var(--c);
+            display: block;
+        }
+        .hero-stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--subtle);
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* ── SECTIONS ── */
+        section {
+            padding: 120px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .section-title {
+            font-size: clamp(36px, 5vw, 64px);
+            font-weight: 900;
+            line-height: 1.05;
+            letter-spacing: -2px;
+            margin-bottom: 20px;
+        }
+
+        .section-sub {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 600px;
+            line-height: 1.7;
+        }
+
+        /* reveal animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(32px);
+            transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
+        }
+        .reveal.visible { opacity:1; transform:none; }
+        .reveal-delay-1 { transition-delay: .1s; }
+        .reveal-delay-2 { transition-delay: .2s; }
+        .reveal-delay-3 { transition-delay: .3s; }
+
+        /* ── HOW IT WORKS ── */
+        .how-section {
+            background: var(--near-black);
+            padding: 120px 40px;
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+        .how-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--divider);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 64px;
+        }
+        .step {
+            background: var(--card);
+            padding: 48px 40px;
+            position: relative;
+        }
+        .step-num {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .15em;
+            color: var(--c);
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            display: block;
+        }
+        .step-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            background: rgba(26,189,225,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 24px;
+        }
+        .step h3 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+            margin-bottom: 12px;
+        }
+        .step p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+        /* ── FEATURE BLOCKS ── */
+        .feature-block {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+            padding: 100px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-bottom: 1px solid var(--divider);
+        }
+        .feature-block.reverse { direction: rtl; }
+        .feature-block.reverse > * { direction: ltr; }
+
+        .feature-text {}
+        .feature-list {
+            list-style: none;
+            margin-top: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 15px;
+            color: var(--muted);
+        }
+        .feature-list li::before {
+            content: '';
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            border-radius: 50%;
+            background: rgba(26,189,225,0.15);
+            border: 1px solid rgba(26,189,225,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2px;
+            background-image: url("data:image/svg+xml,%3Csvg width='10' height='8' viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4L3.5 6.5L9 1' stroke='%231abde1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .feature-visual {
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 40px;
+            min-height: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        /* Contact cards */
+        .contact-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: var(--card2);
+            border: 1px solid var(--divider);
+            border-radius: 12px;
+            transition: border-color .2s;
+        }
+        .contact-card.verified { border-color: rgba(26,189,225,0.3); }
+        .contact-card.filtered { opacity: .4; }
+        .contact-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--c) 0%, var(--c4) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #000;
+            flex-shrink: 0;
+        }
+        .contact-info { flex: 1; }
+        .contact-name { font-size: 14px; font-weight: 600; }
+        .contact-detail { font-size: 12px; color: var(--muted); }
+        .contact-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 980px;
+        }
+        .contact-badge.v { background: rgba(26,189,225,0.15); color: var(--c); }
+        .contact-badge.f { background: rgba(255,64,64,0.1); color: #ff6060; }
+
+        /* Email sequence visual */
+        .email-seq {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .email-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 18px;
+            background: var(--card2);
+            border: 1px solid var(--divider);
+            border-radius: 10px;
+        }
+        .email-day {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--c);
+            letter-spacing: .08em;
+            min-width: 44px;
+        }
+        .email-line { flex: 1; height: 1px; background: var(--divider); }
+        .email-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
+
+        /* Dashboard visual */
+        .dash-stat {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: var(--card2);
+            border: 1px solid var(--divider);
+            border-radius: 12px;
+        }
+        .dash-label { font-size: 13px; color: var(--muted); }
+        .dash-val { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
+        .dash-val.cyan { color: var(--c); }
+        .dash-bar {
+            height: 4px;
+            background: rgba(26,189,225,0.15);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .dash-bar-fill {
+            height: 100%;
+            background: var(--c);
+            border-radius: 2px;
+            animation: barFill 1.5s cubic-bezier(.16,1,.3,1) 1s both;
+        }
+        @keyframes barFill { from { width: 0; } }
+
+        /* ── RESULTS ── */
+        .results-section {
+            background: var(--near-black);
+            padding: 120px 40px;
+            border-top: 1px solid var(--divider);
+        }
+        .results-inner { max-width: 1200px; margin: 0 auto; }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-top: 64px;
+        }
+        .result-card {
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 40px;
+            transition: border-color .3s, transform .3s cubic-bezier(.16,1,.3,1);
+        }
+        .result-card:hover {
+            border-color: rgba(26,189,225,0.25);
+            transform: translateY(-4px);
+        }
+        .result-tag {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 20px;
+            display: block;
+        }
+        .result-metrics {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        .result-metric {}
+        .result-num {
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            color: var(--c);
+            display: block;
+        }
+        .result-desc {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--subtle);
+        }
+        .result-quote {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.7;
+            font-style: italic;
+            border-left: 2px solid var(--c);
+            padding-left: 16px;
+            margin: 24px 0;
+        }
+        .result-author {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .result-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--c) 0%, var(--c4) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #000;
+        }
+        .result-name { font-size: 14px; font-weight: 600; }
+        .result-co { font-size: 12px; color: var(--muted); }
+
+        /* ── PRICING ── */
+        .pricing-section {
+            padding: 120px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--divider);
+            border: 1px solid var(--divider);
+            border-radius: 24px;
+            overflow: hidden;
+            margin-top: 64px;
+        }
+        .price-card {
+            background: var(--card);
+            padding: 48px 36px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .price-card.featured {
+            background: linear-gradient(135deg, #0d1f2d 0%, #0a0f1a 100%);
+            border-top: 2px solid var(--c);
+        }
+        .price-popular {
+            position: absolute;
+            top: -1px; right: 28px;
+            background: var(--c);
+            color: #000;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: 5px 12px;
+            border-radius: 0 0 8px 8px;
+        }
+        .price-icon { font-size: 28px; margin-bottom: 20px; }
+        .price-tier {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+        .price-name {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -.5px;
+            margin-bottom: 4px;
+        }
+        .price-contacts {
+            font-size: 14px;
+            color: var(--muted);
+            margin-bottom: 32px;
+        }
+        .price-amount {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: -2px;
+            margin-bottom: 4px;
+        }
+        .price-period { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+        .price-setup { font-size: 13px; color: var(--subtle); margin-bottom: 36px; }
+        .price-features {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            margin-bottom: 36px;
+        }
+        .price-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+        .price-features li span.check {
+            color: var(--c);
+            font-size: 14px;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .price-cta {
+            display: block;
+            text-align: center;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all .25s;
+        }
+        .price-cta.outline {
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--white);
+        }
+        .price-cta.outline:hover { border-color: var(--c); color: var(--c); }
+        .price-cta.solid {
+            background: var(--c);
+            color: #000;
+        }
+        .price-cta.solid:hover { opacity: .88; transform: translateY(-1px); }
+
+        /* Guarantee */
+        .guarantee {
+            background: rgba(26,189,225,0.06);
+            border: 1px solid rgba(26,189,225,0.2);
+            border-radius: 16px;
+            padding: 32px 40px;
+            margin-top: 32px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        .guarantee-icon { font-size: 36px; flex-shrink: 0; }
+        .guarantee-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+        .guarantee-text { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+        /* ── FAQ ── */
+        .faq-section {
+            padding: 120px 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .faq-item {
+            border-bottom: 1px solid var(--divider);
+        }
+        .faq-q {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--white);
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: left;
+            padding: 24px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .faq-q .faq-icon {
+            width: 24px; height: 24px;
+            border: 1px solid var(--divider);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 16px;
+            transition: transform .3s;
+            color: var(--c);
+        }
+        .faq-item.open .faq-icon { transform: rotate(45deg); }
+        .faq-a {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.8;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .4s cubic-bezier(.16,1,.3,1), padding .3s;
+        }
+        .faq-item.open .faq-a { max-height: 200px; padding-bottom: 24px; }
+
+        /* ── CTA ── */
+        .cta-section {
+            text-align: center;
+            padding: 140px 40px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+        }
+        .cta-section .section-title { font-size: clamp(40px, 6vw, 72px); }
+        .cta-section .section-sub { margin: 24px auto 48px; max-width: 520px; }
+
+        /* ── FOOTER ── */
+        footer {
+            background: #000;
+            border-top: 1px solid var(--divider);
+            padding: 60px 40px 40px;
+        }
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr;
+            gap: 60px;
+        }
+        .footer-brand-name {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--c);
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+        }
+        .footer-brand-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
+        .footer-col h4 { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--subtle); margin-bottom: 16px; }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .footer-col a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color .2s; }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom { max-width: 1200px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid var(--divider); display: flex; justify-content: space-between; font-size: 12px; color: var(--subtle); }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+    <a href="/" class="nav-logo">Staffify</a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/campaigns/" class="active">Auto Lead Gen</a></li>
+        <li><a href="/academy/">Academy</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-orb orb1"></div>
+
+    <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Powered by AI Automation
+    </div>
+
+    <p class="hero-eyebrow">Automated Outbound. Zero Effort.</p>
+
+    <h1 class="hero-title">
+        We Send.<br>
+        <span class="g">You Close.</span>
+    </h1>
+
+    <p class="hero-sub">Staffify fills your pipeline through intelligent, automated outreach — without adding a single task to your plate.</p>
+
+    <div class="hero-ctas">
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary">Start Your Campaign →</a>
+        <a href="#how-it-works" class="btn-ghost">See how it works ↓</a>
+    </div>
+
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <span class="hero-stat-num" data-count="1500" data-suffix="+">1500+</span>
+            <span class="hero-stat-label">Verified Contacts / Campaign</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-num" data-count="7">7</span>
+            <span class="hero-stat-label">Email Touchpoints</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-num" data-count="30">30</span>
+            <span class="hero-stat-label">Days to Full Pipeline</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-num" data-count="99" data-suffix="%">99%</span>
+            <span class="hero-stat-label">Verified Deliverability</span>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<div class="how-section" id="how-it-works">
+    <div class="how-inner">
+        <div class="reveal" style="text-align:center; margin-bottom:0;">
+            <span class="section-label">The Process</span>
+            <h2 class="section-title">Three phases.<br>Fully automated.</h2>
+            <p class="section-sub" style="margin: 0 auto;">From zero pipeline to a full inbox of warm replies — in 30 days.</p>
+        </div>
+        <div class="steps-grid reveal" style="margin-top:64px;">
+            <div class="step">
+                <span class="step-num">Step 01</span>
+                <div class="step-icon">🎯</div>
+                <h3>Build Your Ideal Client Profile</h3>
+                <p>We identify exactly who your perfect client is — by role, industry, company size, and geography — then build a precision-targeted list of verified decision-makers who match.</p>
+            </div>
+            <div class="step">
+                <span class="step-num">Step 02</span>
+                <div class="step-icon">✉️</div>
+                <h3>Launch the Outreach Engine</h3>
+                <p>A 7-email sequence fires over 30 days. Personalized per contact, rotated across up to 20 dedicated mailboxes with full domain warming and deliverability protection.</p>
+            </div>
+            <div class="step">
+                <span class="step-num">Step 03</span>
+                <div class="step-icon">📥</div>
+                <h3>Replies Land in Your Inbox</h3>
+                <p>Interested prospects reply directly to you. No dashboards to manage, no leads to chase. We handle everything up to the handshake — you close from there.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FEATURE: CONTACTS -->
+<div class="feature-block reveal">
+    <div class="feature-text">
+        <span class="section-label">Verified Contacts</span>
+        <h2 class="section-title" style="font-size: clamp(32px,4vw,52px);">Precision targeting.<br>Zero guesswork.</h2>
+        <p style="color:var(--muted); font-size:16px; line-height:1.7; margin-top:16px;">Every contact is triple-verified before we send. No bounces, no invalid emails, no wasted sends — just real decision-makers who match your exact ICP.</p>
+        <ul class="feature-list">
+            <li>Role, industry & company size filtering</li>
+            <li>Triple-verified email & contact data</li>
+            <li>Guaranteed zero bounce rate</li>
+        </ul>
+    </div>
+    <div class="feature-visual">
+        <div class="contact-card verified">
+            <div class="contact-avatar">JM</div>
+            <div class="contact-info">
+                <div class="contact-name">Jessica Martinez</div>
+                <div class="contact-detail">CEO · Plumbing Co · 12 employees</div>
+            </div>
+            <span class="contact-badge v">✓ Verified</span>
+        </div>
+        <div class="contact-card verified">
+            <div class="contact-avatar">RK</div>
+            <div class="contact-info">
+                <div class="contact-name">Ryan Kowalski</div>
+                <div class="contact-detail">Owner · HVAC Services · 8 employees</div>
+            </div>
+            <span class="contact-badge v">✓ Verified</span>
+        </div>
+        <div class="contact-card verified">
+            <div class="contact-avatar">DL</div>
+            <div class="contact-info">
+                <div class="contact-name">Diana Liu</div>
+                <div class="contact-detail">COO · Med Spa · 6 employees</div>
+            </div>
+            <span class="contact-badge v">✓ Verified</span>
+        </div>
+        <div class="contact-card filtered">
+            <div class="contact-avatar" style="background:#333;">?</div>
+            <div class="contact-info">
+                <div class="contact-name">Unknown Contact</div>
+                <div class="contact-detail">Unverified</div>
+            </div>
+            <span class="contact-badge f">✕ Filtered</span>
+        </div>
+    </div>
+</div>
+
+<!-- FEATURE: OUTREACH ENGINE -->
+<div class="feature-block reverse reveal">
+    <div class="feature-text">
+        <span class="section-label">AI Outreach Engine</span>
+        <h2 class="section-title" style="font-size: clamp(32px,4vw,52px);">Scales like a machine.<br>Feels genuinely human.</h2>
+        <p style="color:var(--muted); font-size:16px; line-height:1.7; margin-top:16px;">A 7-email sequence, precisely timed over 30 days, personalized for each recipient. Up to 20 dedicated sending mailboxes with real-time campaign optimization.</p>
+        <ul class="feature-list">
+            <li>Dynamic copy personalized per contact</li>
+            <li>Inbox rotation & domain warming</li>
+            <li>Dedicated campaign manager (Growth+)</li>
+        </ul>
+    </div>
+    <div class="feature-visual">
+        <div class="email-seq">
+            <div class="email-item"><span class="email-day">Day 1</span><div class="email-line"></div><div class="email-dot"></div><span style="font-size:13px;color:var(--muted);">Initial introduction</span></div>
+            <div class="email-item"><span class="email-day">Day 3</span><div class="email-line"></div><div class="email-dot"></div><span style="font-size:13px;color:var(--muted);">Value follow-up</span></div>
+            <div class="email-item"><span class="email-day">Day 7</span><div class="email-line"></div><div class="email-dot"></div><span style="font-size:13px;color:var(--muted);">Case study share</span></div>
+            <div class="email-item"><span class="email-day">Day 12</span><div class="email-line"></div><div class="email-dot"></div><span style="font-size:13px;color:var(--muted);">Objection handler</span></div>
+            <div class="email-item"><span class="email-day">Day 18</span><div class="email-line"></div><div class="email-dot"></div><span style="font-size:13px;color:var(--muted);">Social proof</span></div>
+            <div class="email-item"><span class="email-day">Day 25</span><div class="email-line"></div><div class="email-dot"></div><span style="font-size:13px;color:var(--muted);">Final check-in</span></div>
+            <div class="email-item"><span class="email-day">Day 30</span><div class="email-line"></div><div class="email-dot"></div><span style="font-size:13px;color:var(--muted);">Last call</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- FEATURE: TRACKING -->
+<div class="feature-block reveal">
+    <div class="feature-text">
+        <span class="section-label">Real-Time Tracking</span>
+        <h2 class="section-title" style="font-size: clamp(32px,4vw,52px);">Full visibility.<br>Zero blind spots.</h2>
+        <p style="color:var(--muted); font-size:16px; line-height:1.7; margin-top:16px;">Live campaign dashboards so you always know what's working. Opens, clicks, replies, and pipeline value — tracked in real time from the moment your campaign launches.</p>
+        <ul class="feature-list">
+            <li>Live open & reply rate tracking</li>
+            <li>Per-contact engagement history</li>
+            <li>Alerts for hot leads</li>
+        </ul>
+    </div>
+    <div class="feature-visual">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--subtle); margin-bottom:8px;">Campaign Performance</div>
+        <div class="dash-stat">
+            <div>
+                <div class="dash-label">Open Rate</div>
+                <div class="dash-bar"><div class="dash-bar-fill" style="width:62%"></div></div>
+            </div>
+            <div class="dash-val cyan">62%</div>
+        </div>
+        <div class="dash-stat" style="margin-top:10px;">
+            <div>
+                <div class="dash-label">Reply Rate</div>
+                <div class="dash-bar"><div class="dash-bar-fill" style="width:18%; animation-delay:1.2s;"></div></div>
+            </div>
+            <div class="dash-val cyan">18%</div>
+        </div>
+        <div class="dash-stat" style="margin-top:10px;">
+            <div>
+                <div class="dash-label">Interested</div>
+                <div class="dash-bar"><div class="dash-bar-fill" style="width:9%; animation-delay:1.4s;"></div></div>
+            </div>
+            <div class="dash-val cyan">9%</div>
+        </div>
+        <div class="dash-stat" style="margin-top:10px;">
+            <div>
+                <div class="dash-label">Deliverability</div>
+                <div class="dash-bar"><div class="dash-bar-fill" style="width:99%; animation-delay:1.6s;"></div></div>
+            </div>
+            <div class="dash-val" style="color:#4ade80;">99%</div>
+        </div>
+    </div>
+</div>
+
+<!-- RESULTS -->
+<div class="results-section">
+    <div class="results-inner">
+        <div class="reveal" style="text-align:center;">
+            <span class="section-label">Client Results</span>
+            <h2 class="section-title">Real businesses.<br>Real pipelines.</h2>
+            <p class="section-sub" style="margin: 16px auto 0;">Here's what happens when service businesses let Staffify run their outreach.</p>
+        </div>
+        <div class="results-grid">
+            <div class="result-card reveal reveal-delay-1">
+                <span class="result-tag">🌿 Landscaping & Outdoor Services · Tampa, FL</span>
+                <div class="result-metrics">
+                    <div class="result-metric">
+                        <span class="result-num">47</span>
+                        <span class="result-desc">Qualified Leads</span>
+                    </div>
+                    <div class="result-metric">
+                        <span class="result-num">$280K</span>
+                        <span class="result-desc">New Revenue</span>
+                    </div>
+                    <div class="result-metric">
+                        <span class="result-num">34d</span>
+                        <span class="result-desc">First Close</span>
+                    </div>
+                </div>
+                <p class="result-quote">"We went from cold-calling homeowners associations to filling our calendar with commercial contracts. Staffify brought us the exact property managers we'd been trying to reach for years — in the first 30 days."</p>
+                <div class="result-author">
+                    <div class="result-avatar">MR</div>
+                    <div>
+                        <div class="result-name">Marcus Reid</div>
+                        <div class="result-co">Owner, Evergreen Grounds Co.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="result-card reveal reveal-delay-2">
+                <span class="result-tag">❄️ HVAC & Climate Services · Phoenix, AZ</span>
+                <div class="result-metrics">
+                    <div class="result-metric">
+                        <span class="result-num">61</span>
+                        <span class="result-desc">Qualified Leads</span>
+                    </div>
+                    <div class="result-metric">
+                        <span class="result-num">$415K</span>
+                        <span class="result-desc">New Revenue</span>
+                    </div>
+                    <div class="result-metric">
+                        <span class="result-num">18d</span>
+                        <span class="result-desc">First Close</span>
+                    </div>
+                </div>
+                <p class="result-quote">"Before Staffify, we were burning cash on Google Ads with nothing to show. Within the first campaign, property management companies were reaching out ready to sign annual service contracts."</p>
+                <div class="result-author">
+                    <div class="result-avatar">ST</div>
+                    <div>
+                        <div class="result-name">Sarah Torres</div>
+                        <div class="result-co">CEO, ProClimate Solutions</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PRICING -->
+<div class="pricing-section" id="pricing">
+    <div class="reveal" style="text-align:center;">
+        <span class="section-label">Pricing</span>
+        <h2 class="section-title">Choose the campaign that<br>grows your pipeline.</h2>
+        <p class="section-sub" style="margin: 16px auto 0;">7-Email Sequence · 30-Day Campaign · Verified Contacts · Replies to Your Inbox</p>
+    </div>
+    <div class="pricing-grid reveal">
+        <!-- STARTER -->
+        <div class="price-card">
+            <div class="price-icon">✉️</div>
+            <div class="price-tier">Package A</div>
+            <div class="price-name">Starter</div>
+            <div class="price-contacts">1,500 Verified Contacts</div>
+            <div class="price-amount">$1,000</div>
+            <div class="price-period">per campaign</div>
+            <div class="price-setup">Setup fee: $99</div>
+            <ul class="price-features">
+                <li><span class="check">✓</span> 7-Email Outreach Sequence</li>
+                <li><span class="check">✓</span> 30-Day Campaign (24 Working Days)</li>
+                <li><span class="check">✓</span> 10 Sending Mailboxes</li>
+                <li><span class="check">✓</span> Domain Setup</li>
+                <li><span class="check">✓</span> ICP Targeting & List Building</li>
+                <li><span class="check">✓</span> Personalized Messaging</li>
+                <li><span class="check">✓</span> Deliverability Setup & Monitoring</li>
+                <li><span class="check">✓</span> Replies Routed to Your Inbox</li>
+                <li><span class="check">✓</span> Real-Time Campaign Tracking</li>
+            </ul>
+            <a href="https://calendly.com/go-staffify/discovery-call" class="price-cta outline">Get Started →</a>
+        </div>
+        <!-- GROWTH -->
+        <div class="price-card featured">
+            <div class="price-popular">Most Popular</div>
+            <div class="price-icon">📈</div>
+            <div class="price-tier">Package B</div>
+            <div class="price-name">Growth</div>
+            <div class="price-contacts">2,500 Verified Contacts</div>
+            <div class="price-amount" style="color:var(--c);">$1,750</div>
+            <div class="price-period">per campaign</div>
+            <div class="price-setup">Setup fee: $250</div>
+            <ul class="price-features">
+                <li><span class="check">✓</span> Everything in Starter</li>
+                <li><span class="check">✓</span> 15 Sending Mailboxes</li>
+                <li><span class="check">✓</span> Domain Setup + Infrastructure</li>
+                <li><span class="check">✓</span> <strong style="color:var(--white);">Dedicated Campaign Manager</strong></li>
+                <li><span class="check">✓</span> Campaign Optimization During Run</li>
+                <li><span class="check">✓</span> White-Glove Onboarding</li>
+                <li><span class="check">✓</span> Assembly Support Hub</li>
+                <li><span class="check">✓</span> Unlimited Users</li>
+            </ul>
+            <a href="https://calendly.com/go-staffify/discovery-call" class="price-cta solid">Get Started →</a>
+        </div>
+        <!-- SCALE -->
+        <div class="price-card">
+            <div class="price-icon">🚀</div>
+            <div class="price-tier">Package C</div>
+            <div class="price-name">Scale</div>
+            <div class="price-contacts">5,000 Verified Contacts</div>
+            <div class="price-amount">$2,750</div>
+            <div class="price-period">per campaign</div>
+            <div class="price-setup">Setup fee: $500</div>
+            <ul class="price-features">
+                <li><span class="check">✓</span> Everything in Growth</li>
+                <li><span class="check">✓</span> 20 Sending Mailboxes</li>
+                <li><span class="check">✓</span> <strong style="color:var(--white);">Priority Campaign Monitoring</strong></li>
+                <li><span class="check">✓</span> Accelerated Campaign Throughput</li>
+                <li><span class="check">✓</span> White-Glove Onboarding</li>
+                <li><span class="check">✓</span> Assembly Support Hub</li>
+                <li><span class="check">✓</span> Unlimited Users</li>
+            </ul>
+            <a href="https://calendly.com/go-staffify/discovery-call" class="price-cta outline">Get Started →</a>
+        </div>
+    </div>
+    <div class="guarantee reveal">
+        <div class="guarantee-icon">🛡️</div>
+        <div>
+            <div class="guarantee-title">No-Risk Guarantee</div>
+            <div class="guarantee-text">If your first 30-day campaign doesn't deliver verified replies, we run the next cycle on us. Month-to-month, cancel anytime. No long contracts, no setup fees beyond what's listed in your tier.</div>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ -->
+<div class="faq-section">
+    <div class="reveal" style="text-align:center; margin-bottom:56px;">
+        <span class="section-label">FAQ</span>
+        <h2 class="section-title">Answers before<br>you ask.</h2>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q">Will this hurt my email deliverability? <span class="faq-icon">+</span></button>
+        <div class="faq-a">No. We use dedicated sending domains and mailboxes that are completely separate from your primary domain. Your existing email reputation is never at risk.</div>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q">When do I see real replies? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Most clients see their first replies within the first 7–14 days. Full pipeline momentum builds by day 30 as the sequence reaches all contacts.</div>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q">Will the emails sound like me, or like a robot? <span class="faq-icon">+</span></button>
+        <div class="faq-a">We work with you to capture your voice, tone, and offer before writing a single email. The sequences are reviewed and approved by you before anything sends.</div>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q">What if it doesn't work? <span class="faq-icon">+</span></button>
+        <div class="faq-a">If your first campaign doesn't produce verified replies, we run the next cycle free. We stand behind the work.</div>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q">How is this different from hiring an SDR? <span class="faq-icon">+</span></button>
+        <div class="faq-a">An SDR costs $5–8K/month, takes months to ramp, and produces inconsistent output. Staffify campaigns launch in days, reach thousands of verified contacts, and deliver results within the first cycle — at a fraction of the cost.</div>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q">Can I cancel? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Yes — month-to-month, cancel anytime. Your warmed mailbox infrastructure stays ready if you ever come back.</div>
+    </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section reveal">
+    <span class="section-label">Ready to scale?</span>
+    <h2 class="section-title">Your pipeline<br>won't fill itself.</h2>
+    <p class="section-sub">Launch your first campaign today. Start converting at scale.</p>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary" style="font-size:16px; padding:18px 40px;">Start Your Campaign →</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand-name">Staffify</div>
+            <p class="footer-brand-desc">Operational infrastructure for growing businesses. Elite overseas teams with real systems, real accountability, and real results.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/campaigns/">Auto Lead Gen</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/academy/">Academy</a></li>
+                <li><a href="/book/">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+    // Nav scroll
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Scroll reveal
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) { e.target.classList.add('visible'); }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-q').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = btn.parentElement;
+            const isOpen = item.classList.contains('open');
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+            if (!isOpen) item.classList.add('open');
+        });
+    });
+
+    // Count-up
+    function countUp(el) {
+        const target = parseInt(el.dataset.count);
+        const suffix = el.dataset.suffix || '';
+        const duration = 1800;
+        const start = performance.now();
+        const tick = now => {
+            const p = Math.min((now - start) / duration, 1);
+            const ease = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.round(ease * target) + suffix;
+            if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+    setTimeout(() => {
+        document.querySelectorAll('[data-count]').forEach(countUp);
+    }, 800);
+</script>
+</body>
+</html>
