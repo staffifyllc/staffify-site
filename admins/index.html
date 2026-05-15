@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Admins | Staffify</title>
+    <meta name="description" content="Delegate client communications entirely. Staffify's Executive Admins are trained, polished, and ready to represent your brand professionally — so you can focus on what matters.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --c: #1abde1;
+            --c2: #0fa3c5;
+            --c3: #0d82b8;
+            --c4: #1456a4;
+            --red: #ff4040;
+            --black: #000000;
+            --near-black: #0a0a0a;
+            --apple-dark: #1d1d1f;
+            --mid: #3a3a3c;
+            --subtle: #6e6e73;
+            --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.1);
+            --white: #ffffff;
+            --off-white: #f5f5f7;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .nav-logo {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--c);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links { display: flex; gap: 28px; list-style: none; }
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 400;
+            transition: color .2s;
+        }
+        .nav-links a:hover { color: var(--white); }
+
+        .nav-cta {
+            background: var(--c);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 130px 40px 100px;
+            background:
+                radial-gradient(ellipse 90% 60% at 50% -10%, rgba(26,189,225,0.18) 0%, transparent 65%),
+                var(--black);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(26,189,225,0.4), transparent);
+        }
+
+        .orb {
+            position: absolute;
+            top: -220px; left: 50%;
+            transform: translateX(-50%);
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(26,189,225,0.12) 0%, transparent 65%);
+            pointer-events: none;
+            animation: breathe 6s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0%,100% { transform: translateX(-50%) scale(1); opacity: .8; }
+            50% { transform: translateX(-50%) scale(1.12); opacity: 1; }
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 28px;
+            position: relative;
+        }
+        .pulse-dot {
+            width: 7px; height: 7px;
+            background: var(--c);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(26,189,225,0.6); }
+            50% { box-shadow: 0 0 0 6px rgba(26,189,225,0); }
+        }
+
+        .hero h1 {
+            font-size: clamp(44px, 6.5vw, 88px);
+            font-weight: 900;
+            line-height: 1.02;
+            letter-spacing: -2px;
+            margin-bottom: 12px;
+            max-width: 960px;
+            position: relative;
+        }
+
+        .hero-accent {
+            display: block;
+            font-size: clamp(18px, 2.2vw, 28px);
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 8px;
+        }
+
+        .hero-rule {
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--c), var(--c4));
+            border: none;
+            border-radius: 2px;
+            margin: 20px auto 28px;
+        }
+
+        .hero-sub {
+            font-size: clamp(16px, 1.6vw, 19px);
+            color: var(--muted);
+            max-width: 600px;
+            line-height: 1.75;
+            margin-bottom: 44px;
+            font-weight: 400;
+            position: relative;
+        }
+
+        .btn-primary {
+            background: var(--c);
+            color: #fff;
+            padding: 16px 36px;
+            border-radius: 980px;
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background .3s, transform .3s, box-shadow .3s;
+            box-shadow: 0 0 40px rgba(26,189,225,0.35);
+            display: inline-block;
+            position: relative;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background: var(--c2);
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 0 60px rgba(26,189,225,0.55);
+        }
+
+        /* ── SCROLL REVEAL ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
+        }
+        .reveal.in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ── SECTION SHARED ── */
+        section { padding: 120px 40px; position: relative; }
+
+        .section-eyebrow {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--c);
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: clamp(36px, 5vw, 64px);
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: -1.5px;
+            line-height: 1.05;
+            margin-bottom: 24px;
+        }
+
+        .section-sub {
+            font-size: clamp(15px, 1.4vw, 18px);
+            color: var(--muted);
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 60px;
+            line-height: 1.7;
+        }
+
+        /* ── VALUE CARDS ── */
+        .costs-section {
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 48px 32px;
+            text-align: center;
+            transition: transform .4s cubic-bezier(.16,1,.3,1), border-color .4s, background .4s;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--c), transparent);
+            opacity: 0;
+            transition: opacity .4s;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(26,189,225,0.3);
+            background: rgba(255,255,255,0.05);
+        }
+        .card:hover::before { opacity: 1; }
+
+        .card-num {
+            font-size: 48px;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--c);
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+
+        .card p {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.75;
+        }
+
+        /* ── SHOWCASE GRID (icon cards) ── */
+        .showcase-section {
+            background: var(--black);
+        }
+
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .showcase-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 44px 32px 40px;
+            text-align: center;
+            transition: transform .4s cubic-bezier(.16,1,.3,1), border-color .4s, background .4s, box-shadow .4s;
+            position: relative;
+            overflow: hidden;
+        }
+        .showcase-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--c), transparent);
+            opacity: 0;
+            transition: opacity .4s;
+        }
+        .showcase-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(26,189,225,0.35);
+            background: rgba(26,189,225,0.04);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 40px rgba(26,189,225,0.08);
+        }
+        .showcase-card:hover::before { opacity: 1; }
+
+        .showcase-icon {
+            font-size: 52px;
+            line-height: 1;
+            margin-bottom: 20px;
+            display: block;
+            filter: drop-shadow(0 0 20px rgba(26,189,225,0.45));
+        }
+
+        .showcase-stat {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 10px;
+        }
+
+        .showcase-card h3 {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 14px;
+            letter-spacing: -0.3px;
+            line-height: 1.3;
+        }
+
+        .showcase-card p {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.75;
+        }
+
+        /* ── STAT BANNER (metrics row) ── */
+        .stat-banner {
+            background: linear-gradient(135deg, var(--c), var(--c3));
+            padding: 80px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.15), transparent 60%);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            flex-wrap: wrap;
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .stat-item {
+            flex: 1;
+            min-width: 200px;
+            padding: 20px 32px;
+            border-right: 1px solid rgba(255,255,255,0.25);
+        }
+        .stat-item:last-child { border-right: none; }
+
+        .stat-value {
+            font-size: clamp(36px, 5vw, 56px);
+            font-weight: 900;
+            color: #fff;
+            line-height: 1;
+            letter-spacing: -1.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.75);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            line-height: 1.4;
+        }
+
+        /* ── MYTH VS REALITY ── */
+        .myths-section {
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+        }
+
+        .myths-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .myth-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            border-bottom: 1px solid var(--divider);
+            transition: background .3s;
+        }
+        .myth-row:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .myth-side, .reality-side {
+            padding: 36px 40px;
+        }
+
+        .myth-side {
+            border-right: 1px solid var(--divider);
+        }
+
+        .myth-label, .reality-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .myth-label { color: var(--red); }
+        .reality-label { color: var(--c); }
+
+        .myth-icon {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 900;
+        }
+        .myth-icon.red { background: rgba(255,64,64,0.15); color: var(--red); }
+        .myth-icon.blue { background: rgba(26,189,225,0.15); color: var(--c); }
+
+        .myth-text {
+            font-size: 16px;
+            color: var(--subtle);
+            line-height: 1.6;
+        }
+        .reality-text {
+            font-size: 16px;
+            color: var(--off-white);
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .myth-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-bottom: 2px solid var(--divider);
+            margin-bottom: 0;
+        }
+        .myth-header div {
+            padding: 20px 40px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .myth-header div:first-child {
+            color: var(--red);
+            border-right: 1px solid var(--divider);
+        }
+        .myth-header div:last-child { color: var(--c); }
+
+        /* ── CLOSER ── */
+        .closer-section {
+            padding: 100px 40px;
+            text-align: center;
+            background:
+                radial-gradient(ellipse 70% 50% at 50% 100%, rgba(26,189,225,0.12) 0%, transparent 65%),
+                var(--near-black);
+            border-top: 1px solid var(--divider);
+        }
+
+        .closer-text {
+            font-size: clamp(20px, 2.5vw, 28px);
+            font-weight: 600;
+            color: var(--off-white);
+            max-width: 700px;
+            margin: 0 auto 40px;
+            line-height: 1.6;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            padding: 60px 40px;
+            border-top: 1px solid var(--divider);
+            text-align: center;
+        }
+
+        .f-logo {
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--c);
+            margin-bottom: 12px;
+        }
+        .f-tagline {
+            font-size: 13px;
+            color: var(--subtle);
+            margin-bottom: 6px;
+        }
+        .f-contact {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .f-contact a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color .2s;
+        }
+        .f-contact a:hover { color: var(--c); }
+
+        .f-copy {
+            font-size: 11px;
+            color: var(--mid);
+            margin-top: 24px;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+            nav { padding: 0 20px; }
+            .nav-links { display: none; }
+            section { padding: 80px 20px; }
+
+            .cards-grid { grid-template-columns: 1fr; max-width: 500px; }
+            .showcase-grid { grid-template-columns: 1fr; max-width: 500px; }
+            .myth-row { grid-template-columns: 1fr; }
+            .myth-side { border-right: none; border-bottom: 1px solid var(--divider); }
+            .myth-header { grid-template-columns: 1fr; }
+            .myth-header div:first-child { border-right: none; border-bottom: 1px solid var(--divider); }
+
+            .hero { padding: 120px 20px 80px; }
+            .stat-banner { padding: 60px 20px; }
+
+            .stat-row { flex-direction: column; gap: 0; }
+            .stat-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.2); min-width: 100%; }
+            .stat-item:last-child { border-bottom: none; }
+        }
+
+        /* ── SHIMMER ── */
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        .shimmer-text {
+            background: linear-gradient(90deg, var(--c) 0%, #ffffff 50%, var(--c) 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 4s linear infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="/" class="nav-logo">Staffify</a>
+        <ul class="nav-links">
+            <li><a href="/editors/">Video Editors</a></li>
+            <li><a href="/admins/" style="color:var(--white);">Exec Admins</a></li>
+            <li><a href="https://campaigns.gostaffify.com/">Auto Lead Gen</a></li>
+            <li><a href="/academy/">Academy</a></li>
+            <li><a href="/about/">About</a></li>
+        </ul>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="orb"></div>
+        <div class="hero-eyebrow"><span class="pulse-dot"></span> Dedicated Executive Admin Staffing</div>
+        <h1 class="reveal">Your Business Needs a<br><span class="g">Dedicated Voice</span></h1>
+        <span class="hero-accent reveal">Delegate Client Communications. Entirely.</span>
+        <hr class="hero-rule reveal">
+        <p class="hero-sub reveal">Our Executive Admins aren't contractors — they're dedicated, full-time members of your team. Trained to speak to your clients, represent your brand, and handle everything so you can focus on what only you can do.</p>
+        <div class="reveal" style="display:inline-flex;align-items:center;gap:12px;margin-bottom:32px;padding:14px 24px;background:rgba(26,189,225,0.08);border:1px solid rgba(26,189,225,0.25);border-radius:12px;">
+            <span style="font-size:22px;font-weight:900;color:#1abde1;letter-spacing:-1px;">Starting at $12/hr</span>
+            <span style="font-size:12px;color:rgba(255,255,255,0.4);max-width:180px;line-height:1.4;">Dedicated full-time. We handle payroll, HR &amp; taxes.</span>
+        </div>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary reveal">Hire Your Executive Admin</a>
+    </section>
+
+    <!-- VALUE CARDS -->
+    <section class="costs-section">
+        <p class="section-eyebrow reveal">Built Around Your Business</p>
+        <h2 class="section-title reveal">What You <span class="g">Get Back</span></h2>
+        <p class="section-sub reveal">From day one, your dedicated full-time Executive Admin steps in and takes everything off your plate — so you can run your business instead of being buried in it.</p>
+
+        <div class="cards-grid">
+            <div class="card reveal">
+                <div class="card-num g">01</div>
+                <h3>A Full-Time Team Member</h3>
+                <p>This isn't a gig worker or a contractor. Your Executive Admin is dedicated to you — full-time, fully invested, and fully aligned with how your business operates.</p>
+            </div>
+            <div class="card reveal">
+                <div class="card-num g">02</div>
+                <h3>A Voice Your Clients Trust</h3>
+                <p>Warm, professional, on-brand. Our admins are wired to communicate with clients at a high level. Your clients experience the same quality every time — they'll never notice a difference.</p>
+            </div>
+            <div class="card reveal">
+                <div class="card-num g">03</div>
+                <h3>Zero Hiring Headaches</h3>
+                <p>We source, screen, and place. You just show up to the intro call. No job posts, no vetting, no awkward trial periods. Your admin hits the ground running from week one.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CAPABILITY SHOWCASE -->
+    <section class="showcase-section">
+        <p class="section-eyebrow reveal">What They Handle</p>
+        <h2 class="section-title reveal" style="margin-bottom:16px;">Everything That <span class="g">Eats Your Day</span></h2>
+        <p class="section-sub reveal">Seven core responsibilities. One dedicated full-time admin. Total coverage of your client-facing operations.</p>
+
+        <div class="showcase-grid">
+
+            <div class="showcase-card reveal">
+                <span class="showcase-icon">📧</span>
+                <p class="showcase-stat">Inbox Zero, Every Day</p>
+                <h3>Email Management</h3>
+                <p>Your admin owns the inbox. Replies, follow-ups, and full client threads handled professionally — so nothing falls through and no client feels ignored.</p>
+            </div>
+
+            <div class="showcase-card reveal">
+                <span class="showcase-icon">📅</span>
+                <p class="showcase-stat">Zero Back-and-Forth</p>
+                <h3>Appointment Scheduling</h3>
+                <p>Bookings confirmed, reminders sent, reschedules handled. Your calendar fills itself — you just show up prepared.</p>
+            </div>
+
+            <div class="showcase-card reveal">
+                <span class="showcase-icon">📞</span>
+                <p class="showcase-stat">Always Available</p>
+                <h3>Phone Management</h3>
+                <p>Calls answered, messages taken, issues escalated appropriately. Your clients always reach a real, professional voice — never a voicemail.</p>
+            </div>
+
+            <div class="showcase-card reveal">
+                <span class="showcase-icon">💬</span>
+                <p class="showcase-stat">Every Inquiry Handled</p>
+                <h3>Customer Service</h3>
+                <p>Questions, concerns, complaints — your admin handles them with professionalism and care. Happy clients stay longer and refer more.</p>
+            </div>
+
+            <div class="showcase-card reveal">
+                <span class="showcase-icon">⭐</span>
+                <p class="showcase-stat">More 5-Star Reviews</p>
+                <h3>Review Collection</h3>
+                <p>Your admin follows up with satisfied clients at exactly the right moment and asks for reviews — consistently growing your reputation on autopilot.</p>
+            </div>
+
+            <div class="showcase-card reveal">
+                <span class="showcase-icon">📊</span>
+                <p class="showcase-stat">No Deal Falls Through</p>
+                <h3>CRM Management</h3>
+                <p>Pipelines stay clean, contacts stay updated, and follow-ups never get missed. Your CRM finally reflects what's actually happening in your business.</p>
+            </div>
+
+            <div class="showcase-card reveal">
+                <span class="showcase-icon">💰</span>
+                <p class="showcase-stat">Revenue You're Leaving Behind</p>
+                <h3>Upselling</h3>
+                <p>Your admin identifies the right moments to present additional services — turning existing clients into bigger clients without you having to ask.</p>
+            </div>
+
+        </div>
+
+        <div style="text-align:center; margin-top:60px;" class="reveal">
+            <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary">Book a Discovery Call</a>
+        </div>
+    </section>
+
+    <!-- STAT BANNER -->
+    <div class="stat-banner">
+        <div class="stat-row reveal">
+            <div class="stat-item">
+                <div class="stat-value">$12/hr</div>
+                <div class="stat-label">Starting Rate<br>Full-Time</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">95%</div>
+                <div class="stat-label">Client Satisfaction<br>Maintained</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">2 wks</div>
+                <div class="stat-label">Avg Ramp<br>Time</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">$0</div>
+                <div class="stat-label">Payroll &amp;<br>HR Fees</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MYTH VS REALITY -->
+    <section class="myths-section">
+        <p class="section-eyebrow reveal">The Truth About Delegation</p>
+        <h2 class="section-title reveal" style="margin-bottom:60px;">Myth vs. <span class="g">Reality</span></h2>
+
+        <div class="myths-grid reveal">
+            <div class="myth-header">
+                <div>Myth</div>
+                <div>Reality</div>
+            </div>
+
+            <div class="myth-row">
+                <div class="myth-side">
+                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
+                    <p class="myth-text">&ldquo;An admin can&rsquo;t really speak for me.&rdquo;</p>
+                </div>
+                <div class="reality-side">
+                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
+                    <p class="reality-text">Our admins are trained on your brand voice and communication style. Clients receive the same quality, tone, and professionalism they expect from you &mdash; they won&rsquo;t notice a difference.</p>
+                </div>
+            </div>
+
+            <div class="myth-row">
+                <div class="myth-side">
+                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
+                    <p class="myth-text">&ldquo;It&rsquo;ll take months to get up to speed.&rdquo;</p>
+                </div>
+                <div class="reality-side">
+                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
+                    <p class="reality-text">Most admins are fully operational within 2 weeks. Our onboarding process is built to move fast &mdash; we handle the ramp-up so you&rsquo;re not babysitting a learning curve.</p>
+                </div>
+            </div>
+
+            <div class="myth-row">
+                <div class="myth-side">
+                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
+                    <p class="myth-text">&ldquo;I&rsquo;ll lose control of my communications.&rdquo;</p>
+                </div>
+                <div class="reality-side">
+                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
+                    <p class="reality-text">You set the rules. They execute. You have full visibility into every conversation and maintain final approval on anything that matters. Delegation doesn&rsquo;t mean disappearing.</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- CLOSER -->
+    <section class="closer-section">
+        <p class="closer-text reveal">The best business owners don&rsquo;t answer every email. They hire someone who does it better. <strong class="shimmer-text">That&rsquo;s exactly what Staffify builds for you.</strong></p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary reveal">Get Your Executive Admin</a>
+    </section>
+
+    <footer>
+        <div class="f-logo">Staffify</div>
+        <p class="f-tagline">More Done. Less Stress.</p>
+        <p class="f-tagline">Virtual Assistants &amp; U.S. Based Staffing</p>
+        <div class="f-contact">
+            <a href="tel:3056369210">(305) 636-9210</a>
+            <a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a>
+            <a href="/">Home</a>
+            <a href="/editors/">Video Editors</a>
+            <a href="https://campaigns.gostaffify.com/">Auto Lead Gen</a>
+            <a href="/academy/">Academy</a>
+            <a href="/about/">About</a>
+        </div>
+        <p class="f-copy">&copy; 2026 Staffify LLC. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Scroll reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => entry.target.classList.add('in-view'), i * 80);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Parallax orb on mouse move
+        document.addEventListener('mousemove', (e) => {
+            const orb = document.querySelector('.orb');
+            if (!orb) return;
+            const x = (e.clientX / window.innerWidth - 0.5) * 30;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            orb.style.transform = `translateX(calc(-50% + ${x}px)) translateY(${y}px)`;
+        });
+
+        // Smooth nav background on scroll
+        const nav = document.querySelector('nav');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 80) {
+                nav.style.background = 'rgba(0,0,0,0.92)';
+            } else {
+                nav.style.background = 'rgba(0,0,0,0.72)';
+            }
+        });
+    </script>
+</body>
+</html>

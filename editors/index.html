@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Editors | Staffify</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --c: #1abde1;
+            --c2: #0fa3c5;
+            --c3: #0d82b8;
+            --c4: #1456a4;
+            --red: #ff4040;
+            --black: #000000;
+            --near-black: #0a0a0a;
+            --apple-dark: #1d1d1f;
+            --mid: #3a3a3c;
+            --subtle: #6e6e73;
+            --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.1);
+            --white: #ffffff;
+            --off-white: #f5f5f7;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .nav-logo {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--c);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links { display: flex; gap: 28px; list-style: none; }
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 400;
+            transition: color .2s;
+        }
+        .nav-links a:hover { color: var(--white); }
+
+        .nav-cta {
+            background: var(--c);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 130px 40px 100px;
+            background:
+                radial-gradient(ellipse 90% 60% at 50% -10%, rgba(26,189,225,0.18) 0%, transparent 65%),
+                var(--black);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(26,189,225,0.4), transparent);
+        }
+
+        .orb {
+            position: absolute;
+            top: -220px; left: 50%;
+            transform: translateX(-50%);
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(26,189,225,0.12) 0%, transparent 65%);
+            pointer-events: none;
+            animation: breathe 6s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0%,100% { transform: translateX(-50%) scale(1); opacity: .8; }
+            50% { transform: translateX(-50%) scale(1.12); opacity: 1; }
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 28px;
+            position: relative;
+        }
+        .pulse-dot {
+            width: 7px; height: 7px;
+            background: var(--c);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(26,189,225,0.6); }
+            50% { box-shadow: 0 0 0 6px rgba(26,189,225,0); }
+        }
+
+        .hero h1 {
+            font-size: clamp(44px, 6.5vw, 88px);
+            font-weight: 900;
+            line-height: 1.02;
+            letter-spacing: -2px;
+            margin-bottom: 12px;
+            max-width: 900px;
+            position: relative;
+        }
+
+        .hero-accent {
+            display: block;
+            font-size: clamp(18px, 2.2vw, 28px);
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 8px;
+        }
+
+        .hero-rule {
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--c), var(--c4));
+            border: none;
+            border-radius: 2px;
+            margin: 20px auto 28px;
+        }
+
+        .hero-sub {
+            font-size: clamp(16px, 1.6vw, 19px);
+            color: var(--muted);
+            max-width: 560px;
+            line-height: 1.75;
+            margin-bottom: 44px;
+            font-weight: 400;
+            position: relative;
+        }
+
+        .btn-primary {
+            background: var(--c);
+            color: #fff;
+            padding: 16px 36px;
+            border-radius: 980px;
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all .3s;
+            box-shadow: 0 0 40px rgba(26,189,225,0.35);
+            display: inline-block;
+            position: relative;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background: var(--c2);
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 0 60px rgba(26,189,225,0.55);
+        }
+
+        /* ── SCROLL REVEAL ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
+        }
+        .reveal.in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ── SECTION SHARED ── */
+        section { padding: 120px 40px; position: relative; }
+
+        .section-eyebrow {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--c);
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: clamp(36px, 5vw, 64px);
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: -1.5px;
+            line-height: 1.05;
+            margin-bottom: 24px;
+        }
+
+        .section-sub {
+            font-size: clamp(15px, 1.4vw, 18px);
+            color: var(--muted);
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 60px;
+            line-height: 1.7;
+        }
+
+        /* ── PREDICTABLE COSTS ── */
+        .costs-section {
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 48px 32px;
+            text-align: center;
+            transition: all .4s cubic-bezier(.16,1,.3,1);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--c), transparent);
+            opacity: 0;
+            transition: opacity .4s;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(26,189,225,0.3);
+            background: rgba(255,255,255,0.05);
+        }
+        .card:hover::before { opacity: 1; }
+
+        .card-num {
+            font-size: 48px;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--c);
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+
+        .card p {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.75;
+        }
+
+        /* ── SHOWCASE GRID ── */
+        .showcase-section {
+            background: var(--black);
+        }
+
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .showcase-item {
+            text-align: center;
+        }
+
+        .showcase-visual {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border: 1px solid var(--divider);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            position: relative;
+            transition: border-color .4s, box-shadow .4s;
+            cursor: pointer;
+        }
+        .showcase-visual.portrait {
+            aspect-ratio: 9/16;
+            max-width: 280px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .showcase-visual:hover {
+            border-color: rgba(26,189,225,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .showcase-visual img.thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .showcase-visual iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .play-btn {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255,255,255,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .3s;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .showcase-visual:hover .play-btn {
+            background: rgba(26,189,225,0.45);
+            border-color: var(--c);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+        .showcase-visual.loaded .play-btn { display: none; }
+        .play-btn svg { width: 22px; height: 22px; fill: white; margin-left: 4px; }
+
+        /* Badge for Shorts and AI */
+        .vid-badge {
+            position: absolute;
+            top: 12px; left: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 20px;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .vid-badge.social { background: rgba(26,189,225,0.85); color: #fff; }
+        .vid-badge.ai { background: rgba(147,51,234,0.85); color: #fff; }
+
+        .showcase-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        .showcase-title span { color: var(--c); }
+
+        .showcase-desc {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        /* ── STAT BANNER ── */
+        .stat-banner {
+            background: linear-gradient(135deg, var(--c), var(--c3));
+            padding: 80px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.15), transparent 60%);
+        }
+        .stat-banner p {
+            font-size: clamp(24px, 4vw, 48px);
+            font-weight: 700;
+            line-height: 1.25;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        /* ── MYTH VS REALITY ── */
+        .myths-section {
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+        }
+
+        .myths-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .myth-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            border-bottom: 1px solid var(--divider);
+            transition: background .3s;
+        }
+        .myth-row:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .myth-side, .reality-side {
+            padding: 36px 40px;
+        }
+
+        .myth-side {
+            border-right: 1px solid var(--divider);
+        }
+
+        .myth-label, .reality-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .myth-label { color: var(--red); }
+        .reality-label { color: var(--c); }
+
+        .myth-icon {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 900;
+        }
+        .myth-icon.red { background: rgba(255,64,64,0.15); color: var(--red); }
+        .myth-icon.blue { background: rgba(26,189,225,0.15); color: var(--c); }
+
+        .myth-text {
+            font-size: 16px;
+            color: var(--subtle);
+            line-height: 1.6;
+        }
+        .reality-text {
+            font-size: 16px;
+            color: var(--off-white);
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .myth-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-bottom: 2px solid var(--divider);
+            margin-bottom: 0;
+        }
+        .myth-header div {
+            padding: 20px 40px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .myth-header div:first-child {
+            color: var(--red);
+            border-right: 1px solid var(--divider);
+        }
+        .myth-header div:last-child { color: var(--c); }
+
+        /* ── CLOSER ── */
+        .closer-section {
+            padding: 100px 40px;
+            text-align: center;
+            background:
+                radial-gradient(ellipse 70% 50% at 50% 100%, rgba(26,189,225,0.12) 0%, transparent 65%),
+                var(--near-black);
+            border-top: 1px solid var(--divider);
+        }
+
+        .closer-text {
+            font-size: clamp(20px, 2.5vw, 28px);
+            font-weight: 600;
+            color: var(--off-white);
+            max-width: 700px;
+            margin: 0 auto 40px;
+            line-height: 1.6;
+        }
+
+        /* ── VIDEO CTA SECTION ── */
+        .video-cta-section {
+            padding: 100px 40px;
+            text-align: center;
+            background: var(--black);
+        }
+
+        .video-wrap {
+            max-width: 700px;
+            margin: 0 auto 40px;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--divider);
+            aspect-ratio: 16/9;
+            background: rgba(255,255,255,0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .video-placeholder {
+            font-size: 15px;
+            color: var(--subtle);
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            padding: 60px 40px;
+            border-top: 1px solid var(--divider);
+            text-align: center;
+        }
+
+        .f-logo {
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--c);
+            margin-bottom: 12px;
+        }
+        .f-tagline {
+            font-size: 13px;
+            color: var(--subtle);
+            margin-bottom: 6px;
+        }
+        .f-contact {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .f-contact a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color .2s;
+        }
+        .f-contact a:hover { color: var(--c); }
+
+        .f-copy {
+            font-size: 11px;
+            color: var(--mid);
+            margin-top: 24px;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+            nav { padding: 0 20px; }
+            .nav-links { display: none; }
+            section { padding: 80px 20px; }
+
+            .cards-grid { grid-template-columns: 1fr; max-width: 500px; }
+            .showcase-grid { grid-template-columns: 1fr; max-width: 500px; }
+            .myth-row { grid-template-columns: 1fr; }
+            .myth-side { border-right: none; border-bottom: 1px solid var(--divider); }
+            .myth-header { grid-template-columns: 1fr; }
+            .myth-header div:first-child { border-right: none; border-bottom: 1px solid var(--divider); }
+
+            .hero { padding: 120px 20px 80px; }
+            .stat-banner { padding: 60px 20px; }
+        }
+
+        /* ── COUNT-UP ── */
+        @keyframes countFade {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── SHIMMER ── */
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        .shimmer-text {
+            background: linear-gradient(90deg, var(--c) 0%, #ffffff 50%, var(--c) 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 4s linear infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="/" class="nav-logo">Staffify</a>
+        <ul class="nav-links">
+            <li><a href="/editors/" style="color:var(--white);">Video Editors</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
+            <li><a href="https://campaigns.gostaffify.com/">Auto Lead Gen</a></li>
+            <li><a href="/academy/">Academy</a></li>
+            <li><a href="/about/">About</a></li>
+        </ul>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="orb"></div>
+        <div class="hero-eyebrow"><span class="pulse-dot"></span> VIDEO EDITING, REIMAGINED</div>
+        <h1 class="reveal">On-Demand<br>Video Editors</h1>
+        <span class="hero-accent reveal">Without the Per Project Price Tag</span>
+        <hr class="hero-rule reveal">
+        <p class="hero-sub reveal">Turn unpredictable editing expenses into a predictable monthly investment. Scale up or down based on your workload &mdash; no surprises, no scrambling.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary reveal">Hire Staffify</a>
+    </section>
+
+    <!-- PREDICTABLE COSTS -->
+    <section class="costs-section">
+        <p class="section-eyebrow reveal">Designed for Your Story</p>
+        <h2 class="section-title reveal">Predictable <span class="g">Costs</span></h2>
+        <p class="section-sub reveal">Consistent Quality</p>
+
+        <p class="section-sub reveal" style="max-width:800px;">Managing editing costs shouldn't feel like riding a rollercoaster. At Staffify, we give you a dedicated video editor for one flat monthly rate &mdash; no matter how many projects you take on.</p>
+
+        <div class="cards-grid">
+            <div class="card reveal">
+                <div class="card-num g">1</div>
+                <h3>Simple Pricing, Every Month</h3>
+                <p>Say goodbye to juggling invoices and unpredictable per-project quotes. With Staffify, you pay one flat monthly rate &mdash; whether you have 5 edits or 50. No more recalculating budgets mid-month or bracing for peak-season price hikes.</p>
+            </div>
+            <div class="card reveal">
+                <div class="card-num g">2</div>
+                <h3>Fixed Costs, Steady Growth</h3>
+                <p>Staffify turns the chaos of unpredictable editing costs into a steady, reliable investment. Busy month? Slow month? Your editing bill never changes. That means you can forecast with precision, protect your margins, and finally plan for growth.</p>
+            </div>
+            <div class="card reveal">
+                <div class="card-num g">3</div>
+                <h3>Reliable Editing, Every Time</h3>
+                <p>Tired of scrambling for a last-minute freelancer who &ldquo;might&rdquo; get your vision? With Staffify, you get a dedicated editor who knows your style inside and out. Every cut, every color grade, every transition feels like you did it yourself.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FROM VISION TO VIDEO -->
+    <section class="showcase-section">
+        <p class="section-eyebrow reveal">From Vision to Video</p>
+        <h2 class="section-title reveal" style="margin-bottom:60px;">What Our Editors <span class="g">Deliver</span></h2>
+
+        <div class="showcase-grid">
+            <!-- Video 1: landscape -->
+            <div class="showcase-item reveal">
+                <div class="showcase-visual" onclick="loadYT(this,'f9Hgfq2eQ9Q')">
+                    <img class="thumb" src="https://img.youtube.com/vi/f9Hgfq2eQ9Q/maxresdefault.jpg" alt="Effortless Text FX">
+                    <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>
+                </div>
+                <p class="showcase-title"><span>Effortless Text FX</span> That Stop the Scroll</p>
+                <p class="showcase-desc">Bold typography that moves like it belongs. Our editors craft on-screen text that feels native to trending social formats &mdash; so your content doesn't just perform, it converts.</p>
+            </div>
+            <!-- Video 2: landscape -->
+            <div class="showcase-item reveal">
+                <div class="showcase-visual" onclick="loadYT(this,'grqs_a6dyjI')">
+                    <img class="thumb" src="https://img.youtube.com/vi/grqs_a6dyjI/maxresdefault.jpg" alt="Creative Transitions">
+                    <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>
+                </div>
+                <p class="showcase-title">Creative <span>Transitions</span> Without the Gimmicks</p>
+                <p class="showcase-desc">Transitions designed to feel inevitable. Subtle, sophisticated, and captivating. Your audience won't be able to look away.</p>
+            </div>
+            <!-- Video 3: landscape, AI -->
+            <div class="showcase-item reveal">
+                <div class="showcase-visual" onclick="loadYT(this,'MRklW2tiCjU')">
+                    <img class="thumb" src="https://img.youtube.com/vi/MRklW2tiCjU/maxresdefault.jpg" alt="AI-Enhanced Editing">
+                    <span class="vid-badge ai">AI Enhanced</span>
+                    <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>
+                </div>
+                <p class="showcase-title"><span>AI-Powered</span> Visuals That Feel Human</p>
+                <p class="showcase-desc">We harness cutting-edge AI tools to generate visuals, enhance footage, and build worlds that would be impossible to film &mdash; then our editors make it feel completely real.</p>
+            </div>
+            <!-- Video 4: portrait Short -->
+            <div class="showcase-item reveal">
+                <div class="showcase-visual portrait" onclick="loadYT(this,'X7Ny4yO3Y0g',true)">
+                    <img class="thumb" src="https://img.youtube.com/vi/X7Ny4yO3Y0g/maxresdefault.jpg" alt="Social Media Content">
+                    <span class="vid-badge social">Social</span>
+                    <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>
+                </div>
+                <p class="showcase-title">Scroll-Stopping <span>Social Content</span></p>
+                <p class="showcase-desc">Optimized for Reels, TikTok, and Shorts. Fast-paced, hook-driven edits that grab attention in the first second and hold it all the way through.</p>
+            </div>
+            <!-- Video 5: portrait Short -->
+            <div class="showcase-item reveal">
+                <div class="showcase-visual portrait" onclick="loadYT(this,'w9k6OX27yMs',true)" style="background:linear-gradient(135deg,#0d1117 0%,#1a1a2e 60%,#0a0f1e 100%);">
+                    <span class="vid-badge social">Social</span>
+                    <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>
+                </div>
+                <p class="showcase-title">Trending <span>Formats</span>, On-Brand Every Time</p>
+                <p class="showcase-desc">Your brand voice, translated into whatever format is dominating the feed. We keep you ahead of the curve without you lifting a finger.</p>
+            </div>
+            <!-- Video 6: portrait Short -->
+            <div class="showcase-item reveal">
+                <div class="showcase-visual portrait" onclick="loadYT(this,'KoeUwlBjisA',true)" style="background:linear-gradient(135deg,#0d1117 0%,#1a1a2e 60%,#0a0f1e 100%);">
+                    <span class="vid-badge social">Social</span>
+                    <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>
+                </div>
+                <p class="showcase-title">Built for the <span>Algorithm</span>, Made for Your Audience</p>
+                <p class="showcase-desc">Captions, pacing, hooks, and cuts all tuned for maximum watch time. Content that the algorithm loves and your audience can't stop watching.</p>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin-top:60px;" class="reveal">
+            <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary">Find My Dream Editor</a>
+        </div>
+    </section>
+
+    <!-- STAT BANNER -->
+    <div class="stat-banner reveal">
+        <p>On average, our clients cut editing costs by <strong>55%</strong> &mdash; ditching the overpriced, pay-per-project grind.</p>
+    </div>
+
+    <!-- MYTH VS REALITY -->
+    <section class="myths-section">
+        <p class="section-eyebrow reveal">The Truth About Editing Costs</p>
+        <h2 class="section-title reveal" style="margin-bottom:60px;">Myth vs. <span class="g">Reality</span></h2>
+
+        <div class="myths-grid reveal">
+            <div class="myth-header">
+                <div>Myth</div>
+                <div>Reality</div>
+            </div>
+
+            <div class="myth-row">
+                <div class="myth-side">
+                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
+                    <p class="myth-text">Paying per project gives businesses more control over their budget.</p>
+                </div>
+                <div class="reality-side">
+                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
+                    <p class="reality-text">Per-project pricing creates unpredictable expenses that spike in busy months and disappear in slow ones, making planning nearly impossible.</p>
+                </div>
+            </div>
+
+            <div class="myth-row">
+                <div class="myth-side">
+                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
+                    <p class="myth-text">Seasonal workloads mean it's better to hire editors only when needed.</p>
+                </div>
+                <div class="reality-side">
+                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
+                    <p class="reality-text">Constant turnover leads to inconsistency, lost time training, and lower quality &mdash; slowing growth instead of supporting it.</p>
+                </div>
+            </div>
+
+            <div class="myth-row">
+                <div class="myth-side">
+                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
+                    <p class="myth-text">Freelancers on demand are the most cost-effective option.</p>
+                </div>
+                <div class="reality-side">
+                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
+                    <p class="reality-text">Rush hiring, premium project rates, and inconsistent availability drive up costs and risk missed deadlines.</p>
+                </div>
+            </div>
+
+            <div class="myth-row">
+                <div class="myth-side">
+                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
+                    <p class="myth-text">Scaling is easier when editing is paid for only when projects come in.</p>
+                </div>
+                <div class="reality-side">
+                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
+                    <p class="reality-text">Without predictable expenses and a steady editor, scaling is risky and often stalls before it starts.</p>
+                </div>
+            </div>
+
+            <div class="myth-row">
+                <div class="myth-side">
+                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
+                    <p class="myth-text">Busy seasons are inevitably more expensive.</p>
+                </div>
+                <div class="reality-side">
+                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
+                    <p class="reality-text">With a flat monthly rate from Staffify, editing costs stay the same year-round &mdash; no matter how busy you get.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CLOSER -->
+    <section class="closer-section">
+        <p class="closer-text reveal">With Staffify, the reality is simple: <strong class="shimmer-text">Consistent Costs, Better Quality, and a Partner You Can Count On.</strong></p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary reveal">Partner With Staffify</a>
+    </section>
+
+    <!-- VIDEO CTA -->
+    <section class="video-cta-section">
+        <p class="section-eyebrow reveal">Discover What's Possible</p>
+        <h2 class="section-title reveal" style="margin-bottom:40px;">See a Staffify <span class="g">Editor</span> in Action</h2>
+        <div class="video-wrap reveal" onclick="loadYT(this,'LCdBk8JendE')" style="cursor:pointer;">
+            <img class="thumb" src="https://img.youtube.com/vi/LCdBk8JendE/maxresdefault.jpg" alt="Editor in Action" style="width:100%;height:100%;object-fit:cover;display:block;">
+            <div class="play-btn" style="width:72px;height:72px;">
+                <svg viewBox="0 0 24 24" style="width:28px;height:28px;"><polygon points="5,3 19,12 5,21" fill="white"/></svg>
+            </div>
+        </div>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary reveal">Let's Do This!</a>
+    </section>
+
+    <footer>
+        <div class="f-logo">Staffify</div>
+        <p class="f-tagline">More Done. Less Stress.</p>
+        <p class="f-tagline">Virtual Assistants &amp; U.S. Based Staffing</p>
+        <div class="f-contact">
+            <a href="tel:3056369210">(305) 636-9210</a>
+            <a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a>
+            <a href="/">Home</a>
+            <a href="/admins/">Exec Admins</a>
+            <a href="https://campaigns.gostaffify.com/">Auto Lead Gen</a>
+            <a href="/academy/">Academy</a>
+            <a href="/about/">About</a>
+        </div>
+        <p class="f-copy">&copy; 2026 Staffify LLC. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Scroll reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => entry.target.classList.add('in-view'), i * 80);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Parallax orb on mouse move
+        document.addEventListener('mousemove', (e) => {
+            const orb = document.querySelector('.orb');
+            if (!orb) return;
+            const x = (e.clientX / window.innerWidth - 0.5) * 30;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            orb.style.transform = `translateX(calc(-50% + ${x}px)) translateY(${y}px)`;
+        });
+
+        // YouTube click-to-load
+        function loadYT(el, videoId, isShort) {
+            if (el.classList.contains('loaded')) return;
+            el.classList.add('loaded');
+            const path = isShort ? 'shorts/' : 'embed/';
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+            iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+            iframe.allowFullscreen = true;
+            iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+            // Remove thumbnail and play button, insert iframe
+            el.innerHTML = '';
+            el.appendChild(iframe);
+        }
+
+        // Smooth nav background on scroll
+        const nav = document.querySelector('nav');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 80) {
+                nav.style.background = 'rgba(0,0,0,0.92)';
+            } else {
+                nav.style.background = 'rgba(0,0,0,0.72)';
+            }
+        });
+    </script>
+</body>
+</html>

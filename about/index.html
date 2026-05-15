@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Staffify | More Done. Less Stress.</title>
+    <meta name="description" content="Staffify is a workforce infrastructure company based in Miami, FL. We give growing businesses the people, systems, and tools to scale without the chaos.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --c: #1abde1;
+            --c2: #0fa3c5;
+            --c3: #0d82b8;
+            --c4: #1456a4;
+            --black: #000000;
+            --near-black: #0a0a0a;
+            --card: #0d0d0d;
+            --mid: #3a3a3c;
+            --subtle: #6e6e73;
+            --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08);
+            --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff;
+            --off-white: #f5f5f7;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .nav-logo {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--c);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 400;
+            transition: color .2s;
+        }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+
+        .nav-cta {
+            background: var(--c);
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* HERO */
+        .hero {
+            min-height: 75vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 130px 24px 80px;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(26,189,225,0.14) 0%, transparent 65%), var(--black);
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(26,189,225,0.4), transparent);
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(26,189,225,0.08);
+            border: 1px solid rgba(26,189,225,0.2);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--c);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 32px;
+        }
+
+        .hero h1 {
+            font-size: clamp(52px, 7vw, 96px);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 0.95;
+            margin-bottom: 24px;
+        }
+
+        .hero-sub {
+            font-size: clamp(16px, 1.8vw, 20px);
+            color: var(--muted);
+            max-width: 600px;
+            line-height: 1.65;
+        }
+
+        /* MISSION */
+        .mission-section {
+            padding: 120px 24px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .mission-inner {
+            max-width: 840px;
+            margin: 0 auto;
+        }
+
+        .section-eyebrow {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 20px;
+        }
+
+        .mission-text {
+            font-size: clamp(24px, 3.5vw, 40px);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.25;
+            color: var(--off-white);
+        }
+
+        .mission-text span { color: var(--c); }
+
+        .mission-body {
+            margin-top: 48px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .mission-para {
+            font-size: 16px;
+            color: var(--muted);
+            line-height: 1.75;
+        }
+
+        /* VALUES */
+        .values-section {
+            padding: 120px 24px;
+            background: var(--black);
+        }
+
+        .section-title {
+            font-size: clamp(36px, 4.5vw, 56px);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            text-align: center;
+            margin-bottom: 14px;
+            line-height: 1.1;
+        }
+
+        .section-sub {
+            font-size: 17px;
+            color: var(--muted);
+            text-align: center;
+            max-width: 480px;
+            margin: 0 auto 64px;
+            line-height: 1.65;
+        }
+
+        .values-grid {
+            max-width: 1060px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2px;
+            background: var(--divider);
+            border-radius: 24px;
+            overflow: hidden;
+        }
+
+        .value-card {
+            background: var(--card);
+            padding: 52px 48px;
+            transition: background .2s;
+        }
+        .value-card:hover { background: #111; }
+
+        .value-num {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            color: var(--c);
+            opacity: 0.3;
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+
+        .value-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 14px;
+        }
+
+        .value-desc {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        /* STATS ROW */
+        .stats-section {
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+            padding: 80px 24px;
+        }
+
+        .stats-row {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0 24px;
+            position: relative;
+        }
+        .stat-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            right: 0; top: 10%; bottom: 10%;
+            width: 1px;
+            background: var(--divider2);
+        }
+
+        .stat-num {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            color: var(--c);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        .stat-label { font-size: 13px; color: var(--muted); }
+
+        /* TEAM */
+        .team-section {
+            padding: 120px 24px;
+            background: var(--black);
+        }
+
+        .team-grid {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+        }
+
+        .team-card {
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 40px 28px;
+            text-align: center;
+        }
+
+        .team-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--c), var(--c4));
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .team-name {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .team-role {
+            font-size: 13px;
+            color: var(--c);
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        .team-bio {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        /* CTA */
+        .cta-section {
+            padding: 140px 24px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-orb {
+            position: absolute;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(26,189,225,0.1) 0%, transparent 70%);
+            filter: blur(80px);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .cta-title {
+            font-size: clamp(36px, 5vw, 60px);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1.05;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .cta-sub {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 440px;
+            margin: 0 auto 48px;
+            line-height: 1.65;
+            position: relative;
+        }
+
+        .btn-primary {
+            background: var(--c);
+            color: #fff;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-block;
+            transition: all .25s;
+            position: relative;
+        }
+        .btn-primary:hover { background: var(--c2); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(26,189,225,0.35); }
+
+        /* FOOTER */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+
+        .footer-grid {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 60px;
+        }
+
+        .footer-brand p {
+            font-size: 13px;
+            color: var(--subtle);
+            line-height: 1.7;
+            margin-top: 12px;
+            max-width: 280px;
+        }
+
+        .footer-col h4 {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px;
+            color: var(--subtle);
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+
+        .footer-bottom {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 32px;
+            border-top: 1px solid var(--divider);
+            font-size: 12px;
+            color: var(--subtle);
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(32px);
+            transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+        }
+        .reveal.visible { opacity: 1; transform: none; }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .mission-body { grid-template-columns: 1fr; }
+            .values-grid { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 32px 0; }
+            .stat-item:nth-child(2)::after, .stat-item:nth-child(4)::after { display: none; }
+            .team-grid { grid-template-columns: 1fr; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Staffify</a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="https://campaigns.gostaffify.com/">Auto Lead Gen</a></li>
+        <li><a href="/academy/">Academy</a></li>
+        <li><a href="/about/" class="active">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+</nav>
+
+<section class="hero">
+    <div class="hero-eyebrow">Miami, FL — Founded 2023</div>
+    <h1>We build the<br><span class="g">team behind you.</span></h1>
+    <p class="hero-sub">
+        Staffify is a workforce infrastructure company. We give growing businesses the people, systems, and tools to scale — without the chaos.
+    </p>
+</section>
+
+<section class="mission-section">
+    <div class="mission-inner">
+        <div class="section-eyebrow reveal">Our Mission</div>
+        <p class="mission-text reveal">
+            We believe the best business owners shouldn't be spending their time answering emails, editing videos, or chasing leads. <span>That's what we're here for.</span>
+        </p>
+        <div class="mission-body">
+            <p class="mission-para reveal">
+                Staffify was built for the business owner who's growing fast but still doing too much themselves. We saw how hard it was to find reliable, affordable help — and how expensive and complicated it was to hire, train, and manage someone new.
+            </p>
+            <p class="mission-para reveal">
+                So we built an infrastructure that handles all of it. You get a trained, vetted professional who shows up ready to work. We manage payroll, compliance, and HR. You just run your business.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="values-section">
+    <div class="section-eyebrow reveal" style="text-align:center;">How We Work</div>
+    <h2 class="section-title reveal">Our <span class="g">Values</span></h2>
+    <p class="section-sub reveal">The principles behind every hire, every decision, every client relationship.</p>
+
+    <div class="values-grid">
+        <div class="value-card reveal">
+            <div class="value-num">01</div>
+            <div class="value-title">Speed Without Shortcuts</div>
+            <p class="value-desc">We move fast because our clients need to. Two-week onboarding isn't a promise — it's a process we've engineered specifically to get results without cutting corners on quality.</p>
+        </div>
+        <div class="value-card reveal">
+            <div class="value-num">02</div>
+            <div class="value-title">People First</div>
+            <p class="value-desc">The professionals we place are the product. We invest in their training, their growth, and their long-term success — because when they win, our clients win.</p>
+        </div>
+        <div class="value-card reveal">
+            <div class="value-num">03</div>
+            <div class="value-title">Radical Transparency</div>
+            <p class="value-desc">No hidden fees. No vague deliverables. No surprises. You'll always know exactly what you're paying for, who's working for you, and what's being done.</p>
+        </div>
+        <div class="value-card reveal">
+            <div class="value-num">04</div>
+            <div class="value-title">Partnership Over Transactions</div>
+            <p class="value-desc">We don't close deals and disappear. We're long-term partners invested in your business's growth. Our retention rate reflects that — and so does our referral rate.</p>
+        </div>
+    </div>
+</section>
+
+<section class="stats-section">
+    <div class="stats-row">
+        <div class="stat-item reveal">
+            <div class="stat-num">95%</div>
+            <div class="stat-label">Client retention rate</div>
+        </div>
+        <div class="stat-item reveal">
+            <div class="stat-num">2 wks</div>
+            <div class="stat-label">Average onboarding</div>
+        </div>
+        <div class="stat-item reveal">
+            <div class="stat-num">$0</div>
+            <div class="stat-label">HR & payroll overhead</div>
+        </div>
+        <div class="stat-item reveal">
+            <div class="stat-num">3</div>
+            <div class="stat-label">Core service lines</div>
+        </div>
+    </div>
+</section>
+
+<section class="team-section">
+    <div class="section-eyebrow reveal" style="text-align:center;">The Team</div>
+    <h2 class="section-title reveal">Built by <span class="g">operators</span>.</h2>
+    <p class="section-sub reveal">People who've felt the pain of scaling a business without the right support.</p>
+
+    <div class="team-grid">
+        <div class="team-card reveal">
+            <div class="team-avatar">P</div>
+            <div class="team-name">Paul</div>
+            <div class="team-role">Founder & CEO</div>
+            <p class="team-bio">Former business owner who built Staffify to solve the exact problems he faced scaling his own company. Miami native, obsessed with systems.</p>
+        </div>
+        <div class="team-card reveal">
+            <div class="team-avatar">O</div>
+            <div class="team-name">Operations</div>
+            <div class="team-role">Client Success</div>
+            <p class="team-bio">Our client success team ensures every placement goes smoothly and every client gets exactly what they need — from onboarding to ongoing support.</p>
+        </div>
+        <div class="team-card reveal">
+            <div class="team-avatar">T</div>
+            <div class="team-name">Talent</div>
+            <div class="team-role">Recruiting & Training</div>
+            <p class="team-bio">We vet hundreds of candidates for every placement. Our talent team only advances people they'd personally trust to represent their own business.</p>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section">
+    <div class="cta-orb"></div>
+    <h2 class="cta-title reveal">
+        Ready to work<br>
+        <span class="g">with us?</span>
+    </h2>
+    <p class="cta-sub reveal">Book a free 15-minute call. No pressure — just a real conversation about your business.</p>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary reveal">Book a Discovery Call →</a>
+    <div style="margin-top:32px;display:flex;justify-content:center;gap:28px;flex-wrap:wrap;" class="reveal">
+        <a href="tel:3056369210" style="color:var(--subtle);text-decoration:none;font-size:14px;">(305) 636-9210</a>
+        <a href="mailto:hello@gostaffify.com" style="color:var(--subtle);text-decoration:none;font-size:14px;">hello@gostaffify.com</a>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;">Staffify</a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="https://campaigns.gostaffify.com/">Auto Lead Gen</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/academy/">Academy</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+    const reveals = document.querySelectorAll('.reveal');
+    const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => obs.observe(el));
+
+    window.addEventListener('scroll', () => {
+        const nav = document.querySelector('nav');
+        nav.style.background = window.scrollY > 80 ? 'rgba(0,0,0,0.92)' : 'rgba(0,0,0,0.72)';
+    });
+</script>
+
+</body>
+</html>

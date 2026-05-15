@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StaffifyAcademy | Training for the Modern Team</title>
+    <meta name="description" content="StaffifyAcademy — resources, playbooks, and training designed to help business owners delegate smarter, lead better, and scale faster.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --c: #1abde1;
+            --c2: #0fa3c5;
+            --c3: #0d82b8;
+            --c4: #1456a4;
+            --black: #000000;
+            --near-black: #0a0a0a;
+            --card: #0d0d0d;
+            --mid: #3a3a3c;
+            --subtle: #6e6e73;
+            --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08);
+            --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff;
+            --off-white: #f5f5f7;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .nav-logo {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--c);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 400;
+            transition: color .2s;
+        }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+
+        .nav-cta {
+            background: var(--c);
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* HERO */
+        .hero {
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 130px 24px 80px;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(26,189,225,0.14) 0%, transparent 65%), var(--black);
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(26,189,225,0.4), transparent);
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(26,189,225,0.08);
+            border: 1px solid rgba(26,189,225,0.2);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--c);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 32px;
+        }
+
+        .hero h1 {
+            font-size: clamp(52px, 7vw, 96px);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 0.95;
+            margin-bottom: 24px;
+        }
+
+        .hero-sub {
+            font-size: clamp(16px, 1.8vw, 20px);
+            color: var(--muted);
+            max-width: 560px;
+            line-height: 1.65;
+            margin-bottom: 48px;
+        }
+
+        .btn-primary {
+            background: var(--c);
+            color: #fff;
+            padding: 16px 36px;
+            border-radius: 50px;
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-block;
+            transition: all .25s;
+        }
+        .btn-primary:hover { background: var(--c2); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(26,189,225,0.35); }
+
+        /* COMING SOON SECTION */
+        .coming-soon {
+            padding: 100px 24px;
+            text-align: center;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .coming-soon-badge {
+            display: inline-block;
+            background: rgba(26,189,225,0.08);
+            border: 1px solid rgba(26,189,225,0.2);
+            color: var(--c);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+        }
+
+        .coming-soon h2 {
+            font-size: clamp(32px, 4vw, 52px);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+        }
+
+        .coming-soon p {
+            font-size: 17px;
+            color: var(--muted);
+            max-width: 480px;
+            margin: 0 auto 48px;
+            line-height: 1.65;
+        }
+
+        /* TRACK GRID */
+        .tracks-section {
+            padding: 100px 24px;
+            background: var(--black);
+        }
+
+        .section-eyebrow {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--c);
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: clamp(36px, 4.5vw, 56px);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            text-align: center;
+            margin-bottom: 14px;
+            line-height: 1.1;
+        }
+
+        .section-sub {
+            font-size: 17px;
+            color: var(--muted);
+            text-align: center;
+            max-width: 480px;
+            margin: 0 auto 64px;
+            line-height: 1.65;
+        }
+
+        .tracks-grid {
+            max-width: 1060px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .track-card {
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 40px 32px;
+            transition: border-color .2s, transform .2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .track-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--c), transparent);
+            opacity: 0;
+            transition: opacity .3s;
+        }
+        .track-card:hover { border-color: rgba(26,189,225,0.3); transform: translateY(-4px); }
+        .track-card:hover::before { opacity: 1; }
+
+        .track-icon {
+            font-size: 44px;
+            line-height: 1;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .track-status {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 14px;
+        }
+        .track-status.coming { background: rgba(26,189,225,0.1); color: var(--c); border: 1px solid rgba(26,189,225,0.2); }
+        .track-status.live { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+
+        .track-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .track-desc {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        /* NOTIFY */
+        .notify-section {
+            padding: 100px 24px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            text-align: center;
+        }
+
+        .notify-wrap {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .notify-form {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .notify-input {
+            flex: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--divider2);
+            border-radius: 10px;
+            padding: 14px 18px;
+            color: var(--white);
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .notify-input::placeholder { color: var(--subtle); }
+        .notify-input:focus { border-color: rgba(26,189,225,0.4); }
+
+        .notify-btn {
+            background: var(--c);
+            color: #fff;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            font-family: inherit;
+            transition: background .2s;
+        }
+        .notify-btn:hover { background: var(--c2); }
+
+        /* FOOTER */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+
+        .footer-grid {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 60px;
+        }
+
+        .footer-brand p {
+            font-size: 13px;
+            color: var(--subtle);
+            line-height: 1.7;
+            margin-top: 12px;
+            max-width: 280px;
+        }
+
+        .footer-col h4 {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px;
+            color: var(--subtle);
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+
+        .footer-bottom {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 32px;
+            border-top: 1px solid var(--divider);
+            font-size: 12px;
+            color: var(--subtle);
+        }
+
+        /* REVEAL */
+        .reveal {
+            opacity: 0;
+            transform: translateY(32px);
+            transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+        }
+        .reveal.visible { opacity: 1; transform: none; }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .tracks-grid { grid-template-columns: 1fr; }
+            .notify-form { flex-direction: column; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Staffify</a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="https://campaigns.gostaffify.com/">Auto Lead Gen</a></li>
+        <li><a href="/academy/" class="active">Academy</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+</nav>
+
+<section class="hero">
+    <div class="hero-eyebrow">Knowledge Base for Growth</div>
+    <h1>Staffify<br><span class="g">Academy</span></h1>
+    <p class="hero-sub">
+        Playbooks, training, and resources to help you delegate smarter, lead better, and scale faster.
+    </p>
+    <a href="#tracks" class="btn-primary">Explore Learning Tracks</a>
+</section>
+
+<div class="coming-soon reveal">
+    <div class="coming-soon-badge">Launching Soon</div>
+    <h2>Something Big<br>Is <span class="g">Coming</span></h2>
+    <p>StaffifyAcademy is being built right now. Sign up below and you'll be the first to know when we go live.</p>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary">Talk to Us Now</a>
+</div>
+
+<section class="tracks-section" id="tracks">
+    <div class="section-eyebrow reveal">Learning Tracks</div>
+    <h2 class="section-title reveal">What You'll <span class="g">Learn</span></h2>
+    <p class="section-sub reveal">Practical training for business owners who want to build a team that runs without them.</p>
+
+    <div class="tracks-grid">
+        <div class="track-card reveal">
+            <span class="track-icon">🎯</span>
+            <div class="track-status coming">Coming Soon</div>
+            <div class="track-name">Delegation Mastery</div>
+            <p class="track-desc">How to identify what to hand off, document it in under an hour, and train someone to do it better than you.</p>
+        </div>
+        <div class="track-card reveal">
+            <span class="track-icon">📞</span>
+            <div class="track-status coming">Coming Soon</div>
+            <div class="track-name">Client Communication SOPs</div>
+            <p class="track-desc">Proven scripts and systems for handling every client interaction — from first contact to renewal — without you in the room.</p>
+        </div>
+        <div class="track-card reveal">
+            <span class="track-icon">🎬</span>
+            <div class="track-status coming">Coming Soon</div>
+            <div class="track-name">Content at Scale</div>
+            <p class="track-desc">How to brief editors, maintain brand consistency, and get 10x the output from a dedicated content team.</p>
+        </div>
+        <div class="track-card reveal">
+            <span class="track-icon">⚡</span>
+            <div class="track-status coming">Coming Soon</div>
+            <div class="track-name">Lead Gen Automation</div>
+            <p class="track-desc">Build outbound systems that generate qualified conversations every week without cold calling or manual prospecting.</p>
+        </div>
+        <div class="track-card reveal">
+            <span class="track-icon">📊</span>
+            <div class="track-status coming">Coming Soon</div>
+            <div class="track-name">Managing Remote Teams</div>
+            <p class="track-desc">Set expectations, track performance, and build culture with a team you may never meet in person.</p>
+        </div>
+        <div class="track-card reveal">
+            <span class="track-icon">🚀</span>
+            <div class="track-status coming">Coming Soon</div>
+            <div class="track-name">Scale Without Chaos</div>
+            <p class="track-desc">The systems, tools, and mindset shifts that let you grow revenue without growing your personal workload.</p>
+        </div>
+    </div>
+</section>
+
+<section class="notify-section">
+    <div class="notify-wrap reveal">
+        <h2 class="section-title" style="text-align:left;font-size:clamp(28px,3.5vw,42px);margin-bottom:12px;">Get notified<br>when we <span class="g">launch</span></h2>
+        <p style="text-align:left;font-size:15px;color:var(--muted);line-height:1.6;">Drop your email and you'll be the first inside StaffifyAcademy — plus early access pricing.</p>
+        <form class="notify-form" onsubmit="handleNotify(event)">
+            <input type="email" class="notify-input" placeholder="your@email.com" required>
+            <button type="submit" class="notify-btn">Notify Me</button>
+        </form>
+        <p id="notify-confirm" style="display:none;margin-top:16px;font-size:14px;color:var(--c);font-weight:600;">✓ You're on the list. We'll be in touch.</p>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;">Staffify</a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="https://campaigns.gostaffify.com/">Auto Lead Gen</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/academy/">Academy</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+    const reveals = document.querySelectorAll('.reveal');
+    const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => obs.observe(el));
+
+    window.addEventListener('scroll', () => {
+        const nav = document.querySelector('nav');
+        nav.style.background = window.scrollY > 80 ? 'rgba(0,0,0,0.92)' : 'rgba(0,0,0,0.72)';
+    });
+
+    function handleNotify(e) {
+        e.preventDefault();
+        document.getElementById('notify-confirm').style.display = 'block';
+        e.target.style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
