@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}} | Staffify Blog</title>
+    <meta name="description" content="{{DESCRIPTION}}">
+    <link rel="canonical" href="https://www.gostaffify.com/blog/{{SLUG}}/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.gostaffify.com/blog/{{SLUG}}/">
+    <meta property="og:title" content="{{TITLE}}">
+    <meta property="og:description" content="{{DESCRIPTION}}">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="article:published_time" content="{{PUBLISHED_ISO}}">
+    <meta property="article:author" content="Staffify">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{TITLE}}">
+    <meta name="twitter:description" content="{{DESCRIPTION}}">
+
+    <!-- Schema.org Article -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "{{TITLE_JSON}}",
+      "description": "{{DESCRIPTION_JSON}}",
+      "datePublished": "{{PUBLISHED_ISO}}",
+      "author": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "publisher": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://www.gostaffify.com/blog/{{SLUG}}/" }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* POST HEADER */
+        .post-header {
+            padding: 140px 24px 60px;
+            max-width: 760px; margin: 0 auto;
+            text-align: left;
+            border-bottom: 1px solid var(--divider);
+        }
+        .post-meta-top {
+            display: flex; gap: 16px; align-items: center;
+            font-size: 12px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+            margin-bottom: 32px;
+        }
+        .post-meta-top .crumb { color: var(--c); }
+        .post-meta-top .sep { opacity: 0.4; }
+        .post-title {
+            font-size: clamp(34px, 5vw, 56px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08; margin-bottom: 28px;
+            color: var(--white);
+        }
+        .post-dek {
+            font-size: 19px; line-height: 1.6;
+            color: rgba(255,255,255,0.65);
+            max-width: 640px; font-weight: 400;
+            margin-bottom: 36px;
+        }
+        .post-byline {
+            display: flex; gap: 24px; align-items: center;
+            font-size: 13px; color: var(--muted);
+            padding-top: 24px;
+        }
+        .post-byline strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ARTICLE BODY */
+        article {
+            max-width: 720px; margin: 0 auto;
+            padding: 64px 24px 80px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 19px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article p { margin-bottom: 28px; }
+        article h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(26px, 3.5vw, 34px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 56px 0 20px;
+            line-height: 1.2;
+        }
+        article h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+            color: var(--white);
+            margin: 40px 0 14px; line-height: 1.3;
+        }
+        article ul, article ol { margin: 0 0 28px; padding-left: 28px; }
+        article li { margin-bottom: 10px; }
+        article a { color: var(--c); text-decoration: none; border-bottom: 1px solid rgba(26,189,225,0.3); transition: border-color .2s; }
+        article a:hover { border-bottom-color: var(--c); }
+        article strong { color: var(--white); font-weight: 700; }
+        article em { color: rgba(255,255,255,0.7); }
+        article blockquote {
+            border-left: 3px solid var(--c);
+            padding: 8px 24px;
+            margin: 32px 0;
+            font-style: italic;
+            color: rgba(255,255,255,0.7);
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 8px 8px 0;
+        }
+        article hr {
+            border: none;
+            border-top: 1px solid var(--divider);
+            margin: 56px 0;
+        }
+        article code {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.9em;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--c);
+        }
+
+        /* CTA at end of post */
+        .post-cta {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+        .post-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 44px 40px;
+            text-align: left;
+        }
+        .post-cta-eyebrow {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--c);
+            margin-bottom: 16px;
+        }
+        .post-cta-title {
+            font-size: 26px; font-weight: 800;
+            letter-spacing: -0.02em; line-height: 1.2;
+            color: var(--white); margin-bottom: 14px;
+        }
+        .post-cta-body {
+            font-size: 15px; line-height: 1.65;
+            color: var(--muted); margin-bottom: 24px;
+            max-width: 540px;
+        }
+        .post-cta-btn {
+            display: inline-block;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 980px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .post-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* BACK TO BLOG */
+        .post-foot {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 60px;
+            text-align: center;
+        }
+        .post-foot a {
+            color: var(--muted); text-decoration: none;
+            font-size: 13px; font-weight: 500;
+            transition: color .2s;
+        }
+        .post-foot a:hover { color: var(--white); }
+
+        /* FOOTER */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 13px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 12px; color: var(--subtle);
+        }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .post-header { padding-top: 110px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Staffify</a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/campaigns/">Auto Lead Gen</a></li>
+        <li><a href="/academy/">Academy</a></li>
+        <li><a href="/blog/" class="active">Blog</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+</nav>
+
+<header class="post-header">
+    <div class="post-meta-top">
+        <a href="/blog/" class="crumb" style="text-decoration:none;color:var(--c);">Blog</a>
+        <span class="sep">/</span>
+        <span>Scaling Service Businesses</span>
+    </div>
+    <h1 class="post-title">{{TITLE}}</h1>
+    <p class="post-dek">{{DEK}}</p>
+    <div class="post-byline">
+        <span><strong>Staffify Team</strong></span>
+        <span>·</span>
+        <span>{{PUBLISHED_HUMAN}}</span>
+        <span>·</span>
+        <span>{{READ_TIME}} min read</span>
+    </div>
+</header>
+
+<article>
+{{BODY_HTML}}
+</article>
+
+<section class="post-cta">
+    <div class="post-cta-card">
+        <div class="post-cta-eyebrow">Built for service businesses</div>
+        <h3 class="post-cta-title">Want the team behind your growth, not in front of it?</h3>
+        <p class="post-cta-body">Staffify gives service businesses the people, systems, and infrastructure to scale without the chaos. Vetted talent, real accountability, lifetime replacement guarantee.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="post-cta-btn">Book a Discovery Call →</a>
+    </div>
+</section>
+
+<div class="post-foot">
+    <a href="/blog/">← Back to all posts</a>
+</div>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;">Staffify</a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/campaigns/">Auto Lead Gen</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/academy/">Academy</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span>Miami, FL</span>
+    </div>
+</footer>
+
+</body>
+</html>

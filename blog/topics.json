@@ -1,0 +1,235 @@
+{
+  "_comment": "Topic queue for the automated blog. Generator pulls the next topic with status='pending'. Add new topics at any time. Set status='done' or 'skip' to skip. The generator never re-uses a 'done' topic.",
+  "topics": [
+    {
+      "slug": "first-employee-vs-va",
+      "title": "First Employee Or First VA? The Decision Framework Most Service Businesses Get Wrong",
+      "intent": "Founder considering first hire, debating in-house vs offshore VA. Educate on the tradeoffs, position Staffify as the modern answer.",
+      "keywords": [
+        "first employee",
+        "first va",
+        "when to hire",
+        "service business hiring"
+      ],
+      "status": "done",
+      "published_iso": "2026-05-16T02:16:44Z"
+    },
+    {
+      "slug": "operator-trap",
+      "title": "Why $1M Service Businesses Stall: The Operator Trap And How To Escape It",
+      "intent": "Owners stuck working in the business not on it. Frame the trap, give the exit path, position infrastructure (vs. just hiring) as the unlock.",
+      "keywords": [
+        "service business growth",
+        "operator vs owner",
+        "scale service business"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "delegation-matrix",
+      "title": "The Delegation Matrix: What Service Business Owners Should Keep, Outsource, And Automate",
+      "intent": "Practical framework, decision tool. Reader leaves with a checklist they can apply this week.",
+      "keywords": [
+        "delegation",
+        "outsourcing",
+        "automation",
+        "small business operations"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "sops-that-stick",
+      "title": "Why Most SOPs Get Ignored And How To Build Ones Your Team Actually Follows",
+      "intent": "Owners who tried SOPs and saw no behavior change. Diagnose the failure modes, give the rebuild.",
+      "keywords": [
+        "sop",
+        "standard operating procedures",
+        "process documentation",
+        "team adoption"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "hidden-cost-of-doing-it-yourself",
+      "title": "The Hidden Cost Of Doing It Yourself: A Service Business Owner's Hour Audit",
+      "intent": "Get owners to calculate what their hour is actually worth and where it's leaking. Soft CTA to Staffify.",
+      "keywords": [
+        "effective hourly rate",
+        "delegate",
+        "founder time",
+        "service business operations"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "offshore-talent-fit",
+      "title": "When Offshore Talent Works And When It Doesn't: An Honest Read",
+      "intent": "Owners who burned out on bad VA experiences. Build trust by being candid about failure modes, then position infrastructure as the missing piece.",
+      "keywords": [
+        "offshore va",
+        "virtual assistant",
+        "remote talent",
+        "filipino va"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "client-onboarding-that-scales",
+      "title": "The 11-Step Client Onboarding That Scales: A Service Business Playbook",
+      "intent": "Practical playbook. Reader leaves with a copyable framework. Demonstrates Staffify's operational depth.",
+      "keywords": [
+        "client onboarding",
+        "service business systems",
+        "customer experience"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "coo-function-before-coo",
+      "title": "How To Run The COO Function Before You Can Afford A COO",
+      "intent": "$500K–$2M service businesses that need operational lift but can't afford a $180K hire. Position Staffify's infra layer.",
+      "keywords": [
+        "coo",
+        "operations leader",
+        "small business operations",
+        "fractional coo"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "bottleneck-audit",
+      "title": "The Bottleneck Audit: Finding What's Actually Stopping Your Service Business From Growing",
+      "intent": "Diagnostic article. Step-by-step framework owners can run in 60 minutes.",
+      "keywords": [
+        "growth bottleneck",
+        "operational audit",
+        "business diagnostics"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "retention-multiplier",
+      "title": "The Retention Multiplier: Why Keeping A Client Is 5x Cheaper Than Getting One",
+      "intent": "Reframe spend toward retention systems. Pair with case-study tone. Soft CTA to Exec Admin service.",
+      "keywords": [
+        "client retention",
+        "customer success",
+        "ltv",
+        "service business metrics"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "pricing-power",
+      "title": "Pricing Power For Service Businesses: How To Stop Trading Hours For Dollars",
+      "intent": "Move owners off hourly billing. Tactical and philosophical. Demonstrates premium positioning Staffify embodies.",
+      "keywords": [
+        "pricing strategy",
+        "value pricing",
+        "service business pricing",
+        "stop trading time for money"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "lead-gen-vs-sales",
+      "title": "Lead Gen vs Sales: Why Your Service Business Funnel Is Probably Breaking In One Of Three Places",
+      "intent": "Diagnose the funnel. Funnels into Auto Lead Gen service.",
+      "keywords": [
+        "lead generation",
+        "sales funnel",
+        "b2b lead gen",
+        "service business sales"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "hiring-funnel",
+      "title": "From 'We Need Help' To First Day: The Service Business Hiring Funnel That Doesn't Collapse",
+      "intent": "Walk through the hiring funnel mistakes. Position Staffify's vetting-first model.",
+      "keywords": [
+        "hiring funnel",
+        "service business hiring",
+        "vetting candidates"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "when-to-fire-a-client",
+      "title": "When To Fire A Client (And How To Do It Without Burning The Relationship)",
+      "intent": "Mature operator article. Build credibility. Reader: owners with a few clients eating disproportionate time.",
+      "keywords": [
+        "firing a client",
+        "client management",
+        "service business boundaries"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "minimum-viable-team",
+      "title": "The Minimum Viable Team Behind A 7-Figure Service Business",
+      "intent": "Reverse-engineer the team. Demystify. Position Staffify roles inside the structure.",
+      "keywords": [
+        "small team",
+        "7 figure business",
+        "service business team structure"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "kpis-that-actually-move-growth",
+      "title": "The Five KPIs That Actually Move Service Business Growth (And The Vanity Metrics You Can Ignore)",
+      "intent": "Sharp, practical. Reader leaves with a measurable scorecard.",
+      "keywords": [
+        "service business kpi",
+        "business metrics",
+        "vanity metrics"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "specialists-vs-generalists",
+      "title": "Specialists Or Generalists? How Service Businesses Should Staff Their First Five Roles",
+      "intent": "Structural advice on early hires. Useful for founders building their first team.",
+      "keywords": [
+        "specialist vs generalist",
+        "first hires",
+        "small business staffing"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "outsource-or-hire",
+      "title": "Outsource Or Hire? A Decision Tree For Every Role In A Growing Service Business",
+      "intent": "Decision-tree article with concrete logic. Reader can copy/use.",
+      "keywords": [
+        "outsource",
+        "hire in house",
+        "build vs buy talent"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "process-before-people",
+      "title": "The 'Process Before People' Mistake: Why Hiring Without Systems Multiplies Your Chaos",
+      "intent": "Counter the 'just hire someone' instinct. Make the case for infrastructure first.",
+      "keywords": [
+        "process before people",
+        "systems vs hiring",
+        "service business operations"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "cash-flow-rules",
+      "title": "Cash Flow Rules Every Service Business Owner Should Run On Autopilot",
+      "intent": "Tactical finance article. Build trust through specificity. Avoids being a Staffify pitch.",
+      "keywords": [
+        "service business cash flow",
+        "small business finance",
+        "profit margins"
+      ],
+      "status": "pending"
+    }
+  ]
+}
