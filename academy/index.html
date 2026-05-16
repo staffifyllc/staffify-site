@@ -649,42 +649,61 @@
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            gap: 24px;
         }
         .testimonial-card {
             background: var(--card);
             border: 1px solid var(--divider);
             border-radius: 18px;
-            padding: 32px 28px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
+            transition: border-color .2s, transform .2s;
         }
-        .testimonial-quote-mark {
-            font-size: 48px;
-            line-height: 1;
-            color: var(--c);
-            opacity: 0.5;
-            font-family: Georgia, serif;
-            font-weight: 700;
-            height: 28px;
-            margin-bottom: 6px;
+        .testimonial-card:hover {
+            border-color: rgba(26,189,225,0.3);
+            transform: translateY(-2px);
         }
-        .testimonial-quote {
-            font-size: 15px;
-            line-height: 1.7;
-            color: rgba(255,255,255,0.78);
-            flex-grow: 1;
-            margin-bottom: 24px;
+        .testimonial-video-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 9 / 16;
+            background: #000;
+            overflow: hidden;
+        }
+        .testimonial-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+        .testimonial-body {
+            padding: 22px 24px 26px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
         .testimonial-name {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 700;
             color: var(--white);
         }
         .testimonial-co {
             font-size: 12px;
             color: var(--c);
-            margin-top: 2px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+        .testimonial-quote {
+            font-size: 13px;
+            line-height: 1.65;
+            color: rgba(255,255,255,0.6);
+            margin-top: 8px;
+        }
+        @media (max-width: 700px) {
+            .testimonial-video-wrap { aspect-ratio: 4 / 5; }
         }
 
         /* ── FINAL CTA ────────────────────────────────────────────── */
@@ -926,22 +945,40 @@
 
     <div class="testimonials-grid">
         <div class="testimonial-card reveal">
-            <div class="testimonial-quote-mark">&ldquo;</div>
-            <p class="testimonial-quote">I've already paid a lot of money into different coaching, mentorships, and books to educate myself as a business owner. Hands down one of the most impactful things I've ever done is work with the Staffify team.</p>
-            <div class="testimonial-name">Tevin Colon</div>
-            <div class="testimonial-co">Lightreel Media, Owner</div>
+            <div class="testimonial-video-wrap">
+                <video class="testimonial-video" preload="metadata" controls playsinline aria-label="Tevin Colon testimonial">
+                    <source src="/assets/video/testimonial-tevin.mp4" type="video/mp4">
+                </video>
+            </div>
+            <div class="testimonial-body">
+                <div class="testimonial-name">Tevin Colon</div>
+                <div class="testimonial-co">Lightreel Media, Owner</div>
+                <p class="testimonial-quote">"I've already paid a lot into coaching and mentorships to educate myself as a business owner. Hands down one of the most impactful things I've ever done is work with the Staffify team."</p>
+            </div>
         </div>
         <div class="testimonial-card reveal">
-            <div class="testimonial-quote-mark">&ldquo;</div>
-            <p class="testimonial-quote">I rapidly grew my revenue, I rapidly grew my social media presence, and it allowed me to take on new clients. Not only in my lane, but in different avenues.</p>
-            <div class="testimonial-name">Raffi Sarajian</div>
-            <div class="testimonial-co">Gotham Media, Owner</div>
+            <div class="testimonial-video-wrap">
+                <video class="testimonial-video" preload="metadata" controls playsinline aria-label="Raffi Sarajian testimonial">
+                    <source src="/assets/video/testimonial-raffi.mp4" type="video/mp4">
+                </video>
+            </div>
+            <div class="testimonial-body">
+                <div class="testimonial-name">Raffi Sarajian</div>
+                <div class="testimonial-co">Gotham Media, Owner</div>
+                <p class="testimonial-quote">"I rapidly grew my revenue and my social media presence. It allowed me to take on new clients, not only in my lane but in different avenues."</p>
+            </div>
         </div>
         <div class="testimonial-card reveal">
-            <div class="testimonial-quote-mark">&ldquo;</div>
-            <p class="testimonial-quote">Paul and the team really crushed it. They gave me a bunch of great insights and showed me a lot of blind spots I hadn't thought about. Helped me diversify and make my business stronger.</p>
-            <div class="testimonial-name">Michael Muchnij</div>
-            <div class="testimonial-co">Home &amp; Hearth Productions, Owner</div>
+            <div class="testimonial-video-wrap">
+                <video class="testimonial-video" preload="metadata" controls playsinline aria-label="Michael Muchnij testimonial">
+                    <source src="/assets/video/testimonial-michael.mp4" type="video/mp4">
+                </video>
+            </div>
+            <div class="testimonial-body">
+                <div class="testimonial-name">Michael Muchnij</div>
+                <div class="testimonial-co">Home &amp; Hearth Productions, Owner</div>
+                <p class="testimonial-quote">"Paul and the team really crushed it. They showed me a lot of blind spots I hadn't thought about. Helped me diversify and make my business stronger."</p>
+            </div>
         </div>
     </div>
 </section>
