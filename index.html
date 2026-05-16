@@ -568,12 +568,57 @@
             max-width: 1160px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 1px;
             background: rgba(255,255,255,0.06);
             border-radius: 24px;
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.06);
+        }
+        .service-card.custom-roles { grid-column: 1 / -1; }
+        .service-card.custom-roles {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 32px;
+            padding: 32px 40px;
+            background: linear-gradient(180deg, #0d0d0d 0%, #0a0a0a 100%);
+        }
+        .service-card.custom-roles .custom-text { flex: 1; }
+        .service-card.custom-roles .custom-eyebrow {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 10px;
+        }
+        .service-card.custom-roles .custom-title {
+            font-size: clamp(20px, 2.2vw, 26px);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.25;
+            color: var(--white);
+            margin-bottom: 6px;
+        }
+        .service-card.custom-roles .custom-desc {
+            font-size: 14px;
+            color: rgba(255,255,255,0.55);
+            line-height: 1.6;
+            max-width: 560px;
+        }
+        .service-card.custom-roles .custom-link {
+            color: var(--c);
+            font-weight: 700;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            .service-card.custom-roles { flex-direction: column; align-items: flex-start; padding: 28px; }
         }
 
         .service-card {
@@ -1252,7 +1297,8 @@
     <ul class="nav-links">
         <li><a href="/editors/">Video Editors</a></li>
         <li><a href="/admins/">Exec Admins</a></li>
-        <li><a href="/campaigns/">Auto Lead Gen</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
         <li><a href="/blog/">Blog</a></li>
         <li><a href="/about/">About</a></li>
         <li><a href="/apply/">Apply</a></li>
@@ -1373,26 +1419,26 @@
 <!-- ─── SERVICES ─── -->
 <section class="services-section" id="services">
     <div class="section-eyebrow reveal">What We Build</div>
-    <h2 class="section-title reveal">Three ways to install<br>leverage into your business.</h2>
-    <p class="section-sub reveal">Every service is built around systems first. People second. Results always.</p>
+    <h2 class="section-title reveal">The four operators<br>that scale a service business.</h2>
+    <p class="section-sub reveal">Sales. Admin. CSR. Video. Each placement is full-time, vetted, and aligned to how you actually work.</p>
 
     <div class="services-grid">
-        <a href="/editors/" class="service-card reveal">
+        <a href="/campaigns/" class="service-card reveal">
             <div class="service-card-num">01</div>
             <div class="service-icon">
-                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </div>
-            <div class="service-name">Video Editors</div>
+            <div class="service-name">Sales</div>
             <p class="service-desc">
-                Dedicated editors who know your brand and move fast. Flat monthly rate. No per-project pricing, no scrambling.
+                Done-for-you outbound that finds, nurtures, and routes your warmest prospects straight to your inbox. Reply-first sequences, no spray-and-pray.
             </p>
             <div class="service-features">
-                <div class="service-feature">Reels, TikToks & short-form</div>
-                <div class="service-feature">YouTube & long-form content</div>
-                <div class="service-feature">AI-enhanced editing</div>
-                <div class="service-feature">Flat monthly, no surprises</div>
+                <div class="service-feature">Triple-verified prospect lists</div>
+                <div class="service-feature">7-email reply-first sequences</div>
+                <div class="service-feature">Live ops feed & open-intent tracking</div>
+                <div class="service-feature">Weekly performance reporting</div>
             </div>
-            <div class="service-price">Starting at <strong>flat monthly</strong></div>
+            <div class="service-price">From <strong>$1,000/mo</strong></div>
             <span class="service-link">
                 Explore
                 <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -1409,10 +1455,10 @@
                 Full-time, dedicated admins who handle your communications end-to-end. Your clients always reach a real, professional voice.
             </p>
             <div class="service-features">
-                <div class="service-feature">Email & phone management</div>
+                <div class="service-feature">Email &amp; phone management</div>
                 <div class="service-feature">Appointment scheduling</div>
-                <div class="service-feature">CRM & customer service</div>
-                <div class="service-feature">Review collection & upselling</div>
+                <div class="service-feature">CRM &amp; account upkeep</div>
+                <div class="service-feature">Review collection &amp; upselling</div>
             </div>
             <div class="service-price">Starting at <strong>$12/hr</strong></div>
             <span class="service-link">
@@ -1421,24 +1467,58 @@
             </span>
         </a>
 
-        <a href="/campaigns/" class="service-card reveal reveal-delay-2">
+        <a href="/csr/" class="service-card reveal reveal-delay-2">
             <div class="service-card-num">03</div>
             <div class="service-icon">
-                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
             </div>
-            <div class="service-name">Auto Lead Gen</div>
+            <div class="service-name">Customer Service Reps</div>
             <p class="service-desc">
-                Automated outbound campaigns that find, nurture, and convert your ideal clients, without you lifting a finger.
+                Trained on your tone and SOPs. Tickets, chat, phone, and account touches handled end-to-end. Customers stay longer.
             </p>
             <div class="service-features">
-                <div class="service-feature">Targeted prospect lists</div>
-                <div class="service-feature">Multi-channel outreach</div>
-                <div class="service-feature">Automated follow-up</div>
-                <div class="service-feature">Weekly performance reporting</div>
+                <div class="service-feature">Support tickets &amp; email</div>
+                <div class="service-feature">Live chat &amp; phone support</div>
+                <div class="service-feature">Complaint resolution</div>
+                <div class="service-feature">Retention &amp; renewal touches</div>
             </div>
-            <div class="service-price">From <strong>$1,000/mo</strong></div>
+            <div class="service-price">Starting at <strong>$12/hr</strong></div>
             <span class="service-link">
                 Explore
+                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </span>
+        </a>
+
+        <a href="/editors/" class="service-card reveal reveal-delay-2">
+            <div class="service-card-num">04</div>
+            <div class="service-icon">
+                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <div class="service-name">Video Editors</div>
+            <p class="service-desc">
+                Dedicated editors who know your brand and move fast. Flat monthly rate. No per-project pricing, no scrambling.
+            </p>
+            <div class="service-features">
+                <div class="service-feature">Reels, TikToks &amp; short-form</div>
+                <div class="service-feature">YouTube &amp; long-form content</div>
+                <div class="service-feature">AI-enhanced editing</div>
+                <div class="service-feature">Flat monthly, no surprises</div>
+            </div>
+            <div class="service-price">Starting at <strong>flat monthly</strong></div>
+            <span class="service-link">
+                Explore
+                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </span>
+        </a>
+
+        <a href="https://calendly.com/go-staffify/discovery-call" class="service-card custom-roles reveal">
+            <div class="custom-text">
+                <div class="custom-eyebrow">Need something else?</div>
+                <div class="custom-title">We staff custom roles too.</div>
+                <p class="custom-desc">Transaction coordinators, designers, ops leads, project managers — if it&rsquo;s remote-capable and you&rsquo;ve seen the role done well, we can vet and place it.</p>
+            </div>
+            <span class="custom-link">
+                Talk to us
                 <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </span>
         </a>
@@ -1685,7 +1765,8 @@
             <ul>
                 <li><a href="/editors/">Video Editors</a></li>
                 <li><a href="/admins/">Executive Admins</a></li>
-                <li><a href="/campaigns/">Auto Lead Gen</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
             </ul>
         </div>
         <div class="footer-col">

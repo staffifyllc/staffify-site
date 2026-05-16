@@ -224,7 +224,7 @@ def update_sitemap():
     sitemap_path = REPO_ROOT / "sitemap.xml"
     base = "https://www.gostaffify.com"
     urls = [
-        f"{base}/", f"{base}/about/", f"{base}/editors/", f"{base}/admins/",
+        f"{base}/", f"{base}/about/", f"{base}/editors/", f"{base}/admins/", f"{base}/csr/",
         f"{base}/campaigns/", f"{base}/apply/", f"{base}/blog/", f"{base}/book/",
     ]
     for meta_path in sorted(BLOG_DIR.glob("*/meta.json")):
