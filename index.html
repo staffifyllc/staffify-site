@@ -193,6 +193,41 @@
         }
         .orb-1 { --tx: -50%; }
 
+        /* ── Falling colorway (slow drifting light streaks) ─────── */
+        .hero-streaks {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            opacity: 0;
+            animation: streaksFade 3s ease-out .8s forwards;
+            z-index: 1;
+        }
+        @keyframes streaksFade { to { opacity: 1; } }
+        .streak {
+            position: absolute;
+            top: -20%;
+            width: 1px;
+            height: 140px;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                var(--streak-color, rgba(26,189,225,0.6)) 50%,
+                transparent 100%);
+            filter: blur(.5px);
+            animation: streakFall var(--streak-dur, 8s) linear infinite;
+            animation-delay: var(--streak-delay, 0s);
+            will-change: transform, opacity;
+        }
+        @keyframes streakFall {
+            0%   { transform: translateY(0); opacity: 0; }
+            8%   { opacity: 1; }
+            92%  { opacity: 1; }
+            100% { transform: translateY(120vh); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .hero-streaks { display: none; }
+        }
+
         /* ── Cursor-tracking spotlight (subtle, intentional) ────── */
         .hero-spotlight {
             position: absolute;
@@ -1192,6 +1227,7 @@
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
     <div class="aurora"></div>
+    <div class="hero-streaks" id="heroStreaks"></div>
     <div class="hero-spotlight" id="heroSpotlight"></div>
 
     <!-- Main content -->
@@ -1645,6 +1681,41 @@ const nav = document.getElementById('nav');
 lenis.on('scroll', ({ scroll }) => {
     nav.classList.toggle('scrolled', scroll > 40);
 });
+
+// ── 2a. Falling colorway: randomized light streaks in the hero ──────────────
+(() => {
+    const container = document.getElementById('heroStreaks');
+    if (!container) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const COUNT = 18;
+    const COLORS = [
+        'rgba(26,189,225,0.55)',   // cyan
+        'rgba(15,163,197,0.50)',   // mid cyan
+        'rgba(13,130,184,0.45)',   // deeper cyan
+        'rgba(20,86,164,0.40)',    // navy
+        'rgba(255,255,255,0.30)',  // occasional white
+    ];
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+    for (let i = 0; i < COUNT; i++) {
+        const s = document.createElement('div');
+        s.className = 'streak';
+        const left = rand(0, 100);
+        const dur  = rand(6, 13);              // seconds
+        const delay = -rand(0, dur);           // negative so they're scattered through the cycle on load
+        const height = rand(90, 220);
+        const width  = Math.random() < 0.15 ? 2 : 1;
+        s.style.left = left + '%';
+        s.style.height = height + 'px';
+        s.style.width = width + 'px';
+        s.style.setProperty('--streak-color', pick(COLORS));
+        s.style.setProperty('--streak-dur', dur + 's');
+        s.style.setProperty('--streak-delay', delay + 's');
+        container.appendChild(s);
+    }
+})();
 
 // ── 2b. Cursor-tracking spotlight on the hero ────────────────────────────────
 const heroSection   = document.querySelector('.hero');
