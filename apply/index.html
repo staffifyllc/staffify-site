@@ -60,51 +60,51 @@
             color: transparent;
         }
 
-        /* ── HEADER ────────────────────────────────────────────── */
-        .site-header {
-            max-width: 1180px;
-            margin: 0 auto;
+        /* ── NAV (standard site nav) ───────────────────────────── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 16px 24px;
+            padding: 0 48px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
         }
-        @media (min-width: 640px) { .site-header { padding: 20px 24px; } }
-        .brand {
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            color: var(--c);
-        }
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        @media (min-width: 640px) { .header-right { gap: 14px; } }
-        .header-link {
-            display: none;
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a {
+            color: rgba(255,255,255,0.55);
+            text-decoration: none;
             font-size: 13px;
-            color: var(--w65);
+            font-weight: 400;
             transition: color .2s;
         }
-        .header-link:hover { color: var(--white); }
-        @media (min-width: 640px) {
-            .header-link { display: inline; font-size: 14px; }
-        }
-        .btn-apply {
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+        .nav-cta {
             background: var(--c);
-            color: var(--white);
-            border-radius: 980px;
-            padding: 8px 18px;
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 20px;
             font-size: 13px;
             font-weight: 600;
-            transition: filter .2s;
+            text-decoration: none;
+            transition: all .2s;
         }
-        .btn-apply:hover { filter: brightness(1.1); }
-        @media (min-width: 640px) {
-            .btn-apply { padding: 10px 22px; font-size: 14px; }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
         }
+
+        /* push first section below fixed nav */
+        .first-section { padding-top: 112px; }
+        @media (min-width: 768px) { .first-section { padding-top: 136px; } }
 
         /* ── SECTIONS ──────────────────────────────────────────── */
         section { padding: 32px 0; }
@@ -286,17 +286,23 @@
 </head>
 <body>
 
-<!-- ═══ HEADER ═══════════════════════════════════════════════ -->
-<header class="site-header">
-    <a href="https://gostaffify.com" class="brand" title="Staffify">Staffify</a>
-    <div class="header-right">
-        <a href="https://gostaffify.com" class="header-link">For clients →</a>
-        <a href="https://recruiting.gostaffify.com/apply/general" class="btn-apply">Apply</a>
-    </div>
-</header>
+<!-- ═══ NAV ══════════════════════════════════════════════════ -->
+<nav>
+    <a href="/" class="nav-logo">Staffify</a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/campaigns/">Auto Lead Gen</a></li>
+        <li><a href="/academy/">Academy</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/about/">About</a></li>
+        <li><a href="/apply/" class="active">Apply</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+</nav>
 
 <!-- ═══ HERO ═════════════════════════════════════════════════ -->
-<section>
+<section class="first-section">
     <div class="container">
         <div class="eyebrow"><span class="dot">●</span>Top 1% global talent</div>
         <h1>
