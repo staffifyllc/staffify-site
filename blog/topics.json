@@ -23,7 +23,8 @@
         "operator vs owner",
         "scale service business"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-05-16T02:44:50Z"
     },
     {
       "slug": "delegation-matrix",
