@@ -140,29 +140,10 @@
             50% { transform: scale(1.15); opacity: 1; }
         }
         .orb-1 { transform: translateX(-50%); }
-
-        .scan-line {
-            position: absolute; left: 0; right: 0; height: 1px; pointer-events: none;
-            background: linear-gradient(90deg, transparent 0%, rgba(26,189,225,0.5) 20%, rgba(26,189,225,0.5) 80%, transparent 100%);
-            animation: scan 7s ease-in-out 1.8s infinite;
-        }
-        @keyframes scan {
-            0% { top: 0%; opacity: 0; }
             3% { opacity: 0.7; }
             90% { opacity: 0.3; }
             100% { top: 100%; opacity: 0; }
-        }
-
-        .corner {
-            position: absolute; width: 22px; height: 22px;
-            border-color: rgba(26,189,225,0.3); border-style: solid;
-            opacity: 0; animation: cornerFade .6s ease-out forwards;
-        }
-        .corner-tl { top: 72px; left: 40px; border-width: 1px 0 0 1px; animation-delay: 1.2s; }
-        .corner-tr { top: 72px; right: 40px; border-width: 1px 1px 0 0; animation-delay: 1.3s; }
-        .corner-bl { bottom: 32px; left: 40px; border-width: 0 0 1px 1px; animation-delay: 1.4s; }
-        .corner-br { bottom: 32px; right: 40px; border-width: 0 1px 1px 0; animation-delay: 1.5s; }
-        @keyframes cornerFade { to { opacity: 1; } }
+        } }
 
         .hero-badge {
             display: inline-flex; align-items: center; gap: 8px;
@@ -887,6 +868,37 @@
             .footer-grid { grid-template-columns: 1fr 1fr; }
         }
     
+        
+        /* Aurora — slowly rotating conic gradient for premium AI feel */
+        .aurora {
+            position: absolute; inset: -25%;
+            background: conic-gradient(
+                from 0deg,
+                rgba(26,189,225,0.10) 0deg,
+                rgba(26,189,225,0) 70deg,
+                rgba(20,86,164,0.09) 140deg,
+                rgba(20,86,164,0) 220deg,
+                rgba(26,189,225,0.07) 300deg,
+                rgba(26,189,225,0) 360deg
+            );
+            filter: blur(90px);
+            opacity: 0;
+            animation: auroraFade 2.5s ease-out .4s forwards, auroraSpin 70s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes auroraFade { to { opacity: 1; } }
+        @keyframes auroraSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Third orb — deeper navy, adds depth (only added if not already present) */
+        .orb-3-aurora {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            width: 520px; height: 520px;
+            background: radial-gradient(circle, rgba(13,130,184,0.12) 0%, transparent 65%);
+            filter: blur(110px);
+            top: 30%; left: 12%;
+            animation: orbBreath 13s ease-in-out 1.5s infinite;
+        }
+
         </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
@@ -914,11 +926,8 @@
     <div class="hero-grid"></div>
     <div class="orb-1"></div>
     <div class="orb-2"></div>
-    <div class="scan-line"></div>
-    <div class="corner corner-tl"></div>
-    <div class="corner corner-tr"></div>
-    <div class="corner corner-bl"></div>
-    <div class="corner corner-br"></div>
+    <div class="orb-3"></div>
+    <div class="aurora"></div>
 
     <div class="hero-badge"><span class="badge-dot"></span> Miami, FL · Founded 2023</div>
 

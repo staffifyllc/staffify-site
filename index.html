@@ -194,41 +194,12 @@
         .orb-1 { --tx: -50%; }
 
         /* Scan line */
-        .scan-line {
-            position: absolute;
-            left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent 0%, rgba(26,189,225,0.5) 20%, rgba(26,189,225,0.5) 80%, transparent 100%);
-            top: 0;
-            opacity: 0;
-            pointer-events: none;
-            animation: scan 7s ease-in-out 2s infinite;
-        }
-        @keyframes scan {
-            0% { top: 0%; opacity: 0; }
             3% { opacity: 0.7; }
             90% { opacity: 0.3; }
             100% { top: 100%; opacity: 0; }
         }
 
         /* Corner brackets */
-        .corner {
-            position: absolute;
-            width: 22px; height: 22px;
-            border-color: rgba(26,189,225,0.3);
-            border-style: solid;
-            opacity: 0;
-            animation: cornerReveal 0.8s cubic-bezier(.16,1,.3,1) forwards;
-            pointer-events: none;
-        }
-        .corner-tl { top: 72px; left: 40px; border-width: 1px 0 0 1px; animation-delay: 1.2s; }
-        .corner-tr { top: 72px; right: 40px; border-width: 1px 1px 0 0; animation-delay: 1.3s; }
-        .corner-bl { bottom: 32px; left: 40px; border-width: 0 0 1px 1px; animation-delay: 1.4s; }
-        .corner-br { bottom: 32px; right: 40px; border-width: 0 1px 1px 0; animation-delay: 1.5s; }
-        @keyframes cornerReveal {
-            from { opacity: 0; transform: scale(0.6); }
-            to   { opacity: 1; transform: scale(1); }
-        }
-
         /* Status line */
         .hero-status {
             position: absolute;
@@ -1136,7 +1107,6 @@
             .stats-banner-inner { grid-template-columns: repeat(2, 1fr); gap: 40px 0; }
             .bstat:nth-child(2)::after, .bstat:nth-child(4)::after { display: none; }
             .footer-grid { grid-template-columns: 1fr 1fr; }
-            .corner { display: none; }
             .hero-stats { flex-wrap: wrap; gap: 20px; justify-content: center; }
             .hstat::after { display: none; }
             section { padding: 80px 20px; }
@@ -1148,6 +1118,37 @@
             .stats-banner-inner { grid-template-columns: 1fr 1fr; }
         }
     
+        
+        /* Aurora — slowly rotating conic gradient for premium AI feel */
+        .aurora {
+            position: absolute; inset: -25%;
+            background: conic-gradient(
+                from 0deg,
+                rgba(26,189,225,0.10) 0deg,
+                rgba(26,189,225,0) 70deg,
+                rgba(20,86,164,0.09) 140deg,
+                rgba(20,86,164,0) 220deg,
+                rgba(26,189,225,0.07) 300deg,
+                rgba(26,189,225,0) 360deg
+            );
+            filter: blur(90px);
+            opacity: 0;
+            animation: auroraFade 2.5s ease-out .4s forwards, auroraSpin 70s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes auroraFade { to { opacity: 1; } }
+        @keyframes auroraSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Third orb — deeper navy, adds depth (only added if not already present) */
+        .orb-3-aurora {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            width: 520px; height: 520px;
+            background: radial-gradient(circle, rgba(13,130,184,0.12) 0%, transparent 65%);
+            filter: blur(110px);
+            top: 30%; left: 12%;
+            animation: orbBreath 13s ease-in-out 1.5s infinite;
+        }
+
         </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
@@ -1179,13 +1180,9 @@
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
-    <div class="scan-line"></div>
+    <div class="aurora"></div>
 
     <!-- Corner brackets -->
-    <div class="corner corner-tl"></div>
-    <div class="corner corner-tr"></div>
-    <div class="corner corner-bl"></div>
-    <div class="corner corner-br"></div>
 
     <!-- Main content -->
     <div class="hero-inner">
