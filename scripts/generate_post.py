@@ -225,7 +225,7 @@ def update_sitemap():
     base = "https://www.gostaffify.com"
     urls = [
         f"{base}/", f"{base}/about/", f"{base}/editors/", f"{base}/admins/",
-        f"{base}/campaigns/", f"{base}/academy/", f"{base}/blog/",
+        f"{base}/campaigns/", f"{base}/apply/", f"{base}/blog/", f"{base}/book/",
     ]
     for meta_path in sorted(BLOG_DIR.glob("*/meta.json")):
         m = json.loads(meta_path.read_text())
