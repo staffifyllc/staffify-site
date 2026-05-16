@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+
+# AI crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# Don't crawl utility / archived paths
+User-agent: *
+Disallow: /_archive/
+Disallow: /scripts/
+
+# Canonical sitemap
+Sitemap: https://www.gostaffify.com/sitemap.xml
+
+# Block apex (Wix-served) from being seen as a duplicate of www
+Host: https://www.gostaffify.com

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found | Staffify</title>
+    <meta name="description" content="That page doesn't exist. Head back home or jump to one of our services.">
+    <meta name="robots" content="noindex, follow">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --c: #1abde1; --c4: #1456a4; --black: #000; --muted: rgba(255,255,255,0.55); --divider: rgba(255,255,255,0.08); }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            background-image:
+                radial-gradient(90% 60% at 50% -10%, rgba(26,189,225,0.18) 0%, rgba(0,0,0,0) 65%),
+                radial-gradient(70% 50% at 50% 110%, rgba(20,86,164,0.18) 0%, rgba(0,0,0,0) 60%);
+        }
+        nav {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            border-bottom: 1px solid var(--divider);
+        }
+        nav a.brand { display: flex; align-items: center; }
+        nav a.brand img { height: 28px; }
+        nav a.cta {
+            background: var(--c);
+            color: #000;
+            padding: 8px 18px;
+            border-radius: 980px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 80px 24px;
+        }
+        .code {
+            font-size: clamp(80px, 16vw, 180px);
+            font-weight: 900;
+            letter-spacing: -0.06em;
+            line-height: 1;
+            background: linear-gradient(90deg, #1abde1, #0d82b8, #1456a4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 24px;
+        }
+        h1 {
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+            max-width: 620px;
+            margin-bottom: 18px;
+        }
+        p.lead {
+            font-size: 16px;
+            color: var(--muted);
+            max-width: 520px;
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+        .links {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(220px, 1fr));
+            gap: 12px;
+            max-width: 560px;
+            width: 100%;
+        }
+        .links a {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 22px;
+            border: 1px solid var(--divider);
+            border-radius: 14px;
+            background: rgba(255,255,255,0.03);
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: border-color .2s, background .2s;
+        }
+        .links a:hover { border-color: rgba(26,189,225,0.4); background: rgba(255,255,255,0.06); }
+        .links a span { color: var(--c); font-weight: 700; }
+        footer {
+            border-top: 1px solid var(--divider);
+            padding: 24px 48px;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,0.45);
+        }
+        @media (max-width: 600px) {
+            nav { padding: 0 24px; }
+            footer { padding: 20px 24px; }
+            .links { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="brand" aria-label="Staffify home">
+            <img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;">
+        </a>
+        <a href="/" class="cta">Back to home →</a>
+    </nav>
+
+    <main>
+        <div class="code">404</div>
+        <h1>That page doesn&rsquo;t exist.</h1>
+        <p class="lead">Maybe you followed a stale link, or maybe we moved something. Either way, here&rsquo;s where most people are going next:</p>
+        <div class="links">
+            <a href="/editors/">Video Editors <span>→</span></a>
+            <a href="/admins/">Executive Admins <span>→</span></a>
+            <a href="/csr/">Customer Service <span>→</span></a>
+            <a href="/campaigns/">Sales <span>→</span></a>
+            <a href="/apply/">Apply to Work <span>→</span></a>
+            <a href="/blog/">Read the Blog <span>→</span></a>
+        </div>
+    </main>
+
+    <footer>
+        © 2026 Staffify LLC · <a href="mailto:hello@gostaffify.com" style="color:inherit;">hello@gostaffify.com</a>
+    </footer>
+</body>
+</html>
