@@ -138,10 +138,6 @@
             50% { transform: scale(1.15); opacity: 1; }
         }
         .orb-1 { transform: translateX(-50%); }
-            3% { opacity: 0.7; }
-            90% { opacity: 0.3; }
-            100% { top: 100%; opacity: 0; }
-        } }
 
         .hero-badge {
             display: inline-flex; align-items: center; gap: 8px;
@@ -756,7 +752,70 @@
             animation: orbBreath 13s ease-in-out 1.5s infinite;
         }
 
-        </style>
+        
+        /* ─── OPERATIONS STRIP (after-the-hire, shared) ─── */
+        .ops-strip {
+            padding: 80px 24px;
+            background: var(--near-black, #0a0a0a);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        .ops-strip::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(26,189,225,0.05) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .ops-strip-inner { max-width: 1180px; margin: 0 auto; position: relative; }
+        .ops-strip-eyebrow {
+            text-align: center;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--c, #1abde1);
+            margin-bottom: 16px;
+        }
+        .ops-strip-title {
+            text-align: center;
+            font-size: clamp(26px, 3vw, 36px);
+            font-weight: 800; letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin: 0 auto 48px;
+            max-width: 720px;
+            color: #fff;
+        }
+        .ops-strip-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        .ops-strip-pill {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 24px;
+            transition: background .2s, border-color .2s;
+        }
+        .ops-strip-pill:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(26,189,225,0.25);
+        }
+        .ops-strip-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            background: rgba(26,189,225,0.08);
+            border: 1px solid rgba(26,189,225,0.2);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--c, #1abde1);
+            margin-bottom: 16px;
+        }
+        .ops-strip-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .ops-strip-name { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+        .ops-strip-desc { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; }
+        @media (max-width: 900px) { .ops-strip-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 600px) { .ops-strip-grid { grid-template-columns: 1fr; } }
+    </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
     <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
@@ -970,6 +1029,44 @@
                 <div class="reality-side">
                     <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
                     <p class="reality-text">With a flat monthly rate from Staffify, editing costs stay the same year-round &mdash; no matter how busy you get.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- OPERATIONS STRIP — what we do after the hire -->
+    <section class="ops-strip">
+        <div class="ops-strip-inner">
+            <div class="ops-strip-eyebrow">After the hire</div>
+            <h2 class="ops-strip-title">We don&rsquo;t just place. We operate around you.</h2>
+            <div class="ops-strip-grid">
+                <div class="ops-strip-pill">
+                    <div class="ops-strip-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </div>
+                    <div class="ops-strip-name">24/7 in-country support</div>
+                    <p class="ops-strip-desc">A real human in your placement&rsquo;s country and time zone. Always available, no language gap.</p>
+                </div>
+                <div class="ops-strip-pill">
+                    <div class="ops-strip-icon">
+                        <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    </div>
+                    <div class="ops-strip-name">Active management, daily</div>
+                    <p class="ops-strip-desc">Managers watch productivity, read the data, coach in real time. You see outcomes.</p>
+                </div>
+                <div class="ops-strip-pill">
+                    <div class="ops-strip-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                    </div>
+                    <div class="ops-strip-name">HR built in</div>
+                    <p class="ops-strip-desc">Payroll, compliance, reviews, replacements. Our HR team is your HR team.</p>
+                </div>
+                <div class="ops-strip-pill">
+                    <div class="ops-strip-icon">
+                        <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </div>
+                    <div class="ops-strip-name">Effortless on your end</div>
+                    <p class="ops-strip-desc">Hire once. We run the system. The placement performs, operations stay invisible.</p>
                 </div>
             </div>
         </div>

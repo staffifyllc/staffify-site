@@ -793,6 +793,66 @@
         .diff-icon.x { background: rgba(255,100,100,0.12); color: rgba(255,100,100,0.7); }
         .diff-icon.check { background: rgba(26,189,225,0.12); color: var(--c); }
 
+        /* ─── OPERATIONS LAYER ─── */
+        .ops-section {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 120px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .ops-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(26,189,225,0.06) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .ops-inner { max-width: 1180px; margin: 0 auto; position: relative; }
+        .ops-grid {
+            margin-top: 64px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .ops-card {
+            background: var(--card);
+            padding: 48px 44px;
+            transition: background .25s;
+            position: relative;
+        }
+        .ops-card:hover { background: #101010; }
+        .ops-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            background: rgba(26,189,225,0.08);
+            border: 1px solid rgba(26,189,225,0.18);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--c);
+            margin-bottom: 24px;
+        }
+        .ops-icon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .ops-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--white);
+            margin-bottom: 12px;
+            line-height: 1.25;
+        }
+        .ops-desc {
+            font-size: 14px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.6);
+        }
+        @media (max-width: 768px) {
+            .ops-grid { grid-template-columns: 1fr; }
+        }
+
         /* ─── HOW IT WORKS ─── */
         .how-section { background: var(--near-black); border-top: 1px solid var(--divider); }
 
@@ -1560,6 +1620,49 @@
                 <div class="diff-item good"><span class="diff-icon check">✓</span><span>Performance metrics & productivity tracking</span></div>
                 <div class="diff-item good"><span class="diff-icon check">✓</span><span>95% retention. People who actually stay</span></div>
                 <div class="diff-item good"><span class="diff-icon check">✓</span><span>Perpetual free restaffing support</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── OPERATIONS LAYER ─── -->
+<section class="ops-section">
+    <div class="ops-inner">
+        <div class="section-eyebrow reveal" style="text-align:center;">After the hire</div>
+        <h2 class="section-title reveal" style="text-align:center;">We don&rsquo;t just place.<br><span class="g">We operate around you.</span></h2>
+        <p class="section-sub reveal" style="text-align:center;max-width:640px;margin:0 auto;">The reason our placements stay productive is the operations layer behind them. While you focus on your business, we run the system.</p>
+
+        <div class="ops-grid">
+            <div class="ops-card reveal">
+                <div class="ops-icon">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <div class="ops-name">24/7 in-country support</div>
+                <p class="ops-desc">A real human in the same country and time zone as your placement, always available. No language gap, no overnight tickets bouncing around for hours, no waiting until someone wakes up.</p>
+            </div>
+
+            <div class="ops-card reveal reveal-delay-1">
+                <div class="ops-icon">
+                    <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                </div>
+                <div class="ops-name">Active management, daily</div>
+                <p class="ops-desc">Our managers watch the data, scan productivity, and coach your placement in real time. You see outcomes. We handle the check-ins, the corrections, and the development plan.</p>
+            </div>
+
+            <div class="ops-card reveal reveal-delay-2">
+                <div class="ops-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                </div>
+                <div class="ops-name">HR built in</div>
+                <p class="ops-desc">Payroll, compliance, performance reviews, time off, replacements. The administrative weight of having a team without the actual administrative weight. Our HR team is your HR team.</p>
+            </div>
+
+            <div class="ops-card reveal reveal-delay-2">
+                <div class="ops-icon">
+                    <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </div>
+                <div class="ops-name">Effortless on your end</div>
+                <p class="ops-desc">You hire once. We run the system around it. The placement performs, your business grows, and the operations stay invisible. That is the whole product.</p>
             </div>
         </div>
     </div>
