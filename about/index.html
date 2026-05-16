@@ -735,6 +735,140 @@
             color: var(--subtle);
         }
 
+        /* ── Life at Staffify (how we treat our team) ─────────── */
+        .team-care-section {
+            padding: 120px 24px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+            position: relative;
+            overflow: hidden;
+        }
+        .team-care-orb {
+            position: absolute;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(26,189,225,0.06) 0%, transparent 70%);
+            filter: blur(80px);
+            top: -200px; right: -150px;
+            pointer-events: none;
+        }
+        .team-care-inner {
+            max-width: 1080px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .team-care-section .section-sub { max-width: 640px; }
+
+        .contrast-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin: 56px 0 72px;
+            border-top: 1px solid var(--divider);
+        }
+        .contrast-row {
+            display: grid;
+            grid-template-columns: 1fr 40px 1fr;
+            align-items: stretch;
+            border-bottom: 1px solid var(--divider);
+            padding: 26px 0;
+        }
+        .contrast-col {
+            padding: 0 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .col-old { opacity: 0.55; }
+        .col-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .col-old .col-label { color: rgba(255,90,80,0.8); }
+        .col-new .col-label { color: var(--c); }
+        .col-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: rgba(255,255,255,0.6);
+        }
+        .col-new .col-text { color: rgba(255,255,255,0.85); }
+        .col-new .col-text strong { color: var(--white); font-weight: 700; }
+        .contrast-arrow {
+            align-self: center;
+            color: var(--c);
+            font-size: 18px;
+            opacity: 0.45;
+            text-align: center;
+        }
+
+        .care-pillars {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+            background: var(--divider);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 56px;
+        }
+        .care-pillar {
+            background: var(--card);
+            padding: 40px 28px;
+            transition: background .2s;
+        }
+        .care-pillar:hover { background: #111; }
+        .pillar-num {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--c);
+            opacity: 0.35;
+            line-height: 1;
+            margin-bottom: 16px;
+            letter-spacing: -0.04em;
+        }
+        .pillar-title {
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 10px;
+        }
+        .pillar-desc {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        .care-quote {
+            border-left: 3px solid var(--c);
+            padding: 24px 28px;
+            margin: 0 auto;
+            max-width: 820px;
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 12px 12px 0;
+            font-size: 17px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.7;
+            font-style: italic;
+        }
+        .care-quote-cite {
+            display: block;
+            margin-top: 14px;
+            font-size: 11px;
+            color: var(--c);
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            font-style: normal;
+        }
+        @media (max-width: 900px) {
+            .contrast-row { grid-template-columns: 1fr; gap: 12px; padding: 20px 0; }
+            .contrast-arrow { display: none; }
+            .contrast-col { padding: 0; }
+            .care-pillars { grid-template-columns: 1fr 1fr; }
+        }
+
         .reveal {
             opacity: 0;
             transform: translateY(32px);
@@ -942,6 +1076,91 @@
             </blockquote>
         </div>
 
+    </div>
+</section>
+
+<!-- Life at Staffify — how we treat the team -->
+<section class="team-care-section">
+    <div class="team-care-orb"></div>
+    <div class="team-care-inner">
+        <div class="section-eyebrow reveal" style="text-align:center;">Life at Staffify</div>
+        <h2 class="section-title reveal">Built for the people <span class="g">we hire, too.</span></h2>
+        <p class="section-sub reveal">The industry treats virtual assistants like commodities. We treat them like the operators they are — because we'd never want to be on the other side of the deal Paul saw the first three times he tried to hire one.</p>
+
+        <div class="contrast-grid">
+            <div class="contrast-row reveal">
+                <div class="contrast-col col-old">
+                    <span class="col-label">The industry standard</span>
+                    <p class="col-text">$4–5/hour roles. Five clients deep just to pay rent.</p>
+                </div>
+                <div class="contrast-arrow">→</div>
+                <div class="contrast-col col-new">
+                    <span class="col-label">How we do it</span>
+                    <p class="col-text"><strong>Living-wage floor</strong>, benchmarked to each VA's local market. One full-time role, one client, real focus.</p>
+                </div>
+            </div>
+            <div class="contrast-row reveal">
+                <div class="contrast-col col-old">
+                    <span class="col-label">The industry standard</span>
+                    <p class="col-text">50% take-home. The agency keeps the rest. No transparency.</p>
+                </div>
+                <div class="contrast-arrow">→</div>
+                <div class="contrast-col col-new">
+                    <span class="col-label">How we do it</span>
+                    <p class="col-text"><strong>Transparent splits.</strong> Our team sees exactly what we charge and exactly what they earn. No hidden extraction.</p>
+                </div>
+            </div>
+            <div class="contrast-row reveal">
+                <div class="contrast-col col-old">
+                    <span class="col-label">The industry standard</span>
+                    <p class="col-text">Churn-and-burn placements. Replacement every six months.</p>
+                </div>
+                <div class="contrast-arrow">→</div>
+                <div class="contrast-col col-new">
+                    <span class="col-label">How we do it</span>
+                    <p class="col-text"><strong>Long-term retention by design.</strong> Our team builds careers here. Your VA today is your VA in three years.</p>
+                </div>
+            </div>
+            <div class="contrast-row reveal">
+                <div class="contrast-col col-old">
+                    <span class="col-label">The industry standard</span>
+                    <p class="col-text">No benefits. No paid time off. No growth path.</p>
+                </div>
+                <div class="contrast-arrow">→</div>
+                <div class="contrast-col col-new">
+                    <span class="col-label">How we do it</span>
+                    <p class="col-text"><strong>Paid time off, ongoing training, real career pathing</strong> through Staffify Academy. Promotions from within.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="care-pillars">
+            <div class="care-pillar reveal">
+                <div class="pillar-num">01</div>
+                <div class="pillar-title">Stability</div>
+                <p class="pillar-desc">Full-time roles with predictable hours, real PTO, and contracts our team can build a life on.</p>
+            </div>
+            <div class="care-pillar reveal">
+                <div class="pillar-num">02</div>
+                <div class="pillar-title">Fair Pay</div>
+                <p class="pillar-desc">A living-wage floor benchmarked to each VA's local market — with transparency on every dollar.</p>
+            </div>
+            <div class="care-pillar reveal">
+                <div class="pillar-num">03</div>
+                <div class="pillar-title">Growth</div>
+                <p class="pillar-desc">Ongoing training through Staffify Academy. Specialization tracks. Real promotions, not lateral moves.</p>
+            </div>
+            <div class="care-pillar reveal">
+                <div class="pillar-num">04</div>
+                <div class="pillar-title">Respect</div>
+                <p class="pillar-desc">A direct line to leadership. Feedback that goes both ways. Treated like operators, not seats.</p>
+            </div>
+        </div>
+
+        <blockquote class="care-quote reveal">
+            "Our team isn't an expense line — they're the reason this works. If we wouldn't take the deal ourselves, we don't offer it to them."
+            <span class="care-quote-cite">— Paul Chareth, Founder</span>
+        </blockquote>
     </div>
 </section>
 
