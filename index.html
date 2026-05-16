@@ -493,19 +493,41 @@
             text-transform: uppercase;
         }
 
-        /* ─── MARQUEE ─── */
+        /* ─── MARQUEE (client logo strip) ─── */
         .marquee-section {
-            padding: 20px 0;
+            padding: 36px 0 44px;
             overflow: hidden;
-            background: rgba(26,189,225,0.03);
+            background: rgba(26,189,225,0.025);
             border-top: 1px solid rgba(26,189,225,0.08);
             border-bottom: 1px solid rgba(26,189,225,0.08);
+            position: relative;
+        }
+        .marquee-eyebrow {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 28px;
+        }
+        .marquee-eyebrow .dot {
+            color: var(--c);
+            margin-right: 8px;
+        }
+        .marquee-wrap {
+            position: relative;
+            overflow: hidden;
+            -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+                    mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
         }
         .marquee-track {
             display: flex;
             width: max-content;
-            animation: marquee 35s linear infinite;
+            animation: marquee 60s linear infinite;
+            align-items: center;
         }
+        .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
         @keyframes marquee {
             from { transform: translateX(0); }
             to   { transform: translateX(-50%); }
@@ -513,21 +535,24 @@
         .marquee-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 0 36px;
-            white-space: nowrap;
-            font-size: 12px;
-            font-weight: 500;
-            color: rgba(255,255,255,0.25);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+            justify-content: center;
+            padding: 0 44px;
+            height: 60px;
+            opacity: 0.55;
+            filter: grayscale(100%) brightness(1.4) contrast(0.95);
+            transition: opacity .3s ease, filter .3s ease;
         }
-        .marquee-item span { color: var(--c); }
-        .marquee-item::after {
-            content: '';
-            width: 3px; height: 3px;
-            background: rgba(26,189,225,0.5);
-            border-radius: 50%;
+        .marquee-item:hover {
+            opacity: 1;
+            filter: grayscale(0%) brightness(1) contrast(1);
+        }
+        .marquee-item img {
+            max-height: 44px;
+            max-width: 180px;
+            width: auto;
+            height: auto;
+            display: block;
+            object-fit: contain;
         }
 
         /* ─── WHAT WE DO ─── */
@@ -1574,35 +1599,83 @@
     </div>
 </section>
 
-<!-- ─── MARQUEE ─── -->
+<!-- ─── MARQUEE (client logos) ─── -->
 <div class="marquee-section">
-    <div class="marquee-track">
-        <div class="marquee-item"><span>AI-Powered Vetting</span></div>
-        <div class="marquee-item"><span>Top 1% Talent</span></div>
-        <div class="marquee-item"><span>Video Editors</span></div>
-        <div class="marquee-item"><span>Executive Admins</span></div>
-        <div class="marquee-item"><span>Auto Lead Gen</span></div>
-        <div class="marquee-item"><span>Inbox Management</span></div>
-        <div class="marquee-item"><span>Workflow Automation</span></div>
-        <div class="marquee-item"><span>Client Follow-Up</span></div>
-        <div class="marquee-item"><span>Content Production</span></div>
-        <div class="marquee-item"><span>CRM Management</span></div>
-        <div class="marquee-item"><span>Zero HR Overhead</span></div>
-        <div class="marquee-item"><span>95% Retention Rate</span></div>
-        <!-- Duplicate for infinite loop -->
-        <div class="marquee-item"><span>AI-Powered Vetting</span></div>
-        <div class="marquee-item"><span>Top 1% Talent</span></div>
-        <div class="marquee-item"><span>Video Editors</span></div>
-        <div class="marquee-item"><span>Executive Admins</span></div>
-        <div class="marquee-item"><span>Auto Lead Gen</span></div>
-        <div class="marquee-item"><span>Inbox Management</span></div>
-        <div class="marquee-item"><span>Workflow Automation</span></div>
-        <div class="marquee-item"><span>Client Follow-Up</span></div>
-        <div class="marquee-item"><span>Content Production</span></div>
-        <div class="marquee-item"><span>CRM Management</span></div>
-        <div class="marquee-item"><span>Zero HR Overhead</span></div>
-        <div class="marquee-item"><span>95% Retention Rate</span></div>
+    <div class="marquee-eyebrow"><span class="dot">●</span>Trusted by service businesses across the US and abroad</div>
+    <div class="marquee-wrap">
+        <div class="marquee-track">
+        <div class="marquee-item"><img src="/assets/clients/386-productions.png" alt="386 Productions client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/alex-dellacorte.png" alt="Alex Dellacorte client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/carly-caron.png" alt="Carly Caron client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/coral-cove-media.png" alt="Coral Cove Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/definitive-hdr.png" alt="Definitive Hdr client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/dynamic-cinema-productions.png" alt="Dynamic Cinema Productions client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/east-end-social-media.png" alt="East End Social Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/flylisted.png" alt="Flylisted client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/foothills-photography.png" alt="Foothills Photography client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/home-hearth-productions.png" alt="Home Hearth Productions client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/homepage-realty.png" alt="Homepage Realty client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/incu-studios.png" alt="Incu Studios client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/jeff-hursey.png" alt="Jeff Hursey client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/joel-adamson.png" alt="Joel Adamson client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/jonathan-gonzales.png" alt="Jonathan Gonzales client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/keen-eye-marketing.png" alt="Keen Eye Marketing client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/kiln-media.png" alt="Kiln Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/lux-point-media.png" alt="Lux Point Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/move-it-media.png" alt="Move It Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/onelook.png" alt="Onelook client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/pending-media.png" alt="Pending Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/photographik-studios-inc.png" alt="Photographik Studios Inc client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/property-pix.png" alt="Property Pix client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/rachael-adkins.png" alt="Rachael Adkins client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/realtour-pilot.png" alt="Realtour Pilot client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/rooted-elements-media.png" alt="Rooted Elements Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/sara-barclay.png" alt="Sara Barclay client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/sojourner-media.png" alt="Sojourner Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/symmetry-sauna.png" alt="Symmetry Sauna client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/the-midlands-group.png" alt="The Midlands Group client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/tj-romero.png" alt="Tj Romero client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/vic-devor.png" alt="Vic Devor client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/virtual-view-tours.png" alt="Virtual View Tours client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/william-raveis.png" alt="William Raveis client logo" loading="lazy"></div>
+        <!-- Duplicate for seamless infinite loop -->
+        <div class="marquee-item"><img src="/assets/clients/386-productions.png" alt="386 Productions client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/alex-dellacorte.png" alt="Alex Dellacorte client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/carly-caron.png" alt="Carly Caron client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/coral-cove-media.png" alt="Coral Cove Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/definitive-hdr.png" alt="Definitive Hdr client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/dynamic-cinema-productions.png" alt="Dynamic Cinema Productions client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/east-end-social-media.png" alt="East End Social Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/flylisted.png" alt="Flylisted client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/foothills-photography.png" alt="Foothills Photography client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/home-hearth-productions.png" alt="Home Hearth Productions client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/homepage-realty.png" alt="Homepage Realty client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/incu-studios.png" alt="Incu Studios client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/jeff-hursey.png" alt="Jeff Hursey client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/joel-adamson.png" alt="Joel Adamson client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/jonathan-gonzales.png" alt="Jonathan Gonzales client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/keen-eye-marketing.png" alt="Keen Eye Marketing client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/kiln-media.png" alt="Kiln Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/lux-point-media.png" alt="Lux Point Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/move-it-media.png" alt="Move It Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/onelook.png" alt="Onelook client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/pending-media.png" alt="Pending Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/photographik-studios-inc.png" alt="Photographik Studios Inc client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/property-pix.png" alt="Property Pix client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/rachael-adkins.png" alt="Rachael Adkins client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/realtour-pilot.png" alt="Realtour Pilot client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/rooted-elements-media.png" alt="Rooted Elements Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/sara-barclay.png" alt="Sara Barclay client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/sojourner-media.png" alt="Sojourner Media client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/symmetry-sauna.png" alt="Symmetry Sauna client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/the-midlands-group.png" alt="The Midlands Group client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/tj-romero.png" alt="Tj Romero client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/vic-devor.png" alt="Vic Devor client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/virtual-view-tours.png" alt="Virtual View Tours client logo" loading="lazy"></div>
+        <div class="marquee-item"><img src="/assets/clients/william-raveis.png" alt="William Raveis client logo" loading="lazy"></div>
+        </div>
     </div>
+</div>
 </div>
 
 <!-- ─── SERVICES ─── -->
