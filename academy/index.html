@@ -706,6 +706,152 @@
             .testimonial-video-wrap { aspect-ratio: 4 / 5; }
         }
 
+        /* ── PRICING ──────────────────────────────────────────────── */
+        .pricing-section {
+            padding: 120px 24px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+        .pricing-grid {
+            max-width: 980px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+        }
+        .price-card {
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 22px;
+            padding: 40px 36px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: border-color .2s, transform .2s;
+        }
+        .price-card:hover {
+            border-color: rgba(26,189,225,0.35);
+            transform: translateY(-2px);
+        }
+        .price-card.featured {
+            border-color: rgba(26,189,225,0.5);
+            background: linear-gradient(180deg, rgba(26,189,225,0.05) 0%, rgba(26,189,225,0.01) 100%);
+            box-shadow: 0 0 80px rgba(26,189,225,0.06);
+        }
+        .price-badge {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: rgba(26,189,225,0.15);
+            border: 1px solid rgba(26,189,225,0.35);
+            color: var(--c);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            padding: 5px 10px;
+            border-radius: 999px;
+        }
+        .price-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--c);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .price-tagline {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 22px;
+            letter-spacing: -0.01em;
+        }
+        .price-row {
+            display: flex; align-items: baseline; gap: 14px;
+            margin-bottom: 6px;
+        }
+        .price-amount {
+            font-size: 52px;
+            font-weight: 900;
+            color: var(--white);
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+        .price-was {
+            font-size: 18px;
+            color: var(--muted);
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        .price-note {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 28px;
+        }
+        .price-features {
+            list-style: none;
+            margin: 0 0 32px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex-grow: 1;
+        }
+        .price-features li {
+            font-size: 14px;
+            color: rgba(255,255,255,0.78);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            line-height: 1.5;
+        }
+        .price-features li::before {
+            content: "✓";
+            color: var(--c);
+            font-weight: 700;
+            font-size: 13px;
+            flex-shrink: 0;
+            width: 16px;
+        }
+        .price-cta {
+            display: block;
+            text-align: center;
+            background: var(--c);
+            color: #000;
+            padding: 14px 24px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: filter .2s, transform .2s;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+        }
+        .price-cta:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+        .price-card:not(.featured) .price-cta {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.18);
+            color: var(--white);
+            box-shadow: none;
+        }
+        .price-card:not(.featured) .price-cta:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(26,189,225,0.4);
+        }
+        .price-foot {
+            max-width: 880px;
+            margin: 36px auto 0;
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        @media (max-width: 760px) {
+            .pricing-grid { grid-template-columns: 1fr; }
+        }
+
         /* ── FINAL CTA ────────────────────────────────────────────── */
         .academy-cta {
             padding: 140px 24px;
@@ -812,7 +958,7 @@
     <p class="hero-sub-new">We teach what built our business. Real playbooks for the founders ready to step out of the weeds and into real, sustainable ownership.</p>
 
     <div class="hero-ctas-new">
-        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-mag">Join the Program →</a>
+        <a href="#pricing" class="btn-mag">Get Access →</a>
         <a href="#pillars" class="btn-primary" style="background:transparent;border:1px solid rgba(255,255,255,0.15);font-weight:500;padding:16px 32px;">See what's inside</a>
     </div>
 </section>
@@ -983,6 +1129,53 @@
     </div>
 </section>
 
+<!-- ═══ PRICING ══════════════════════════════════════════════ -->
+<section class="pricing-section" id="pricing">
+    <div class="section-eyebrow reveal">Pricing</div>
+    <h2 class="section-title reveal">Choose your <span class="g">access.</span></h2>
+    <p class="section-sub reveal">Both plans include the full program. Pick the one that fits.</p>
+
+    <div class="pricing-grid">
+        <div class="price-card featured reveal">
+            <div class="price-badge">Flash Sale · First 10</div>
+            <div class="price-name">From Hustle To Empire</div>
+            <div class="price-tagline">Lifetime Access, locked in.</div>
+            <div class="price-row">
+                <span class="price-amount">$2,000</span>
+                <span class="price-was">$3,499</span>
+            </div>
+            <p class="price-note">Save $1,499. Limited to the first 10 sign-ups.</p>
+            <ul class="price-features">
+                <li>10+ hours of on-demand video content</li>
+                <li>Templates, workflows, and pitch decks</li>
+                <li>Private Slack community of founders</li>
+                <li>All bonuses and supporting materials</li>
+                <li>Lifetime access to every future update</li>
+            </ul>
+            <a href="https://www.media631.com/pricing-plans/plans-pricing" class="price-cta">Get Access Now →</a>
+        </div>
+
+        <div class="price-card reveal">
+            <div class="price-name">From Hustle To Empire</div>
+            <div class="price-tagline">Standard Access.</div>
+            <div class="price-row">
+                <span class="price-amount">$3,499</span>
+            </div>
+            <p class="price-note">Full program. No deadline pressure.</p>
+            <ul class="price-features">
+                <li>10+ hours of on-demand video content</li>
+                <li>Templates, workflows, and pitch decks</li>
+                <li>Private Slack community of founders</li>
+                <li>All bonuses and supporting materials</li>
+                <li>Lifetime access to every future update</li>
+            </ul>
+            <a href="https://www.media631.com/pricing-plans/plans-pricing" class="price-cta">Select Plan →</a>
+        </div>
+    </div>
+
+    <p class="price-foot reveal">Checkout is handled through our secure Wix-powered checkout. After purchase you&rsquo;ll receive immediate access to the program library and Slack community.</p>
+</section>
+
 <!-- ═══ FINAL CTA ════════════════════════════════════════════ -->
 <section class="academy-cta">
     <div class="academy-cta-orb"></div>
@@ -990,7 +1183,7 @@
     <h2 class="academy-cta-title reveal">They did it. <span class="g">Now it&rsquo;s your turn.</span></h2>
     <p class="academy-cta-sub reveal">Scaling smarter starts here. Self-paced, lifetime access, real playbooks.</p>
     <div class="academy-cta-actions reveal">
-        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-mag">Join the Program →</a>
+        <a href="#pricing" class="btn-mag">See Pricing →</a>
         <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary" style="background:transparent;border:1px solid rgba(255,255,255,0.15);font-weight:500;">Talk to us first</a>
     </div>
 </section>
