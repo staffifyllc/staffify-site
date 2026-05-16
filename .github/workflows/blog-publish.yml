@@ -1,0 +1,57 @@
+name: Publish blog post
+
+# Runs Mon/Wed/Fri at 10am EST (14:00 UTC). Picks the next pending topic
+# from blog/topics.json, drafts the post via Claude, renders to HTML,
+# updates the listing + sitemap, and commits.
+#
+# To trigger manually: go to Actions tab → Publish blog post → Run workflow.
+on:
+  schedule:
+    - cron: "0 14 * * 1,3,5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Generate next blog post
+        id: generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 scripts/generate_post.py
+        continue-on-error: false
+
+      - name: Commit and push
+        run: |
+          git config user.name  "staffify-bot"
+          git config user.email "bot@gostaffify.com"
+          git add blog/ sitemap.xml
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          NEW_META=$(git diff --cached --name-only -- 'blog/*/meta.json' | head -n1)
+          if [ -n "$NEW_META" ]; then
+            TITLE=$(python3 -c "import json; print(json.load(open('$NEW_META'))['title'])")
+            SLUG=$(python3 -c "import json; print(json.load(open('$NEW_META'))['slug'])")
+            git commit -m "Blog: $TITLE" -m "Auto-published by .github/workflows/blog-publish.yml" -m "URL: https://www.gostaffify.com/blog/$SLUG/"
+          else
+            git commit -m "Blog: auto-publish"
+          fi
+          git push origin HEAD:main
