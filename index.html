@@ -765,7 +765,19 @@
             left: calc(16.66% + 20px);
             right: calc(16.66% + 20px);
             height: 1px;
-            background: linear-gradient(90deg, var(--c) 0%, rgba(26,189,225,0.15) 100%);
+            background: rgba(26,189,225,0.12);
+            overflow: hidden;
+        }
+        .steps-connector-fill {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg,
+                rgba(26,189,225,0.95) 0%,
+                rgba(26,189,225,0.55) 100%);
+            transform-origin: left center;
+            transform: scaleX(var(--fill, 0));
+            transition: transform .6s cubic-bezier(.16,1,.3,1);
+            box-shadow: 0 0 12px rgba(26,189,225,0.4);
         }
 
         .step-card { text-align: center; padding: 0 24px; }
@@ -781,11 +793,40 @@
             margin: 0 auto 28px;
             position: relative;
             z-index: 1;
+            transition: border-color .5s ease-out, background .5s ease-out, box-shadow .5s ease-out;
+        }
+        .step-num::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 50%;
+            border: 1px solid rgba(26,189,225,0.6);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .step-num.active {
+            border-color: rgba(26,189,225,0.7);
+            background: rgba(26,189,225,0.15);
+            box-shadow: 0 0 40px rgba(26,189,225,0.25), inset 0 0 18px rgba(26,189,225,0.18);
+        }
+        .step-num.active::before {
+            animation: stepPulse 1.4s ease-out forwards;
+        }
+        @keyframes stepPulse {
+            0%   { transform: scale(1);   opacity: 0.9; }
+            100% { transform: scale(1.9); opacity: 0;   }
         }
         .step-num-inner {
             font-size: 20px;
             font-weight: 900;
             color: var(--c);
+            transition: color .5s ease-out, transform .5s cubic-bezier(.16,1,.3,1);
+            position: relative;
+            z-index: 1;
+        }
+        .step-num.active .step-num-inner {
+            color: #fff;
+            transform: scale(1.08);
         }
         .step-title {
             font-size: 17px;
@@ -1451,7 +1492,7 @@
     <p class="section-sub reveal">Up and running in two weeks. No babysitting required.</p>
 
     <div class="steps-container">
-        <div class="steps-connector"></div>
+        <div class="steps-connector"><div class="steps-connector-fill"></div></div>
         <div class="step-card reveal">
             <div class="step-num"><div class="step-num-inner">1</div></div>
             <div class="step-title">Discovery Call</div>
@@ -1743,6 +1784,29 @@ if (heroGrid) {
         if (heroSt)    heroSt.style.transform    = `translateY(${y * 0.26}px)`;
     });
 }
+
+// ── 3b. Steps section: scroll-driven connector + activation ─────────────────
+const stepsContainer = document.querySelector('.steps-container');
+const stepsFill      = stepsContainer?.querySelector('.steps-connector-fill');
+const stepNums       = stepsContainer?.querySelectorAll('.step-num');
+const STEP_THRESHOLDS = [0.18, 0.55, 0.92];
+
+function updateStepsAnimation() {
+    if (!stepsContainer || !stepsFill || !stepNums) return;
+    const r = stepsContainer.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+    const startY = vh * 0.80;
+    const endY   = vh * 0.30;
+    const p = Math.max(0, Math.min(1, (startY - r.top) / (startY - endY)));
+    stepsFill.style.setProperty('--fill', p);
+    stepNums.forEach((s, i) => {
+        if (p >= STEP_THRESHOLDS[i]) s.classList.add('active');
+        else s.classList.remove('active');
+    });
+}
+lenis.on('scroll', updateStepsAnimation);
+window.addEventListener('resize', updateStepsAnimation);
+requestAnimationFrame(updateStepsAnimation);
 
 // ── 4. Section reveals: blur + scale + slide ─────────────────────────────────
 const revealObs = new IntersectionObserver(entries => {
