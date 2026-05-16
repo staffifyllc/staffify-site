@@ -3,8 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StaffifyAcademy | Training for the Modern Team</title>
-    <meta name="description" content="StaffifyAcademy: resources, playbooks, and training designed to help business owners delegate smarter, lead better, and scale faster.">
+    <title>Staffify Academy | Built for the next era of real estate media</title>
+    <meta name="description" content="Staffify Academy: proven systems, pricing, delegation, and growth frameworks for real estate media owners. Self-paced. Built by 7-figure operators.">
+    <link rel="canonical" href="https://www.gostaffify.com/academy/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.gostaffify.com/academy/">
+    <meta property="og:title" content="Staffify Academy | Built for the next era of real estate media">
+    <meta property="og:description" content="Proven systems, pricing, delegation, and growth frameworks for real estate media owners. Self-paced. Built by 7-figure operators.">
+    <meta property="og:site_name" content="Staffify">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Staffify Academy | Built for the next era of real estate media">
+    <meta name="twitter:description" content="Proven systems, pricing, delegation, and growth frameworks for real estate media owners. Self-paced.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -505,6 +514,229 @@
             color: var(--subtle);
         }
 
+        /* ── PAIN FRAMER ──────────────────────────────────────────── */
+        .pain-section {
+            padding: 120px 24px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+            text-align: center;
+        }
+        .pain-inner { max-width: 820px; margin: 0 auto; }
+        .pain-title {
+            font-size: clamp(32px, 5vw, 56px);
+            font-weight: 900; letter-spacing: -0.03em; line-height: 1.1;
+            margin-bottom: 28px;
+        }
+        .pain-body {
+            font-size: 17px; line-height: 1.75;
+            color: var(--muted);
+            max-width: 680px; margin: 0 auto 40px;
+        }
+        .pain-quote {
+            border-left: 3px solid var(--c);
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 12px 12px 0;
+            padding: 24px 28px;
+            margin: 0 auto;
+            max-width: 680px;
+            font-size: 18px; font-style: italic;
+            color: rgba(255,255,255,0.78);
+            line-height: 1.7;
+            text-align: left;
+        }
+        .pain-quote-cite {
+            display: block; margin-top: 12px;
+            font-size: 11px; color: var(--c);
+            font-weight: 700; letter-spacing: 0.14em;
+            font-style: normal;
+        }
+
+        /* ── PILLAR LIST (Why Academy) ────────────────────────────── */
+        .pillars-section {
+            padding: 120px 24px;
+            background: var(--black);
+        }
+        .pillars-grid {
+            max-width: 1080px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 2px;
+            background: var(--divider);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .pillar-card {
+            background: var(--card);
+            padding: 36px 28px;
+            transition: background .2s;
+        }
+        .pillar-card:hover { background: #111; }
+        .pillar-num {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--c);
+            opacity: 0.7;
+            margin-bottom: 14px;
+        }
+        .pillar-title {
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+        .pillar-desc {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        /* ── INCLUSIONS ───────────────────────────────────────────── */
+        .inclusions-section {
+            padding: 120px 24px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+        }
+        .inclusions-grid {
+            max-width: 920px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .inclusion-card {
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 14px;
+            padding: 26px 28px;
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+        }
+        .inclusion-check {
+            flex-shrink: 0;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: rgba(26,189,225,0.12);
+            border: 1px solid rgba(26,189,225,0.35);
+            color: var(--c);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 800;
+        }
+        .inclusion-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--white);
+        }
+        .inclusion-desc {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        /* ── TESTIMONIALS ─────────────────────────────────────────── */
+        .testimonials-section {
+            padding: 120px 24px;
+            background: var(--black);
+        }
+        .testimonials-grid {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .testimonial-card {
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 18px;
+            padding: 32px 28px;
+            display: flex;
+            flex-direction: column;
+        }
+        .testimonial-quote-mark {
+            font-size: 48px;
+            line-height: 1;
+            color: var(--c);
+            opacity: 0.5;
+            font-family: Georgia, serif;
+            font-weight: 700;
+            height: 28px;
+            margin-bottom: 6px;
+        }
+        .testimonial-quote {
+            font-size: 15px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.78);
+            flex-grow: 1;
+            margin-bottom: 24px;
+        }
+        .testimonial-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--white);
+        }
+        .testimonial-co {
+            font-size: 12px;
+            color: var(--c);
+            margin-top: 2px;
+        }
+
+        /* ── FINAL CTA ────────────────────────────────────────────── */
+        .academy-cta {
+            padding: 140px 24px;
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .academy-cta-orb {
+            position: absolute;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(26,189,225,0.1) 0%, transparent 70%);
+            filter: blur(80px);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .academy-cta-eyebrow {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
+            text-transform: uppercase; color: var(--c);
+            margin-bottom: 18px;
+            position: relative;
+        }
+        .academy-cta-title {
+            font-size: clamp(36px, 5vw, 60px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08;
+            margin-bottom: 18px;
+            position: relative;
+        }
+        .academy-cta-sub {
+            font-size: 17px;
+            color: var(--muted);
+            max-width: 520px;
+            margin: 0 auto 40px;
+            position: relative;
+        }
+        .academy-cta-actions {
+            display: flex; gap: 14px;
+            justify-content: center; flex-wrap: wrap;
+            position: relative;
+        }
+
+        @media (max-width: 900px) {
+            .inclusions-grid { grid-template-columns: 1fr; }
+            .testimonials-grid { grid-template-columns: 1fr; }
+        }
+
         /* REVEAL */
         .reveal {
             opacity: 0;
@@ -549,7 +781,7 @@
     <div class="corner corner-bl"></div>
     <div class="corner corner-br"></div>
 
-    <div class="hero-badge"><span class="badge-dot"></span> Knowledge Base for Growth</div>
+    <div class="hero-badge"><span class="badge-dot"></span> Now enrolling · Built for founders</div>
 
     <div class="hero-headline">
         <div class="text-row hero-main"><span class="text-inner" style="--d:.4s">Staffify</span></div>
@@ -558,74 +790,171 @@
 
     <div class="hero-rule-new"></div>
 
-    <p class="hero-sub-new">Playbooks, training, and resources to help you delegate smarter, lead better, and scale faster.</p>
+    <p class="hero-sub-new">We teach what built our business. Real playbooks for the founders ready to step out of the weeds and into real, sustainable ownership.</p>
 
     <div class="hero-ctas-new">
-        <a href="#tracks" class="btn-mag">Explore Learning Tracks →</a>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-mag">Join the Program →</a>
+        <a href="#pillars" class="btn-primary" style="background:transparent;border:1px solid rgba(255,255,255,0.15);font-weight:500;padding:16px 32px;">See what's inside</a>
     </div>
 </section>
 
-<div class="coming-soon reveal">
-    <div class="coming-soon-badge">Launching Soon</div>
-    <h2>Something Big<br>Is <span class="g">Coming</span></h2>
-    <p>StaffifyAcademy is being built right now. Sign up below and you'll be the first to know when we go live.</p>
-    <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary">Talk to Us Now</a>
-</div>
+<!-- ═══ PAIN FRAMER ══════════════════════════════════════════ -->
+<section class="pain-section reveal">
+    <div class="pain-inner">
+        <div class="section-eyebrow" style="margin-bottom:18px;">The reality</div>
+        <h2 class="pain-title">Are you running your business, <span class="g">or is it running you?</span></h2>
+        <p class="pain-body">The industry is changing fast. Markets are oversaturated, prices are being driven down, and AI tools are giving every agent more control than ever. What used to set you apart is quickly becoming standard.</p>
+        <blockquote class="pain-quote">
+            Success doesn't come from having all the answers. It comes from the courage to move before you're ready.
+            <span class="pain-quote-cite">Paul Chareth, Founder</span>
+        </blockquote>
+    </div>
+</section>
 
+<!-- ═══ WHY THIS ACADEMY ═════════════════════════════════════ -->
+<section class="pillars-section" id="pillars">
+    <div class="section-eyebrow reveal">Why Staffify Academy</div>
+    <h2 class="section-title reveal">We teach what <span class="g">built our business.</span></h2>
+    <p class="section-sub reveal">We do not teach business theory. We teach what actually built ours, and how you can use the same playbooks to step out of the weeds and into real, sustainable ownership.</p>
+
+    <div class="pillars-grid">
+        <div class="pillar-card reveal">
+            <div class="pillar-num">01</div>
+            <div class="pillar-title">Taught by 7-figure owners</div>
+            <p class="pillar-desc">Real operators, not theorists. Every framework was built and refined inside a 7-figure operation across 6 states.</p>
+        </div>
+        <div class="pillar-card reveal">
+            <div class="pillar-num">02</div>
+            <div class="pillar-title">Proven frameworks, not fluff</div>
+            <p class="pillar-desc">Tested in production. Refined under pressure. Built for founders who need things that actually work in their business this week.</p>
+        </div>
+        <div class="pillar-card reveal">
+            <div class="pillar-num">03</div>
+            <div class="pillar-title">Step-by-step playbooks you can copy</div>
+            <p class="pillar-desc">No vague advice. Every module ships with a doc, a checklist, or a template you can put into use tomorrow.</p>
+        </div>
+        <div class="pillar-card reveal">
+            <div class="pillar-num">04</div>
+            <div class="pillar-title">Built for working founders</div>
+            <p class="pillar-desc">Self-paced. Designed for the founder who has 30 minutes after the kids are asleep. Not for the classroom.</p>
+        </div>
+        <div class="pillar-card reveal">
+            <div class="pillar-num">05</div>
+            <div class="pillar-title">Community of like-minded entrepreneurs</div>
+            <p class="pillar-desc">Private Slack. Direct line to other founders running the same plays in their own businesses.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ CURRICULUM ═══════════════════════════════════════════ -->
 <section class="tracks-section" id="tracks">
-    <div class="section-eyebrow reveal">Learning Tracks</div>
-    <h2 class="section-title reveal">What You'll <span class="g">Learn</span></h2>
-    <p class="section-sub reveal">Practical training for business owners who want to build a team that runs without them.</p>
+    <div class="section-eyebrow reveal">Curriculum</div>
+    <h2 class="section-title reveal">What you&rsquo;ll <span class="g">learn.</span></h2>
+    <p class="section-sub reveal">Four pillars. All built on what actually worked.</p>
 
     <div class="tracks-grid">
         <div class="track-card reveal">
             <span class="track-icon">🎯</span>
-            <div class="track-status coming">Coming Soon</div>
-            <div class="track-name">Delegation Mastery</div>
-            <p class="track-desc">How to identify what to hand off, document it in under an hour, and train someone to do it better than you.</p>
+            <div class="track-status live">Module 01</div>
+            <div class="track-name">Delegating without micromanaging</div>
+            <p class="track-desc">Hand off work that stays handed off. How to document, brief, and trust your team to own outcomes, not just tasks.</p>
         </div>
         <div class="track-card reveal">
-            <span class="track-icon">📞</span>
-            <div class="track-status coming">Coming Soon</div>
-            <div class="track-name">Client Communication SOPs</div>
-            <p class="track-desc">Proven scripts and systems for handling every client interaction, from first contact to renewal, without you in the room.</p>
+            <span class="track-icon">💰</span>
+            <div class="track-status live">Module 02</div>
+            <div class="track-name">Pricing your services for true profit</div>
+            <p class="track-desc">Stop discounting. Stop trading hours for dollars. Build margins that actually fund growth and let you breathe.</p>
         </div>
         <div class="track-card reveal">
-            <span class="track-icon">🎬</span>
-            <div class="track-status coming">Coming Soon</div>
-            <div class="track-name">Content at Scale</div>
-            <p class="track-desc">How to brief editors, maintain brand consistency, and get 10x the output from a dedicated content team.</p>
+            <span class="track-icon">🧭</span>
+            <div class="track-status live">Module 03</div>
+            <div class="track-name">Turning your team into leaders, not task-runners</div>
+            <p class="track-desc">Move people from doing tasks to owning outcomes. The accountability architecture that gets you out of the weeds for good.</p>
         </div>
         <div class="track-card reveal">
-            <span class="track-icon">⚡</span>
-            <div class="track-status coming">Coming Soon</div>
-            <div class="track-name">Lead Gen Automation</div>
-            <p class="track-desc">Build outbound systems that generate qualified conversations every week without cold calling or manual prospecting.</p>
-        </div>
-        <div class="track-card reveal">
-            <span class="track-icon">📊</span>
-            <div class="track-status coming">Coming Soon</div>
-            <div class="track-name">Managing Remote Teams</div>
-            <p class="track-desc">Set expectations, track performance, and build culture with a team you may never meet in person.</p>
-        </div>
-        <div class="track-card reveal">
-            <span class="track-icon">🚀</span>
-            <div class="track-status coming">Coming Soon</div>
-            <div class="track-name">Scale Without Chaos</div>
-            <p class="track-desc">The systems, tools, and mindset shifts that let you grow revenue without growing your personal workload.</p>
+            <span class="track-icon">⚙️</span>
+            <div class="track-status live">Module 04</div>
+            <div class="track-name">Using systems to scale, not just survive</div>
+            <p class="track-desc">The operational backbone. SOPs, dashboards, and decision trees that let the business run when you're not watching.</p>
         </div>
     </div>
 </section>
 
-<section class="notify-section">
-    <div class="notify-wrap reveal">
-        <h2 class="section-title" style="text-align:left;font-size:clamp(28px,3.5vw,42px);margin-bottom:12px;">Get notified<br>when we <span class="g">launch</span></h2>
-        <p style="text-align:left;font-size:15px;color:var(--muted);line-height:1.6;">Drop your email and you'll be the first inside StaffifyAcademy. Plus early access pricing.</p>
-        <form class="notify-form" onsubmit="handleNotify(event)">
-            <input type="email" class="notify-input" placeholder="your@email.com" required>
-            <button type="submit" class="notify-btn">Notify Me</button>
-        </form>
-        <p id="notify-confirm" style="display:none;margin-top:16px;font-size:14px;color:var(--c);font-weight:600;">✓ You're on the list. We'll be in touch.</p>
+<!-- ═══ INSIDE THE PROGRAM ═══════════════════════════════════ -->
+<section class="inclusions-section">
+    <div class="section-eyebrow reveal">What&rsquo;s included</div>
+    <h2 class="section-title reveal">Inside the <span class="g">program.</span></h2>
+    <p class="section-sub reveal">Self-paced and on-demand. Built for founders, not students.</p>
+
+    <div class="inclusions-grid">
+        <div class="inclusion-card reveal">
+            <div class="inclusion-check">✓</div>
+            <div>
+                <div class="inclusion-title">10+ hours of video content</div>
+                <div class="inclusion-desc">Self-paced, on-demand. Watch on your schedule, in any order you need.</div>
+            </div>
+        </div>
+        <div class="inclusion-card reveal">
+            <div class="inclusion-check">✓</div>
+            <div>
+                <div class="inclusion-title">Templates, workflows, and pitch decks</div>
+                <div class="inclusion-desc">Copy our exact docs. Adjust the names. Use them in your business this week.</div>
+            </div>
+        </div>
+        <div class="inclusion-card reveal">
+            <div class="inclusion-check">✓</div>
+            <div>
+                <div class="inclusion-title">Private Slack community</div>
+                <div class="inclusion-desc">Direct line to other founders running the same plays. Real answers, real fast.</div>
+            </div>
+        </div>
+        <div class="inclusion-card reveal">
+            <div class="inclusion-check">✓</div>
+            <div>
+                <div class="inclusion-title">Lifetime access to updates</div>
+                <div class="inclusion-desc">Buy once. Every new module, every update, every refinement is yours forever.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ TESTIMONIALS ═════════════════════════════════════════ -->
+<section class="testimonials-section">
+    <div class="section-eyebrow reveal">Don&rsquo;t just take our word</div>
+    <h2 class="section-title reveal">Built for founders, <span class="g">used by founders.</span></h2>
+    <p class="section-sub reveal">Real operators applying the same playbooks in their own businesses.</p>
+
+    <div class="testimonials-grid">
+        <div class="testimonial-card reveal">
+            <div class="testimonial-quote-mark">&ldquo;</div>
+            <p class="testimonial-quote">I've already paid a lot of money into different coaching, mentorships, and books to educate myself as a business owner. Hands down one of the most impactful things I've ever done is work with the Staffify team.</p>
+            <div class="testimonial-name">Tevin Colon</div>
+            <div class="testimonial-co">Lightreel Media, Owner</div>
+        </div>
+        <div class="testimonial-card reveal">
+            <div class="testimonial-quote-mark">&ldquo;</div>
+            <p class="testimonial-quote">I rapidly grew my revenue, I rapidly grew my social media presence, and it allowed me to take on new clients. Not only in my lane, but in different avenues.</p>
+            <div class="testimonial-name">Raffi Sarajian</div>
+            <div class="testimonial-co">Gotham Media, Owner</div>
+        </div>
+        <div class="testimonial-card reveal">
+            <div class="testimonial-quote-mark">&ldquo;</div>
+            <p class="testimonial-quote">Paul and the team really crushed it. They gave me a bunch of great insights and showed me a lot of blind spots I hadn't thought about. Helped me diversify and make my business stronger.</p>
+            <div class="testimonial-name">Michael Muchnij</div>
+            <div class="testimonial-co">Home &amp; Hearth Productions, Owner</div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ FINAL CTA ════════════════════════════════════════════ -->
+<section class="academy-cta">
+    <div class="academy-cta-orb"></div>
+    <div class="academy-cta-eyebrow reveal">Your first step</div>
+    <h2 class="academy-cta-title reveal">They did it. <span class="g">Now it&rsquo;s your turn.</span></h2>
+    <p class="academy-cta-sub reveal">Scaling smarter starts here. Self-paced, lifetime access, real playbooks.</p>
+    <div class="academy-cta-actions reveal">
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-mag">Join the Program →</a>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary" style="background:transparent;border:1px solid rgba(255,255,255,0.15);font-weight:500;">Talk to us first</a>
     </div>
 </section>
 
