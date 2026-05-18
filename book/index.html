@@ -318,6 +318,99 @@
             .expect-item { gap: 20px; }
         }
     
+        
+        /* ─── MOBILE NAV (hamburger + drawer) ────────────────── */
+        .nav-hamburger {
+            display: none;
+            width: 44px; height: 44px;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 8px;
+        }
+        .nav-hamburger span {
+            position: relative;
+            display: block;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, opacity .3s, top .3s;
+        }
+        .nav-hamburger span::before,
+        .nav-hamburger span::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, top .3s, opacity .3s;
+        }
+        .nav-hamburger span::before { top: -7px; }
+        .nav-hamburger span::after  { top: 7px; }
+        .nav-hamburger.open span { background: transparent; }
+        .nav-hamburger.open span::before { top: 0; transform: rotate(45deg); }
+        .nav-hamburger.open span::after  { top: 0; transform: rotate(-45deg); }
+
+        .nav-mobile-menu {
+            position: fixed;
+            top: 56px; left: 0; right: 0;
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 24px 24px 32px;
+            z-index: 199;
+            opacity: 0;
+            transform: translateY(-12px);
+            pointer-events: none;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+        .nav-mobile-menu.open {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+        .nav-mobile-menu ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 0 0 22px;
+            padding: 0;
+        }
+        .nav-mobile-menu li a {
+            display: block;
+            padding: 14px 8px;
+            color: rgba(255,255,255,0.78);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-mobile-menu li a:active { background: rgba(255,255,255,0.04); }
+        .nav-mobile-menu li a.active { color: #fff; }
+        .nav-mobile-menu .nav-mobile-cta {
+            display: block;
+            text-align: center;
+            margin-top: 18px;
+            padding: 14px 24px;
+            background: #1abde1;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .nav-hamburger { display: inline-flex; }
+            .nav-cta { display: none; }
+        }
+
         </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
@@ -464,7 +557,21 @@
         <li><a href="/apply/">Apply</a></li>
     </ul>
         <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
-    </nav>
+        <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
+</nav>
+
+<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
+    <ul>
+            <li><a href="/editors/">Video Editors</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
+            <li><a href="/csr/">CSR</a></li>
+            <li><a href="/campaigns/">Sales</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/about/">About</a></li>
+            <li><a href="/apply/">Apply</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
+</div>
 
     <!-- HERO -->
     <section class="hero">
@@ -565,5 +672,31 @@
       }, { threshold: 0.09 });
       document.querySelectorAll('.reveal').forEach(el => _io.observe(el));
     </script>
+<script>
+(function(){
+    var btn = document.getElementById('navHamburger');
+    var menu = document.getElementById('navMobileMenu');
+    if (!btn || !menu) return;
+    function open(){
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+        menu.style.opacity = '1';
+        menu.style.transform = 'translateY(0)';
+        menu.style.pointerEvents = 'auto';
+    }
+    function close(){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+        menu.style.opacity = '0';
+        menu.style.transform = 'translateY(-12px)';
+        menu.style.pointerEvents = 'none';
+    }
+    function toggle(){ menu.classList.contains('open') ? close() : open(); }
+    btn.addEventListener('click', toggle);
+    menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
 </body>
 </html>
