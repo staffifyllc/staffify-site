@@ -10,7 +10,12 @@
 
 import { Redis } from '@upstash/redis';
 
-const redis = Redis.fromEnv();
+// Vercel's Upstash integration injects KV_REST_API_URL / KV_REST_API_TOKEN.
+// Construct the client explicitly so it works without env var aliasing.
+const redis = new Redis({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+});
 
 const PLAYBOOK_URL = 'https://www.gostaffify.com/playbook/';
 const CALENDLY_URL = 'https://calendly.com/go-staffify/discovery-call';

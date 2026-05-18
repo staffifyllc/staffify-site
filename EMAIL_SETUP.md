@@ -18,10 +18,13 @@ In Vercel: **Project → Storage → Create Database → KV (Upstash)**.
 - Plan: Free (10K commands/day — way more than you need)
 
 Once created, Vercel automatically injects these env vars into the project:
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
+- `KV_REST_API_URL`
+- `KV_REST_API_TOKEN`
+- `KV_REST_API_READ_ONLY_TOKEN`
+- `KV_URL`
+- `REDIS_URL`
 
-You don't need to copy/paste anything. Just hit **Connect**.
+The `/api/subscribe` code uses `KV_REST_API_URL` and `KV_REST_API_TOKEN`. You don't need to copy/paste anything. Just hit **Connect**.
 
 ## 2. Set up Resend (free up to 3K emails/month)
 

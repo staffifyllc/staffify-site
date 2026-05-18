@@ -8,7 +8,10 @@
 
 import { Redis } from '@upstash/redis';
 
-const redis = Redis.fromEnv();
+const redis = new Redis({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+});
 
 function toCSV(rows) {
     const cols = ['email', 'signed_up_at', 'last_seen_at', 'source', 'playbook_sent_at'];
