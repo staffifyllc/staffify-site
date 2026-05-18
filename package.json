@@ -1,0 +1,10 @@
+{
+  "name": "staffify-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Staffify marketing site + serverless email handlers",
+  "dependencies": {
+    "@upstash/redis": "^1.34.3"
+  }
+}
