@@ -378,6 +378,98 @@
             line-height: 1.75;
         }
 
+        /* ── CASE STUDY (Flylisted) ── */
+        .case-section {
+            background: var(--black);
+            border-bottom: 1px solid var(--divider);
+        }
+        .case-card {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            gap: 56px;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.015) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 24px;
+            padding: 56px 56px;
+        }
+        .case-card .case-left { display: flex; flex-direction: column; gap: 18px; }
+        .case-card .case-logo {
+            height: 56px;
+            width: auto;
+            object-fit: contain;
+            align-self: flex-start;
+            opacity: 0.95;
+        }
+        .case-card .case-context {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .case-card .case-headline {
+            font-size: clamp(28px, 3.4vw, 40px);
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+            color: var(--white);
+        }
+        .case-card .case-headline .g { font-size: 1.1em; }
+        .case-card .case-quote {
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 17px;
+            line-height: 1.55;
+            color: rgba(255,255,255,0.78);
+            font-style: italic;
+            margin-top: 4px;
+        }
+        .case-card .case-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            color: var(--c);
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            letter-spacing: 0.02em;
+            transition: gap .2s;
+        }
+        .case-card .case-cta:hover { gap: 14px; }
+        .case-card .case-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .case-stat {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--divider);
+            border-radius: 16px;
+            padding: 28px 28px;
+        }
+        .case-stat .num {
+            font-size: clamp(40px, 4.4vw, 56px);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        .case-stat .label {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+        @media (max-width: 900px) {
+            .case-card {
+                grid-template-columns: 1fr;
+                padding: 40px 28px;
+                gap: 32px;
+            }
+        }
+
         /* ── SHOWCASE GRID ── */
         .showcase-section {
             background: var(--black);
@@ -1136,6 +1228,37 @@
                 <div class="card-num g">3</div>
                 <h3>Reliable Editing, Every Time</h3>
                 <p>Tired of scrambling for a last-minute freelancer who &ldquo;might&rdquo; get your vision? With Staffify, you get a dedicated editor who knows your style inside and out. Every cut, every color grade, every transition feels like you did it yourself.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CASE STUDY: FLYLISTED -->
+    <section class="case-section">
+        <p class="section-eyebrow reveal">Case Study</p>
+        <h2 class="section-title reveal">Real <span class="g">Numbers</span></h2>
+        <p class="section-sub reveal" style="margin-bottom:48px;">How one real estate marketing company cut its editing spend by replacing pay-per-video with a dedicated Staffify editor.</p>
+
+        <div class="case-card reveal">
+            <div class="case-left">
+                <img src="/assets/clients/flylisted.png" alt="Flylisted" class="case-logo">
+                <p class="case-context">Real Estate Marketing &middot; Boston / South Florida</p>
+                <h3 class="case-headline">Flylisted cut video editing spend <span class="g">60%</span> by ditching pay-per-video.</h3>
+                <p class="case-quote">&ldquo;We were bleeding margin to per-video freelance pricing every busy month. A dedicated Staffify editor cut our editing spend by 60% and our turnaround stopped fluctuating with the calendar.&rdquo;</p>
+                <a href="/case-studies/flylisted/" class="case-cta">Read the full case study <span aria-hidden="true">→</span></a>
+            </div>
+            <div class="case-stats">
+                <div class="case-stat">
+                    <div class="num g">60%</div>
+                    <div class="label">lower editing spend vs. pay-per-video</div>
+                </div>
+                <div class="case-stat">
+                    <div class="num g">12-24h</div>
+                    <div class="label">turnaround, every listing, no surge pricing</div>
+                </div>
+                <div class="case-stat">
+                    <div class="num g">Flat</div>
+                    <div class="label">monthly rate, predictable cost line</div>
+                </div>
             </div>
         </div>
     </section>
