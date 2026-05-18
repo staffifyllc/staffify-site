@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service | Staffify</title>
+    <meta name="description" content="Terms of Service for Staffify LLC. The terms that govern your use of gostaffify.com and engagement of our staffing services.">
+    <link rel="canonical" href="https://www.gostaffify.com/terms/">
+    <meta name="robots" content="index, follow">
+
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5;
+            --black: #000000; --near-black: #0a0a0a;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08);
+            --white: #ffffff;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo img { height: 28px; width: auto; display: block; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        .doc-header {
+            padding: 140px 24px 40px;
+            max-width: 760px; margin: 0 auto;
+            border-bottom: 1px solid var(--divider);
+        }
+        .doc-eyebrow {
+            font-size: 12px; color: var(--c);
+            text-transform: uppercase; letter-spacing: 0.14em;
+            font-weight: 700; margin-bottom: 20px;
+        }
+        .doc-title {
+            font-size: clamp(36px, 5vw, 56px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08; margin-bottom: 20px;
+        }
+        .doc-meta { font-size: 13px; color: var(--muted); }
+
+        article {
+            max-width: 760px; margin: 0 auto;
+            padding: 56px 24px 80px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 18px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article p { margin-bottom: 22px; }
+        article h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(22px, 2.6vw, 28px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 48px 0 16px;
+            line-height: 1.25;
+        }
+        article h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
+            color: var(--white);
+            margin: 28px 0 10px;
+        }
+        article ul { margin: 0 0 22px; padding-left: 28px; }
+        article li { margin-bottom: 8px; }
+        article a { color: var(--c); text-decoration: none; border-bottom: 1px solid rgba(26,189,225,0.3); transition: border-color .2s; }
+        article a:hover { border-bottom-color: var(--c); }
+        article strong { color: var(--white); font-weight: 700; }
+
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 13px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 12px; color: var(--subtle);
+            gap: 24px; flex-wrap: wrap;
+        }
+        .footer-legal { display: flex; gap: 20px; }
+        .footer-legal a { color: var(--subtle); text-decoration: none; transition: color .2s; }
+        .footer-legal a:hover { color: var(--white); }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .doc-header { padding-top: 110px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+            .footer-bottom { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+</nav>
+
+<header class="doc-header">
+    <div class="doc-eyebrow">Legal</div>
+    <h1 class="doc-title">Terms of Service</h1>
+    <div class="doc-meta">Last updated: May 18, 2026</div>
+</header>
+
+<article>
+
+<p>These Terms of Service ("Terms") govern your access to and use of gostaffify.com (the "Site") and any staffing, recruiting, or operational services offered by Staffify LLC ("Staffify," "we," "our," or "us"). By accessing the Site or engaging our services, you agree to be bound by these Terms. If you do not agree, do not use the Site or engage our services.</p>
+
+<h2>1. Services</h2>
+
+<p>Staffify provides workforce infrastructure, including the placement of vetted remote talent ("Talent") with U.S.-based businesses ("Clients") and operational support around those placements. The specific scope, duration, deliverables, fees, and replacement terms of any engagement will be set out in a separate written agreement, statement of work, or order form between Staffify and the Client (the "Engagement Agreement"). In the event of any conflict between these Terms and an Engagement Agreement, the Engagement Agreement controls for that engagement.</p>
+
+<h2>2. Eligibility</h2>
+
+<p>You represent that you are at least 18 years old and have the legal authority to enter into these Terms on behalf of yourself or the entity you represent.</p>
+
+<h2>3. Account and accuracy</h2>
+
+<p>When you contact us, book a call, request content, or otherwise share information with Staffify, you agree to provide accurate and complete information and to update it as needed. You are responsible for safeguarding any account credentials or links shared with you.</p>
+
+<h2>4. Client responsibilities</h2>
+
+<p>If you engage Staffify, you are responsible for:</p>
+
+<ul>
+    <li>Providing reasonable direction, materials, and access necessary for Talent to perform their work.</li>
+    <li>Treating Talent professionally and lawfully.</li>
+    <li>Complying with all applicable laws, including employment, labor, tax, export-control, and data-protection laws in any jurisdiction where you operate.</li>
+    <li>Paying invoices in accordance with your Engagement Agreement.</li>
+</ul>
+
+<h2>5. Talent classification</h2>
+
+<p>Talent placed by Staffify are not employees of the Client unless expressly stated in writing. Unless otherwise agreed, Talent are independent contractors engaged by Staffify, and the Client's relationship is with Staffify rather than directly with the Talent. Nothing in these Terms creates a partnership, joint venture, or employment relationship between Staffify, the Client, and any Talent.</p>
+
+<h2>6. Replacement guarantee</h2>
+
+<p>Staffify offers a lifetime replacement guarantee on placements made under an active Engagement Agreement: if a placed Talent leaves or fails to perform to the standard described in the Engagement Agreement, Staffify will source and place a replacement at no additional placement fee. The replacement guarantee applies only while the Engagement Agreement is active and in good standing (including current on fees) and does not cover claims arising from changes in the Client's needs, scope creep beyond the original role, or Client misconduct.</p>
+
+<h2>7. Fees and payment</h2>
+
+<p>Fees, billing cadence, and payment methods are described in your Engagement Agreement. Unless otherwise specified, fees are payable in U.S. dollars, are non-refundable, and are due upon receipt. Past-due amounts may accrue interest at the lesser of 1.5% per month or the maximum allowed by law, and Staffify may suspend services for any account that becomes past due.</p>
+
+<h2>8. Intellectual property</h2>
+
+<h3>Our content</h3>
+<p>All content on the Site &mdash; including text, graphics, logos, images, videos, code, and the Operator's Playbook &mdash; is owned by or licensed to Staffify and protected by copyright, trademark, and other intellectual property laws. You may view and share links to our content for personal, non-commercial purposes. You may not reproduce, modify, distribute, or create derivative works without our prior written consent.</p>
+
+<h3>Work product</h3>
+<p>Unless your Engagement Agreement says otherwise, work product created by Talent under a Client engagement is assigned to the Client upon full payment of related fees.</p>
+
+<h2>9. Acceptable use</h2>
+
+<p>You agree not to use the Site or our services to:</p>
+
+<ul>
+    <li>Violate any applicable law or third-party right.</li>
+    <li>Send unsolicited communications or harvest information from the Site.</li>
+    <li>Reverse engineer, scrape, or interfere with the operation of the Site.</li>
+    <li>Discriminate against, harass, or mistreat any Talent.</li>
+    <li>Attempt to circumvent Staffify by directly hiring placed Talent away from Staffify during or for 12 months after the conclusion of any engagement, except as expressly permitted in writing.</li>
+</ul>
+
+<h2>10. Confidentiality</h2>
+
+<p>If you receive non-public information from Staffify or a placed Talent in connection with your engagement, you agree to use that information only for the purpose for which it was disclosed and to protect it with at least the same care you use for your own confidential information.</p>
+
+<h2>11. Disclaimer of warranties</h2>
+
+<p>THE SITE AND OUR SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, OR STATUTORY, INCLUDING ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SITE WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF HARMFUL COMPONENTS.</p>
+
+<h2>12. Limitation of liability</h2>
+
+<p>TO THE FULLEST EXTENT PERMITTED BY LAW, STAFFIFY AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AFFILIATES WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, OR PUNITIVE DAMAGES, INCLUDING LOST PROFITS, REVENUE, OR DATA, ARISING OUT OF OR RELATED TO YOUR USE OF THE SITE OR OUR SERVICES, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. OUR TOTAL CUMULATIVE LIABILITY FOR ANY CLAIM ARISING OUT OF OR RELATED TO THESE TERMS OR YOUR USE OF THE SITE OR SERVICES WILL NOT EXCEED THE GREATER OF (A) THE AMOUNTS PAID BY YOU TO STAFFIFY IN THE THREE MONTHS PRECEDING THE CLAIM, OR (B) $100.</p>
+
+<h2>13. Indemnification</h2>
+
+<p>You agree to indemnify, defend, and hold harmless Staffify and its officers, directors, employees, and affiliates from any claim, loss, liability, damage, or expense (including reasonable attorneys' fees) arising out of (a) your breach of these Terms, (b) your use of the Site or our services, or (c) your violation of any law or third-party right.</p>
+
+<h2>14. Termination</h2>
+
+<p>We may suspend or terminate your access to the Site or our services at any time, with or without notice, for any reason, including violation of these Terms. Sections that by their nature should survive termination (including intellectual property, confidentiality, disclaimers, limitation of liability, indemnification, and governing law) will survive.</p>
+
+<h2>15. Governing law and disputes</h2>
+
+<p>These Terms are governed by the laws of the State of Florida, without regard to its conflict-of-laws principles. Any dispute arising out of or relating to these Terms will be brought exclusively in the state or federal courts located in Miami-Dade County, Florida, and you consent to personal jurisdiction and venue there.</p>
+
+<h2>16. Changes to these Terms</h2>
+
+<p>We may update these Terms from time to time. When we make material changes, we will update the "Last updated" date at the top of this page and, where appropriate, provide additional notice. Continued use of the Site or our services after an update constitutes acceptance of the revised Terms.</p>
+
+<h2>17. Miscellaneous</h2>
+
+<p>These Terms (together with any Engagement Agreement) constitute the entire agreement between you and Staffify regarding the Site and our services and supersede all prior agreements on the same subject. If any provision is held unenforceable, the remaining provisions will remain in full force and effect. Our failure to enforce any provision is not a waiver. You may not assign these Terms without our prior written consent; we may assign these Terms freely.</p>
+
+<h2>18. Contact us</h2>
+
+<p>Questions about these Terms? Contact:</p>
+
+<p>
+    Staffify LLC<br>
+    Miami, FL<br>
+    <a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a><br>
+    <a href="tel:3056369210">(305) 636-9210</a>
+</p>
+
+<p style="margin-top:48px;padding:18px 22px;border:1px solid var(--divider);border-radius:10px;font-size:14px;color:var(--muted);font-family:'Inter',sans-serif;line-height:1.55;">
+<strong style="color:var(--white);">Note:</strong> This document is a baseline Terms of Service template. Before relying on these Terms for any high-stakes engagement, we recommend a review by your own legal counsel to tailor the language to your specific business arrangements and jurisdictions.
+</p>
+
+</article>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify"></a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/apply/">Apply</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <div class="footer-legal">
+            <a href="/privacy/">Privacy</a>
+            <a href="/terms/">Terms</a>
+        </div>
+        <span>Miami, FL</span>
+    </div>
+</footer>
+
+</body>
+</html>
