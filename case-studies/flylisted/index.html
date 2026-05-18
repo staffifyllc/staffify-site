@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flylisted Case Study: Scaling Real Estate Video Output Without Scaling Overhead | Staffify</title>
+    <meta name="description" content="How Flylisted, a Boston-based real estate marketing company, used Staffify video editors to triple listing throughput in New England and South Florida without adding in-house headcount.">
+    <link rel="canonical" href="https://www.gostaffify.com/case-studies/flylisted/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.gostaffify.com/case-studies/flylisted/">
+    <meta property="og:title" content="Flylisted scaled real estate video output without scaling overhead">
+    <meta property="og:description" content="How a Boston real estate marketing company tripled listing throughput in two markets using Staffify video editors.">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Flylisted Case Study | Staffify">
+    <meta name="twitter:description" content="How a Boston real estate marketing company tripled listing throughput using Staffify video editors.">
+
+    <!-- Schema.org Article + about Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "How Flylisted scaled real estate video output without scaling overhead",
+      "description": "Case study: Boston-based real estate marketing company Flylisted tripled listing throughput in New England and South Florida using Staffify video editors.",
+      "author": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "publisher": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://www.gostaffify.com/case-studies/flylisted/" },
+      "about": {
+        "@type": "Organization",
+        "name": "Flylisted",
+        "url": "https://www.flylisted.com/",
+        "description": "Boston-based real estate marketing company serving New England and South Florida."
+      }
+    }
+    </script>
+
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* HERO */
+        .cs-hero {
+            padding: 140px 24px 80px;
+            max-width: 1100px; margin: 0 auto;
+            text-align: left;
+            border-bottom: 1px solid var(--divider);
+        }
+        .cs-crumb {
+            display: flex; gap: 12px; align-items: center;
+            font-size: 12px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
+            margin-bottom: 32px;
+        }
+        .cs-crumb a { color: var(--c); text-decoration: none; }
+        .cs-crumb .sep { opacity: 0.4; }
+        .cs-hero-grid {
+            display: grid; grid-template-columns: 1fr 280px;
+            gap: 64px; align-items: center;
+        }
+        .cs-hero-title {
+            font-size: clamp(36px, 5.4vw, 64px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.05; margin-bottom: 24px;
+            color: var(--white);
+        }
+        .cs-hero-dek {
+            font-size: 20px; line-height: 1.6;
+            color: rgba(255,255,255,0.7);
+            max-width: 640px; font-weight: 400;
+        }
+        .cs-logo-card {
+            background: rgba(255,255,255,0.96);
+            border-radius: 18px;
+            padding: 40px 32px;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 200px;
+        }
+        .cs-logo-card img {
+            max-width: 100%; max-height: 120px;
+            object-fit: contain;
+        }
+
+        /* STATS ROW */
+        .cs-stats {
+            max-width: 1100px; margin: 0 auto;
+            padding: 64px 24px 56px;
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            border-bottom: 1px solid var(--divider);
+        }
+        .cs-stat-num {
+            font-size: clamp(36px, 4.5vw, 56px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1;
+        }
+        .cs-stat-label {
+            font-size: 13px; color: var(--muted);
+            margin-top: 12px; line-height: 1.4;
+            max-width: 200px;
+        }
+
+        /* BODY */
+        article.cs-body {
+            max-width: 760px; margin: 0 auto;
+            padding: 72px 24px 40px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 19px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article.cs-body p { margin-bottom: 28px; }
+        article.cs-body h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(26px, 3.5vw, 34px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 56px 0 20px;
+            line-height: 1.2;
+        }
+        article.cs-body h2 .label {
+            font-size: 11px; font-weight: 800;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--c); display: block;
+            margin-bottom: 8px;
+        }
+        article.cs-body ul { margin: 0 0 28px; padding-left: 28px; }
+        article.cs-body li { margin-bottom: 10px; }
+        article.cs-body strong { color: var(--white); font-weight: 700; }
+
+        /* PULL QUOTE */
+        .cs-quote {
+            max-width: 860px; margin: 32px auto;
+            padding: 56px 32px;
+            text-align: center;
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+        .cs-quote blockquote {
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: clamp(22px, 2.6vw, 30px);
+            font-weight: 500; line-height: 1.35;
+            color: var(--white); letter-spacing: -0.01em;
+            max-width: 720px; margin: 0 auto 28px;
+        }
+        .cs-quote blockquote::before { content: "“"; color: var(--c); margin-right: 4px; }
+        .cs-quote blockquote::after  { content: "”"; color: var(--c); margin-left: 4px; }
+        .cs-quote .attrib {
+            font-size: 13px; color: var(--muted);
+            letter-spacing: 0.04em;
+        }
+        .cs-quote .attrib strong { color: var(--white); font-weight: 700; }
+
+        /* ROLES TILE */
+        .cs-roles {
+            max-width: 1100px; margin: 64px auto 0;
+            padding: 0 24px;
+        }
+        .cs-roles-eyebrow {
+            font-size: 11px; font-weight: 800;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--c); margin-bottom: 20px;
+        }
+        .cs-roles-title {
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white); margin-bottom: 32px;
+        }
+        .cs-roles-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .cs-role-card {
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 16px;
+            padding: 28px 24px;
+        }
+        .cs-role-card .role-count {
+            font-size: 32px; font-weight: 900;
+            letter-spacing: -0.02em; color: var(--c);
+            margin-bottom: 4px;
+        }
+        .cs-role-card .role-name {
+            font-size: 14px; font-weight: 700;
+            color: var(--white); margin-bottom: 8px;
+        }
+        .cs-role-card .role-desc {
+            font-size: 13px; color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* CTA */
+        .cs-cta {
+            max-width: 1100px; margin: 96px auto 0;
+            padding: 0 24px 100px;
+        }
+        .cs-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 56px 48px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 40px;
+        }
+        .cs-cta-card h3 {
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white); margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        .cs-cta-card p {
+            font-size: 15px; color: var(--muted);
+            max-width: 540px;
+        }
+        .cs-cta-btn {
+            display: inline-block; flex-shrink: 0;
+            background: var(--c); color: #000;
+            padding: 16px 32px; border-radius: 980px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .cs-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* FOOTER */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 13px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 12px; color: var(--subtle);
+        }
+
+        /* MOBILE NAV (hamburger + drawer) */
+        .nav-hamburger {
+            display: none;
+            width: 44px; height: 44px;
+            align-items: center; justify-content: center;
+            background: transparent; border: none; cursor: pointer;
+            padding: 0; margin-left: 8px;
+        }
+        .nav-hamburger span {
+            position: relative; display: block;
+            width: 22px; height: 2px; background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, opacity .3s, top .3s;
+        }
+        .nav-hamburger span::before,
+        .nav-hamburger span::after {
+            content: ''; position: absolute; left: 0;
+            width: 22px; height: 2px; background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, top .3s, opacity .3s;
+        }
+        .nav-hamburger span::before { top: -7px; }
+        .nav-hamburger span::after  { top: 7px; }
+        .nav-hamburger.open span { background: transparent; }
+        .nav-hamburger.open span::before { top: 0; transform: rotate(45deg); }
+        .nav-hamburger.open span::after  { top: 0; transform: rotate(-45deg); }
+        .nav-mobile-menu {
+            position: fixed; top: 56px; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.97);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 199;
+            opacity: 0; visibility: hidden;
+            transition: opacity .3s, visibility .3s;
+            padding: 32px 24px;
+            display: flex; flex-direction: column; gap: 8px;
+            pointer-events: none;
+        }
+        .nav-mobile-menu.open {
+            opacity: 1 !important; visibility: visible !important;
+            pointer-events: auto !important;
+        }
+        .nav-mobile-menu ul {
+            list-style: none; display: flex; flex-direction: column;
+            gap: 0; padding-top: 16px;
+        }
+        .nav-mobile-menu li { border-bottom: 1px solid var(--divider); }
+        .nav-mobile-menu a {
+            display: block; padding: 18px 0;
+            font-size: 17px; font-weight: 500;
+            color: var(--white); text-decoration: none;
+        }
+        .nav-mobile-cta {
+            display: inline-block; align-self: flex-start;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 980px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none; margin-top: 24px;
+        }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links, .nav-cta { display: none; }
+            .nav-hamburger { display: flex; }
+            .cs-hero { padding-top: 110px; padding-bottom: 56px; }
+            .cs-hero-grid { grid-template-columns: 1fr; gap: 32px; }
+            .cs-logo-card { max-width: 280px; }
+            .cs-stats { grid-template-columns: repeat(2, 1fr); gap: 28px; padding: 48px 24px; }
+            .cs-cta-card { flex-direction: column; align-items: flex-start; padding: 36px 28px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+            .footer-bottom { flex-direction: column; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/about/">About</a></li>
+        <li><a href="/apply/">Apply</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
+</nav>
+
+<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
+    <ul>
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/about/">About</a></li>
+        <li><a href="/apply/">Apply</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
+</div>
+
+<header class="cs-hero">
+    <div class="cs-crumb">
+        <a href="/case-studies/">Case Studies</a>
+        <span class="sep">/</span>
+        <span>Real Estate Marketing</span>
+    </div>
+    <div class="cs-hero-grid">
+        <div>
+            <h1 class="cs-hero-title">How Flylisted tripled listing throughput without scaling overhead.</h1>
+            <p class="cs-hero-dek">A Boston-based real estate marketing company operating in New England and South Florida needed faster video turnaround as listing volume grew. They plugged in Staffify video editors and admin support instead of hiring full-time in-house.</p>
+        </div>
+        <div class="cs-logo-card">
+            <img src="/assets/clients/flylisted.png" alt="Flylisted logo">
+        </div>
+    </div>
+</header>
+
+<section class="cs-stats" aria-label="Key results">
+    <div>
+        <div class="cs-stat-num g">3x</div>
+        <div class="cs-stat-label">listing throughput within 90 days</div>
+    </div>
+    <div>
+        <div class="cs-stat-num g">12-24h</div>
+        <div class="cs-stat-label">video turnaround, down from 2-4 days</div>
+    </div>
+    <div>
+        <div class="cs-stat-num g">68%</div>
+        <div class="cs-stat-label">lower cost per edit vs. local hire</div>
+    </div>
+    <div>
+        <div class="cs-stat-num g">0</div>
+        <div class="cs-stat-label">in-house headcount added</div>
+    </div>
+</section>
+
+<article class="cs-body">
+
+<h2><span class="label">The Challenge</span>Growth was outpacing the edit room.</h2>
+
+<p>Flylisted built its reputation on fast, polished listing media — drone, walkthrough video, and photography that gives agents a marketing edge in two of the most competitive real estate markets in the country.</p>
+
+<p>The problem wasn't lead flow. It was the bottleneck behind every shoot. As volume grew through the spring listing season, the team was shipping more raw footage than their two in-house editors could turn around. Agents were waiting 2-4 days for finished video. Some were sending follow-up nudges. A few referred next month's listing to a competitor.</p>
+
+<p>The instinct was to hire a third editor locally. The math didn't work. A full-time editor in Boston runs $70-90K loaded, before benefits, taxes, and the ramp time before they're producing at speed. To absorb the seasonal swing, Flylisted would have been paying a winter salary for summer demand.</p>
+
+<h2><span class="label">The Approach</span>Plug in a flex editing team instead of adding W-2 headcount.</h2>
+
+<p>Staffify placed three vetted video editors with Flylisted, all experienced in real estate listing media. The arrangement was structured around output, not hours: editors picked up jobs from a shared queue, with QA and dispatching handled by a Staffify operations layer rather than the Flylisted leadership team.</p>
+
+<p>Two design choices made it work:</p>
+
+<ul>
+    <li><strong>Editors specialized inside the queue.</strong> One editor owned drone and walkthrough composites. One owned vertical social cuts for Reels and TikTok. One floated to absorb peaks. That specialization cut average edit time roughly in half.</li>
+    <li><strong>The operations layer absorbed the chaos.</strong> Staffify handled QA, replacement coverage when an editor was out, and ticketing. Flylisted's founders never had to onboard, train, or troubleshoot the editing team directly.</li>
+</ul>
+
+<p>An admin VA was added a few weeks later to handle agent intake, file collection, and the back-and-forth of scheduling reshoots. That move alone took another six hours per week off the founders' plate.</p>
+
+<div class="cs-quote">
+    <blockquote>The thing that mattered most wasn't even the cost. It was that I stopped being the bottleneck. Listings ship now without me touching them.</blockquote>
+    <div class="attrib"><strong>Flylisted founders</strong> · Boston, MA</div>
+</div>
+
+<h2><span class="label">The Outcome</span>3x volume, same leadership team, faster client experience.</h2>
+
+<p>Within 90 days, Flylisted was turning listings around in 12 to 24 hours instead of 2 to 4 days. Total monthly listing throughput tripled. Agents who had been on the fence about exclusivity locked into multi-listing agreements once they trusted the turnaround.</p>
+
+<p>The cost line came in at roughly 32% of what the equivalent local hire would have cost — and because the Staffify arrangement scales by output rather than salary, Flylisted can ramp coverage up or down with the listing season instead of carrying winter overhead.</p>
+
+<p>Most importantly: zero new salaried headcount was added. The founders kept the team lean, kept margin intact, and stopped editing in the evenings to catch up.</p>
+
+</article>
+
+<section class="cs-roles">
+    <div class="cs-roles-eyebrow">The Stack</div>
+    <h3 class="cs-roles-title">What Flylisted hired through Staffify</h3>
+    <div class="cs-roles-grid">
+        <div class="cs-role-card">
+            <div class="role-count">3</div>
+            <div class="role-name">Video Editors</div>
+            <div class="role-desc">Real-estate-specialized. Drone, walkthrough, vertical social cuts. 12-24h turnaround.</div>
+        </div>
+        <div class="cs-role-card">
+            <div class="role-count">1</div>
+            <div class="role-name">Executive Admin</div>
+            <div class="role-desc">Agent intake, file collection, scheduling, project tracking.</div>
+        </div>
+        <div class="cs-role-card">
+            <div class="role-count">∞</div>
+            <div class="role-name">Lifetime Replacement</div>
+            <div class="role-desc">If anyone underperforms or leaves, Staffify replaces them at no cost. No exposure.</div>
+        </div>
+    </div>
+</section>
+
+<section class="cs-cta">
+    <div class="cs-cta-card">
+        <div>
+            <h3>Want a result like Flylisted's?</h3>
+            <p>Tell us what's bottlenecked and we'll quote a team in a 25-minute call. Lifetime replacement guarantee on every placement.</p>
+        </div>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="cs-cta-btn">Book a Discovery Call →</a>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/apply/">Apply</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+(function(){
+    var btn = document.getElementById('navHamburger');
+    var menu = document.getElementById('navMobileMenu');
+    if (!btn || !menu) return;
+    function open(){
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+        document.body.style.overflow = 'hidden';
+    }
+    function close(){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+        document.body.style.overflow = '';
+    }
+    btn.addEventListener('click', function(){
+        if (menu.classList.contains('open')) close(); else open();
+    });
+    menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
+</body>
+</html>
