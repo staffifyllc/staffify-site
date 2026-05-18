@@ -2430,5 +2430,284 @@ window.addEventListener('mousemove', e => {
     menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
 })();
 </script>
+
+<!-- ─── EMAIL CAPTURE POPUP ─── -->
+<style>
+    .lead-modal-bg {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.78);
+        backdrop-filter: blur(8px);
+        z-index: 9998;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .3s, visibility .3s;
+    }
+    .lead-modal-bg.open { opacity: 1; visibility: visible; }
+    .lead-modal {
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -45%);
+        width: min(540px, calc(100vw - 32px));
+        background: linear-gradient(180deg, #0d0d0d 0%, #060606 100%);
+        border: 1px solid rgba(26,189,225,0.25);
+        border-radius: 20px;
+        padding: 44px 40px 36px;
+        box-shadow: 0 0 80px rgba(26,189,225,0.18), 0 24px 60px rgba(0,0,0,0.6);
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .35s cubic-bezier(.16,1,.3,1), transform .35s cubic-bezier(.16,1,.3,1), visibility .35s;
+    }
+    .lead-modal.open { opacity: 1 !important; visibility: visible !important; transform: translate(-50%, -50%) !important; }
+    .lead-modal-close {
+        position: absolute;
+        top: 14px; right: 14px;
+        width: 32px; height: 32px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 50%;
+        color: rgba(255,255,255,0.5);
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color .2s, border-color .2s;
+    }
+    .lead-modal-close:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+    .lead-modal-eyebrow {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--c);
+        margin-bottom: 18px;
+    }
+    .lead-modal h2 {
+        font-size: clamp(22px, 3vw, 28px);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        color: #fff;
+        margin-bottom: 14px;
+    }
+    .lead-modal h2 span { color: var(--c); }
+    .lead-modal p {
+        font-size: 14.5px;
+        color: rgba(255,255,255,0.6);
+        line-height: 1.6;
+        margin-bottom: 22px;
+    }
+    .lead-modal ul { list-style: none; margin: 0 0 24px; padding: 0; }
+    .lead-modal ul li {
+        font-size: 13px;
+        color: rgba(255,255,255,0.65);
+        padding: 5px 0;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    .lead-modal ul li::before { content: "✓"; color: var(--c); font-weight: 700; flex-shrink: 0; }
+    .lead-modal form { display: flex; gap: 10px; flex-direction: column; }
+    @media (min-width: 480px) { .lead-modal form { flex-direction: row; } }
+    .lead-modal input[type=email] {
+        flex: 1;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 999px;
+        padding: 13px 20px;
+        color: #fff;
+        font-family: inherit;
+        font-size: 14px;
+        outline: none;
+        transition: border-color .2s;
+    }
+    .lead-modal input[type=email]::placeholder { color: rgba(255,255,255,0.35); }
+    .lead-modal input[type=email]:focus { border-color: var(--c); }
+    .lead-modal button[type=submit] {
+        background: var(--c);
+        color: #000;
+        border: none;
+        border-radius: 999px;
+        padding: 13px 26px;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: filter .2s;
+    }
+    .lead-modal button[type=submit]:hover { filter: brightness(1.1); }
+    .lead-modal button[type=submit]:disabled { opacity: 0.6; cursor: wait; }
+    .lead-modal-foot {
+        margin-top: 18px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.35);
+        text-align: center;
+    }
+    .lead-modal-success { text-align: center; padding: 10px 0; }
+    .lead-modal-success a {
+        display: inline-block;
+        margin-top: 14px;
+        background: var(--c);
+        color: #000;
+        padding: 12px 26px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 14px;
+    }
+    .lead-modal-error { color: #ff7070; font-size: 13px; margin-top: 12px; text-align: center; }
+</style>
+
+<div class="lead-modal-bg" id="leadModalBg" aria-hidden="true"></div>
+<div class="lead-modal" id="leadModal" role="dialog" aria-modal="true" aria-labelledby="leadModalTitle" aria-hidden="true">
+    <button type="button" class="lead-modal-close" id="leadModalClose" aria-label="Close">✕</button>
+    <div id="leadModalForm">
+        <div class="lead-modal-eyebrow">Free playbook</div>
+        <h2 id="leadModalTitle">The Service Business <span>Operator&rsquo;s Playbook</span></h2>
+        <p>Six chapters on the operational moves that separate $300K service businesses from $3M ones. Drop your email and we&rsquo;ll send it over.</p>
+        <ul>
+            <li>The Bottleneck Audit (60-minute framework)</li>
+            <li>The Delegation Matrix &amp; the Hiring Funnel</li>
+            <li>Pricing Power, Retention, and the Operations Layer</li>
+        </ul>
+        <form id="leadModalFormEl" novalidate>
+            <input type="email" name="email" placeholder="your@email.com" required autocomplete="email">
+            <button type="submit">Send me the playbook &rarr;</button>
+        </form>
+        <div class="lead-modal-error" id="leadModalError" style="display:none;"></div>
+        <div class="lead-modal-foot">No spam. Unsubscribe in one click.</div>
+    </div>
+    <div class="lead-modal-success" id="leadModalSuccess" style="display:none;">
+        <div class="lead-modal-eyebrow" style="color: #4ade80;">You&rsquo;re in</div>
+        <h2>Check your inbox. The Playbook is on the way.</h2>
+        <p style="text-align:center;">Or read it right now in your browser.</p>
+        <a href="/playbook/" target="_blank" rel="noopener">Read the Playbook &rarr;</a>
+    </div>
+</div>
+
+<script>
+(function(){
+    // ───── CONFIG ─────
+    // To wire this up:
+    //   1. Create a "Newsletter Form" in Loops (https://app.loops.so/forms)
+    //   2. Copy the form ID and paste it below.
+    //   3. In Loops, create an automation:
+    //      Trigger: "Form submitted: <this form>"
+    //      Action: Send email containing https://www.gostaffify.com/playbook/
+    var LOOPS_FORM_ID = 'REPLACE_WITH_YOUR_LOOPS_FORM_ID';
+
+    var SHOW_AFTER_MS = 25000;
+    var DISMISS_TTL_DAYS = 14;
+    var STORAGE_KEY = 'sf_lead_modal_v1';
+
+    var bg = document.getElementById('leadModalBg');
+    var modal = document.getElementById('leadModal');
+    var closeBtn = document.getElementById('leadModalClose');
+    var form = document.getElementById('leadModalFormEl');
+    var formWrap = document.getElementById('leadModalForm');
+    var success = document.getElementById('leadModalSuccess');
+    var errBox = document.getElementById('leadModalError');
+
+    function getState(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; } }
+    function setState(s){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) {} }
+    function shouldShow(){
+        var s = getState();
+        if (s.submitted) return false;
+        if (s.dismissedAt && (Date.now() - s.dismissedAt) < DISMISS_TTL_DAYS * 86400000) return false;
+        return true;
+    }
+    function openModal(){
+        if (!shouldShow()) return;
+        modal.classList.add('open');
+        bg.classList.add('open');
+        // Inline styles to win cascade
+        modal.style.opacity = '1';
+        modal.style.visibility = 'visible';
+        modal.style.transform = 'translate(-50%, -50%)';
+        bg.style.opacity = '1';
+        bg.style.visibility = 'visible';
+        modal.setAttribute('aria-hidden','false');
+        bg.setAttribute('aria-hidden','false');
+    }
+    function closeModal(persistDismiss){
+        modal.classList.remove('open');
+        bg.classList.remove('open');
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+        modal.style.transform = 'translate(-50%, -45%)';
+        bg.style.opacity = '0';
+        bg.style.visibility = 'hidden';
+        modal.setAttribute('aria-hidden','true');
+        bg.setAttribute('aria-hidden','true');
+        if (persistDismiss) {
+            var s = getState();
+            s.dismissedAt = Date.now();
+            setState(s);
+        }
+    }
+
+    // Auto-show after delay
+    if (shouldShow()) setTimeout(openModal, SHOW_AFTER_MS);
+
+    // Exit-intent (desktop only)
+    if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+        document.addEventListener('mouseleave', function(e){
+            if (e.clientY < 10 && shouldShow()) openModal();
+        }, { passive: true });
+    }
+
+    closeBtn.addEventListener('click', function(){ closeModal(true); });
+    bg.addEventListener('click', function(){ closeModal(true); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(true); });
+
+    form.addEventListener('submit', function(e){
+        e.preventDefault();
+        errBox.style.display = 'none';
+        var email = form.email.value.trim();
+        if (!email || email.indexOf('@') < 0) {
+            errBox.textContent = 'Please enter a valid email.';
+            errBox.style.display = 'block';
+            return;
+        }
+        var btn = form.querySelector('button[type=submit]');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        var send;
+        if (LOOPS_FORM_ID && LOOPS_FORM_ID !== 'REPLACE_WITH_YOUR_LOOPS_FORM_ID') {
+            var fd = new FormData();
+            fd.append('email', email);
+            fd.append('source', 'playbook-popup');
+            fd.append('userGroup', 'newsletter');
+            send = fetch('https://app.loops.so/api/newsletter-form/' + LOOPS_FORM_ID, {
+                method: 'POST', body: fd
+            }).then(function(r){ if (!r.ok) throw new Error('Status ' + r.status); });
+        } else {
+            console.warn('Loops form ID not set. Captured locally:', email);
+            send = new Promise(function(res){ setTimeout(res, 500); });
+        }
+
+        send.then(function(){
+            var s = getState();
+            s.submitted = true;
+            s.email = email;
+            setState(s);
+            formWrap.style.display = 'none';
+            success.style.display = 'block';
+        }).catch(function(err){
+            console.error(err);
+            errBox.textContent = 'Hmm, that didn’t go through. Try again or email hello@gostaffify.com.';
+            errBox.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Send me the playbook →';
+        });
+    });
+})();
+</script>
+
 </body>
 </html>

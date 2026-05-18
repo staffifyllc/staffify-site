@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Service Business Operator's Playbook | Staffify</title>
+    <meta name="description" content="An operator-grade playbook for service business founders. Six chapters on bottlenecks, delegation, hiring, pricing, retention, and operations. Built by Staffify.">
+    <meta name="robots" content="noindex, follow">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000; --near-black: #0a0a0a; --paper: #fdfcf9;
+            --ink: #14181f; --ink-soft: #3a4150; --ink-mute: #71798a;
+            --rule: rgba(20,24,31,0.08);
+        }
+        body {
+            font-family: 'Fraunces', Georgia, serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.7;
+            font-size: 18px;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1, h2, h3, .ui { font-family: 'Inter', -apple-system, sans-serif; letter-spacing: -0.02em; }
+
+        /* PRINT-FRIENDLY */
+        @media print {
+            body { background: #fff; color: #000; }
+            .no-print { display: none !important; }
+            .chapter { page-break-before: always; }
+            .cover { page-break-after: always; }
+        }
+
+        /* PAGE WRAPPER */
+        .page {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+
+        /* TOP BAR */
+        .topbar {
+            position: sticky;
+            top: 0;
+            background: rgba(253,252,249,0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--rule);
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 50;
+        }
+        .topbar-brand {
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            color: var(--ink);
+            text-decoration: none;
+            letter-spacing: -0.02em;
+        }
+        .topbar-cta {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            background: var(--c);
+            padding: 8px 18px;
+            border-radius: 999px;
+            text-decoration: none;
+        }
+
+        /* COVER */
+        .cover {
+            padding: 100px 0 80px;
+            text-align: center;
+            border-bottom: 1px solid var(--rule);
+            margin-bottom: 80px;
+        }
+        .cover-eyebrow {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--c2);
+            margin-bottom: 28px;
+        }
+        .cover h1 {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(40px, 6vw, 64px);
+            font-weight: 700;
+            line-height: 1.05;
+            color: var(--ink);
+            margin-bottom: 28px;
+        }
+        .cover-sub {
+            font-size: 19px;
+            color: var(--ink-soft);
+            max-width: 540px;
+            margin: 0 auto 48px;
+            line-height: 1.6;
+        }
+        .cover-meta {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            color: var(--ink-mute);
+            letter-spacing: 0.04em;
+        }
+
+        /* TOC */
+        .toc {
+            background: #f4f1ea;
+            border-radius: 12px;
+            padding: 36px 36px 32px;
+            margin-bottom: 80px;
+        }
+        .toc h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--ink-mute);
+            margin-bottom: 20px;
+        }
+        .toc ol {
+            list-style: none;
+            counter-reset: ch;
+        }
+        .toc li {
+            counter-increment: ch;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(20,24,31,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .toc li:last-child { border: none; }
+        .toc li a {
+            color: var(--ink);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 600;
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+        }
+        .toc li a::before {
+            content: counter(ch, decimal-leading-zero);
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--c2);
+            letter-spacing: 0.04em;
+        }
+        .toc li a:hover { color: var(--c3); }
+
+        /* CHAPTER */
+        .chapter {
+            padding-top: 60px;
+            margin-bottom: 60px;
+            border-top: 1px solid var(--rule);
+        }
+        .chapter-num {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--c2);
+            margin-bottom: 14px;
+        }
+        .chapter h2 {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(32px, 4.5vw, 44px);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 24px;
+            color: var(--ink);
+        }
+        .chapter .lede {
+            font-size: 20px;
+            line-height: 1.55;
+            color: var(--ink-soft);
+            margin-bottom: 36px;
+            border-left: 3px solid var(--c);
+            padding-left: 20px;
+        }
+        .chapter h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--ink);
+            margin: 36px 0 14px;
+        }
+        .chapter p { margin-bottom: 22px; }
+        .chapter ul, .chapter ol { margin: 0 0 22px 22px; }
+        .chapter li { margin-bottom: 10px; line-height: 1.65; }
+        .chapter strong { color: var(--ink); font-weight: 700; }
+        .chapter em { color: var(--ink-soft); font-style: italic; }
+        .chapter blockquote {
+            border-left: 3px solid var(--c2);
+            padding: 4px 22px;
+            margin: 28px 0;
+            font-style: italic;
+            color: var(--ink-soft);
+        }
+        .chapter .framework {
+            background: #f4f1ea;
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin: 28px 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            line-height: 1.65;
+            color: var(--ink-soft);
+        }
+        .chapter .framework h4 {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--c2);
+            margin-bottom: 14px;
+        }
+        .chapter .framework ul, .chapter .framework ol { margin-left: 18px; }
+        .chapter .framework li { font-size: 15px; margin-bottom: 8px; }
+
+        /* CLOSING CTA */
+        .closing {
+            margin: 80px 0 60px;
+            padding: 56px 40px;
+            background: linear-gradient(180deg, var(--near-black) 0%, #000 100%);
+            color: #fff;
+            border-radius: 20px;
+            text-align: center;
+        }
+        .closing h2 {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(28px, 4vw, 36px);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 18px;
+            color: #fff;
+        }
+        .closing p {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            line-height: 1.65;
+            color: rgba(255,255,255,0.7);
+            max-width: 480px;
+            margin: 0 auto 32px;
+        }
+        .closing a {
+            display: inline-block;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            background: var(--c);
+            color: #fff;
+            padding: 14px 32px;
+            border-radius: 999px;
+            text-decoration: none;
+        }
+
+        /* FOOTER */
+        .pb-footer {
+            text-align: center;
+            padding: 40px 32px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            color: var(--ink-mute);
+            border-top: 1px solid var(--rule);
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar no-print">
+    <a href="/" class="topbar-brand">Staffify</a>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="topbar-cta">Book a Call</a>
+</div>
+
+<div class="page">
+
+<!-- COVER -->
+<section class="cover">
+    <div class="cover-eyebrow">A Staffify Playbook</div>
+    <h1>The Service Business Operator's Playbook</h1>
+    <p class="cover-sub">Six chapters on the operational moves that separate $300K service businesses from $3M ones. Frameworks you can apply this week.</p>
+    <div class="cover-meta">2026 EDITION · 6 CHAPTERS · ~25 MIN READ</div>
+</section>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+    <h2>What's Inside</h2>
+    <ol>
+        <li><a href="#ch1">The Bottleneck Audit</a></li>
+        <li><a href="#ch2">The Delegation Matrix</a></li>
+        <li><a href="#ch3">The Hiring Funnel That Doesn't Collapse</a></li>
+        <li><a href="#ch4">Pricing Power for Service Businesses</a></li>
+        <li><a href="#ch5">The 95% Retention System</a></li>
+        <li><a href="#ch6">The Operations Layer Behind Every Hire</a></li>
+    </ol>
+</div>
+
+<!-- CHAPTER 1 -->
+<section class="chapter" id="ch1">
+    <div class="chapter-num">Chapter 01</div>
+    <h2>The Bottleneck Audit</h2>
+    <p class="lede">Most service business owners can name three things they want to grow. Almost none can name the one thing that is actually stopping them. The bottleneck audit fixes that in 60 minutes.</p>
+
+    <p>You hit the moment every service business hits. Revenue is moving. The phone rings. You are working sixty hours a week to keep up with thirty hours of revenue-generating output. So you decide to grow. You hire someone, or you start a new marketing channel, or you build a new offer.</p>
+    <p>None of it works the way it should. Why? Because growth is rarely a feature problem. It is almost always a bottleneck problem. And until you find the bottleneck, every new hire and every new dollar of ad spend just gets stuck behind it.</p>
+
+    <h3>The four bottleneck zones</h3>
+    <p>Every service business has the same four zones. Find the one that's clogged, and you find your growth.</p>
+
+    <div class="framework">
+        <h4>The Four Zones</h4>
+        <ol>
+            <li><strong>Demand</strong> — Are leads showing up? If not, this is your bottleneck. Everything downstream is fine.</li>
+            <li><strong>Conversion</strong> — Are leads becoming clients? If 80% of your discovery calls don't close, fix the offer or the close before you spend on more leads.</li>
+            <li><strong>Delivery</strong> — Once a client is in, can the operation actually serve them? If projects slip or quality drops at volume, the bottleneck is here. More leads make this worse.</li>
+            <li><strong>Retention</strong> — Are clients staying and referring? If acquisition is the only way you grow, you have a leaking bucket. Every new client just pays for the one that churned.</li>
+        </ol>
+    </div>
+
+    <h3>How to run the audit</h3>
+    <p>Open a spreadsheet. Five columns: Zone, Inputs (what comes in), Outputs (what comes out), Conversion rate, Constraint. Fill in the last 90 days of data.</p>
+
+    <p>Where's the lowest conversion rate that isn't fundamental to your business? That's your bottleneck. If 200 leads turn into 8 clients (4% conversion), but those 8 stay for 14 months, demand is your bottleneck. If 200 leads turn into 80 clients but 60 of them churn in 90 days, retention is your bottleneck.</p>
+
+    <blockquote>"More leads is the wrong answer to a retention problem. More features is the wrong answer to a delivery problem. The whole point of an audit is to stop guessing."</blockquote>
+
+    <h3>What to do this week</h3>
+    <ul>
+        <li>Block 60 minutes on your calendar. No phone, no Slack.</li>
+        <li>Pull the numbers. Even rough estimates are fine — you're looking for which zone is an order of magnitude worse than the others.</li>
+        <li>Pick ONE bottleneck to fix this quarter. Not two. One.</li>
+        <li>Every operational decision for the next 90 days passes through one question: does this help the bottleneck?</li>
+    </ul>
+</section>
+
+<!-- CHAPTER 2 -->
+<section class="chapter" id="ch2">
+    <div class="chapter-num">Chapter 02</div>
+    <h2>The Delegation Matrix</h2>
+    <p class="lede">"Hire someone" is bad advice. "Hire the right person for the right work in the right way" is real advice. The delegation matrix is how you tell the difference.</p>
+
+    <p>Every owner who has ever delegated badly has done one of three things: they handed off a task that should have been automated, they tried to automate work that needed judgment, or they kept work themselves that anyone could have done. The matrix exists to stop you doing any of these.</p>
+
+    <h3>The two axes</h3>
+    <p>Plot every recurring task in your business on these two dimensions:</p>
+
+    <div class="framework">
+        <h4>Axis 1: Judgment Required</h4>
+        <p><strong>Low judgment:</strong> The right answer is the same every time. Following a checklist works. Examples: data entry, scheduling, sending invoices.</p>
+        <p><strong>High judgment:</strong> The right answer depends on context that changes. Examples: writing a proposal, handling a frustrated client, deciding which leads to prioritize.</p>
+    </div>
+    <div class="framework">
+        <h4>Axis 2: Energy You Lose Doing It</h4>
+        <p><strong>Low energy cost:</strong> You don't mind the task. It doesn't drain you.</p>
+        <p><strong>High energy cost:</strong> The task is what you dread when you open your calendar.</p>
+    </div>
+
+    <h3>The four quadrants</h3>
+    <p>The matrix creates four boxes. Each one has a different answer.</p>
+
+    <ul>
+        <li><strong>Low judgment, low energy:</strong> Automate. If you don't lose energy and the answer is the same every time, software should be doing it.</li>
+        <li><strong>Low judgment, high energy:</strong> Delegate to a VA or rep. This is the highest-leverage delegation. The work is bounded, you hate it, someone else can do it for $11–$20 an hour.</li>
+        <li><strong>High judgment, low energy:</strong> Keep, for now. The judgment is the value you uniquely provide and the cost to you is low. Revisit only when this quadrant gets too full.</li>
+        <li><strong>High judgment, high energy:</strong> Hire a senior operator or partner. This is where you need a real number two, not a VA. Often the first $100K hire a service business should make.</li>
+    </ul>
+
+    <h3>The trap most owners fall into</h3>
+    <p>Treating "high judgment" and "I'm the only one who can do it" as the same thing. They are not. Most owners assume judgment-based work is them-only work, and they cling to it, and they bottleneck themselves.</p>
+    <p>Judgment is teachable. You can build a brief, document the decision tree, and watch someone else exercise good judgment three weeks later. The barrier is not judgment. The barrier is the time it takes to write the brief.</p>
+</section>
+
+<!-- CHAPTER 3 -->
+<section class="chapter" id="ch3">
+    <div class="chapter-num">Chapter 03</div>
+    <h2>The Hiring Funnel That Doesn't Collapse</h2>
+    <p class="lede">Most service-business hiring collapses for the same three reasons. Here's the funnel that doesn't, and how to build it without losing six months and $30,000 to a bad first hire.</p>
+
+    <p>You can predict bad hiring at a service business by checking three things. There is no job description. There is no test of skill before the offer. There is no documented expectation of what success looks like in the first 90 days.</p>
+
+    <p>Fix those three things and you fix 90% of hiring failures. Skip them and you join the long line of owners who say "VAs don't work" or "good people are impossible to find." The people exist. The funnel doesn't.</p>
+
+    <h3>Stage 1: The brief</h3>
+    <p>Before you write a job post, write a brief. One page. Five sections.</p>
+    <div class="framework">
+        <h4>The Five Sections of a Hiring Brief</h4>
+        <ol>
+            <li><strong>The outcome:</strong> What does this role produce in 90 days? Not "edits videos." Try "delivers 40 finished short-form videos per month with a 90% first-pass approval rate."</li>
+            <li><strong>The non-negotiables:</strong> Skills and traits the candidate must already have. Be honest. Most lists are aspirational and end up filtering out everyone.</li>
+            <li><strong>The trainable parts:</strong> What you can teach. Knowing this protects you from over-filtering.</li>
+            <li><strong>The success path:</strong> What does week 1, month 1, month 3 look like? If you can't write this, the role isn't ready to hire.</li>
+            <li><strong>The dealbreakers:</strong> The two or three things that will get someone fired. Naming them upfront saves everyone six months.</li>
+        </ol>
+    </div>
+
+    <h3>Stage 2: The screen</h3>
+    <p>The biggest hiring mistake is interviewing for skill instead of testing for it. A 30-minute conversation cannot tell you whether someone can do the work. A 90-minute paid test project can.</p>
+    <p>Build a small, real test for every role. A video editor cuts a sample reel. An admin works a sample inbox for an hour. A CSR handles three simulated tickets. Pay for it. Treat the test like the interview, because it is.</p>
+
+    <h3>Stage 3: The first 30 days</h3>
+    <p>Most hires fail in the first 30 days because the new hire spends them guessing what success looks like. Write the 30-day plan before the hire starts. Share it on day one. Review it on day seven, day fourteen, day thirty.</p>
+
+    <blockquote>"You can't manage someone into a role you haven't designed. The 30-day plan is the design."</blockquote>
+
+    <h3>Where most owners cut corners</h3>
+    <ul>
+        <li><strong>Skipping the test:</strong> "I have a good feeling." Trust the test, not the feeling.</li>
+        <li><strong>Hiring a generalist for a specialist need:</strong> A great editor is not a great content strategist. A great admin is not a great CSR. Role-fit beats raw quality.</li>
+        <li><strong>Not setting a 90-day mutual decision:</strong> Both you and the hire should know there's a checkpoint at 90 days. Either party can walk. Removes the "should I fire them" agony from month four.</li>
+    </ul>
+</section>
+
+<!-- CHAPTER 4 -->
+<section class="chapter" id="ch4">
+    <div class="chapter-num">Chapter 04</div>
+    <h2>Pricing Power for Service Businesses</h2>
+    <p class="lede">Service businesses don't have a revenue problem. They have a pricing problem. Most owners are 30 to 50% underpriced and don't know it. Here's how to find out.</p>
+
+    <p>Pricing is the only lever in a service business that improves every other lever simultaneously. Higher prices fund better hiring. Better hiring funds better delivery. Better delivery funds higher retention. Higher retention funds the option to be picky about clients. And so on.</p>
+    <p>And yet most service-business owners raise prices once a year at best, by 5 to 10%, and they treat it like a confession. The truth is: most of them could double their rates this month and lose only their worst clients.</p>
+
+    <h3>The signal that you're underpriced</h3>
+    <p>If you've never had a prospect say "that's too expensive," you are underpriced. Full stop. The job of pricing is to filter, not just to charge. If everyone says yes, your filter is broken.</p>
+    <p>The reverse signal: if your conversion rate is below 20% AND most rejections cite price, you may be overpriced for your current positioning. The fix is rarely lowering price. It's raising the perceived value before the price comes up.</p>
+
+    <h3>The three pricing moves</h3>
+    <div class="framework">
+        <h4>1. Switch from hourly to outcome-based.</h4>
+        <p>Hourly billing punishes efficiency. The faster you get, the less you make. Outcome pricing ("we'll deliver X for $Y") rewards efficiency and makes scope crystal clear. Start with one offer. Test it for a quarter.</p>
+    </div>
+    <div class="framework">
+        <h4>2. Introduce a top tier nobody buys.</h4>
+        <p>Three tiers. The top one is intentionally expensive. Almost no one picks it, and that's the point. It anchors the middle tier as reasonable. Most service businesses go from 2 tiers to 3 and watch the average deal size move 30%.</p>
+    </div>
+    <div class="framework">
+        <h4>3. Raise prices for new clients only, by 25%.</h4>
+        <p>You don't need to risk existing client relationships. Just charge new ones more. Tell yourself you'll raise it again in 90 days if the close rate doesn't drop. It usually doesn't.</p>
+    </div>
+
+    <h3>The mistake to avoid</h3>
+    <p>Lowering prices to compete with the cheapest provider in your space. The cheapest provider has a different business model and a worse business. You are not them. Competing on price is a race you don't want to win.</p>
+</section>
+
+<!-- CHAPTER 5 -->
+<section class="chapter" id="ch5">
+    <div class="chapter-num">Chapter 05</div>
+    <h2>The 95% Retention System</h2>
+    <p class="lede">Keeping a client is five times cheaper than getting one. Service businesses that get retention right out-earn their competitors who don't, every single year.</p>
+
+    <p>Retention is the most under-invested lever in service business growth. Everyone obsesses over acquisition. Almost nobody designs an actual retention system. The result: most service businesses run with a leaking bucket and call it growth.</p>
+
+    <h3>What retention actually is</h3>
+    <p>Retention is not "they stay because they like us." Retention is what you do to make sure they stay. Three things, every time:</p>
+
+    <div class="framework">
+        <h4>The Three-Touch Retention Loop</h4>
+        <ol>
+            <li><strong>Outcome visibility:</strong> Every month, your client sees what they bought from you. A short report, a metric, a screenshot. If they have to ask "what am I paying for," you've already lost them.</li>
+            <li><strong>Proactive check-in:</strong> Before they would have raised an issue, you raised it. "I noticed X — here's what we're doing." The check-in beats the complaint every time.</li>
+            <li><strong>Quarterly recommitment:</strong> Every 90 days, you have a real conversation about what's working and what isn't. Not a sales call. A partnership review. The clients who do these stay 2-3x longer.</li>
+        </ol>
+    </div>
+
+    <h3>The retention metric that matters</h3>
+    <p>Track net revenue retention (NRR), not just client count. If you keep 90% of clients but they shrink their spend by 20%, you've lost ground. If you keep 80% of clients and the ones who stay grow their spend by 30%, you've gained.</p>
+    <p>The simple version: take your revenue from a cohort of clients in Q1. What did the same cohort produce in Q4? Above 100% is healthy. Above 110% is a great service business. Below 90% is a problem hiding inside what looks like growth.</p>
+
+    <h3>The retention killer most owners miss</h3>
+    <p>Onboarding. The first 30 days of a client relationship predict the next 30 months. Most service businesses spend zero time engineering onboarding and wonder why clients churn at month four. Build a 7-step onboarding flow with deliverables in week 1. The data is unambiguous: clients who hit week-2 milestones renew at 3x the rate of clients who don't.</p>
+</section>
+
+<!-- CHAPTER 6 -->
+<section class="chapter" id="ch6">
+    <div class="chapter-num">Chapter 06</div>
+    <h2>The Operations Layer Behind Every Hire</h2>
+    <p class="lede">The mistake everyone makes: hire a person, expect the person to make the business work. The work works because of the system around the person. Here's the system.</p>
+
+    <p>You can hire the best video editor on the planet and your content output will still be unpredictable if there is no system around them. You can hire a mediocre editor and have predictable output if the system is right. The system matters more than the hire.</p>
+
+    <h3>The four pieces of a working operations layer</h3>
+    <div class="framework">
+        <h4>1. The SOP that's actually used</h4>
+        <p>A document nobody reads is not an SOP. A real SOP is the one you point new hires at, and the one your existing team references twice a week. The test of an SOP: would a brand-new hire be productive in their first 48 hours using only this document? If no, it's not an SOP, it's a rough draft.</p>
+    </div>
+    <div class="framework">
+        <h4>2. The dashboard</h4>
+        <p>Three numbers, visible to the team daily. Not twenty. Three. Pick the ones that, if they're green, the business is working. (For most service businesses: jobs in progress, on-time delivery rate, monthly recurring revenue.) Everything else is for monthly review.</p>
+    </div>
+    <div class="framework">
+        <h4>3. The weekly rhythm</h4>
+        <p>One hour, every week, same time. Review the three numbers, surface blockers, decide what's getting done this week. Service businesses that run weekly rhythms ship reliably. Service businesses that don't ship in bursts.</p>
+    </div>
+    <div class="framework">
+        <h4>4. The escalation tree</h4>
+        <p>For every common problem (client complaint, technical issue, schedule slip, scope creep), there is a documented path. Who handles it first, when it escalates, who has final say. Nine times out of ten, the path is invoked without you. That's the point.</p>
+    </div>
+
+    <h3>The role you'll always need</h3>
+    <p>Even with a beautiful operations layer, you'll always need one person whose job is to watch it run. That's the operations lead. In a small service business, that's you, until you hand it off. In a larger one, that's a fractional or full-time COO.</p>
+    <p>The operations lead is the person who notices when the dashboard slips, when the weekly rhythm gets sloppy, when the SOPs go stale. Without them, the system slowly erodes back to chaos.</p>
+
+    <h3>What this looks like at Staffify</h3>
+    <p>This is the layer we build for every client placement. We don't just give you a video editor or a customer-service rep. We give you a placement plus an in-country manager who watches the data, runs the rhythm, and catches problems before you would have. The placement performs. The operations stay invisible.</p>
+    <p>That's the whole point. The work works because of the system. The hire is the visible part. The system is the part that makes the hire work.</p>
+</section>
+
+<!-- CLOSING -->
+<section class="closing">
+    <h2>The team behind your growth, not in front of it.</h2>
+    <p>Staffify gives growing service businesses the operators and the operations layer to scale without the chaos. If any of what you just read sounded like the next move for your business, the next move is a 20-minute call.</p>
+    <a href="https://calendly.com/go-staffify/discovery-call">Book a 20-min discovery call →</a>
+</section>
+
+</div>
+
+<footer class="pb-footer">
+    © 2026 Staffify LLC · Made for service business operators · <a href="/" style="color:inherit;">gostaffify.com</a>
+</footer>
+
+</body>
+</html>
