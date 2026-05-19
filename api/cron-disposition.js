@@ -18,7 +18,7 @@ const DECISION_DELAY_MS = 24 * HOUR;   // wait 24h after call ends before prompt
 const DECISION_TIMEOUT_MS = 21 * 24 * HOUR; // stop prompting after 21 days
 const LINK_EXPIRY_MS = 14 * 24 * HOUR;  // magic links valid for 14 days
 
-const NOTIFY_TO = process.env.NOTIFY_TO || 'paul@gostaffify.com';
+const NOTIFY_TO = process.env.NOTIFY_TO || 'hello@gostaffify.com';
 
 function sign(email, decision, exp) {
     return crypto.createHmac('sha256', process.env.ADMIN_TOKEN || '')
