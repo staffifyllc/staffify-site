@@ -134,11 +134,11 @@ Either way, the playbook is yours to keep: ${PLAYBOOK_URL}
 
 function authorized(req) {
     if (req.headers['x-vercel-cron']) return true;
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) return false;
+    const validSecrets = [process.env.CRON_SECRET, process.env.ADMIN_TOKEN].filter(Boolean);
+    if (!validSecrets.length) return false;
     const header = req.headers['authorization'] || '';
     const m = /^Bearer\s+(.+)$/i.exec(header);
-    return m && m[1] === cronSecret;
+    return m && validSecrets.includes(m[1]);
 }
 
 export default async function handler(req, res) {
