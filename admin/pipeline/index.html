@@ -502,7 +502,7 @@ async function doAction(email, action) {
     const labels = {
         'mark-client': 'Move to Pending Payment?',
         'mark-paid': 'Mark this client as paid? This sends them the intake form + strategy call link.',
-        'mark-no-close': 'Mark as No Close? They\\'ll be enrolled in the email nurture drip.',
+        'mark-no-close': "Mark as No Close? They'll be enrolled in the email nurture drip.",
         'reopen': 'Move back to Upcoming?',
     };
     if (!confirm(labels[action] || 'Confirm action?')) return;
