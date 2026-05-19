@@ -69,8 +69,38 @@ const CLIENT_EMAILS = new Set([
     'steven.geiger@raveis.com',
 ]);
 
+// Manual skips Paul called out during the review pass — clients with different
+// emails than the CSV, prospects he wants left alone, or staff/test bookings.
+const MANUAL_SKIPS = new Set([
+    'joe@homesight2020.com',                          // active client (different email)
+    'ryan@heliobook.com',                             // pre-call, let normal flow handle
+    'vera@symmetry.build',                            // client
+    'hello@prspctvmedia.com',                         // client (Kyle Lux)
+    'accounts@prspctvmedia.com',                      // client (Kyle Lux, second email)
+    'cj@howell.productions',                          // Howell Productions (CSV: cjhowellco@gmail.com)
+    'scott@visualadvantage.ca',                       // Visual Advantage
+    'phil@visualadvantage.ca',                        // Visual Advantage
+    'driverealestatemedia@gmail.com',                 // Jeff Hursey (CSV: service@driverealestatemedia.com)
+    'ben@sojourner-media.com',                        // Sojourner Media (CSV: hello@)
+    'tevincolon@yahoo.com',                           // Tevin Colon (CSV: lightreelmedia)
+    'pete.morneau@me.com',                            // Peter Morneau (CSV: peter.morneau@me.com)
+    'stetsonybarra@gmail.com',                        // Stetson Ybarra (CSV: rootedelementsmedia)
+    'jspackman215@gmail.com',                         // Jordan Spackman (CSV: realtourpilot)
+    'info@advertaimarketing.com',                     // removed by Paul
+    'matthew.puleo@epichospitalityllc.com',           // removed by Paul
+    'darab.hassan182@gmail.com',                      // removed by Paul
+    'pamarandola@gmail.com',                          // removed by Paul
+    'dustin@arthomephoto.com',                        // removed by Paul
+    'andrew.martin@hubstaff.com',                     // Hubstaff staff
+    'alvin.keung@gmail.com',                          // removed by Paul
+    'zgoberville@gmail.com',                          // removed by Paul
+    'trey@amazinglistingphotos.com',                  // removed by Paul
+    'ismail@revvideoproductions.com',                 // removed by Paul
+]);
+
 function isClient(email) {
-    return CLIENT_EMAILS.has(String(email || '').toLowerCase().trim());
+    const e = String(email || '').toLowerCase().trim();
+    return CLIENT_EMAILS.has(e) || MANUAL_SKIPS.has(e);
 }
 
 // ─── Calendly API helpers ───────────────────────────────────────────────
