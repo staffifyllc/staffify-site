@@ -14,10 +14,12 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
-# Don't crawl utility / archived paths
+# Don't crawl utility / archived / admin paths
 User-agent: *
 Disallow: /_archive/
 Disallow: /scripts/
+Disallow: /admin/
+Disallow: /api/
 
 # Canonical sitemap
 Sitemap: https://www.gostaffify.com/sitemap.xml

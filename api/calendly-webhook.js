@@ -317,19 +317,44 @@ export default async function handler(req, res) {
 
     // Upsert into subscribers list
     const existingSignedAt = await redis.hget(`subscriber:${email}`, 'signed_up_at');
+    const existingStatus = await redis.hget(`subscriber:${email}`, 'status');
+
+    // Only set status=upcoming if this prospect isn't already further along the pipeline.
+    // If they're already a client (active/pending) we don't want to demote them.
+    const TERMINAL_STATUSES = ['client-pending-payment', 'client-active'];
+    const newStatus = existingStatus && TERMINAL_STATUSES.includes(existingStatus)
+        ? existingStatus
+        : 'upcoming';
+
     await redis.hset(`subscriber:${email}`, {
         email,
         source: 'discovery-call-booked',
         role,
+        status: newStatus,
+        status_updated_at: existingStatus === newStatus ? (await redis.hget(`subscriber:${email}`, 'status_updated_at')) || now : now,
         signed_up_at: existingSignedAt || now,
         last_seen_at: now,
         last_booking_at: now,
+        first_name: firstName,
         event_name: eventName,
+        next_call_at: startTime,
     });
     await redis.zadd('subscribers:by_date', {
         score: existingSignedAt ? Number(existingSignedAt) : now,
         member: email,
     });
+
+    // Add to the pipeline:<status> sorted set so the dashboard can list fast
+    // Remove from any other pipeline buckets first
+    const allBuckets = ['pipeline:upcoming', 'pipeline:client-pending-payment', 'pipeline:client-active', 'pipeline:no-close'];
+    if (existingStatus && existingStatus !== newStatus) {
+        for (const b of allBuckets) {
+            if (b !== `pipeline:${newStatus}`) await redis.zrem(b, email);
+        }
+    }
+    // Score by upcoming call time when available so soonest calls float to top
+    const score = startTime ? new Date(startTime).getTime() : now;
+    await redis.zadd(`pipeline:${newStatus}`, { score, member: email });
 
     // Track the booking record separately for analytics
     await redis.hset(`discovery:${email}`, {
@@ -338,5 +363,5 @@ export default async function handler(req, res) {
         utm_content: utmContent,
     });
 
-    return res.status(200).json({ ok: true, role, sent });
+    return res.status(200).json({ ok: true, role, sent, status: newStatus });
 }
