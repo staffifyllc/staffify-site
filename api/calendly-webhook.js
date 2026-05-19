@@ -315,8 +315,14 @@ export default async function handler(req, res) {
         }
     }
 
+    // Compute call_ends_at: start_time + assumed duration (30min default)
+    // Used by the disposition cron to know when to ping Paul for a "Client / Not a fit" decision.
+    const startMs = startTime ? new Date(startTime).getTime() : 0;
+    const callEndsAt = startMs ? startMs + 30 * 60 * 1000 : 0;
+
     // Upsert into subscribers list
     const existingSignedAt = await redis.hget(`subscriber:${email}`, 'signed_up_at');
+    const existingDecision = await redis.hget(`subscriber:${email}`, 'decision');
     await redis.hset(`subscriber:${email}`, {
         email,
         source: 'discovery-call-booked',
@@ -327,11 +333,20 @@ export default async function handler(req, res) {
         first_name: firstName,
         event_name: eventName,
         next_call_at: startTime,
+        call_ends_at: callEndsAt,
+        // Only set disposition_pending if there's no existing decision.
+        // A prospect who already converted (decision=client) shouldn't get re-prompted.
+        ...(existingDecision ? {} : { disposition_pending: 1, disposition_prompted_at: '' }),
     });
     await redis.zadd('subscribers:by_date', {
         score: existingSignedAt ? Number(existingSignedAt) : now,
         member: email,
     });
+
+    // Add to the disposition queue so the cron can find them in O(1)
+    if (!existingDecision && callEndsAt) {
+        await redis.zadd('disposition:pending', { score: callEndsAt, member: email });
+    }
 
     // Track the booking record separately for analytics
     await redis.hset(`discovery:${email}`, {

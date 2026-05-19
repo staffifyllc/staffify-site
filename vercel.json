@@ -1,5 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
-  "trailingSlash": true
+  "trailingSlash": true,
+  "crons": [
+    {
+      "path": "/api/cron-disposition",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron-nurture",
+      "schedule": "30 14 * * *"
+    }
+  ]
 }
