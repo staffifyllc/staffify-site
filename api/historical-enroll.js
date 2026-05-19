@@ -94,8 +94,10 @@ const MANUAL_SKIPS = new Set([
     'andrew.martin@hubstaff.com',                     // Hubstaff staff
     'alvin.keung@gmail.com',                          // removed by Paul
     'zgoberville@gmail.com',                          // removed by Paul
-    'trey@amazinglistingphotos.com',                  // removed by Paul
-    'ismail@revvideoproductions.com',                 // removed by Paul
+    'trey@amazinglistingphotos.com',                  // LEGAL — do not contact
+    'ismail@revvideoproductions.com',                 // LEGAL — do not contact
+    'blake.globelife@gmail.com',                      // LEGAL — do not contact
+    'mikecherokeedrone@gmail.com',                    // LEGAL — do not contact
 ]);
 
 function isClient(email) {
