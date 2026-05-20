@@ -651,6 +651,24 @@
             border-color: rgba(26,189,225,0.3);
             background: rgba(255,255,255,0.045);
         }
+        .process-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(26,189,225,0.12), rgba(20,86,164,0.08));
+            border: 1px solid rgba(26,189,225,0.25);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            transition: transform .25s cubic-bezier(.16,1,.3,1), background .25s;
+        }
+        .process-step:hover .process-icon {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.12));
+        }
+        .process-icon svg {
+            width: 24px; height: 24px;
+            stroke: var(--c); fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
         .process-num {
             font-size: 12px;
             font-weight: 800;
@@ -1600,24 +1618,36 @@
 
         <div class="process-grid">
             <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16" y2="16"/><line x1="7.5" y1="9.5" x2="13.5" y2="9.5"/><line x1="7.5" y1="12" x2="11" y2="12"/></svg>
+                </div>
                 <div class="process-num">STEP 01</div>
                 <h3>We analyze your current workflow</h3>
                 <p>Before we touch a candidate, we look at <strong>how video editing actually moves through your business today</strong>. What's your project management system? Where does footage live? Who reviews? Where are the bottlenecks? That snapshot becomes the spec we hire against.</p>
             </div>
 
             <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><polygon points="10 9 16 12 10 15" fill="currentColor" stroke="none"/></svg>
+                </div>
                 <div class="process-num">STEP 02</div>
                 <h3>Test projects on your real footage</h3>
                 <p>We take <strong>your actual footage</strong> and have candidate editors complete real test projects, not generic samples. You approve the work before we move them forward. If their cut doesn't match your brand voice on real content, they don't continue. Full stop.</p>
             </div>
 
             <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                </div>
                 <div class="process-num">STEP 03</div>
                 <h3>Background checks on the approved ones</h3>
                 <p>Approved editors run through a traditional recruiting layer: <strong>reference checks, hardware checks, internet speed checks, and reliability testing</strong> to confirm they can hit your minimum refresh window on deliverables. If they can't ship on time, they don't make the placement list.</p>
             </div>
 
             <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><line x1="3" y1="20" x2="21" y2="20"/><rect x="5" y="14" width="3" height="6"/><rect x="10.5" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/><polyline points="4 11 9 9 14 6 19 3"/><polyline points="16 3 19 3 19 6"/></svg>
+                </div>
                 <div class="process-num">STEP 04</div>
                 <h3>Cost per deliverable, modeled upfront</h3>
                 <p>We track <strong>how long each editor's test project actually took</strong>, so by the time we recommend someone, you know not just how they perform, but the real cost-per-finished-video. No surprises after you sign. You see the unit economics before you commit.</p>

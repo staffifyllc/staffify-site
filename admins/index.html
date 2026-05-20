@@ -483,6 +483,24 @@
             transition: border-color .25s, background .25s;
         }
         .process-step:hover { border-color: rgba(26,189,225,0.3); background: rgba(255,255,255,0.045); }
+        .process-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(26,189,225,0.12), rgba(20,86,164,0.08));
+            border: 1px solid rgba(26,189,225,0.25);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            transition: transform .25s cubic-bezier(.16,1,.3,1), background .25s;
+        }
+        .process-step:hover .process-icon {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.12));
+        }
+        .process-icon svg {
+            width: 24px; height: 24px;
+            stroke: var(--c); fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
         .process-num {
             font-size: 12px; font-weight: 800;
             letter-spacing: 0.18em; color: var(--c);
@@ -1319,24 +1337,36 @@
 
         <div class="process-grid">
             <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16" y2="16"/><line x1="7.5" y1="9.5" x2="13.5" y2="9.5"/><line x1="7.5" y1="12" x2="11" y2="12"/></svg>
+                </div>
                 <div class="process-num">STEP 01</div>
                 <h3>We map what's actually eating your day</h3>
                 <p>Before we touch a candidate, we walk through <strong>your inbox, calendar, CRM, and project tracker</strong> with you. We document the repetitive workflows, the recurring decisions, and the "quick things" that aren't quick. That becomes the spec we hire against.</p>
             </div>
 
             <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1.5"/><polyline points="9 14 11 16 15 12"/></svg>
+                </div>
                 <div class="process-num">STEP 02</div>
                 <h3>Test tasks on your real workflows</h3>
                 <p>Candidates run <strong>real test tasks on your actual systems</strong>: inbox triage, calendar coordination, a sample CRM cleanup, drafting a follow-up email in your voice. You see the work product before they ever step into the role. If it's not your voice, they don't continue.</p>
             </div>
 
             <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                </div>
                 <div class="process-num">STEP 03</div>
                 <h3>Full vetting on approved candidates</h3>
                 <p>Approved admins run through a traditional recruiting layer: <strong>reference checks, hardware checks, internet speed, working-hours alignment with your time zone, and communication style screening</strong>. We confirm they can show up consistently before we place them.</p>
             </div>
 
             <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><line x1="3" y1="20" x2="21" y2="20"/><rect x="5" y="14" width="3" height="6"/><rect x="10.5" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/><polyline points="4 11 9 9 14 6 19 3"/><polyline points="16 3 19 3 19 6"/></svg>
+                </div>
                 <div class="process-num">STEP 04</div>
                 <h3>Onboarding plan modeled upfront</h3>
                 <p>We track <strong>how long each test task actually took</strong>, so by the time we recommend someone, you know not just how they perform but how much of your weekly admin load they can realistically absorb. You see the load-out before you commit.</p>
