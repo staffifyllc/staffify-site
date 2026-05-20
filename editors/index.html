@@ -470,6 +470,162 @@
             }
         }
 
+        /* ── COST CALCULATOR ── */
+        .calc-section {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+        .calc-card {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: linear-gradient(160deg, rgba(26,189,225,0.05) 0%, rgba(20,86,164,0.04) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 24px;
+            padding: 48px 44px;
+        }
+        .calc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 56px;
+            align-items: start;
+        }
+        .calc-inputs label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+        .calc-input-row {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 26px;
+        }
+        .calc-input-row input[type=number] {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--divider);
+            color: var(--white);
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700;
+            padding: 14px 18px;
+            border-radius: 12px;
+            width: 100%;
+            -moz-appearance: textfield;
+        }
+        .calc-input-row input[type=number]::-webkit-outer-spin-button,
+        .calc-input-row input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+        .calc-input-row input[type=number]:focus { outline: none; border-color: var(--c); background: rgba(255,255,255,0.06); }
+        .calc-prefix, .calc-suffix {
+            font-size: 18px; font-weight: 600; color: var(--muted);
+        }
+        .calc-or {
+            text-align: center;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--muted);
+            margin: -8px 0 18px;
+            position: relative;
+        }
+        .calc-or::before, .calc-or::after {
+            content: ''; position: absolute; top: 50%;
+            width: 30%; height: 1px; background: var(--divider);
+        }
+        .calc-or::before { left: 0; }
+        .calc-or::after  { right: 0; }
+        .calc-helper {
+            font-size: 13px; color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .calc-output {
+            text-align: left;
+        }
+        .calc-savings-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--c);
+            margin-bottom: 12px;
+        }
+        .calc-savings-amount {
+            font-size: clamp(48px, 6vw, 72px);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 8px;
+            color: var(--white);
+        }
+        .calc-savings-amount.positive {
+            background: linear-gradient(90deg, #1abde1, #1456a4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .calc-savings-amount.negative { color: var(--white); }
+        .calc-savings-period {
+            font-size: 13px; color: var(--muted);
+            margin-bottom: 28px;
+        }
+        .calc-bars {
+            display: flex; flex-direction: column; gap: 16px;
+            margin-top: 12px;
+        }
+        .calc-bar {
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .calc-bar-head {
+            display: flex; justify-content: space-between;
+            font-size: 13px; color: var(--muted);
+        }
+        .calc-bar-head strong { color: var(--white); font-weight: 600; }
+        .calc-bar-track {
+            background: rgba(255,255,255,0.06);
+            border-radius: 999px;
+            height: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        .calc-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.4s cubic-bezier(.16,1,.3,1);
+        }
+        .calc-bar-fill.current { background: linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.6)); }
+        .calc-bar-fill.staffify { background: linear-gradient(90deg, #1abde1, #1456a4); }
+
+        .calc-footnote {
+            margin-top: 28px;
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.6;
+            padding-top: 22px;
+            border-top: 1px solid var(--divider);
+        }
+        .calc-cta {
+            display: inline-block;
+            margin-top: 18px;
+            background: var(--c);
+            color: #000;
+            padding: 14px 28px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.18);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .calc-cta:hover { transform: translateY(-1px); box-shadow: 0 0 48px rgba(26,189,225,0.4); }
+
+        @media (max-width: 900px) {
+            .calc-card { padding: 36px 24px; }
+            .calc-grid { grid-template-columns: 1fr; gap: 36px; }
+        }
+
         /* ── HOW IT WORKS (process steps) ── */
         .process-section {
             background: var(--near-black);
@@ -1370,6 +1526,72 @@
         </div>
     </section>
 
+    <!-- COST CALCULATOR -->
+    <section class="calc-section">
+        <p class="section-eyebrow reveal">Run Your Numbers</p>
+        <h2 class="section-title reveal">How much would <span class="g">you save?</span></h2>
+        <p class="section-sub reveal" style="margin-bottom:40px;">Drop in what you're spending on video editing today. We'll show you what a dedicated Staffify editor would cost instead, and where the math falls.</p>
+
+        <div class="calc-card reveal">
+            <div class="calc-grid">
+                <div class="calc-inputs">
+                    <label for="calc-spend">Your current monthly editing spend</label>
+                    <div class="calc-input-row">
+                        <span class="calc-prefix">$</span>
+                        <input type="number" id="calc-spend" min="0" step="100" value="3000" inputmode="numeric">
+                        <span class="calc-suffix">/mo</span>
+                    </div>
+
+                    <div class="calc-or">or break it down</div>
+
+                    <label for="calc-videos">Videos you produce per month</label>
+                    <div class="calc-input-row">
+                        <input type="number" id="calc-videos" min="0" step="1" value="100" inputmode="numeric">
+                        <span class="calc-suffix">videos</span>
+                    </div>
+
+                    <label for="calc-perVideo">Average cost per video today</label>
+                    <div class="calc-input-row">
+                        <span class="calc-prefix">$</span>
+                        <input type="number" id="calc-perVideo" min="0" step="1" value="30" inputmode="numeric">
+                        <span class="calc-suffix">each</span>
+                    </div>
+
+                    <p class="calc-helper">Quick rule of thumb: real-estate listing videos run $20-50. Long-form / talking-head edits run $80-200. Match what you're paying freelancers or agencies now.</p>
+                </div>
+
+                <div class="calc-output">
+                    <div class="calc-savings-label" id="calc-savings-label">You'd save</div>
+                    <div class="calc-savings-amount positive" id="calc-savings-amount">$1,100/mo</div>
+                    <div class="calc-savings-period" id="calc-savings-period">$13,200 per year &middot; ~37% of your current spend</div>
+
+                    <div class="calc-bars">
+                        <div class="calc-bar">
+                            <div class="calc-bar-head">
+                                <span>Your current spend</span>
+                                <strong id="calc-bar-current-label">$3,000/mo</strong>
+                            </div>
+                            <div class="calc-bar-track"><div class="calc-bar-fill current" id="calc-bar-current" style="width:100%"></div></div>
+                        </div>
+                        <div class="calc-bar">
+                            <div class="calc-bar-head">
+                                <span>Staffify flat rate</span>
+                                <strong id="calc-bar-staffify-label">$1,900/mo</strong>
+                            </div>
+                            <div class="calc-bar-track"><div class="calc-bar-fill staffify" id="calc-bar-staffify" style="width:63%"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="calc-footnote" id="calc-footnote">
+                        That's <strong style="color:#fff">one dedicated editor</strong> on your team, flat monthly rate. Unlimited edits within capacity, 12-24h turnaround, lifetime replacement guarantee. Real estate + property media is our sweet spot.
+                    </div>
+
+                    <a href="https://calendly.com/go-staffify/discovery-call?utm_content=editors&amp;utm_campaign=calculator" class="calc-cta">Get a real quote in 25 min →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- HOW IT WORKS -->
     <section class="process-section">
         <p class="section-eyebrow reveal">How It Works</p>
@@ -1631,6 +1853,89 @@
     </footer>
 
     <script>
+        // ─── COST CALCULATOR ───
+        (function(){
+            // Easy to tweak: Staffify dedicated editor monthly rate
+            const STAFFIFY_FLAT_MONTHLY = 1900;
+
+            const $spend = document.getElementById('calc-spend');
+            const $videos = document.getElementById('calc-videos');
+            const $perVideo = document.getElementById('calc-perVideo');
+            const $savingsLabel = document.getElementById('calc-savings-label');
+            const $savingsAmount = document.getElementById('calc-savings-amount');
+            const $savingsPeriod = document.getElementById('calc-savings-period');
+            const $barCurrent = document.getElementById('calc-bar-current');
+            const $barCurrentLabel = document.getElementById('calc-bar-current-label');
+            const $barStaffify = document.getElementById('calc-bar-staffify');
+            const $barStaffifyLabel = document.getElementById('calc-bar-staffify-label');
+            const $footnote = document.getElementById('calc-footnote');
+
+            if (!$spend) return; // calc not on page
+
+            function fmt(n) {
+                return '$' + Math.round(n).toLocaleString();
+            }
+
+            let lastEdited = 'spend'; // 'spend' or 'breakdown'
+
+            function recalc() {
+                let monthly;
+                if (lastEdited === 'breakdown') {
+                    const v = Math.max(0, Number($videos.value) || 0);
+                    const p = Math.max(0, Number($perVideo.value) || 0);
+                    monthly = v * p;
+                    $spend.value = monthly || '';
+                } else {
+                    monthly = Math.max(0, Number($spend.value) || 0);
+                }
+
+                const diff = monthly - STAFFIFY_FLAT_MONTHLY;
+                const annualSavings = diff * 12;
+
+                if (diff > 0) {
+                    // Savings
+                    $savingsLabel.textContent = "You'd save";
+                    $savingsAmount.textContent = fmt(diff) + '/mo';
+                    $savingsAmount.classList.add('positive');
+                    $savingsAmount.classList.remove('negative');
+                    const pct = monthly > 0 ? Math.round((diff / monthly) * 100) : 0;
+                    $savingsPeriod.innerHTML = fmt(annualSavings) + ' per year &middot; ~' + pct + '% off your current spend';
+                    $footnote.innerHTML = 'That\'s <strong style="color:#fff">one dedicated editor</strong> on your team, flat monthly rate. Unlimited edits within capacity, 12-24h turnaround, lifetime replacement guarantee.';
+                } else if (diff < 0) {
+                    // Staffify costs more at this volume
+                    $savingsLabel.textContent = "At your volume";
+                    $savingsAmount.textContent = fmt(-diff) + '/mo more';
+                    $savingsAmount.classList.remove('positive');
+                    $savingsAmount.classList.add('negative');
+                    $savingsPeriod.innerHTML = "But you'd trade variable cost for a predictable line, brand-consistent edits, and a 12-24h SLA.";
+                    const breakEvenVideos = $perVideo.value ? Math.ceil(STAFFIFY_FLAT_MONTHLY / Number($perVideo.value)) : null;
+                    if (breakEvenVideos) {
+                        $footnote.innerHTML = 'You\'d break even at <strong style="color:#fff">~' + breakEvenVideos + ' videos a month</strong>. Above that, every additional video costs you $0 instead of $' + Number($perVideo.value) + '.';
+                    } else {
+                        $footnote.innerHTML = 'The savings show up the moment your volume picks up. Flat rate means no surge pricing in busy months.';
+                    }
+                } else {
+                    $savingsLabel.textContent = 'Break even';
+                    $savingsAmount.textContent = '$0/mo';
+                    $savingsAmount.classList.remove('positive', 'negative');
+                    $savingsPeriod.innerHTML = "Same cost, but with predictable monthly billing and brand consistency.";
+                }
+
+                // Bars: scale relative to the larger of the two
+                const max = Math.max(monthly, STAFFIFY_FLAT_MONTHLY, 1);
+                $barCurrent.style.width = Math.round((monthly / max) * 100) + '%';
+                $barStaffify.style.width = Math.round((STAFFIFY_FLAT_MONTHLY / max) * 100) + '%';
+                $barCurrentLabel.textContent = fmt(monthly) + '/mo';
+                $barStaffifyLabel.textContent = fmt(STAFFIFY_FLAT_MONTHLY) + '/mo';
+            }
+
+            $spend.addEventListener('input', () => { lastEdited = 'spend'; recalc(); });
+            $videos.addEventListener('input', () => { lastEdited = 'breakdown'; recalc(); });
+            $perVideo.addEventListener('input', () => { lastEdited = 'breakdown'; recalc(); });
+
+            recalc();
+        })();
+
         // Scroll reveal
         const observer = new IntersectionObserver((entries) => {
             entries.forEach((entry, i) => {
