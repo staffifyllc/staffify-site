@@ -378,6 +378,75 @@
             line-height: 1.75;
         }
 
+        /* ── TRUST STRIP ── */
+        .trust-strip {
+            background: var(--black);
+            padding: 28px 24px 32px;
+            border-bottom: 1px solid var(--divider);
+        }
+        .trust-strip-inner { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+        .trust-strip-label {
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--muted);
+        }
+        .trust-strip-logos { display: flex; align-items: center; justify-content: center; gap: 36px; flex-wrap: wrap; }
+        .trust-strip-logos img {
+            height: 26px; width: auto;
+            opacity: 0.55;
+            filter: grayscale(100%) brightness(1.4);
+            transition: opacity .2s, filter .2s;
+        }
+        .trust-strip-logos img:hover { opacity: 1; filter: grayscale(0%) brightness(1); }
+        @media (max-width: 700px) {
+            .trust-strip-logos { gap: 22px; }
+            .trust-strip-logos img { height: 20px; }
+        }
+
+        /* ── INLINE / MID-PAGE CTA ── */
+        .inline-cta { max-width: 1100px; margin: 0 auto; padding: 48px 24px 16px; text-align: center; }
+        .inline-cta-btn {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: var(--c); color: #000;
+            padding: 13px 28px; border-radius: 999px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.18);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .inline-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 0 48px rgba(26,189,225,0.4); }
+        .inline-cta-microcopy { font-size: 12px; color: var(--muted); margin-top: 12px; }
+        .inline-cta-microcopy strong { color: rgba(255,255,255,0.75); font-weight: 600; }
+
+        /* ── CALL PREVIEW ── */
+        .call-preview { max-width: 540px; margin: 0 auto 22px; display: grid; gap: 8px; font-size: 13px; color: var(--muted); text-align: left; }
+        .call-preview-item { display: flex; align-items: flex-start; gap: 10px; line-height: 1.55; }
+        .call-preview-item svg { flex-shrink: 0; width: 16px; height: 16px; stroke: var(--c); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
+        .call-preview-item strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ── STICKY CTA ── */
+        .sticky-cta {
+            position: fixed; bottom: 24px; right: 24px;
+            z-index: 90; opacity: 0;
+            transform: translateY(20px); pointer-events: none;
+            transition: opacity .3s cubic-bezier(.16,1,.3,1), transform .3s cubic-bezier(.16,1,.3,1);
+        }
+        .sticky-cta.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .sticky-cta a {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--c); color: #000;
+            padding: 14px 24px; border-radius: 999px;
+            font-size: 14px; font-weight: 700; text-decoration: none;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .sticky-cta a:hover { transform: translateY(-2px); box-shadow: 0 16px 48px rgba(26,189,225,0.35), 0 0 0 1px rgba(255,255,255,0.06); }
+        .sticky-cta a svg { width: 16px; height: 16px; fill: currentColor; }
+        @media (max-width: 700px) {
+            .sticky-cta { left: 16px; right: 16px; bottom: 16px; }
+            .sticky-cta a { width: 100%; justify-content: center; padding: 16px; }
+        }
+
         /* ── COST CALCULATOR (founder time reclaimed) ── */
         .calc-section {
             background: var(--black);
@@ -1247,6 +1316,21 @@
         </div>
     </section>
 
+    <!-- TRUST STRIP -->
+    <section class="trust-strip reveal" aria-label="Clients">
+        <div class="trust-strip-inner">
+            <div class="trust-strip-label">Trusted by 50+ service businesses</div>
+            <div class="trust-strip-logos">
+                <img src="/assets/clients/flylisted.png" alt="Flylisted" loading="lazy">
+                <img src="/assets/clients/coral-cove-media.png" alt="Coral Cove Media" loading="lazy">
+                <img src="/assets/clients/lux-point-media.png" alt="Lux Point Media" loading="lazy">
+                <img src="/assets/clients/home-hearth-productions.png" alt="Home Hearth Productions" loading="lazy">
+                <img src="/assets/clients/move-it-media.png" alt="Move it Media" loading="lazy">
+                <img src="/assets/clients/william-raveis.png" alt="William Raveis" loading="lazy">
+            </div>
+        </div>
+    </section>
+
     <!-- VALUE CARDS -->
     <section class="costs-section">
         <p class="section-eyebrow reveal">Built Around Your Business</p>
@@ -1329,6 +1413,12 @@
         </div>
     </section>
 
+    <!-- INLINE CTA after calculator -->
+    <div class="inline-cta reveal">
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins&amp;utm_campaign=mid-calc" class="inline-cta-btn">Stop being the bottleneck →</a>
+        <p class="inline-cta-microcopy"><strong>No pitch, no obligation.</strong> If we're not a fit, we'll tell you in the first 5 minutes.</p>
+    </div>
+
     <!-- HOW IT WORKS -->
     <section class="process-section">
         <p class="section-eyebrow reveal">How It Works</p>
@@ -1382,6 +1472,26 @@
             <div class="guarantee-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
             </div>
+        </div>
+
+        <!-- INLINE CTA after guarantee -->
+        <div class="inline-cta reveal">
+            <div class="call-preview">
+                <div class="call-preview-item">
+                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
+                    <span>We look at <strong>where your day is actually going</strong> right now</span>
+                </div>
+                <div class="call-preview-item">
+                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
+                    <span>We map an <strong>admin profile</strong> built for your specific workflows</span>
+                </div>
+                <div class="call-preview-item">
+                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
+                    <span>You get an honest read. <strong>If we're not a fit, we'll say so.</strong></span>
+                </div>
+            </div>
+            <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins&amp;utm_campaign=mid-guarantee" class="inline-cta-btn">Book a 25-min call →</a>
+            <p class="inline-cta-microcopy">No pitch deck. No obligation. No upsell.</p>
         </div>
     </section>
 
@@ -1593,7 +1703,33 @@
         <p class="f-copy">&copy; 2026 Staffify LLC. All rights reserved. &middot; <a href="/privacy/" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms/" style="color:inherit;text-decoration:underline;">Terms</a></p>
     </footer>
 
+    <!-- STICKY FLOATING CTA -->
+    <div class="sticky-cta" id="stickyCta" aria-hidden="true">
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins&amp;utm_campaign=sticky">
+            <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm0 16H5V9h14v11z"/></svg>
+            Book a 25-min call
+        </a>
+    </div>
+
     <script>
+        // ─── STICKY CTA scroll trigger ───
+        (function(){
+            var el = document.getElementById('stickyCta');
+            if (!el) return;
+            var threshold = 800;
+            function check() {
+                if (window.scrollY > threshold) {
+                    el.classList.add('visible');
+                    el.setAttribute('aria-hidden', 'false');
+                } else {
+                    el.classList.remove('visible');
+                    el.setAttribute('aria-hidden', 'true');
+                }
+            }
+            window.addEventListener('scroll', check, { passive: true });
+            check();
+        })();
+
         // ─── COST CALCULATOR: founder time reclaimed ───
         (function(){
             const STAFFIFY_FLAT_MONTHLY = 2000;
