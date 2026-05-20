@@ -378,6 +378,24 @@
             line-height: 1.75;
         }
 
+        /* ── SOFT-YES LEAD MAGNET ── */
+        .soft-yes { background: var(--near-black); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); padding: 64px 24px; }
+        .soft-yes-card { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+        .soft-yes-label { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c); margin-bottom: 12px; }
+        .soft-yes h2 { font-size: clamp(26px, 3vw, 36px); font-weight: 800; letter-spacing: -0.02em; color: var(--white); margin-bottom: 14px; line-height: 1.2; }
+        .soft-yes p { font-size: 15px; color: var(--muted); line-height: 1.65; max-width: 460px; }
+        .soft-yes-form { display: flex; background: rgba(255,255,255,0.04); border: 1px solid var(--divider); border-radius: 12px; padding: 6px; transition: border-color .2s; }
+        .soft-yes-form:focus-within { border-color: var(--c); }
+        .soft-yes-form input { flex: 1; min-width: 0; background: transparent; border: none; color: var(--white); font-family: 'Inter', sans-serif; font-size: 15px; padding: 12px 14px; outline: none; }
+        .soft-yes-form input::placeholder { color: var(--subtle); }
+        .soft-yes-form button { background: var(--c); color: #000; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; border: none; cursor: pointer; padding: 10px 18px; border-radius: 8px; transition: filter .15s, transform .15s; white-space: nowrap; }
+        .soft-yes-form button:hover { filter: brightness(1.05); transform: translateY(-1px); }
+        .soft-yes-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .soft-yes-microcopy { font-size: 12px; color: var(--subtle); margin-top: 10px; }
+        .soft-yes-success { display: none; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #86efac; padding: 14px 18px; border-radius: 12px; font-size: 14px; }
+        .soft-yes-success.show { display: block; }
+        @media (max-width: 760px) { .soft-yes-card { grid-template-columns: 1fr; gap: 28px; } }
+
         /* ── TRUST STRIP ── */
         .trust-strip {
             background: var(--black);
@@ -533,6 +551,36 @@
         @media (max-width: 900px) {
             .calc-card { padding: 36px 24px; }
             .calc-grid { grid-template-columns: 1fr; gap: 36px; }
+        }
+
+        /* ── CASE STUDY teaser card ── */
+        .case-section {
+            background: var(--black);
+            border-bottom: 1px solid var(--divider);
+        }
+        .case-card {
+            max-width: 1100px; margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            gap: 56px; align-items: center;
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.015) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 24px;
+            padding: 56px 56px;
+        }
+        .case-card .case-left { display: flex; flex-direction: column; gap: 18px; }
+        .case-card .case-context { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+        .case-card .case-headline { font-size: clamp(28px, 3.4vw, 40px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.15; color: var(--white); }
+        .case-card .case-headline .g { font-size: 1.1em; }
+        .case-card .case-quote { font-family: 'Fraunces', Georgia, serif; font-size: 17px; line-height: 1.55; color: rgba(255,255,255,0.78); font-style: italic; margin-top: 4px; }
+        .case-card .case-cta { display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; color: var(--c); font-size: 14px; font-weight: 700; text-decoration: none; letter-spacing: 0.02em; transition: gap .2s; }
+        .case-card .case-cta:hover { gap: 14px; }
+        .case-card .case-stats { display: flex; flex-direction: column; gap: 24px; }
+        .case-stat { background: rgba(255,255,255,0.03); border: 1px solid var(--divider); border-radius: 16px; padding: 28px 28px; }
+        .case-stat .num { font-size: clamp(40px, 4.4vw, 56px); font-weight: 900; letter-spacing: -0.03em; line-height: 1; margin-bottom: 8px; }
+        .case-stat .label { font-size: 13px; color: var(--muted); line-height: 1.5; }
+        @media (max-width: 900px) {
+            .case-card { grid-template-columns: 1fr; padding: 40px 28px; gap: 32px; }
         }
 
         /* ── HOW IT WORKS ── */
@@ -1419,6 +1467,36 @@
         <p class="inline-cta-microcopy"><strong>No pitch, no obligation.</strong> If we're not a fit, we'll tell you in the first 5 minutes.</p>
     </div>
 
+    <!-- CASE STUDY teaser -->
+    <section class="case-section" style="padding-top:24px;">
+        <p class="section-eyebrow reveal">Case Study</p>
+        <h2 class="section-title reveal">Real <span class="g">Numbers</span></h2>
+        <p class="section-sub reveal" style="margin-bottom:48px;">How one real estate marketing studio reclaimed 60 founder-hours every month with a single Staffify executive admin.</p>
+
+        <div class="case-card reveal">
+            <div class="case-left">
+                <p class="case-context">Real Estate Marketing Studio &middot; Anonymized composite</p>
+                <h3 class="case-headline">The studio reclaimed <span class="g">60 founder-hours</span> a month within 30 days.</h3>
+                <p class="case-quote">&ldquo;I didn't realize how much of my day was being eaten by 'quick' agent texts and shoot logistics until somebody else was handling it. By month two I was on real estate showings to grow the business, not in my inbox apologizing for late deliveries.&rdquo;</p>
+                <a href="/case-studies/operator-time-reclaimed/" class="case-cta">Read the full case study <span aria-hidden="true">→</span></a>
+            </div>
+            <div class="case-stats">
+                <div class="case-stat">
+                    <div class="num g">60 hrs</div>
+                    <div class="label">of founder time reclaimed every month</div>
+                </div>
+                <div class="case-stat">
+                    <div class="num g">~$10K</div>
+                    <div class="label">of growth-time recaptured per month</div>
+                </div>
+                <div class="case-stat">
+                    <div class="num g">30 days</div>
+                    <div class="label">to fully embedded in the workflow</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- HOW IT WORKS -->
     <section class="process-section">
         <p class="section-eyebrow reveal">How It Works</p>
@@ -1642,6 +1720,25 @@
         </div>
     </section>
 
+    <!-- SOFT-YES LEAD MAGNET -->
+    <section class="soft-yes reveal">
+        <div class="soft-yes-card">
+            <div>
+                <div class="soft-yes-label">Not ready to talk yet?</div>
+                <h2>Grab the Operator's Playbook.</h2>
+                <p>Six chapters on the operational moves that separate the $300K service businesses from the $3M ones. The bottleneck audit, the delegation matrix, the hiring funnel, pricing power. Yours free.</p>
+            </div>
+            <div>
+                <form class="soft-yes-form" id="softYesForm" novalidate>
+                    <input type="email" name="email" id="softYesEmail" placeholder="you@example.com" required autocomplete="email">
+                    <button type="submit" id="softYesBtn">Send me the Playbook</button>
+                </form>
+                <p class="soft-yes-microcopy" id="softYesMicro">One email. No spam. Unsubscribe in one click.</p>
+                <div class="soft-yes-success" id="softYesSuccess">✓ Check your inbox in 30 seconds. The playbook is on the way.</div>
+            </div>
+        </div>
+    </section>
+
     <!-- OPERATIONS STRIP — what we do after the hire -->
     <section class="ops-strip">
         <div class="ops-strip-inner">
@@ -1703,6 +1800,10 @@
         <p class="f-copy">&copy; 2026 Staffify LLC. All rights reserved. &middot; <a href="/privacy/" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms/" style="color:inherit;text-decoration:underline;">Terms</a></p>
     </footer>
 
+    <!-- CALENDLY POPUP WIDGET (intercepts all Calendly links on this page) -->
+    <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
+    <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
+
     <!-- STICKY FLOATING CTA -->
     <div class="sticky-cta" id="stickyCta" aria-hidden="true">
         <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins&amp;utm_campaign=sticky">
@@ -1712,6 +1813,50 @@
     </div>
 
     <script>
+        // ─── SOFT-YES LEAD MAGNET (playbook capture) ───
+        (function() {
+            var form = document.getElementById('softYesForm');
+            if (!form) return;
+            var emailInput = document.getElementById('softYesEmail');
+            var btn = document.getElementById('softYesBtn');
+            var micro = document.getElementById('softYesMicro');
+            var success = document.getElementById('softYesSuccess');
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var email = emailInput.value.trim();
+                if (!email || email.indexOf('@') < 0) { emailInput.focus(); return; }
+                btn.disabled = true;
+                btn.textContent = 'Sending…';
+                try {
+                    var r = await fetch('/api/subscribe/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, source: 'admins-page-softyes', website: '' })
+                    });
+                    if (!r.ok) throw new Error('http ' + r.status);
+                    form.style.display = 'none';
+                    micro.style.display = 'none';
+                    success.classList.add('show');
+                } catch (err) {
+                    btn.disabled = false;
+                    btn.textContent = 'Send me the Playbook';
+                    micro.textContent = 'Hmm, that didn\'t go through. Try again or email hello@gostaffify.com.';
+                    micro.style.color = '#fca5a5';
+                }
+            });
+        })();
+
+        // ─── CALENDLY POPUP INTERCEPTOR ───
+        document.addEventListener('click', function(e) {
+            var a = e.target.closest && e.target.closest('a');
+            if (!a || !a.href) return;
+            if (a.href.indexOf('calendly.com/go-staffify') === -1) return;
+            if (typeof Calendly === 'undefined' || !Calendly.initPopupWidget) return;
+            e.preventDefault();
+            Calendly.initPopupWidget({ url: a.href });
+        });
+
         // ─── STICKY CTA scroll trigger ───
         (function(){
             var el = document.getElementById('stickyCta');

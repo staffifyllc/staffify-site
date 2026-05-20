@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Staffify Cinematic Ad — Storyboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background: #050505;
+    color: #f5f5f7;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.5;
+    padding: 48px 24px;
+    -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1400px; margin: 0 auto; }
+.header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+.header h1 {
+    font-size: 32px; font-weight: 900;
+    letter-spacing: -0.03em;
+    background: linear-gradient(90deg, #1abde1, #1456a4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+}
+.header p { color: #8a8a8f; font-size: 15px; }
+
+.scenes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+}
+@media (max-width: 1100px) { .scenes { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px)  { .scenes { grid-template-columns: 1fr; } }
+
+.scene {
+    background: #0d0d0d;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color .2s, transform .2s;
+}
+.scene:hover {
+    border-color: rgba(26,189,225,0.4);
+    transform: translateY(-2px);
+}
+.frame {
+    position: relative;
+    aspect-ratio: 9 / 16;
+    background: #000;
+    overflow: hidden;
+}
+.frame img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.frame .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 36px 28px;
+    background: linear-gradient(180deg, transparent 0%, transparent 50%, rgba(0,0,0,0.75) 100%);
+    pointer-events: none;
+}
+.frame .overlay-line {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.18;
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+}
+.frame .overlay-line.gradient {
+    background: linear-gradient(90deg, #1abde1, #ffffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.frame .overlay-line + .overlay-line { margin-top: 8px; }
+.frame .scene-num {
+    position: absolute;
+    top: 16px; left: 16px;
+    background: rgba(26,189,225,0.18);
+    border: 1px solid rgba(26,189,225,0.4);
+    color: #1abde1;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    padding: 5px 10px;
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+}
+.meta {
+    padding: 20px 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.meta .label {
+    font-size: 11px;
+    color: #8a8a8f;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.meta h3 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+}
+.meta p {
+    font-size: 13px;
+    color: #a1a1a6;
+    line-height: 1.55;
+}
+
+.cta-card {
+    margin-top: 60px;
+    background: linear-gradient(135deg, rgba(26,189,225,0.08), rgba(20,86,164,0.06));
+    border: 1px solid rgba(26,189,225,0.25);
+    border-radius: 20px;
+    padding: 36px 40px;
+    text-align: center;
+}
+.cta-card h2 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+}
+.cta-card p {
+    font-size: 14px;
+    color: #a1a1a6;
+    line-height: 1.6;
+    max-width: 640px;
+    margin: 0 auto;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header">
+        <h1>Staffify Cinematic Ad — Storyboard</h1>
+        <p>Six vertical keepers with overlay copy positioned. Built for Reels / TikTok / Stories.</p>
+    </div>
+
+    <div class="scenes">
+
+        <div class="scene">
+            <div class="frame">
+                <span class="scene-num">SCENE 01</span>
+                <img src="staffify-cinematic-vertical/scene-1-chaos-1.jpg" alt="Chaos">
+                <div class="overlay">
+                    <div class="overlay-line">Your business is growing.</div>
+                    <div class="overlay-line gradient">But somehow… you're drowning.</div>
+                </div>
+            </div>
+            <div class="meta">
+                <div class="label">Scene 01 · Chaos</div>
+                <h3>The bottleneck reveals itself</h3>
+                <p>Founder buried at 1AM, monitors stacked floor-to-ceiling. The teal vertical light cuts through the dark — the only thing keeping him conscious.</p>
+            </div>
+        </div>
+
+        <div class="scene">
+            <div class="frame">
+                <span class="scene-num">SCENE 02</span>
+                <img src="staffify-cinematic-vertical/scene-2-bottleneck-1.jpg" alt="Bottleneck">
+                <div class="overlay">
+                    <div class="overlay-line">You didn't build an agency…</div>
+                    <div class="overlay-line gradient">…to become the backup editor.</div>
+                </div>
+            </div>
+            <div class="meta">
+                <div class="label">Scene 02 · Bottleneck</div>
+                <h3>Reopening the editor at midnight</h3>
+                <p>Tight close-up. Frustration etched in the face lit by monitor glow. Real estate footage visible — the unfinished work staring back.</p>
+            </div>
+        </div>
+
+        <div class="scene">
+            <div class="frame">
+                <span class="scene-num">SCENE 03</span>
+                <img src="staffify-cinematic-vertical/scene-3-staffify-1.jpg" alt="Staffify Editor">
+                <div class="overlay">
+                    <div class="overlay-line">Meet the editor</div>
+                    <div class="overlay-line gradient">behind elite agencies.</div>
+                </div>
+            </div>
+            <div class="meta">
+                <div class="label">Scene 03 · Enter Staffify</div>
+                <h3>The shift in tone</h3>
+                <p>Filipino editor at a luxury workstation, real estate footage on stacked monitors. Calm, focused, elite. Music drops here.</p>
+            </div>
+        </div>
+
+        <div class="scene">
+            <div class="frame">
+                <span class="scene-num">SCENE 04</span>
+                <img src="staffify-cinematic-vertical/scene-4-system-1.jpg" alt="System">
+                <div class="overlay">
+                    <div class="overlay-line">Not freelancers.</div>
+                    <div class="overlay-line gradient">Infrastructure.</div>
+                </div>
+            </div>
+            <div class="meta">
+                <div class="label">Scene 04 · The System</div>
+                <h3>Operational command center</h3>
+                <p>Vertical dashboard wall with workstations below. Reads as a SaaS startup ops floor, not a call-center BPO. This is the differentiator.</p>
+            </div>
+        </div>
+
+        <div class="scene">
+            <div class="frame">
+                <span class="scene-num">SCENE 05</span>
+                <img src="staffify-cinematic-vertical/scene-5-margin-2.jpg" alt="Margin">
+                <div class="overlay">
+                    <div class="overlay-line">Predictable costs.</div>
+                    <div class="overlay-line">12–24hr turnarounds.</div>
+                    <div class="overlay-line gradient">Editors that learn your brand.</div>
+                </div>
+            </div>
+            <div class="meta">
+                <div class="label">Scene 05 · Margin Recovery</div>
+                <h3>The owner, calm + in control</h3>
+                <p>Founder arms-crossed in front of a floor-to-ceiling growth dashboard, city skyline behind. The metrics aren't sharp — that's fine, it's a vibe shot.</p>
+            </div>
+        </div>
+
+        <div class="scene">
+            <div class="frame">
+                <span class="scene-num">SCENE 06</span>
+                <img src="staffify-cinematic-vertical/scene-6-hero-1.jpg" alt="Hero">
+                <div class="overlay">
+                    <div class="overlay-line">Stop surviving your agency.</div>
+                    <div class="overlay-line gradient">Build the machine behind it.</div>
+                </div>
+            </div>
+            <div class="meta">
+                <div class="label">Scene 06 · Hero / Close</div>
+                <h3>STAFFIFY</h3>
+                <p>Top/bottom split: Filipino editor + agency owner. Two operators connected through the work. End card: "More done. Less stress."</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="cta-card">
+        <h2>Read order</h2>
+        <p>Run scenes 01 → 06 in order, each held 2.5–3 seconds. Track shifts from tense/dark (Scenes 1–2) to calm/confident (Scenes 3–6) at the 6-second mark. Total runtime: ~18 seconds — fits perfectly in a Reel/TikTok cap, with room for a 12-second cutdown as a 15s Story ad.</p>
+    </div>
+</div>
+</body>
+</html>
