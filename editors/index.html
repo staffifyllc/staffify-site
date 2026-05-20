@@ -1538,7 +1538,7 @@
                     <label for="calc-spend">Your current monthly editing spend</label>
                     <div class="calc-input-row">
                         <span class="calc-prefix">$</span>
-                        <input type="number" id="calc-spend" min="0" step="100" value="5000" inputmode="numeric">
+                        <input type="number" id="calc-spend" min="0" step="100" value="4000" inputmode="numeric">
                         <span class="calc-suffix">/mo</span>
                     </div>
 
@@ -1546,30 +1546,30 @@
 
                     <label for="calc-videos">Videos you produce per month</label>
                     <div class="calc-input-row">
-                        <input type="number" id="calc-videos" min="0" step="1" value="125" inputmode="numeric">
+                        <input type="number" id="calc-videos" min="0" step="1" value="50" inputmode="numeric">
                         <span class="calc-suffix">videos</span>
                     </div>
 
                     <label for="calc-perVideo">Average cost per video today</label>
                     <div class="calc-input-row">
                         <span class="calc-prefix">$</span>
-                        <input type="number" id="calc-perVideo" min="0" step="1" value="40" inputmode="numeric">
+                        <input type="number" id="calc-perVideo" min="0" step="1" value="80" inputmode="numeric">
                         <span class="calc-suffix">each</span>
                     </div>
 
-                    <p class="calc-helper">Quick rule of thumb: real-estate listing videos run $20-50. Long-form / talking-head edits run $80-200. Match what you're paying freelancers or agencies now. All figures here are <strong style="color:#fff">approximate</strong> — your actual quote depends on volume, complexity, and turnaround needs.</p>
+                    <p class="calc-helper">A dedicated Staffify editor handles ~<strong style="color:#fff">50-60 videos/month</strong> at a flat rate. Higher volumes scale to 2+ editors. Real-estate listing videos run $20-50 freelance; long-form / talking-head edits run $80-200. All figures here are <strong style="color:#fff">approximate</strong>.</p>
                 </div>
 
                 <div class="calc-output">
                     <div class="calc-savings-label" id="calc-savings-label">You'd save approximately</div>
-                    <div class="calc-savings-amount positive" id="calc-savings-amount">$3,000/mo</div>
-                    <div class="calc-savings-period" id="calc-savings-period">~$36,000 per year &middot; ~60% off your current spend</div>
+                    <div class="calc-savings-amount positive" id="calc-savings-amount">~$2,000/mo</div>
+                    <div class="calc-savings-period" id="calc-savings-period">~$24,000 per year &middot; ~50% off your current spend</div>
 
                     <div class="calc-bars">
                         <div class="calc-bar">
                             <div class="calc-bar-head">
                                 <span>Your current spend</span>
-                                <strong id="calc-bar-current-label">$5,000/mo</strong>
+                                <strong id="calc-bar-current-label">$4,000/mo</strong>
                             </div>
                             <div class="calc-bar-track"><div class="calc-bar-fill current" id="calc-bar-current" style="width:100%"></div></div>
                         </div>
@@ -1578,12 +1578,12 @@
                                 <span>Staffify, starting at</span>
                                 <strong id="calc-bar-staffify-label">~$2,000/mo</strong>
                             </div>
-                            <div class="calc-bar-track"><div class="calc-bar-fill staffify" id="calc-bar-staffify" style="width:40%"></div></div>
+                            <div class="calc-bar-track"><div class="calc-bar-fill staffify" id="calc-bar-staffify" style="width:50%"></div></div>
                         </div>
                     </div>
 
                     <div class="calc-footnote" id="calc-footnote">
-                        That's <strong style="color:#fff">one dedicated editor</strong> on your team. Pricing starts around $2k/mo and scales with role complexity and output. Unlimited edits within capacity, 12-24h turnaround, lifetime replacement guarantee.
+                        At your volume you'd need <strong style="color:#fff">one dedicated editor</strong> (each editor handles ~50-60 videos/month). Pricing starts around $2k/mo per editor and scales with role complexity. Unlimited edits within capacity, 12-24h turnaround, lifetime replacement guarantee.
                     </div>
 
                     <a href="https://calendly.com/go-staffify/discovery-call?utm_content=editors&amp;utm_campaign=calculator" class="calc-cta">Get a real quote in 25 min →</a>
@@ -1858,6 +1858,8 @@
             // Floor pricing for a dedicated Staffify editor.
             // Real quotes scale up with complexity / output — this is the baseline.
             const STAFFIFY_FLAT_MONTHLY = 2000;
+            // Average editor capacity per month (50-60 videos/mo range; midpoint).
+            const VIDEOS_PER_EDITOR = 55;
 
             const $spend = document.getElementById('calc-spend');
             const $videos = document.getElementById('calc-videos');
@@ -1880,18 +1882,27 @@
             let lastEdited = 'spend'; // 'spend' or 'breakdown'
 
             function recalc() {
-                let monthly;
+                let monthly, editorsNeeded;
                 if (lastEdited === 'breakdown') {
                     const v = Math.max(0, Number($videos.value) || 0);
                     const p = Math.max(0, Number($perVideo.value) || 0);
                     monthly = v * p;
+                    editorsNeeded = v > 0 ? Math.max(1, Math.ceil(v / VIDEOS_PER_EDITOR)) : 1;
                     $spend.value = monthly || '';
                 } else {
                     monthly = Math.max(0, Number($spend.value) || 0);
+                    // From total spend alone we can't infer volume — show 1-editor floor.
+                    editorsNeeded = 1;
                 }
 
-                const diff = monthly - STAFFIFY_FLAT_MONTHLY;
+                const staffifyTotal = editorsNeeded * STAFFIFY_FLAT_MONTHLY;
+                const diff = monthly - staffifyTotal;
                 const annualSavings = diff * 12;
+
+                const editorWord = editorsNeeded === 1 ? 'editor' : 'editors';
+                const editorStack = editorsNeeded === 1
+                    ? 'one dedicated editor'
+                    : editorsNeeded + ' dedicated editors';
 
                 if (diff > 0) {
                     // Savings
@@ -1901,19 +1912,19 @@
                     $savingsAmount.classList.remove('negative');
                     const pct = monthly > 0 ? Math.round((diff / monthly) * 100) : 0;
                     $savingsPeriod.innerHTML = '~' + fmt(annualSavings) + ' per year &middot; ~' + pct + '% off your current spend';
-                    $footnote.innerHTML = 'That\'s <strong style="color:#fff">one dedicated editor</strong> on your team. Pricing starts around $2k/mo and scales with role complexity and output. Unlimited edits within capacity, 12-24h turnaround, lifetime replacement guarantee.';
+                    $footnote.innerHTML = 'At your volume you\'d need <strong style="color:#fff">' + editorStack + '</strong> (each editor handles ~50-60 videos/month). Pricing starts around $2k/mo per editor and scales with role complexity. Unlimited edits within capacity, 12-24h turnaround, lifetime replacement guarantee.';
                 } else if (diff < 0) {
                     // Staffify costs more at this volume
                     $savingsLabel.textContent = "At your volume";
                     $savingsAmount.textContent = '~' + fmt(-diff) + '/mo more';
                     $savingsAmount.classList.remove('positive');
                     $savingsAmount.classList.add('negative');
-                    $savingsPeriod.innerHTML = "But you'd trade variable cost for a predictable line, brand-consistent edits, and a 12-24h SLA.";
-                    const breakEvenVideos = $perVideo.value ? Math.ceil(STAFFIFY_FLAT_MONTHLY / Number($perVideo.value)) : null;
+                    $savingsPeriod.innerHTML = "But you'd trade variable cost for a predictable line, brand-consistent edits, and a 12-24h SLA on every video.";
+                    const breakEvenVideos = $perVideo.value ? Math.ceil(staffifyTotal / Number($perVideo.value)) : null;
                     if (breakEvenVideos) {
-                        $footnote.innerHTML = 'You\'d break even at <strong style="color:#fff">~' + breakEvenVideos + ' videos a month</strong>. Above that, every additional video costs you ~$0 instead of $' + Number($perVideo.value) + '.';
+                        $footnote.innerHTML = 'At ' + editorStack + ', you\'d break even around <strong style="color:#fff">~' + breakEvenVideos + ' videos a month</strong>. Above that, every additional video costs you ~$0 instead of $' + Number($perVideo.value) + '.';
                     } else {
-                        $footnote.innerHTML = 'The savings show up the moment your volume picks up. Flat rate means no surge pricing in busy months.';
+                        $footnote.innerHTML = 'The savings show up the moment volume picks up. Flat rate means no surge pricing in busy months.';
                     }
                 } else {
                     $savingsLabel.textContent = 'Break even';
@@ -1923,11 +1934,11 @@
                 }
 
                 // Bars: scale relative to the larger of the two
-                const max = Math.max(monthly, STAFFIFY_FLAT_MONTHLY, 1);
+                const max = Math.max(monthly, staffifyTotal, 1);
                 $barCurrent.style.width = Math.round((monthly / max) * 100) + '%';
-                $barStaffify.style.width = Math.round((STAFFIFY_FLAT_MONTHLY / max) * 100) + '%';
+                $barStaffify.style.width = Math.round((staffifyTotal / max) * 100) + '%';
                 $barCurrentLabel.textContent = fmt(monthly) + '/mo';
-                $barStaffifyLabel.textContent = '~' + fmt(STAFFIFY_FLAT_MONTHLY) + '/mo';
+                $barStaffifyLabel.textContent = '~' + fmt(staffifyTotal) + '/mo' + (editorsNeeded > 1 ? ' (' + editorsNeeded + ' ' + editorWord + ')' : '');
             }
 
             $spend.addEventListener('input', () => { lastEdited = 'spend'; recalc(); });
