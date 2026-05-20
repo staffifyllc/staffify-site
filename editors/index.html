@@ -1484,6 +1484,26 @@
         .btn-pulse:hover { animation-play-state: paused; }
         @media (prefers-reduced-motion: reduce) { .btn-pulse { animation: none; } }
 
+        /* ── PULSING BACKGROUND HALO behind final CTA ── */
+        .bg-pulse { position: relative; isolation: isolate; }
+        .bg-pulse::after {
+            content: '';
+            position: absolute;
+            bottom: 10%; left: 50%;
+            width: min(900px, 110%); height: 60%;
+            background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(26,189,225,0.22) 0%, transparent 65%);
+            transform: translateX(-50%) scale(1);
+            pointer-events: none;
+            z-index: 0;
+            animation: bgPulse 2.4s cubic-bezier(.4,0,.6,1) infinite;
+        }
+        .bg-pulse > * { position: relative; z-index: 1; }
+        @keyframes bgPulse {
+            0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(0.95); }
+            50%      { opacity: 1;   transform: translateX(-50%) scale(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) { .bg-pulse::after { animation: none; } }
+
         </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
@@ -2115,7 +2135,7 @@
     </section>
 
     <!-- VIDEO CTA -->
-    <section class="video-cta-section">
+    <section class="video-cta-section bg-pulse">
         <p class="section-eyebrow reveal">Discover What's Possible</p>
         <h2 class="section-title reveal" style="margin-bottom:40px;">See a Staffify <span class="g">Editor</span> in Action</h2>
         <div class="video-wrap reveal" onclick="loadYT(this,'LCdBk8JendE')" style="cursor:pointer;">

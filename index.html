@@ -1473,6 +1473,17 @@
         .btn-pulse:hover { animation-play-state: paused; }
         @media (prefers-reduced-motion: reduce) { .btn-pulse { animation: none; } }
 
+        /* ── PULSING BACKGROUND HALO behind final CTA (animates existing .cta-orb) ── */
+        .bg-pulse .cta-orb {
+            animation: bgPulse 2.4s cubic-bezier(.4,0,.6,1) infinite;
+            background: radial-gradient(circle, rgba(26,189,225,0.18) 0%, transparent 65%);
+        }
+        @keyframes bgPulse {
+            0%, 100% { opacity: 0.45; transform: translate(-50%,-50%) scale(0.95); }
+            50%      { opacity: 1;    transform: translate(-50%,-50%) scale(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) { .bg-pulse .cta-orb { animation: none; } }
+
         </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
@@ -2126,7 +2137,7 @@
 </section>
 
 <!-- ─── CTA ─── -->
-<section class="cta-section">
+<section class="cta-section bg-pulse">
     <div class="cta-orb"></div>
     <h2 class="cta-title reveal">
         This isn't outsourcing.<br>

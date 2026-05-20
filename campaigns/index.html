@@ -2900,6 +2900,17 @@
         .btn-pulse:hover { animation-play-state: paused; }
         @media (prefers-reduced-motion: reduce) { .btn-pulse { animation: none; } }
 
+        /* ── PULSING BACKGROUND HALO behind final CTA (animates existing ::before glow) ── */
+        .final-cta.bg-pulse::before {
+            background: radial-gradient(circle, rgba(26,189,225,0.20) 0%, transparent 65%);
+            animation: bgPulse 2.4s cubic-bezier(.4,0,.6,1) infinite;
+        }
+        @keyframes bgPulse {
+            0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(0.95); }
+            50%      { opacity: 1;   transform: translateX(-50%) scale(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) { .final-cta.bg-pulse::before { animation: none; } }
+
         </style>
     <script type="application/ld+json">
 [
@@ -3917,7 +3928,7 @@
 </section>
 
 <!-- ═══ FINAL CTA ═══ -->
-<section class="final-cta" aria-label="Book a free strategy call">
+<section class="final-cta bg-pulse" aria-label="Book a free strategy call">
     <h2>
         Your pipeline<br>
         won't <span class="g">fill itself.</span>
