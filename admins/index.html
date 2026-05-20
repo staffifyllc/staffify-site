@@ -378,6 +378,163 @@
             line-height: 1.75;
         }
 
+        /* ── COST CALCULATOR (founder time reclaimed) ── */
+        .calc-section {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+        .calc-card {
+            max-width: 1000px; margin: 0 auto;
+            background: linear-gradient(160deg, rgba(26,189,225,0.05) 0%, rgba(20,86,164,0.04) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 24px;
+            padding: 48px 44px;
+        }
+        .calc-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 56px; align-items: start;
+        }
+        .calc-inputs label {
+            display: block;
+            font-size: 12px; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--muted); margin-bottom: 12px;
+        }
+        .calc-input-row {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 26px;
+        }
+        .calc-input-row input[type=number] {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--divider);
+            color: var(--white);
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700;
+            padding: 14px 18px;
+            border-radius: 12px;
+            width: 100%;
+            -moz-appearance: textfield;
+        }
+        .calc-input-row input[type=number]::-webkit-outer-spin-button,
+        .calc-input-row input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .calc-input-row input[type=number]:focus { outline: none; border-color: var(--c); background: rgba(255,255,255,0.06); }
+        .calc-prefix, .calc-suffix { font-size: 18px; font-weight: 600; color: var(--muted); }
+        .calc-helper { font-size: 13px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
+        .calc-helper strong { color: var(--white); font-weight: 600; }
+
+        .calc-output { text-align: left; }
+        .calc-savings-label {
+            font-size: 12px; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--c); margin-bottom: 12px;
+        }
+        .calc-savings-amount {
+            font-size: clamp(48px, 6vw, 72px);
+            font-weight: 900; letter-spacing: -0.04em; line-height: 1;
+            margin-bottom: 8px; color: var(--white);
+        }
+        .calc-savings-amount.positive {
+            background: linear-gradient(90deg, #1abde1, #1456a4);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .calc-savings-period { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+        .calc-bars { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
+        .calc-bar { display: flex; flex-direction: column; gap: 8px; }
+        .calc-bar-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+        .calc-bar-head strong { color: var(--white); font-weight: 600; }
+        .calc-bar-track { background: rgba(255,255,255,0.06); border-radius: 999px; height: 12px; overflow: hidden; position: relative; }
+        .calc-bar-fill { height: 100%; border-radius: 999px; transition: width 0.4s cubic-bezier(.16,1,.3,1); }
+        .calc-bar-fill.current { background: linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.6)); }
+        .calc-bar-fill.staffify { background: linear-gradient(90deg, #1abde1, #1456a4); }
+        .calc-footnote {
+            margin-top: 28px; font-size: 13px; color: var(--muted);
+            line-height: 1.6; padding-top: 22px; border-top: 1px solid var(--divider);
+        }
+        .calc-cta {
+            display: inline-block; margin-top: 18px;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 999px;
+            font-weight: 700; font-size: 14px; text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.18);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .calc-cta:hover { transform: translateY(-1px); box-shadow: 0 0 48px rgba(26,189,225,0.4); }
+
+        @media (max-width: 900px) {
+            .calc-card { padding: 36px 24px; }
+            .calc-grid { grid-template-columns: 1fr; gap: 36px; }
+        }
+
+        /* ── HOW IT WORKS ── */
+        .process-section {
+            background: var(--near-black);
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+        .process-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;
+        }
+        .process-step {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid var(--divider);
+            border-radius: 20px; padding: 36px 32px;
+            transition: border-color .25s, background .25s;
+        }
+        .process-step:hover { border-color: rgba(26,189,225,0.3); background: rgba(255,255,255,0.045); }
+        .process-num {
+            font-size: 12px; font-weight: 800;
+            letter-spacing: 0.18em; color: var(--c);
+            margin-bottom: 18px;
+        }
+        .process-step h3 {
+            font-size: 22px; font-weight: 800;
+            letter-spacing: -0.02em; color: var(--white);
+            margin-bottom: 14px; line-height: 1.2;
+        }
+        .process-step p { font-size: 14.5px; color: var(--muted); line-height: 1.65; }
+        .process-step strong { color: var(--white); font-weight: 600; }
+
+        .guarantee-card {
+            max-width: 1100px; margin: 40px auto 0;
+            background: linear-gradient(135deg, rgba(26,189,225,0.08) 0%, rgba(20,86,164,0.06) 100%);
+            border: 1px solid rgba(26,189,225,0.25);
+            border-radius: 20px; padding: 36px 40px;
+            display: grid; grid-template-columns: 1fr auto;
+            gap: 32px; align-items: center;
+        }
+        .guarantee-card .badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-size: 11px; font-weight: 800;
+            letter-spacing: 0.16em; text-transform: uppercase;
+            color: var(--c);
+            background: rgba(26,189,225,0.1);
+            border: 1px solid rgba(26,189,225,0.25);
+            border-radius: 999px; padding: 5px 12px; margin-bottom: 14px;
+        }
+        .guarantee-card h3 {
+            font-size: clamp(22px, 2.6vw, 28px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white); margin-bottom: 8px; line-height: 1.2;
+        }
+        .guarantee-card p {
+            font-size: 15px; color: var(--muted);
+            line-height: 1.6; max-width: 620px;
+        }
+        .guarantee-card .guarantee-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.18));
+            border: 1px solid rgba(26,189,225,0.3);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .guarantee-card .guarantee-icon svg { width: 38px; height: 38px; stroke: var(--c); fill: none; stroke-width: 2; }
+
+        @media (max-width: 768px) {
+            .process-grid { grid-template-columns: 1fr; }
+            .guarantee-card { grid-template-columns: 1fr; padding: 28px 24px; }
+        }
+
         /* ── SHOWCASE GRID (icon cards) ── */
         .showcase-section {
             background: var(--black);
@@ -1097,6 +1254,107 @@
         </div>
     </section>
 
+    <!-- COST CALCULATOR — what's admin work costing the founder? -->
+    <section class="calc-section">
+        <p class="section-eyebrow reveal">The Hidden Tax</p>
+        <h2 class="section-title reveal">Founders doing admin work <span class="g">kills growth.</span></h2>
+        <p class="section-sub reveal" style="margin-bottom:40px;">Every hour you spend on inbox triage, calendar logistics, or CRM cleanup is an hour you can't spend on the work that grows the business. Run your numbers and see what it's actually costing you.</p>
+
+        <div class="calc-card reveal">
+            <div class="calc-grid">
+                <div class="calc-inputs">
+                    <label for="calc-hours">Hours per week you spend on admin work</label>
+                    <div class="calc-input-row">
+                        <input type="number" id="calc-hours" min="0" step="1" value="12" inputmode="numeric">
+                        <span class="calc-suffix">hrs/week</span>
+                    </div>
+
+                    <label for="calc-value">What's an hour of your time worth in growth work?</label>
+                    <div class="calc-input-row">
+                        <span class="calc-prefix">$</span>
+                        <input type="number" id="calc-value" min="0" step="10" value="200" inputmode="numeric">
+                        <span class="calc-suffix">/hr</span>
+                    </div>
+
+                    <p class="calc-helper">Think of it as <strong>revenue per founder hour</strong> when you're doing the highest-leverage work: closing deals, building partnerships, training the team. Most service-business owners doing $1M+ land between <strong>$150-$400/hr</strong>. All figures here are approximate &mdash; the actual fit gets dialed in on the call.</p>
+                </div>
+
+                <div class="calc-output">
+                    <div class="calc-savings-label" id="calc-savings-label">You'd reclaim</div>
+                    <div class="calc-savings-amount positive" id="calc-savings-amount">~$10,400/mo</div>
+                    <div class="calc-savings-period" id="calc-savings-period">~52 hours/month back &middot; ~$124,800/year of growth time</div>
+
+                    <div class="calc-bars">
+                        <div class="calc-bar">
+                            <div class="calc-bar-head">
+                                <span>Cost of your time on admin today</span>
+                                <strong id="calc-bar-current-label">$10,400/mo</strong>
+                            </div>
+                            <div class="calc-bar-track"><div class="calc-bar-fill current" id="calc-bar-current" style="width:100%"></div></div>
+                        </div>
+                        <div class="calc-bar">
+                            <div class="calc-bar-head">
+                                <span>Staffify admin, starting at</span>
+                                <strong id="calc-bar-staffify-label">~$2,000/mo</strong>
+                            </div>
+                            <div class="calc-bar-track"><div class="calc-bar-fill staffify" id="calc-bar-staffify" style="width:19%"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="calc-footnote" id="calc-footnote">
+                        That's <strong style="color:#fff">52 hours every month</strong> you'd redirect from inbox triage and scheduling to revenue-generating work. The Staffify admin runs ~$2k/mo and scales with role complexity. Lifetime replacement guarantee on every placement.
+                    </div>
+
+                    <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins&amp;utm_campaign=calculator" class="calc-cta">Dial it in on a 25-min call →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="process-section">
+        <p class="section-eyebrow reveal">How It Works</p>
+        <h2 class="section-title reveal">How we find the <span class="g">right admin</span> for you</h2>
+        <p class="section-sub reveal" style="margin-bottom:48px;">An admin lives inside your business. We can't just send a resume and call it done. Every Staffify executive admin runs through the same process so the person sitting in your inbox actually sounds like you, thinks like you, and protects your time the way you would.</p>
+
+        <div class="process-grid">
+            <div class="process-step reveal">
+                <div class="process-num">STEP 01</div>
+                <h3>We map what's actually eating your day</h3>
+                <p>Before we touch a candidate, we walk through <strong>your inbox, calendar, CRM, and project tracker</strong> with you. We document the repetitive workflows, the recurring decisions, and the "quick things" that aren't quick. That becomes the spec we hire against.</p>
+            </div>
+
+            <div class="process-step reveal">
+                <div class="process-num">STEP 02</div>
+                <h3>Test tasks on your real workflows</h3>
+                <p>Candidates run <strong>real test tasks on your actual systems</strong>: inbox triage, calendar coordination, a sample CRM cleanup, drafting a follow-up email in your voice. You see the work product before they ever step into the role. If it's not your voice, they don't continue.</p>
+            </div>
+
+            <div class="process-step reveal">
+                <div class="process-num">STEP 03</div>
+                <h3>Full vetting on approved candidates</h3>
+                <p>Approved admins run through a traditional recruiting layer: <strong>reference checks, hardware checks, internet speed, working-hours alignment with your time zone, and communication style screening</strong>. We confirm they can show up consistently before we place them.</p>
+            </div>
+
+            <div class="process-step reveal">
+                <div class="process-num">STEP 04</div>
+                <h3>Onboarding plan modeled upfront</h3>
+                <p>We track <strong>how long each test task actually took</strong>, so by the time we recommend someone, you know not just how they perform but how much of your weekly admin load they can realistically absorb. You see the load-out before you commit.</p>
+            </div>
+        </div>
+
+        <div class="guarantee-card reveal">
+            <div>
+                <div class="badge"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1abde1;"></span>Lifetime Replacement Guarantee</div>
+                <h3>If they aren't the right fit, we replace them. Free.</h3>
+                <p>If the admin we place underperforms, ghosts, or just isn't the right voice in your inbox for any reason, we source and place a replacement at <strong>no additional cost, no offset to your monthly rate, no cushion fees</strong>. The risk is on us, not you.</p>
+            </div>
+            <div class="guarantee-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+        </div>
+    </section>
+
     <!-- CAPABILITY SHOWCASE -->
     <section class="showcase-section">
         <p class="section-eyebrow reveal">What They Handle</p>
@@ -1292,6 +1550,67 @@
     </footer>
 
     <script>
+        // ─── COST CALCULATOR: founder time reclaimed ───
+        (function(){
+            const STAFFIFY_FLAT_MONTHLY = 2000;
+            const WEEKS_PER_MONTH = 4.33;
+
+            const $hours = document.getElementById('calc-hours');
+            const $value = document.getElementById('calc-value');
+            const $savingsLabel = document.getElementById('calc-savings-label');
+            const $savingsAmount = document.getElementById('calc-savings-amount');
+            const $savingsPeriod = document.getElementById('calc-savings-period');
+            const $barCurrent = document.getElementById('calc-bar-current');
+            const $barCurrentLabel = document.getElementById('calc-bar-current-label');
+            const $barStaffify = document.getElementById('calc-bar-staffify');
+            const $barStaffifyLabel = document.getElementById('calc-bar-staffify-label');
+            const $footnote = document.getElementById('calc-footnote');
+
+            if (!$hours) return;
+
+            function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+
+            function recalc() {
+                const h = Math.max(0, Number($hours.value) || 0);
+                const v = Math.max(0, Number($value.value) || 0);
+                const hoursPerMonth = h * WEEKS_PER_MONTH;
+                const monthlyOpportunityCost = hoursPerMonth * v;
+                const annualOpportunityCost = monthlyOpportunityCost * 12;
+
+                const netReclaimed = monthlyOpportunityCost - STAFFIFY_FLAT_MONTHLY;
+                const netAnnual = netReclaimed * 12;
+
+                if (netReclaimed > 0) {
+                    $savingsLabel.textContent = "You'd reclaim approximately";
+                    $savingsAmount.textContent = '~' + fmt(netReclaimed) + '/mo';
+                    $savingsAmount.classList.add('positive');
+                    $savingsPeriod.innerHTML = '~' + Math.round(hoursPerMonth) + ' hours/month back &middot; ~' + fmt(netAnnual) + '/year of growth time';
+                    $footnote.innerHTML = 'That\'s <strong style="color:#fff">' + Math.round(hoursPerMonth) + ' hours every month</strong> you\'d redirect from admin work to revenue-generating work. The Staffify admin runs ~$2k/mo and scales with role complexity. Lifetime replacement guarantee on every placement.';
+                } else if (netReclaimed < 0) {
+                    $savingsLabel.textContent = 'Close to break-even';
+                    $savingsAmount.textContent = '~' + Math.round(hoursPerMonth) + ' hrs/mo';
+                    $savingsAmount.classList.remove('positive');
+                    $savingsPeriod.innerHTML = "reclaimed for ~$2k/mo. Even at break-even on cost, you trade repetitive admin for time on the highest-leverage work in your business.";
+                    $footnote.innerHTML = 'The dollar math gets stronger fast as your hourly value grows. A founder who doubles their per-hour leverage in growth work flips the math <strong style="color:#fff">2x</strong> overnight without changing admin volume.';
+                } else {
+                    $savingsLabel.textContent = 'Break even on cost';
+                    $savingsAmount.textContent = '~' + Math.round(hoursPerMonth) + ' hrs/mo';
+                    $savingsAmount.classList.remove('positive');
+                    $savingsPeriod.innerHTML = 'reclaimed for ~$2k/mo. The qualitative win is staying out of the inbox at all.';
+                }
+
+                const max = Math.max(monthlyOpportunityCost, STAFFIFY_FLAT_MONTHLY, 1);
+                $barCurrent.style.width = Math.round((monthlyOpportunityCost / max) * 100) + '%';
+                $barStaffify.style.width = Math.round((STAFFIFY_FLAT_MONTHLY / max) * 100) + '%';
+                $barCurrentLabel.textContent = fmt(monthlyOpportunityCost) + '/mo';
+                $barStaffifyLabel.textContent = '~' + fmt(STAFFIFY_FLAT_MONTHLY) + '/mo';
+            }
+
+            $hours.addEventListener('input', recalc);
+            $value.addEventListener('input', recalc);
+            recalc();
+        })();
+
         // Scroll reveal
         const observer = new IntersectionObserver((entries) => {
             entries.forEach((entry, i) => {
