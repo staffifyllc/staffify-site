@@ -2873,6 +2873,24 @@
             .nav-cta { display: none; }
         }
 
+        /* ── SOFT-YES LEAD MAGNET ── */
+        .soft-yes { background: var(--near-black); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); padding: 80px 24px; }
+        .soft-yes-card { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+        .soft-yes-label { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c); margin-bottom: 12px; }
+        .soft-yes h2 { font-size: clamp(26px, 3vw, 36px); font-weight: 800; letter-spacing: -0.02em; color: var(--white); margin-bottom: 14px; line-height: 1.2; }
+        .soft-yes p { font-size: 15px; color: var(--muted); line-height: 1.65; max-width: 460px; }
+        .soft-yes-form { display: flex; background: rgba(255,255,255,0.04); border: 1px solid var(--divider); border-radius: 12px; padding: 6px; transition: border-color .2s; }
+        .soft-yes-form:focus-within { border-color: var(--c); }
+        .soft-yes-form input { flex: 1; min-width: 0; background: transparent; border: none; color: var(--white); font-family: 'Inter', sans-serif; font-size: 15px; padding: 12px 14px; outline: none; }
+        .soft-yes-form input::placeholder { color: var(--subtle); }
+        .soft-yes-form button { background: var(--c); color: #000; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; border: none; cursor: pointer; padding: 10px 18px; border-radius: 8px; transition: filter .15s, transform .15s; white-space: nowrap; }
+        .soft-yes-form button:hover { filter: brightness(1.05); transform: translateY(-1px); }
+        .soft-yes-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .soft-yes-microcopy { font-size: 12px; color: var(--subtle); margin-top: 10px; }
+        .soft-yes-success { display: none; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #86efac; padding: 14px 18px; border-radius: 12px; font-size: 14px; }
+        .soft-yes-success.show { display: block; }
+        @media (max-width: 760px) { .soft-yes-card { grid-template-columns: 1fr; gap: 28px; } .soft-yes { padding: 56px 20px; } }
+
         </style>
     <script type="application/ld+json">
 [
@@ -3870,6 +3888,25 @@
     </div>
 </section>
 
+<!-- ═══ SOFT-YES LEAD MAGNET ═══ -->
+<section class="soft-yes" aria-label="Get the playbook">
+    <div class="soft-yes-card">
+        <div>
+            <div class="soft-yes-label">Not ready to talk yet?</div>
+            <h2>Grab the Operator's Playbook.</h2>
+            <p>Six chapters on the operational moves that separate the $300K service businesses from the $3M ones. The bottleneck audit, the delegation matrix, the hiring funnel, pricing power. Yours free.</p>
+        </div>
+        <div>
+            <form class="soft-yes-form" id="softYesForm" novalidate>
+                <input type="email" name="email" id="softYesEmail" placeholder="you@example.com" required autocomplete="email">
+                <button type="submit" id="softYesBtn">Send me the Playbook</button>
+            </form>
+            <p class="soft-yes-microcopy" id="softYesMicro">One email. No spam. Unsubscribe in one click.</p>
+            <div class="soft-yes-success" id="softYesSuccess">✓ Check your inbox in 30 seconds. The playbook is on the way.</div>
+        </div>
+    </div>
+</section>
+
 <!-- ═══ FINAL CTA ═══ -->
 <section class="final-cta" aria-label="Book a free strategy call">
     <h2>
@@ -4703,6 +4740,36 @@ function toggleFaq(btn) {
     btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
     answer.hidden = isOpen;
 }
+
+// ─── SOFT-YES LEAD MAGNET ───
+(function() {
+    var form = document.getElementById('softYesForm');
+    if (!form) return;
+    var emailInput = document.getElementById('softYesEmail');
+    var btn = document.getElementById('softYesBtn');
+    var micro = document.getElementById('softYesMicro');
+    var success = document.getElementById('softYesSuccess');
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var email = emailInput.value.trim();
+        if (!email || email.indexOf('@') < 0) { emailInput.focus(); return; }
+        btn.disabled = true; btn.textContent = 'Sending…';
+        try {
+            var r = await fetch('/api/subscribe/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, source: 'campaigns-page-softyes', website: '' })
+            });
+            if (!r.ok) throw new Error('http ' + r.status);
+            form.style.display = 'none'; micro.style.display = 'none';
+            success.classList.add('show');
+        } catch (err) {
+            btn.disabled = false; btn.textContent = 'Send me the Playbook';
+            micro.textContent = "Hmm, that didn't go through. Try again or email hello@gostaffify.com.";
+            micro.style.color = '#fca5a5';
+        }
+    });
+})();
 
 </script>
 

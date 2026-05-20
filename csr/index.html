@@ -387,6 +387,81 @@
             line-height: 1.75;
         }
 
+        /* ── TRUST STRIP ── */
+        .trust-strip { background: var(--black); padding: 28px 24px 32px; border-bottom: 1px solid var(--divider); }
+        .trust-strip-inner { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+        .trust-strip-label { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+        .trust-strip-logos { display: flex; align-items: center; justify-content: center; gap: 36px; flex-wrap: wrap; }
+        .trust-strip-logos img { height: 26px; width: auto; opacity: 0.55; filter: grayscale(100%) brightness(1.4); transition: opacity .2s, filter .2s; }
+        .trust-strip-logos img:hover { opacity: 1; filter: grayscale(0%) brightness(1); }
+        @media (max-width: 700px) { .trust-strip-logos { gap: 22px; } .trust-strip-logos img { height: 20px; } }
+
+        /* ── HOW IT WORKS ── */
+        .process-section { background: var(--near-black); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); }
+        .process-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+        .process-step { background: rgba(255,255,255,0.025); border: 1px solid var(--divider); border-radius: 20px; padding: 36px 32px; transition: border-color .25s, background .25s; }
+        .process-step:hover { border-color: rgba(26,189,225,0.3); background: rgba(255,255,255,0.045); }
+        .process-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(26,189,225,0.12), rgba(20,86,164,0.08));
+            border: 1px solid rgba(26,189,225,0.25);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            transition: transform .25s cubic-bezier(.16,1,.3,1), background .25s;
+        }
+        .process-step:hover .process-icon { transform: translateY(-2px); background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.12)); }
+        .process-icon svg { width: 24px; height: 24px; stroke: var(--c); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .process-num { font-size: 12px; font-weight: 800; letter-spacing: 0.18em; color: var(--c); margin-bottom: 18px; }
+        .process-step h3 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--white); margin-bottom: 14px; line-height: 1.2; }
+        .process-step p { font-size: 14.5px; color: var(--muted); line-height: 1.65; }
+        .process-step strong { color: var(--white); font-weight: 600; }
+
+        .guarantee-card { max-width: 1100px; margin: 40px auto 0; background: linear-gradient(135deg, rgba(26,189,225,0.08) 0%, rgba(20,86,164,0.06) 100%); border: 1px solid rgba(26,189,225,0.25); border-radius: 20px; padding: 36px 40px; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+        .guarantee-card .badge { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--c); background: rgba(26,189,225,0.1); border: 1px solid rgba(26,189,225,0.25); border-radius: 999px; padding: 5px 12px; margin-bottom: 14px; }
+        .guarantee-card h3 { font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; letter-spacing: -0.02em; color: var(--white); margin-bottom: 8px; line-height: 1.2; }
+        .guarantee-card p { font-size: 15px; color: var(--muted); line-height: 1.6; max-width: 620px; }
+        .guarantee-card .guarantee-icon { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.18)); border: 1px solid rgba(26,189,225,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .guarantee-card .guarantee-icon svg { width: 38px; height: 38px; stroke: var(--c); fill: none; stroke-width: 2; }
+        @media (max-width: 768px) { .process-grid { grid-template-columns: 1fr; } .guarantee-card { grid-template-columns: 1fr; padding: 28px 24px; } }
+
+        /* ── INLINE CTA ── */
+        .inline-cta { max-width: 1100px; margin: 0 auto; padding: 48px 24px 16px; text-align: center; }
+        .inline-cta-btn { display: inline-flex; align-items: center; gap: 10px; background: var(--c); color: #000; padding: 13px 28px; border-radius: 999px; font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 0 32px rgba(26,189,225,0.18); transition: transform .15s, box-shadow .15s; }
+        .inline-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 0 48px rgba(26,189,225,0.4); }
+        .inline-cta-microcopy { font-size: 12px; color: var(--muted); margin-top: 12px; }
+        .inline-cta-microcopy strong { color: rgba(255,255,255,0.75); font-weight: 600; }
+        .call-preview { max-width: 540px; margin: 0 auto 22px; display: grid; gap: 8px; font-size: 13px; color: var(--muted); text-align: left; }
+        .call-preview-item { display: flex; align-items: flex-start; gap: 10px; line-height: 1.55; }
+        .call-preview-item svg { flex-shrink: 0; width: 16px; height: 16px; stroke: var(--c); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
+        .call-preview-item strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ── SOFT-YES LEAD MAGNET ── */
+        .soft-yes { background: var(--near-black); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); padding: 64px 24px; }
+        .soft-yes-card { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+        .soft-yes-label { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c); margin-bottom: 12px; }
+        .soft-yes h2 { font-size: clamp(26px, 3vw, 36px); font-weight: 800; letter-spacing: -0.02em; color: var(--white); margin-bottom: 14px; line-height: 1.2; }
+        .soft-yes p { font-size: 15px; color: var(--muted); line-height: 1.65; max-width: 460px; }
+        .soft-yes-form { display: flex; background: rgba(255,255,255,0.04); border: 1px solid var(--divider); border-radius: 12px; padding: 6px; transition: border-color .2s; }
+        .soft-yes-form:focus-within { border-color: var(--c); }
+        .soft-yes-form input { flex: 1; min-width: 0; background: transparent; border: none; color: var(--white); font-family: 'Inter', sans-serif; font-size: 15px; padding: 12px 14px; outline: none; }
+        .soft-yes-form input::placeholder { color: var(--subtle); }
+        .soft-yes-form button { background: var(--c); color: #000; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; border: none; cursor: pointer; padding: 10px 18px; border-radius: 8px; transition: filter .15s, transform .15s; white-space: nowrap; }
+        .soft-yes-form button:hover { filter: brightness(1.05); transform: translateY(-1px); }
+        .soft-yes-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .soft-yes-microcopy { font-size: 12px; color: var(--subtle); margin-top: 10px; }
+        .soft-yes-success { display: none; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #86efac; padding: 14px 18px; border-radius: 12px; font-size: 14px; }
+        .soft-yes-success.show { display: block; }
+        @media (max-width: 760px) { .soft-yes-card { grid-template-columns: 1fr; gap: 28px; } }
+
+        /* ── STICKY CTA ── */
+        .sticky-cta { position: fixed; bottom: 24px; right: 24px; z-index: 90; opacity: 0; transform: translateY(20px); pointer-events: none; transition: opacity .3s cubic-bezier(.16,1,.3,1), transform .3s cubic-bezier(.16,1,.3,1); }
+        .sticky-cta.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .sticky-cta a { display: inline-flex; align-items: center; gap: 8px; background: var(--c); color: #000; padding: 14px 24px; border-radius: 999px; font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 12px 36px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06); transition: transform .15s, box-shadow .15s; }
+        .sticky-cta a:hover { transform: translateY(-2px); box-shadow: 0 16px 48px rgba(26,189,225,0.35), 0 0 0 1px rgba(255,255,255,0.06); }
+        .sticky-cta a svg { width: 16px; height: 16px; fill: currentColor; }
+        @media (max-width: 700px) { .sticky-cta { left: 16px; right: 16px; bottom: 16px; } .sticky-cta a { width: 100%; justify-content: center; padding: 16px; } }
+
         /* ── SHOWCASE GRID (icon cards) ── */
         .showcase-section {
             background: var(--black);
@@ -1081,6 +1156,21 @@
         </div>
     </section>
 
+    <!-- TRUST STRIP -->
+    <section class="trust-strip reveal" aria-label="Clients">
+        <div class="trust-strip-inner">
+            <div class="trust-strip-label">Trusted by 50+ service businesses</div>
+            <div class="trust-strip-logos">
+                <img src="/assets/clients/flylisted.png" alt="Flylisted" loading="lazy">
+                <img src="/assets/clients/coral-cove-media.png" alt="Coral Cove Media" loading="lazy">
+                <img src="/assets/clients/lux-point-media.png" alt="Lux Point Media" loading="lazy">
+                <img src="/assets/clients/home-hearth-productions.png" alt="Home Hearth Productions" loading="lazy">
+                <img src="/assets/clients/move-it-media.png" alt="Move it Media" loading="lazy">
+                <img src="/assets/clients/william-raveis.png" alt="William Raveis" loading="lazy">
+            </div>
+        </div>
+    </section>
+
     <!-- VALUE CARDS -->
     <section class="costs-section">
         <p class="section-eyebrow reveal">Built Around Your Business</p>
@@ -1103,6 +1193,82 @@
                 <h3>Zero Hiring Headaches</h3>
                 <p>We source, screen, train, and place. You show up to the intro call. No job posts, no vetting, no trial-and-error. Your CSR hits the ground running from week one.</p>
             </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="process-section">
+        <p class="section-eyebrow reveal">How It Works</p>
+        <h2 class="section-title reveal">How we find the <span class="g">right CSR</span> for your customers</h2>
+        <p class="section-sub reveal" style="margin-bottom:48px;">A customer service rep is the voice of your business. We can't just match a resume and call it done. Every Staffify CSR runs through the same process so the person answering your customers sounds like you, thinks like you, and protects your reputation the way you would.</p>
+
+        <div class="process-grid">
+            <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16" y2="16"/><line x1="7.5" y1="9.5" x2="13.5" y2="9.5"/><line x1="7.5" y1="12" x2="11" y2="12"/></svg>
+                </div>
+                <div class="process-num">STEP 01</div>
+                <h3>We map your customer experience layer</h3>
+                <p>Before we touch a candidate, we walk through <strong>your tickets, your call recordings, your chat transcripts, your SOPs</strong>. We document the recurring issues, the escalation rules, and the words you'd never use. That becomes the spec we hire against.</p>
+            </div>
+
+            <div class="process-step reveal">
+                <div class="process-num">STEP 02</div>
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                </div>
+                <h3>Test interactions on your real scripts</h3>
+                <p>Candidates run <strong>real test interactions</strong>: handling a sample ticket, taking a mock call, replying to an angry email in your voice. You see the work product before they ever step into the role. If they don't sound like you, they don't continue.</p>
+            </div>
+
+            <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                </div>
+                <div class="process-num">STEP 03</div>
+                <h3>Full vetting on approved candidates</h3>
+                <p>Approved CSRs run through a traditional recruiting layer: <strong>reference checks, voice samples, neutral-accent screening, hardware checks, internet speed, and working-hours alignment with your customers' time zones</strong>. We confirm they can show up consistently before we place them.</p>
+            </div>
+
+            <div class="process-step reveal">
+                <div class="process-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><line x1="3" y1="20" x2="21" y2="20"/><rect x="5" y="14" width="3" height="6"/><rect x="10.5" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/><polyline points="4 11 9 9 14 6 19 3"/><polyline points="16 3 19 3 19 6"/></svg>
+                </div>
+                <div class="process-num">STEP 04</div>
+                <h3>SLA modeled upfront</h3>
+                <p>We benchmark <strong>response times, resolution rates, and escalation paths</strong> during the test phase, so by the time we recommend someone, you know not just how they perform but what your customer experience scoreboard will look like with them in seat.</p>
+            </div>
+        </div>
+
+        <div class="guarantee-card reveal">
+            <div>
+                <div class="badge"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1abde1;"></span>Lifetime Replacement Guarantee</div>
+                <h3>If they aren't the right voice for your customers, we replace them. Free.</h3>
+                <p>If the CSR we place underperforms, ghosts, or just isn't the right voice for your customers for any reason, we source and place a replacement at <strong>no additional cost, no offset to your monthly rate, no cushion fees</strong>. The risk is on us, not you.</p>
+            </div>
+            <div class="guarantee-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+        </div>
+
+        <!-- INLINE CTA after guarantee -->
+        <div class="inline-cta reveal">
+            <div class="call-preview">
+                <div class="call-preview-item">
+                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
+                    <span>We look at <strong>where your customer experience is leaking</strong> today</span>
+                </div>
+                <div class="call-preview-item">
+                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
+                    <span>We map a <strong>CSR profile</strong> sized to your call and ticket volume</span>
+                </div>
+                <div class="call-preview-item">
+                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
+                    <span>You get an honest read. <strong>If we're not a fit, we'll say so.</strong></span>
+                </div>
+            </div>
+            <a href="https://calendly.com/go-staffify/discovery-call?utm_content=csr&amp;utm_campaign=mid-guarantee" class="inline-cta-btn">Book a 25-min call →</a>
+            <p class="inline-cta-microcopy">No pitch deck. No obligation. No upsell.</p>
         </div>
     </section>
 
@@ -1167,6 +1333,25 @@
 
         <div style="text-align:center; margin-top:60px;" class="reveal">
             <a href="https://calendly.com/go-staffify/discovery-call?utm_content=csr" class="btn-primary">Book a Discovery Call</a>
+        </div>
+    </section>
+
+    <!-- SOFT-YES LEAD MAGNET -->
+    <section class="soft-yes reveal">
+        <div class="soft-yes-card">
+            <div>
+                <div class="soft-yes-label">Not ready to talk yet?</div>
+                <h2>Grab the Operator's Playbook.</h2>
+                <p>Six chapters on the operational moves that separate the $300K service businesses from the $3M ones. The bottleneck audit, the delegation matrix, the hiring funnel, pricing power. Yours free.</p>
+            </div>
+            <div>
+                <form class="soft-yes-form" id="softYesForm" novalidate>
+                    <input type="email" name="email" id="softYesEmail" placeholder="you@example.com" required autocomplete="email">
+                    <button type="submit" id="softYesBtn">Send me the Playbook</button>
+                </form>
+                <p class="soft-yes-microcopy" id="softYesMicro">One email. No spam. Unsubscribe in one click.</p>
+                <div class="soft-yes-success" id="softYesSuccess">✓ Check your inbox in 30 seconds. The playbook is on the way.</div>
+            </div>
         </div>
     </section>
 
@@ -1300,7 +1485,72 @@
         <p class="f-copy">&copy; 2026 Staffify LLC. All rights reserved. &middot; <a href="/privacy/" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms/" style="color:inherit;text-decoration:underline;">Terms</a></p>
     </footer>
 
+    <!-- CALENDLY POPUP WIDGET -->
+    <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
+    <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
+
+    <!-- STICKY FLOATING CTA -->
+    <div class="sticky-cta" id="stickyCta" aria-hidden="true">
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=csr&amp;utm_campaign=sticky">
+            <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm0 16H5V9h14v11z"/></svg>
+            Book a 25-min call
+        </a>
+    </div>
+
     <script>
+        // ─── CALENDLY POPUP INTERCEPTOR ───
+        document.addEventListener('click', function(e) {
+            var a = e.target.closest && e.target.closest('a');
+            if (!a || !a.href) return;
+            if (a.href.indexOf('calendly.com/go-staffify') === -1) return;
+            if (typeof Calendly === 'undefined' || !Calendly.initPopupWidget) return;
+            e.preventDefault();
+            Calendly.initPopupWidget({ url: a.href });
+        });
+
+        // ─── STICKY CTA scroll trigger ───
+        (function(){
+            var el = document.getElementById('stickyCta');
+            if (!el) return;
+            var threshold = 800;
+            function check() {
+                if (window.scrollY > threshold) { el.classList.add('visible'); el.setAttribute('aria-hidden','false'); }
+                else { el.classList.remove('visible'); el.setAttribute('aria-hidden','true'); }
+            }
+            window.addEventListener('scroll', check, { passive: true });
+            check();
+        })();
+
+        // ─── SOFT-YES LEAD MAGNET ───
+        (function() {
+            var form = document.getElementById('softYesForm');
+            if (!form) return;
+            var emailInput = document.getElementById('softYesEmail');
+            var btn = document.getElementById('softYesBtn');
+            var micro = document.getElementById('softYesMicro');
+            var success = document.getElementById('softYesSuccess');
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var email = emailInput.value.trim();
+                if (!email || email.indexOf('@') < 0) { emailInput.focus(); return; }
+                btn.disabled = true; btn.textContent = 'Sending…';
+                try {
+                    var r = await fetch('/api/subscribe/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, source: 'csr-page-softyes', website: '' })
+                    });
+                    if (!r.ok) throw new Error('http ' + r.status);
+                    form.style.display = 'none'; micro.style.display = 'none';
+                    success.classList.add('show');
+                } catch (err) {
+                    btn.disabled = false; btn.textContent = 'Send me the Playbook';
+                    micro.textContent = "Hmm, that didn't go through. Try again or email hello@gostaffify.com.";
+                    micro.style.color = '#fca5a5';
+                }
+            });
+        })();
+
         // Scroll reveal
         const observer = new IntersectionObserver((entries) => {
             entries.forEach((entry, i) => {
