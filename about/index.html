@@ -988,6 +988,15 @@
             .nav-cta { display: none; }
         }
 
+        /* ── PULSE FINAL CTA (lobby/game-start cadence) ── */
+        @keyframes btnPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(26,189,225,0.55), 0 0 24px 4px rgba(26,189,225,0.28); }
+            50%      { box-shadow: 0 0 0 16px rgba(26,189,225,0), 0 0 44px 10px rgba(26,189,225,0.5); }
+        }
+        .btn-pulse { animation: btnPulse 2.4s cubic-bezier(.4,0,.6,1) infinite; will-change: box-shadow; }
+        .btn-pulse:hover { animation-play-state: paused; }
+        @media (prefers-reduced-motion: reduce) { .btn-pulse { animation: none; } }
+
         </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
@@ -1455,7 +1464,7 @@
         <span class="g">with us?</span>
     </h2>
     <p class="cta-sub reveal">Book a free 15-minute call. No pressure. Just a real conversation about your business.</p>
-    <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary reveal">Book a Discovery Call →</a>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary btn-pulse reveal">Book a Discovery Call →</a>
     <div style="margin-top:32px;display:flex;justify-content:center;gap:28px;flex-wrap:wrap;" class="reveal">
         <a href="tel:3056369210" style="color:var(--subtle);text-decoration:none;font-size:14px;">(305) 636-9210</a>
         <a href="mailto:hello@gostaffify.com" style="color:var(--subtle);text-decoration:none;font-size:14px;">hello@gostaffify.com</a>

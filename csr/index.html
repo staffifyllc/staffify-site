@@ -952,6 +952,15 @@
             .nav-cta { display: none; }
         }
 
+        /* ── PULSE FINAL CTA (lobby/game-start cadence) ── */
+        @keyframes btnPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(26,189,225,0.55), 0 0 24px 4px rgba(26,189,225,0.28); }
+            50%      { box-shadow: 0 0 0 16px rgba(26,189,225,0), 0 0 44px 10px rgba(26,189,225,0.5); }
+        }
+        .btn-pulse { animation: btnPulse 2.4s cubic-bezier(.4,0,.6,1) infinite; will-change: box-shadow; }
+        .btn-pulse:hover { animation-play-state: paused; }
+        @media (prefers-reduced-motion: reduce) { .btn-pulse { animation: none; } }
+
         </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
@@ -1465,7 +1474,7 @@
     <!-- CLOSER -->
     <section class="closer-section">
         <p class="closer-text reveal">The best businesses don&rsquo;t answer every ticket themselves. They build a customer experience that runs whether they&rsquo;re online or not. <strong class="shimmer-text">That&rsquo;s exactly what Staffify builds for you.</strong></p>
-        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=csr" class="btn-primary reveal">Get Your CSR</a>
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=csr" class="btn-primary btn-pulse reveal">Get Your CSR</a>
     </section>
 
     <footer>
