@@ -13,7 +13,12 @@ const redis = new Redis({
 });
 
 function toCSV(rows) {
-    const cols = ['email', 'signed_up_at', 'last_seen_at', 'source', 'playbook_sent_at'];
+    const cols = [
+        'email', 'source', 'signed_up_at', 'last_seen_at',
+        'playbook_sent_at', 'decision',
+        'softyes_stage', 'softyes_enrolled_at', 'softyes_graduated_reason',
+        'last_booking_at',
+    ];
     const header = cols.join(',');
     const lines = rows.map(r =>
         cols.map(c => {
@@ -22,6 +27,17 @@ function toCSV(rows) {
         }).join(',')
     );
     return [header, ...lines].join('\n');
+}
+
+function softyesStage(softyes) {
+    if (!softyes || !softyes.enrolled_at) return '';
+    if (softyes.graduated_at) return `graduated (${softyes.graduated_reason || 'unknown'})`;
+    if (softyes.day45_sent_at) return 'completed (day 45 sent)';
+    if (softyes.day21_sent_at) return 'day 21 sent';
+    if (softyes.day12_sent_at) return 'day 12 sent';
+    if (softyes.day6_sent_at) return 'day 6 sent';
+    if (softyes.day2_sent_at) return 'day 2 sent';
+    return 'enrolled (waiting day 2)';
 }
 
 function authorized(req) {
@@ -55,7 +71,12 @@ export default async function handler(req, res) {
         const rows = [];
         for (const email of emails) {
             const rec = await redis.hgetall(`subscriber:${email}`);
-            if (rec) rows.push(rec);
+            if (!rec) continue;
+            const softyes = await redis.hgetall(`softyes:${email}`);
+            rec.softyes_stage = softyesStage(softyes);
+            rec.softyes_enrolled_at = (softyes && softyes.enrolled_at) || '';
+            rec.softyes_graduated_reason = (softyes && softyes.graduated_reason) || '';
+            rows.push(rec);
         }
 
         const format = (req.query.format || 'json').toString().toLowerCase();
