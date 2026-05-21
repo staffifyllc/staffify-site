@@ -391,40 +391,17 @@
             .soft-yes-card { grid-template-columns: 1fr; gap: 28px; }
         }
 
-        /* ── TRUST STRIP (below hero) ── */
-        .trust-strip {
-            background: var(--black);
-            padding: 28px 24px 32px;
-            border-bottom: 1px solid var(--divider);
-        }
-        .trust-strip-inner {
-            max-width: 1100px; margin: 0 auto;
-            display: flex; flex-direction: column; align-items: center;
-            gap: 18px;
-        }
-        .trust-strip-label {
-            font-size: 11px; font-weight: 700;
-            letter-spacing: 0.18em; text-transform: uppercase;
-            color: var(--muted);
-        }
-        .trust-strip-logos {
-            display: flex; align-items: center; justify-content: center;
-            gap: 36px; flex-wrap: wrap;
-        }
-        .trust-strip-logos img {
-            height: 26px; width: auto;
-            opacity: 0.55;
-            filter: grayscale(100%) brightness(1.4);
-            transition: opacity .2s, filter .2s;
-        }
-        .trust-strip-logos img:hover {
-            opacity: 1;
-            filter: grayscale(0%) brightness(1);
-        }
-        @media (max-width: 700px) {
-            .trust-strip-logos { gap: 22px; }
-            .trust-strip-logos img { height: 20px; }
-        }
+        /* ── TRUST STRIP (scrolling marquee) ── */
+        .trust-strip { background: var(--black); padding: 36px 0 44px; border-bottom: 1px solid var(--divider); overflow: hidden; position: relative; }
+        .trust-strip-label { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.20em; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
+        .trust-marquee { overflow: hidden; position: relative; mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent); }
+        .trust-marquee-track { display: flex; gap: 72px; width: max-content; align-items: center; animation: trustMarquee 70s linear infinite; }
+        .trust-marquee:hover .trust-marquee-track { animation-play-state: paused; }
+        .trust-marquee img { height: 30px; width: auto; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.5; transition: opacity .2s; flex-shrink: 0; user-select: none; -webkit-user-drag: none; }
+        .trust-marquee img:hover { opacity: 0.95; }
+        @keyframes trustMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @media (prefers-reduced-motion: reduce) { .trust-marquee-track { animation: none; flex-wrap: wrap; justify-content: center; row-gap: 24px; } }
+        @media (max-width: 700px) { .trust-marquee img { height: 24px; } .trust-marquee-track { gap: 48px; animation-duration: 50s; } }
 
         /* ── INLINE / MID-PAGE CTA (after key sections) ── */
         .inline-cta {
@@ -1708,17 +1685,28 @@
         </div>
     </section>
 
-    <!-- TRUST STRIP -->
+    <!-- TRUST STRIP (scrolling marquee) -->
     <section class="trust-strip reveal" aria-label="Clients">
-        <div class="trust-strip-inner">
-            <div class="trust-strip-label">Trusted by 50+ service businesses</div>
-            <div class="trust-strip-logos">
+        <div class="trust-strip-label">Trusted by 50+ service businesses</div>
+        <div class="trust-marquee">
+            <div class="trust-marquee-track">
                 <img src="/assets/clients/flylisted.png" alt="Flylisted" loading="lazy">
+                <img src="/assets/clients/william-raveis.png" alt="William Raveis" loading="lazy">
+                <img src="/assets/clients/move-it-media.png" alt="Move it Media" loading="lazy">
+                <img src="/assets/clients/homepage-realty.png" alt="Homepage Realty" loading="lazy">
                 <img src="/assets/clients/coral-cove-media.png" alt="Coral Cove Media" loading="lazy">
                 <img src="/assets/clients/lux-point-media.png" alt="Lux Point Media" loading="lazy">
                 <img src="/assets/clients/home-hearth-productions.png" alt="Home Hearth Productions" loading="lazy">
-                <img src="/assets/clients/move-it-media.png" alt="Move it Media" loading="lazy">
-                <img src="/assets/clients/william-raveis.png" alt="William Raveis" loading="lazy">
+                <img src="/assets/clients/pending-media.png" alt="Pending Media" loading="lazy">
+                <img src="/assets/clients/property-pix.png" alt="Property Pix" loading="lazy">
+                <img src="/assets/clients/virtual-view-tours.png" alt="Virtual View Tours" loading="lazy">
+                <img src="/assets/clients/symmetry-sauna.png" alt="Symmetry Sauna" loading="lazy">
+                <img src="/assets/clients/joel-adamson.png" alt="Joel Adamson" loading="lazy">
+                <img src="/assets/clients/jonathan-gonzales.png" alt="Jonathan Gonzales" loading="lazy">
+                <img src="/assets/clients/rachael-adkins.png" alt="Rachael Adkins" loading="lazy">
+                <img src="/assets/clients/sara-barclay.png" alt="Sara Barclay" loading="lazy">
+                <img src="/assets/clients/tj-romero.png" alt="TJ Romero" loading="lazy">
+                <img src="/assets/clients/vic-devor.png" alt="Vic Devor" loading="lazy">
             </div>
         </div>
     </section>
@@ -2224,6 +2212,13 @@
             e.preventDefault();
             Calendly.initPopupWidget({ url: a.href });
         });
+
+        // ─── TRUST MARQUEE: duplicate track for seamless infinite loop ───
+        (function(){
+            document.querySelectorAll('.trust-marquee-track').forEach(function(t){
+                t.innerHTML = t.innerHTML + t.innerHTML;
+            });
+        })();
 
         // ─── STICKY CTA scroll trigger ───
         (function(){
