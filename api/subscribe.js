@@ -178,6 +178,25 @@ export default async function handler(req, res) {
                 ...renderEmail(email),
             });
             await redis.hset(`subscriber:${email}`, { playbook_sent_at: Date.now() });
+
+            // Enroll in the soft-yes nurture sequence (day 2, 6, 12, 21, 45).
+            // Idempotent: only enrolls if no prior softyes record exists.
+            // Skip enrollment if they've already converted (decision set) or already in post-call nurture.
+            const alreadyEnrolled = await redis.hget(`softyes:${email}`, 'enrolled_at');
+            const inPostCallNurture = await redis.hget(`nurture:${email}`, 'enrolled_at');
+            if (!alreadyEnrolled && !inPostCallNurture) {
+                await redis.hset(`softyes:${email}`, {
+                    email,
+                    source,
+                    enrolled_at: Date.now(),
+                    day2_sent_at: '',
+                    day6_sent_at: '',
+                    day12_sent_at: '',
+                    day21_sent_at: '',
+                    day45_sent_at: '',
+                });
+                await redis.zadd('softyes:active', { score: Date.now(), member: email });
+            }
         }
 
         return res.status(200).json({ ok: true, returning: !!existing });

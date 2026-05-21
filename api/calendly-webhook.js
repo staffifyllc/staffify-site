@@ -348,6 +348,14 @@ export default async function handler(req, res) {
         await redis.zadd('disposition:pending', { score: callEndsAt, member: email });
     }
 
+    // Graduate them out of the soft-yes nurture if they were in it.
+    // Booking a call > educational drip. The disposition/post-call flow takes over.
+    const inSoftYes = await redis.hget(`softyes:${email}`, 'enrolled_at');
+    if (inSoftYes) {
+        await redis.zrem('softyes:active', email);
+        await redis.hset(`softyes:${email}`, { graduated_at: now, graduated_reason: 'booked_call' });
+    }
+
     // Track the booking record separately for analytics
     await redis.hset(`discovery:${email}`, {
         email, role, booked_at: now,
