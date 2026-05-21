@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Studies | Staffify</title>
+    <meta name="description" content="Real businesses, real placements. Founder hours reclaimed, costs cut, and capacity unlocked across editors, admins, customer service, and outbound.">
+    <link rel="canonical" href="https://www.gostaffify.com/case-studies/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.gostaffify.com/case-studies/">
+    <meta property="og:title" content="Case Studies | Staffify">
+    <meta property="og:description" content="Real businesses, real placements. Founder hours reclaimed across editors, admins, CSRs, and sales.">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo img { height: 28px; display: block; }
+        .nav-links { display: flex; gap: 28px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover, .nav-links a.active { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* HERO */
+        .hub-hero {
+            padding: 140px 24px 64px;
+            max-width: 1100px; margin: 0 auto;
+            border-bottom: 1px solid var(--divider);
+        }
+        .hub-eyebrow {
+            font-size: 11px; font-weight: 800;
+            letter-spacing: 0.20em; text-transform: uppercase;
+            color: var(--c); margin-bottom: 22px;
+        }
+        .hub-hero h1 {
+            font-size: clamp(40px, 6vw, 72px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.05; margin-bottom: 24px;
+            max-width: 880px;
+        }
+        .hub-hero h1 em {
+            font-style: normal;
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 40%, #0d82b8 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hub-hero .dek {
+            font-size: 19px; line-height: 1.6;
+            color: rgba(255,255,255,0.65);
+            max-width: 720px;
+        }
+
+        /* SUMMARY STATS */
+        .hub-stats {
+            max-width: 1100px; margin: 0 auto;
+            padding: 56px 24px 24px;
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+        }
+        .hub-stat-num {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(36px, 4.5vw, 56px);
+            font-weight: 700; letter-spacing: -0.02em;
+            line-height: 1;
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 60%, #0d82b8 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hub-stat-label {
+            font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+            color: var(--muted); text-transform: uppercase;
+            margin-top: 12px;
+        }
+
+        /* GRID */
+        .hub-grid {
+            max-width: 1200px; margin: 24px auto 0;
+            padding: 24px 24px 64px;
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+        .cs-card {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--divider);
+            border-radius: 20px;
+            padding: 36px 36px 32px;
+            transition: border-color .25s, transform .25s, box-shadow .25s;
+            text-decoration: none;
+            color: inherit;
+            display: flex; flex-direction: column;
+            min-height: 320px;
+        }
+        .cs-card:hover {
+            border-color: rgba(26,189,225,0.35);
+            transform: translateY(-4px);
+            box-shadow: 0 24px 60px rgba(26,189,225,0.08), 0 0 0 1px rgba(26,189,225,0.18);
+        }
+        .cs-card-meta {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 24px;
+        }
+        .cs-card-pill {
+            display: inline-block;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.10em; text-transform: uppercase;
+            padding: 6px 12px; border-radius: 999px;
+            background: rgba(26,189,225,0.10);
+            color: var(--c); border: 1px solid rgba(26,189,225,0.18);
+        }
+        .cs-card-pill.role-editor { background: rgba(99,102,241,0.10); color: #a5b4fc; border-color: rgba(99,102,241,0.18); }
+        .cs-card-pill.role-admin  { background: rgba(34,197,94,0.10); color: #86efac; border-color: rgba(34,197,94,0.18); }
+        .cs-card-pill.role-csr    { background: rgba(251,146,60,0.10); color: #fdba74; border-color: rgba(251,146,60,0.18); }
+        .cs-card-pill.role-sdr    { background: rgba(244,114,182,0.10); color: #f9a8d4; border-color: rgba(244,114,182,0.18); }
+        .cs-card-pill.role-multi  { background: rgba(168,85,247,0.10); color: #d8b4fe; border-color: rgba(168,85,247,0.18); }
+        .cs-card-disclosure {
+            font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--subtle);
+        }
+        .cs-card h2 {
+            font-size: clamp(22px, 2.4vw, 26px);
+            font-weight: 800; letter-spacing: -0.02em;
+            line-height: 1.18; color: var(--white);
+            margin-bottom: 16px;
+        }
+        .cs-card .summary {
+            font-size: 15px; color: var(--muted);
+            line-height: 1.6; margin-bottom: 22px;
+        }
+        .cs-card-stats {
+            display: flex; gap: 24px; flex-wrap: wrap;
+            margin-bottom: 28px; padding: 18px 0;
+            border-top: 1px solid var(--divider);
+            border-bottom: 1px solid var(--divider);
+        }
+        .cs-card-stat-num {
+            font-family: 'Fraunces', serif;
+            font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+            color: var(--white); line-height: 1;
+        }
+        .cs-card-stat-label {
+            font-size: 11px; color: var(--subtle);
+            margin-top: 6px; letter-spacing: 0.04em;
+        }
+        .cs-card-link {
+            margin-top: auto;
+            font-size: 13px; font-weight: 700;
+            color: var(--c); letter-spacing: 0.02em;
+            display: inline-flex; align-items: center; gap: 6px;
+            transition: gap .2s;
+        }
+        .cs-card:hover .cs-card-link { gap: 12px; }
+
+        /* CTA */
+        .hub-cta {
+            max-width: 1100px; margin: 56px auto 0;
+            padding: 0 24px 100px;
+        }
+        .hub-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 56px 48px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 40px; flex-wrap: wrap;
+        }
+        .hub-cta-card h3 {
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white); margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        .hub-cta-card p {
+            font-size: 15px; color: var(--muted);
+            max-width: 540px;
+        }
+        .hub-cta-btn {
+            display: inline-block;
+            background: var(--c); color: #000;
+            padding: 16px 32px; border-radius: 980px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .hub-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* DISCLOSURE */
+        .disclosure {
+            max-width: 1100px; margin: 0 auto;
+            padding: 32px 24px 80px;
+            border-top: 1px solid var(--divider);
+            font-size: 12px; color: var(--subtle); line-height: 1.65;
+            text-align: center;
+        }
+
+        /* FOOTER */
+        footer { background: var(--black); border-top: 1px solid var(--divider); padding: 40px 48px; text-align: center; }
+        footer a { color: var(--muted); text-decoration: none; font-size: 13px; }
+        footer a:hover { color: var(--white); }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 20px; }
+            .nav-links { display: none; }
+            .hub-hero { padding: 100px 22px 48px; }
+            .hub-stats { grid-template-columns: repeat(2, 1fr); gap: 24px; padding: 40px 22px 16px; }
+            .hub-grid { grid-template-columns: 1fr; padding: 16px 22px 48px; }
+            .cs-card { padding: 28px 24px; min-height: 0; }
+            .hub-cta-card { padding: 36px 28px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/case-studies/" class="active">Case Studies</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call?utm_content=case-studies" class="nav-cta">Get Started</a>
+</nav>
+
+<!-- HERO -->
+<section class="hub-hero">
+    <div class="hub-eyebrow">Case Studies</div>
+    <h1>Real businesses. <em>Real placements.</em></h1>
+    <p class="dek">A growing library of stories from the businesses we serve. Some are named with permission. Others are anonymized composites drawn from real placement patterns to protect client confidentiality. The numbers are real either way.</p>
+</section>
+
+<!-- SUMMARY STATS -->
+<div class="hub-stats">
+    <div>
+        <div class="hub-stat-num">50+</div>
+        <div class="hub-stat-label">Service businesses</div>
+    </div>
+    <div>
+        <div class="hub-stat-num">120+</div>
+        <div class="hub-stat-label">Roles placed</div>
+    </div>
+    <div>
+        <div class="hub-stat-num">95%</div>
+        <div class="hub-stat-label">Retention rate</div>
+    </div>
+    <div>
+        <div class="hub-stat-num">24hr</div>
+        <div class="hub-stat-label">Replacement guarantee</div>
+    </div>
+</div>
+
+<!-- GRID -->
+<section class="hub-grid">
+
+    <!-- FLYLISTED -->
+    <a class="cs-card" href="/case-studies/flylisted/">
+        <div class="cs-card-meta">
+            <span class="cs-card-pill role-editor">Video Editor</span>
+            <span class="cs-card-disclosure">Named client</span>
+        </div>
+        <h2>How Flylisted cut their editing spend 60% and locked turnaround at 12-24hrs.</h2>
+        <p class="summary">A real-estate marketing studio in Boston and South Florida swapped a rotating bench of freelance editors for one dedicated Staffify editor on a flat monthly rate.</p>
+        <div class="cs-card-stats">
+            <div>
+                <div class="cs-card-stat-num">60%</div>
+                <div class="cs-card-stat-label">Editing spend cut</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">12-24hr</div>
+                <div class="cs-card-stat-label">Turnaround locked</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">1</div>
+                <div class="cs-card-stat-label">Voice across every cut</div>
+            </div>
+        </div>
+        <span class="cs-card-link">Read the case study →</span>
+    </a>
+
+    <!-- OPERATOR TIME RECLAIMED -->
+    <a class="cs-card" href="/case-studies/operator-time-reclaimed/">
+        <div class="cs-card-meta">
+            <span class="cs-card-pill role-admin">Executive Admin</span>
+            <span class="cs-card-disclosure">Anonymized composite</span>
+        </div>
+        <h2>60 founder-hours reclaimed every month with a Staffify executive admin.</h2>
+        <p class="summary">A real-estate marketing studio took 15 hours per week of inbox triage, calendar control, and vendor coordination off the founder's plate inside 30 days.</p>
+        <div class="cs-card-stats">
+            <div>
+                <div class="cs-card-stat-num">60 hrs</div>
+                <div class="cs-card-stat-label">Reclaimed per month</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">~$10K</div>
+                <div class="cs-card-stat-label">Opportunity cost recaptured</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">30 days</div>
+                <div class="cs-card-stat-label">To full handoff</div>
+            </div>
+        </div>
+        <span class="cs-card-link">Read the case study →</span>
+    </a>
+
+    <!-- DTC SUPPORT -->
+    <a class="cs-card" href="/case-studies/dtc-support-scale/">
+        <div class="cs-card-meta">
+            <span class="cs-card-pill role-csr">Customer Service</span>
+            <span class="cs-card-disclosure">Anonymized composite</span>
+        </div>
+        <h2>Response times from 18 hours to 2, and the founder stopped reading the word "refund."</h2>
+        <p class="summary">A DTC apparel brand running on Shopify scaled past founder-led support with two Staffify CSRs covering US and EU hours, keeping CSAT above 94% throughout the handoff.</p>
+        <div class="cs-card-stats">
+            <div>
+                <div class="cs-card-stat-num">9x</div>
+                <div class="cs-card-stat-label">Faster first response</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">94%</div>
+                <div class="cs-card-stat-label">CSAT held</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">16 hrs/wk</div>
+                <div class="cs-card-stat-label">Founder time recaptured</div>
+            </div>
+        </div>
+        <span class="cs-card-link">Read the case study →</span>
+    </a>
+
+    <!-- COACHING SDR -->
+    <a class="cs-card" href="/case-studies/coaching-sdr-pipeline/">
+        <div class="cs-card-meta">
+            <span class="cs-card-pill role-sdr">Sales / SDR</span>
+            <span class="cs-card-disclosure">Anonymized composite</span>
+        </div>
+        <h2>A coach who hates prospecting added seven new clients without making a single cold call.</h2>
+        <p class="summary">An executive coaching practice paired with a Staffify SDR on LinkedIn and email outbound. 12 booked calls per month landed on the founder's calendar that she did not source.</p>
+        <div class="cs-card-stats">
+            <div>
+                <div class="cs-card-stat-num">12/mo</div>
+                <div class="cs-card-stat-label">Booked calls (founder-net-new)</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">$180K</div>
+                <div class="cs-card-stat-label">Pipeline in 90 days</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">45 days</div>
+                <div class="cs-card-stat-label">Payback period</div>
+            </div>
+        </div>
+        <span class="cs-card-link">Read the case study →</span>
+    </a>
+
+    <!-- AGENCY MULTI-ROLE -->
+    <a class="cs-card" href="/case-studies/agency-leverage-stack/">
+        <div class="cs-card-meta">
+            <span class="cs-card-pill role-multi">Multi-Role Placement</span>
+            <span class="cs-card-disclosure">Anonymized composite</span>
+        </div>
+        <h2>How a $3M agency added four layers of leverage and scaled to $5M without burning the founder out.</h2>
+        <p class="summary">A full-service marketing agency phased in an admin, two CSRs, and an editor over 90 days. Founder dropped from 65 to 35 hours a week. Margins improved six points.</p>
+        <div class="cs-card-stats">
+            <div>
+                <div class="cs-card-stat-num">4 roles</div>
+                <div class="cs-card-stat-label">Placed in 90 days</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">+$2M</div>
+                <div class="cs-card-stat-label">ARR added year-end</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">+6 pts</div>
+                <div class="cs-card-stat-label">Margin expansion</div>
+            </div>
+        </div>
+        <span class="cs-card-link">Read the case study →</span>
+    </a>
+
+    <!-- LEGAL INTAKE -->
+    <a class="cs-card" href="/case-studies/legal-intake-conversion/">
+        <div class="cs-card-meta">
+            <span class="cs-card-pill role-csr">Customer Service</span>
+            <span class="cs-card-disclosure">Anonymized composite</span>
+        </div>
+        <h2>A personal injury firm captured every after-hours lead and lifted intake conversion 16 points.</h2>
+        <p class="summary">A multi-state PI firm with 18 attorneys built a six-CSR 24/7 intake desk on Staffify. The first 90 days produced an annualized $1.2M revenue lift from leads that were previously hitting voicemail.</p>
+        <div class="cs-card-stats">
+            <div>
+                <div class="cs-card-stat-num">22%→38%</div>
+                <div class="cs-card-stat-label">Intake conversion</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">$1.2M</div>
+                <div class="cs-card-stat-label">Annualized revenue lift</div>
+            </div>
+            <div>
+                <div class="cs-card-stat-num">24/7</div>
+                <div class="cs-card-stat-label">Coverage from day one</div>
+            </div>
+        </div>
+        <span class="cs-card-link">Read the case study →</span>
+    </a>
+
+</section>
+
+<!-- DISCLOSURE -->
+<div class="disclosure">
+    Anonymized composites combine elements from multiple real Staffify placements within the same vertical and role. Identifying details are changed to protect client confidentiality. Outcome ranges reflect real placement performance.
+</div>
+
+<!-- CTA -->
+<section class="hub-cta">
+    <div class="hub-cta-card">
+        <div>
+            <h3>Could your business be the next case study?</h3>
+            <p>Book a 25-minute discovery call. We'll look at your week, name the highest-leverage delegation, and tell you what it would take to install.</p>
+        </div>
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=case-studies" class="hub-cta-btn">Book a 25-min call →</a>
+    </div>
+</section>
+
+<footer>
+    <a href="/">Staffify</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+    <p style="margin-top:14px;font-size:12px;color:var(--subtle);">© 2026 Staffify. More Done. Less Stress.</p>
+</footer>
+
+</body>
+</html>
