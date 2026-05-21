@@ -371,31 +371,35 @@
             margin-bottom: 20px;
         }
 
-        /* ── CARD NUMBER SHIMMER (01-02-03 metallic sweep) ── */
-        @keyframes cardNumShimmer {
-            0%, 100% { background-position: 100% 0; }
-            50%      { background-position: -100% 0; }
-        }
+        /* ── DIAMOND SHIMMER (sharp streak sweeps across 01-02-03, then rests) ── */
         .card-num.g {
-            background: linear-gradient(110deg,
-                #1456a4 0%,
-                #0d82b8 22%,
-                #1abde1 42%,
-                #e5f8ff 50%,
-                #1abde1 58%,
-                #0d82b8 78%,
-                #1456a4 100%
-            );
-            background-size: 250% 100%;
+            background:
+                linear-gradient(115deg,
+                    transparent 0%,
+                    transparent 44%,
+                    rgba(255,255,255,0.35) 47%,
+                    rgba(255,255,255,1) 50%,
+                    rgba(255,255,255,0.35) 53%,
+                    transparent 56%,
+                    transparent 100%
+                ),
+                linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            background-size: 220% 100%, 100% 100%;
+            background-position: 130% 0, 0 0;
+            background-repeat: no-repeat, no-repeat;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            animation: cardNumShimmer 4.8s ease-in-out infinite;
+            animation: diamondShimmer 6s ease-out infinite;
         }
-        .cards-grid .card:nth-child(2) .card-num.g { animation-delay: 0.6s; }
-        .cards-grid .card:nth-child(3) .card-num.g { animation-delay: 1.2s; }
+        @keyframes diamondShimmer {
+            0%, 78%  { background-position: 130% 0, 0 0; }
+            100%     { background-position: -30% 0, 0 0; }
+        }
+        .cards-grid .card:nth-child(2) .card-num.g { animation-delay: 0.7s; }
+        .cards-grid .card:nth-child(3) .card-num.g { animation-delay: 1.4s; }
         @media (prefers-reduced-motion: reduce) {
-            .card-num.g { animation: none; background-position: 0 0; }
+            .card-num.g { animation: none; background-position: -30% 0, 0 0; }
         }
 
         .card h3 {
