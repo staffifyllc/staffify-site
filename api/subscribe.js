@@ -170,36 +170,65 @@ export default async function handler(req, res) {
         });
         await redis.zadd('subscribers:by_date', { score: existing ? Number(existing) : now, member: email });
 
-        // Only send the welcome/delivery email on first signup
-        if (!existing) {
+        // Determine whether to send the playbook + enroll in soft-yes drip.
+        // Rules:
+        //   First signup ever                                          → send + enroll
+        //   Returning signup, no prior soft-yes record                 → send + enroll
+        //   Returning signup, soft-yes completed/graduated 90+ days ago AND no decision recorded → re-send + re-enroll
+        //   Otherwise (active drip in progress, recent completion, decision set, in post-call nurture) → silent
+        const REENROLL_AFTER_MS = 90 * 86400 * 1000;
+        const subRec = await redis.hgetall(`subscriber:${email}`);
+        const softyesRec = await redis.hgetall(`softyes:${email}`);
+        const inPostCallNurture = await redis.hget(`nurture:${email}`, 'enrolled_at');
+
+        const decisionSet = !!(subRec && subRec.decision && String(subRec.decision).length);
+        const softyesEndedAt = softyesRec
+            ? Number(softyesRec.graduated_at || softyesRec.completed_at || softyesRec.day45_sent_at || 0)
+            : 0;
+        const eligibleToReenroll = softyesEndedAt && (now - softyesEndedAt) >= REENROLL_AFTER_MS && !decisionSet;
+
+        const isFirstSignup = !existing;
+        const shouldEnroll =
+            !inPostCallNurture && !decisionSet && (
+                isFirstSignup ||
+                !softyesRec || !softyesRec.enrolled_at ||  // had subscriber row but no prior drip
+                eligibleToReenroll
+            );
+
+        if (isFirstSignup || eligibleToReenroll) {
             await sendViaResend({
                 to: email,
                 subject: "Your Service Business Operator's Playbook is here",
                 ...renderEmail(email),
             });
             await redis.hset(`subscriber:${email}`, { playbook_sent_at: Date.now() });
-
-            // Enroll in the soft-yes nurture sequence (day 2, 6, 12, 21, 45).
-            // Idempotent: only enrolls if no prior softyes record exists.
-            // Skip enrollment if they've already converted (decision set) or already in post-call nurture.
-            const alreadyEnrolled = await redis.hget(`softyes:${email}`, 'enrolled_at');
-            const inPostCallNurture = await redis.hget(`nurture:${email}`, 'enrolled_at');
-            if (!alreadyEnrolled && !inPostCallNurture) {
-                await redis.hset(`softyes:${email}`, {
-                    email,
-                    source,
-                    enrolled_at: Date.now(),
-                    day2_sent_at: '',
-                    day6_sent_at: '',
-                    day12_sent_at: '',
-                    day21_sent_at: '',
-                    day45_sent_at: '',
-                });
-                await redis.zadd('softyes:active', { score: Date.now(), member: email });
-            }
         }
 
-        return res.status(200).json({ ok: true, returning: !!existing });
+        if (shouldEnroll) {
+            // Wipe prior stage timestamps so the new drip starts fresh from day 2.
+            const reEnrolled = !!(softyesRec && softyesRec.enrolled_at);
+            await redis.hset(`softyes:${email}`, {
+                email,
+                source,
+                enrolled_at: Date.now(),
+                day2_sent_at: '',
+                day6_sent_at: '',
+                day12_sent_at: '',
+                day21_sent_at: '',
+                day45_sent_at: '',
+                graduated_at: '',
+                graduated_reason: '',
+                completed_at: '',
+                ...(reEnrolled ? { reenroll_count: (Number(softyesRec.reenroll_count || 0) + 1), reenrolled_at: Date.now() } : {}),
+            });
+            await redis.zadd('softyes:active', { score: Date.now(), member: email });
+        }
+
+        return res.status(200).json({
+            ok: true,
+            returning: !!existing,
+            re_enrolled: !!(eligibleToReenroll && shouldEnroll),
+        });
     } catch (err) {
         console.error('subscribe error', err);
         return res.status(500).json({ error: 'server_error' });
