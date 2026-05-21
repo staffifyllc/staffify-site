@@ -17,8 +17,8 @@ const redis = new Redis({
     token: process.env.KV_REST_API_TOKEN,
 });
 
-const PLAYBOOK_URL = 'https://www.gostaffify.com/playbook/';
-const CALENDLY_URL = 'https://calendly.com/go-staffify/discovery-call';
+const DELEGATE_URL = 'https://www.gostaffify.com/delegate/';
+const CALENDLY_URL = 'https://calendly.com/go-staffify/discovery-call?utm_content=delegate';
 
 const ALLOWED_ORIGINS = [
     'https://www.gostaffify.com',
@@ -41,56 +41,45 @@ function isValidEmail(s) {
 }
 
 function renderEmail(email) {
-    const greeting = 'Hey,';
-    const body = `
-Here's the playbook you signed up for. Six chapters on the operational moves that separate the $300K service businesses from the $3M ones.
+    const text = `Hey,
 
-Read it here: ${PLAYBOOK_URL}
+Here's what you signed up for. Ten specific things to move off your plate this month, ordered by ROI. Hours saved. Dollar value reclaimed per category. What "done" actually looks like.
 
-What's inside:
-  • The Bottleneck Audit (60-minute framework)
-  • The Delegation Matrix
-  • The Hiring Funnel that doesn't collapse
-  • Pricing Power for Service Businesses
-  • The 95% Retention System
-  • The Operations Layer behind every hire
+Read it here: ${DELEGATE_URL}
 
-If any of it lands and you want to talk about putting it into practice in your business, my calendar is here:
+The short version: across all ten, the average founder we work with reclaims 30 to 50 hours per week within 60 days. At $150 to $300 per hour of founder time, that's $18,000 to $60,000 per month of opportunity cost recaptured. The delegated headcount typically runs $2,000 to $4,500 per role.
+
+The math, even ungenerously, is 4 to 15x ROI in month one.
+
+The hard part isn't the math. It's picking which one to delegate first, finding the right person, and not blowing it on the handoff. That's what we do at Staffify.
+
+If you want a second pair of eyes on which delegation pays back fastest in your specific business, my calendar:
 
 ${CALENDLY_URL}
 
 Paul
-Founder, Staffify
-`.trim();
-
-    const text = `${greeting}\n\n${body}`;
+Founder, Staffify`;
 
     const html = `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
     <tr><td align="center" style="padding:32px 16px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;">
-        <tr><td style="padding:36px 36px 28px 36px;">
-          <p style="margin:0 0 14px 0;font-size:16px;line-height:1.55;">Hey,</p>
-          <p style="margin:0 0 14px 0;font-size:16px;line-height:1.55;">Here's the playbook you signed up for. Six chapters on the operational moves that separate the $300K service businesses from the $3M ones.</p>
-          <p style="margin:18px 0;">
-            <a href="${PLAYBOOK_URL}" style="display:inline-block;background:#0c1118;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:600;font-size:15px;">Read the Playbook →</a>
+        <tr><td style="padding:36px 36px 28px 36px;font-size:16px;line-height:1.6;color:#1a1a1a;">
+          <p style="margin:0 0 14px 0;">Hey,</p>
+          <p style="margin:0 0 14px 0;">Here's what you signed up for. <strong>Ten specific things to move off your plate this month, ordered by ROI.</strong> Hours saved. Dollar value reclaimed per category. What "done" actually looks like.</p>
+          <p style="margin:22px 0;">
+            <a href="${DELEGATE_URL}" style="display:inline-block;background:#0c1118;color:#ffffff;text-decoration:none;padding:14px 26px;border-radius:10px;font-weight:700;font-size:15px;">Read the list →</a>
           </p>
-          <p style="margin:18px 0 8px 0;font-size:15px;line-height:1.55;"><strong>What's inside:</strong></p>
-          <ul style="margin:0 0 18px 0;padding-left:20px;font-size:15px;line-height:1.7;">
-            <li>The Bottleneck Audit (60-minute framework)</li>
-            <li>The Delegation Matrix</li>
-            <li>The Hiring Funnel that doesn't collapse</li>
-            <li>Pricing Power for Service Businesses</li>
-            <li>The 95% Retention System</li>
-            <li>The Operations Layer behind every hire</li>
-          </ul>
-          <p style="margin:0 0 14px 0;font-size:15px;line-height:1.55;">If any of it lands and you want to talk about putting it into practice in your business, my calendar is here:</p>
-          <p style="margin:0 0 22px 0;font-size:15px;line-height:1.55;"><a href="${CALENDLY_URL}" style="color:#0c1118;">${CALENDLY_URL}</a></p>
-          <p style="margin:0;font-size:15px;line-height:1.55;">Paul<br><span style="color:#6b6b6b;">Founder, Staffify</span></p>
+          <p style="margin:0 0 14px 0;"><strong>The short version:</strong> across all ten, the average founder we work with reclaims <strong>30 to 50 hours per week within 60 days</strong>. At $150 to $300 per hour of founder time, that's $18,000 to $60,000 per month of opportunity cost recaptured. The delegated headcount typically runs $2,000 to $4,500 per role.</p>
+          <p style="margin:0 0 14px 0;">The math, even ungenerously, is <strong>4 to 15x ROI in month one</strong>.</p>
+          <p style="margin:0 0 14px 0;">The hard part isn't the math. It's picking which one to delegate first, finding the right person, and not blowing it on the handoff. That's what we do at Staffify.</p>
+          <p style="margin:0 0 14px 0;">If you want a second pair of eyes on which delegation pays back fastest in your specific business:</p>
+          <p style="margin:0 0 22px 0;"><a href="${CALENDLY_URL}" style="color:#0c1118;font-weight:600;">Book a 25-min call →</a></p>
+          <p style="margin:0;">Paul<br><span style="color:#6b6b6b;">Founder, Staffify</span></p>
         </td></tr>
         <tr><td style="padding:18px 36px 28px 36px;border-top:1px solid #eee;font-size:12px;color:#888;line-height:1.5;">
-          You're receiving this because you requested the Operator's Playbook at gostaffify.com.
+          You're receiving this because you requested the 30-Day ROI List at gostaffify.com. Reply with the word "stop" if you'd rather not get the follow-ups.
         </td></tr>
       </table>
     </td></tr>
@@ -198,7 +187,7 @@ export default async function handler(req, res) {
         if (isFirstSignup || eligibleToReenroll) {
             await sendViaResend({
                 to: email,
-                subject: "Your Service Business Operator's Playbook is here",
+                subject: "The 10 highest-ROI delegations, inside",
                 ...renderEmail(email),
             });
             await redis.hset(`subscriber:${email}`, { playbook_sent_at: Date.now() });

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10 Things to Delegate in the First 30 Days | Staffify</title>
+    <meta name="description" content="The ten highest-ROI delegations service business founders make in their first month. Hours saved, dollars reclaimed, what done looks like. Built by Staffify.">
+    <meta name="robots" content="noindex, follow">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --paper: #fdfcf9;
+            --ink: #14181f; --ink-soft: #3a4150; --ink-mute: #71798a;
+            --rule: rgba(20,24,31,0.08);
+            --tint: #f4f1ea;
+        }
+        body {
+            font-family: 'Fraunces', Georgia, serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.7;
+            font-size: 18px;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1, h2, h3, .ui { font-family: 'Inter', -apple-system, sans-serif; letter-spacing: -0.02em; }
+
+        .topbar {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(253,252,249,0.94);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--rule);
+            padding: 14px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .topbar-brand {
+            font-family: 'Inter', sans-serif; font-weight: 900; font-size: 18px;
+            color: var(--ink); text-decoration: none; letter-spacing: -0.02em;
+        }
+        .topbar-cta {
+            font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+            color: #fff; background: var(--ink); padding: 8px 18px;
+            border-radius: 999px; text-decoration: none;
+        }
+
+        .page { max-width: 760px; margin: 0 auto; padding: 0 32px; }
+
+        /* COVER */
+        .cover {
+            text-align: center;
+            padding: 96px 0 64px;
+        }
+        .cover-eyebrow {
+            font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+            letter-spacing: 0.22em; text-transform: uppercase;
+            color: var(--c2); margin-bottom: 28px;
+        }
+        .cover h1 {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(40px, 6.5vw, 68px);
+            font-weight: 700; line-height: 1.05;
+            color: var(--ink); margin-bottom: 28px;
+        }
+        .cover h1 em {
+            font-style: italic; color: var(--c3);
+        }
+        .cover-sub {
+            font-size: 19px; color: var(--ink-soft);
+            max-width: 580px; margin: 0 auto 42px; line-height: 1.6;
+        }
+        .cover-stats {
+            display: inline-flex; gap: 36px; flex-wrap: wrap; justify-content: center;
+            padding: 22px 32px; background: var(--tint); border-radius: 14px;
+            margin-bottom: 12px;
+        }
+        .cover-stat-num {
+            font-family: 'Fraunces', serif; font-size: 32px; font-weight: 700;
+            color: var(--c3); line-height: 1;
+        }
+        .cover-stat-label {
+            font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
+            letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-mute);
+            margin-top: 6px;
+        }
+        .cover-meta {
+            font-family: 'Inter', sans-serif; font-size: 12px;
+            color: var(--ink-mute); letter-spacing: 0.04em;
+            margin-top: 24px;
+        }
+
+        /* TOC */
+        .toc {
+            background: var(--tint); border-radius: 14px;
+            padding: 36px 36px 32px; margin-bottom: 80px;
+        }
+        .toc h2 {
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+            letter-spacing: 0.16em; text-transform: uppercase;
+            color: var(--ink-mute); margin-bottom: 20px;
+        }
+        .toc ol { list-style: none; counter-reset: ch; }
+        .toc li {
+            counter-increment: ch; padding: 14px 0;
+            border-bottom: 1px solid rgba(20,24,31,0.06);
+        }
+        .toc li:last-child { border: none; }
+        .toc li a {
+            display: flex; align-items: baseline; gap: 16px;
+            color: var(--ink); text-decoration: none;
+            font-size: 17px; font-weight: 600; line-height: 1.4;
+        }
+        .toc li a::before {
+            content: counter(ch, decimal-leading-zero);
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+            color: var(--c2); letter-spacing: 0.04em;
+            min-width: 24px;
+        }
+        .toc li a:hover { color: var(--c3); }
+        .toc-time {
+            margin-left: auto; font-family: 'Inter', sans-serif;
+            font-size: 12px; font-weight: 500; color: var(--ink-mute);
+            white-space: nowrap;
+        }
+
+        /* INTRO */
+        .intro { margin-bottom: 64px; }
+        .intro .lede {
+            font-size: 22px; line-height: 1.55; color: var(--ink);
+            margin-bottom: 28px;
+        }
+        .intro p { margin-bottom: 22px; color: var(--ink-soft); }
+        .intro strong { color: var(--ink); }
+
+        /* ITEM */
+        .item {
+            padding-top: 60px; margin-bottom: 48px;
+            border-top: 1px solid var(--rule);
+        }
+        .item-num {
+            font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+            letter-spacing: 0.20em; text-transform: uppercase;
+            color: var(--c2); margin-bottom: 14px;
+        }
+        .item h2 {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(28px, 4vw, 40px);
+            font-weight: 700; line-height: 1.15;
+            margin-bottom: 18px; color: var(--ink);
+        }
+        .item-roi {
+            display: flex; gap: 14px; flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+        .item-roi-pill {
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+            background: var(--tint); color: var(--ink); padding: 7px 14px;
+            border-radius: 999px; letter-spacing: 0.02em;
+        }
+        .item-roi-pill strong { font-weight: 800; color: var(--c3); }
+        .item p { margin-bottom: 18px; color: var(--ink-soft); }
+        .item p strong { color: var(--ink); font-weight: 700; }
+        .item h3 {
+            font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--ink); margin: 28px 0 10px;
+        }
+        .item .win {
+            background: var(--tint); border-radius: 12px;
+            padding: 22px 26px; margin: 24px 0 0;
+        }
+        .item .win h3 {
+            margin: 0 0 8px 0; color: var(--c3);
+        }
+        .item .win p {
+            margin: 0; font-family: 'Inter', sans-serif; font-size: 16px;
+            font-weight: 500; color: var(--ink);
+        }
+
+        /* CLOSER */
+        .closer {
+            margin-top: 100px; padding: 64px 48px;
+            background: var(--ink); border-radius: 18px;
+            color: #fff; text-align: center;
+        }
+        .closer-eyebrow {
+            font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+            letter-spacing: 0.22em; text-transform: uppercase;
+            color: var(--c); margin-bottom: 20px;
+        }
+        .closer h2 {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(28px, 4.5vw, 40px);
+            font-weight: 700; line-height: 1.15;
+            margin-bottom: 22px; color: #fff;
+        }
+        .closer p {
+            font-size: 17px; line-height: 1.65;
+            color: rgba(255,255,255,0.72); margin-bottom: 18px;
+            max-width: 540px; margin-left: auto; margin-right: auto;
+        }
+        .closer p strong { color: #fff; }
+        .closer-math {
+            display: flex; gap: 32px; flex-wrap: wrap; justify-content: center;
+            margin: 36px 0 40px;
+        }
+        .closer-math-item {
+            text-align: left;
+        }
+        .closer-math-num {
+            font-family: 'Fraunces', serif; font-size: 36px; font-weight: 700;
+            color: var(--c); line-height: 1;
+        }
+        .closer-math-label {
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+            letter-spacing: 0.06em; color: rgba(255,255,255,0.55);
+            margin-top: 8px;
+        }
+        .closer-cta {
+            display: inline-block; background: var(--c); color: var(--ink);
+            font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 700;
+            padding: 16px 32px; border-radius: 999px;
+            text-decoration: none; transition: transform .15s, box-shadow .15s;
+        }
+        .closer-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 48px rgba(26,189,225,0.35); }
+        .closer-sub {
+            font-family: 'Inter', sans-serif; font-size: 13px;
+            color: rgba(255,255,255,0.5); margin-top: 18px;
+        }
+
+        /* FOOTER */
+        footer {
+            padding: 60px 32px; text-align: center;
+            font-family: 'Inter', sans-serif; font-size: 13px;
+            color: var(--ink-mute);
+        }
+        footer a { color: var(--ink-soft); text-decoration: none; }
+        footer a:hover { color: var(--c3); }
+
+        @media (max-width: 640px) {
+            .page { padding: 0 22px; }
+            .cover { padding: 64px 0 48px; }
+            .toc { padding: 28px 24px; }
+            .item { padding-top: 44px; margin-bottom: 32px; }
+            .closer { padding: 48px 28px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <a href="/" class="topbar-brand">Staffify</a>
+    <a href="https://calendly.com/go-staffify/discovery-call?utm_content=delegate" class="topbar-cta">Book a 25-min call</a>
+</header>
+
+<main class="page">
+
+    <!-- COVER -->
+    <section class="cover">
+        <div class="cover-eyebrow">The 30-Day ROI List</div>
+        <h1>10 things to <em>delegate</em> in the first 30 days.</h1>
+        <p class="cover-sub">A short, opinionated list of the highest-leverage delegations service business founders make in their first month. Hours saved. Dollars reclaimed. What "done" actually looks like.</p>
+        <div class="cover-stats">
+            <div>
+                <div class="cover-stat-num">30-50</div>
+                <div class="cover-stat-label">Hours / week reclaimed</div>
+            </div>
+            <div>
+                <div class="cover-stat-num">4-15x</div>
+                <div class="cover-stat-label">ROI in month one</div>
+            </div>
+            <div>
+                <div class="cover-stat-num">30</div>
+                <div class="cover-stat-label">Day implementation</div>
+            </div>
+        </div>
+        <div class="cover-meta">Built by Staffify · 12-minute read</div>
+    </section>
+
+    <!-- TOC -->
+    <nav class="toc">
+        <h2>What's inside</h2>
+        <ol>
+            <li><a href="#item-1">Inbox triage and reply drafting<span class="toc-time">~8 hrs/wk back</span></a></li>
+            <li><a href="#item-2">Calendar control and meeting prep<span class="toc-time">~4 hrs/wk back</span></a></li>
+            <li><a href="#item-3">Content production and video editing<span class="toc-time">~10 hrs/wk back</span></a></li>
+            <li><a href="#item-4">CRM hygiene and lead follow-up<span class="toc-time">~5 hrs/wk back</span></a></li>
+            <li><a href="#item-5">Customer support (tier-one)<span class="toc-time">~7 hrs/wk back</span></a></li>
+            <li><a href="#item-6">Invoicing and AR follow-up<span class="toc-time">~4 hrs/wk back</span></a></li>
+            <li><a href="#item-7">Vendor and contractor coordination<span class="toc-time">~3 hrs/wk back</span></a></li>
+            <li><a href="#item-8">Cold outbound and SDR first-touch<span class="toc-time">~6 hrs/wk back</span></a></li>
+            <li><a href="#item-9">Client onboarding workflows<span class="toc-time">~3 hrs/client</span></a></li>
+            <li><a href="#item-10">Personal logistics tax<span class="toc-time">~4 hrs/wk back</span></a></li>
+        </ol>
+    </nav>
+
+    <!-- INTRO -->
+    <section class="intro">
+        <p class="lede">Most founders don't have a revenue problem. They have a calendar problem. The work that actually grows the business gets squeezed by the work that just keeps it alive.</p>
+        <p>This list isn't aspirational. Every item below is delegated routinely by the businesses we work with. The hours saved are real. The math is real. The ordering is intentional: we put the highest-leverage moves first because if you only delegate three things, those three need to be the ones that buy back the most week.</p>
+        <p>Read it once. Pick one. Start there. <strong>If the first one lands inside 30 days, the rest stack faster than you expect.</strong></p>
+    </section>
+
+    <!-- ITEM 1 -->
+    <section class="item" id="item-1">
+        <div class="item-num">Number 01 · Highest ROI</div>
+        <h2>Inbox triage and reply drafting.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>7-12</strong> hrs/wk</span>
+            <span class="item-roi-pill">Up to <strong>$14K/mo</strong> recapture</span>
+            <span class="item-roi-pill"><strong>14-day</strong> ramp</span>
+        </div>
+        <p>This is the single biggest leak in most founder weeks. The inbox is a gravity well that pulls focus all day, every day, while contributing almost nothing to revenue.</p>
+        <p>A trained assistant can categorize incoming mail, draft 80% of replies for your one-click approval, and flag only the items that genuinely require your judgment. <strong>You stop reading 200 emails. You start approving 40 drafts.</strong></p>
+        <h3>What it looks like</h3>
+        <p>Three folders by end of week one. <strong>Done (FYI)</strong>: handled by your assistant, you can skim if you want to. <strong>Drafted (your review)</strong>: reply written, waiting for thumbs up. <strong>Escalated</strong>: this is yours, here's the context.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>Inbox to zero by end of day, every day. 8+ hours per week back on your calendar.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 2 -->
+    <section class="item" id="item-2">
+        <div class="item-num">Number 02</div>
+        <h2>Calendar control and meeting prep.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>3-5</strong> hrs/wk</span>
+            <span class="item-roi-pill"><strong>30-50%</strong> fewer meetings</span>
+            <span class="item-roi-pill"><strong>Week 1</strong> impact</span>
+        </div>
+        <p>Meetings expand to fill the time you let them. A gatekeeper auto-rejects bad fits, batches calls into focused time blocks, builds a prep doc 24 hours before every external call, and clears no-shows from your day.</p>
+        <p>Most founders, when they actually audit their calendar, find that <strong>40 to 60 percent of their meetings could have been a Slack message or didn't need them at all.</strong> A trained gatekeeper makes that call for you.</p>
+        <h3>What it looks like</h3>
+        <p>"No meetings before 11am" and "no meetings Thursdays" enforced by someone other than you. Prep docs auto-arrive in your inbox the morning of every external call. Recap notes hit your inbox 30 minutes after the meeting ends.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>30 to 50 percent fewer meetings without losing a single deal or relationship.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 3 -->
+    <section class="item" id="item-3">
+        <div class="item-num">Number 03</div>
+        <h2>Content production and video editing.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>5-15</strong> hrs/wk</span>
+            <span class="item-roi-pill"><strong>40-60%</strong> spend reduction</span>
+            <span class="item-roi-pill"><strong>12-24 hr</strong> turnaround</span>
+        </div>
+        <p>If you produce content, this is where you die. Shooting raw is easy. Post-production is the bottleneck. A dedicated editor takes raw footage and ships finished assets at 12 to 24 hour turnaround on a flat monthly rate, while keeping brand voice consistent across every cut.</p>
+        <p>The pattern most founders fall into is rotating freelancers per video. The bill scales linearly, brand voice drifts between editors, turnaround is unpredictable. <strong>One dedicated editor solves all three problems at once.</strong></p>
+        <h3>What it looks like</h3>
+        <p>You shoot Monday. You see the cut Tuesday. You approve. It posts Wednesday. The same person edits every video, so brand voice gets sharper over time, not blurrier.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>Your content cadence locks in (e.g., 3 long-form, 12 shorts per week) while editing spend drops 40 to 60 percent.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 4 -->
+    <section class="item" id="item-4">
+        <div class="item-num">Number 04</div>
+        <h2>CRM hygiene and lead follow-up.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>4-7</strong> hrs/wk</span>
+            <span class="item-roi-pill"><strong>$5-50K</strong> in stuck pipeline</span>
+            <span class="item-roi-pill"><strong>21-day</strong> turnaround</span>
+        </div>
+        <p>Pipeline rots when nobody's tending it. Stale leads in the wrong stage, missing fields, no follow-up cadence, deals that quietly die because the founder forgot they existed.</p>
+        <p>A delegated assistant runs daily CRM stand-up: every lead in the right stage, every dormant deal pinged on a schedule, every won deal handed off cleanly to delivery. <strong>You stop thinking "I have around $X in the funnel" and start saying "I have $X, here's the close probability per deal."</strong></p>
+        <h3>What it looks like</h3>
+        <p>Monday morning you open the CRM and see a single "needs your eyes" filter with 5 to 8 deals. Everything else is moving on its own schedule. Friday EOD you get a pipeline diff: what came in, what advanced, what stalled.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>Pipeline visibility goes from instinct to numbers. Stuck deals get resurrected. Close rate trends up because nothing falls through.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 5 -->
+    <section class="item" id="item-5">
+        <div class="item-num">Number 05</div>
+        <h2>Customer support (tier-one).</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>5-10</strong> hrs/wk</span>
+            <span class="item-roi-pill"><strong>60-80%</strong> faster response</span>
+            <span class="item-roi-pill"><strong>NPS goes up</strong></span>
+        </div>
+        <p>Every support ticket you answer personally is a tax on growth. Trained tier-one handles 80 percent of inbound (refunds within policy, FAQ, status updates, basic scheduling). You only see escalations: the angry ones, the legal ones, the strategic ones.</p>
+        <p>Counterintuitively, support quality usually goes <strong>up</strong>, not down. A trained CSR has more patience at 11pm than a tired founder ever will, and they're not internally negotiating refund decisions against this quarter's targets.</p>
+        <h3>What it looks like</h3>
+        <p>You stop seeing the word "refund" in your inbox. You stop explaining the same thing to the same kind of customer twice a week. Response times shorten because someone is actually monitoring the queue.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>Response time improves 60 to 80 percent. NPS or CSAT scores tick up. Founder bandwidth shifts to product and sales.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 6 -->
+    <section class="item" id="item-6">
+        <div class="item-num">Number 06</div>
+        <h2>Invoicing and AR follow-up.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>3-6</strong> hrs/wk</span>
+            <span class="item-roi-pill"><strong>10-20 days</strong> DSO improvement</span>
+            <span class="item-roi-pill"><strong>Real cash</strong> impact</span>
+        </div>
+        <p>Founders treat accounts receivable like a chore and let invoices age 30, 60, 90 days without a nudge. A delegated AR function sends the invoice the day work is delivered, follows up at 7/14/21 days on a templated cadence, and escalates only the stuck cases to you.</p>
+        <p><strong>This is the rare delegation that pays for itself in week one.</strong> Most service businesses are carrying $5,000 to $50,000 in collectible receivables that just need somebody to send a polite email.</p>
+        <h3>What it looks like</h3>
+        <p>Friday EOD report: "X invoiced this week, Y collected, Z aged past 30." No emotion. Just numbers. You only intervene on the receivables that need a relationship touch.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>Days-sales-outstanding drops by 10 to 20 days. Cash in the bank instead of cash in spreadsheets.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 7 -->
+    <section class="item" id="item-7">
+        <div class="item-num">Number 07</div>
+        <h2>Vendor and contractor coordination.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>2-4</strong> hrs/wk</span>
+            <span class="item-roi-pill">Death by 1,000 cuts</span>
+            <span class="item-roi-pill"><strong>Week 2</strong> impact</span>
+        </div>
+        <p>You're juggling six freelancers, two SaaS renewals, a virtual phone provider, your hosting bill, and your CPA. Each one needs touchpoints. None individually feels like much. Collectively they eat half a day.</p>
+        <p>A coordinator owns the relationships, chases what's due, renews what's needed, and surfaces only the items that need a real decision from you. <strong>You stop being copied on every "did you want to renew?" email.</strong></p>
+        <h3>What it looks like</h3>
+        <p>Monthly vendor summary in your inbox: who got paid, who's coming up for renewal, who's flagged for review. You make 2 or 3 decisions a month instead of 20.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>No missed deadlines, no surprise renewals, no vendor relationships that collapse the week your assistant takes vacation.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 8 -->
+    <section class="item" id="item-8">
+        <div class="item-num">Number 08</div>
+        <h2>Cold outbound and SDR first-touch.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>5-8</strong> hrs/wk</span>
+            <span class="item-roi-pill"><strong>8-15</strong> calls/mo booked</span>
+            <span class="item-roi-pill"><strong>30-45 day</strong> payback</span>
+        </div>
+        <p>Founders are uniquely good at closing. They're terrible at prospecting. The two skills look similar from the outside but they live in completely different parts of the calendar.</p>
+        <p>Delegate list-building, first-touch sequences, and reply triage to a trained SDR. <strong>You close the meetings they book.</strong> The math usually works inside 30 to 45 days: pipeline value created exceeds the cost of the SDR within the first cycle.</p>
+        <h3>What it looks like</h3>
+        <p>8 to 15 qualified discovery calls per month land on your calendar that you did not personally source. Replies get triaged. Reschedules get handled. You show up, run the call, and close.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>Net new pipeline value exceeds the cost of the SDR. Founder time spent in actual sales conversations, not building lists.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 9 -->
+    <section class="item" id="item-9">
+        <div class="item-num">Number 09</div>
+        <h2>Client onboarding workflows.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>2-4</strong> hrs per client</span>
+            <span class="item-roi-pill"><strong>Lower churn</strong></span>
+            <span class="item-roi-pill"><strong>Faster TTV</strong></span>
+        </div>
+        <p>Onboarding done well drops churn. Done by the founder, it drops new sales. Every hour you spend onboarding the last client is an hour you didn't spend closing the next one.</p>
+        <p>Delegate the welcome sequence, document collection, kickoff scheduling, and first-30-day check-ins to a trained admin. <strong>You only touch the kickoff strategy call. Everything else runs on rails.</strong></p>
+        <h3>What it looks like</h3>
+        <p>New client signs Monday. By Friday they've completed onboarding paperwork, attended kickoff, and started work. You spent 30 minutes total. The client thinks you're an operationally excellent partner because the process is buttery.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>Time-to-value drops. Early-stage churn risk reduces. Retention trends up inside the first quarter.</p>
+        </div>
+    </section>
+
+    <!-- ITEM 10 -->
+    <section class="item" id="item-10">
+        <div class="item-num">Number 10 · The hidden one</div>
+        <h2>Personal logistics tax.</h2>
+        <div class="item-roi">
+            <span class="item-roi-pill"><strong>2-5</strong> hrs/wk</span>
+            <span class="item-roi-pill">Brutally underestimated</span>
+            <span class="item-roi-pill"><strong>Mental</strong> bandwidth</span>
+        </div>
+        <p>Travel booking. Expense reports. Doctor coordination. Gift ordering. Scheduling personal appointments. Researching the right car seat. Each one feels small. Every one steals a peak-cognitive 20-minute window from the part of your day you'd otherwise spend on the work that matters.</p>
+        <p>Delegated to an executive admin or personal assistant, <strong>you reclaim mental bandwidth that compounds across every other delegation on this list.</strong> This is the one almost every founder underestimates.</p>
+        <h3>What it looks like</h3>
+        <p>You think "I need to book a flight to Austin" and 30 minutes later three options are sitting in your inbox waiting for a thumbs up. You think "I should send my biggest client something for their kid's graduation" and it's done by Tuesday.</p>
+        <div class="win">
+            <h3>First-month win</h3>
+            <p>30 to 50 percent more deep-focus blocks per week. You stop ending your workday emotionally drained from logistics tax.</p>
+        </div>
+    </section>
+
+    <!-- CLOSER -->
+    <section class="closer">
+        <div class="closer-eyebrow">The Math</div>
+        <h2>Across all ten, the average founder reclaims 30-50 hours per week within 60 days.</h2>
+        <p>At $150 to $300 per hour of founder time, that's <strong>$18,000 to $60,000 per month of opportunity cost recaptured.</strong> The delegated headcount typically runs $2,000 to $4,500 per role.</p>
+
+        <div class="closer-math">
+            <div class="closer-math-item">
+                <div class="closer-math-num">$18-60K</div>
+                <div class="closer-math-label">Monthly recapture</div>
+            </div>
+            <div class="closer-math-item">
+                <div class="closer-math-num">$2-4.5K</div>
+                <div class="closer-math-label">Cost per role</div>
+            </div>
+            <div class="closer-math-item">
+                <div class="closer-math-num">4-15x</div>
+                <div class="closer-math-label">Month-one ROI</div>
+            </div>
+        </div>
+
+        <p>The math, even ungenerously calculated, is <strong>4 to 15x ROI in month one.</strong> The hard part isn't the math. It's deciding which one to delegate first, finding the right person, and not blowing it on the handoff.</p>
+        <p>That's what we do at Staffify. We install the role, train the person, and back every placement with a lifetime replacement guarantee.</p>
+
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=delegate" class="closer-cta">Book a 25-min call →</a>
+        <div class="closer-sub">No pitch. We'll look at your week and tell you which delegation pays back fastest.</div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Built by <a href="https://www.gostaffify.com/">Staffify</a> · More Done. Less Stress.</p>
+    <p style="margin-top:8px;font-size:11px;">© 2026 Staffify · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>
+</footer>
+
+</body>
+</html>
