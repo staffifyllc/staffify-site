@@ -6,7 +6,7 @@
 // Env vars required:
 //   CALENDLY_WEBHOOK_SIGNING_KEY  — from Calendly when you create the webhook
 //   RESEND_API_KEY
-//   FROM_EMAIL                    — e.g. "Paul <paul@gostaffify.com>"
+//   FROM_EMAIL                    — e.g. "Staffify <hello@gostaffify.com>"
 //   KV_REST_API_URL / KV_REST_API_TOKEN
 //
 // Calendly link convention: append ?utm_content=editors|admins|csr|sales
@@ -243,12 +243,12 @@ Founder, Staffify`,
 // ─── Resend send ────────────────────────────────────────────────
 async function sendViaResend({ to, subject, html, text }) {
     const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.FROM_EMAIL || 'Paul <paul@gostaffify.com>';
+    const from = process.env.FROM_EMAIL || 'Staffify <hello@gostaffify.com>';
     if (!apiKey) throw new Error('RESEND_API_KEY not set');
     const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'paul@gostaffify.com' }),
+        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'hello@gostaffify.com' }),
     });
     if (!res.ok) {
         const detail = await res.text().catch(() => '');

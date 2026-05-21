@@ -6,7 +6,7 @@
 //   RESEND_API_KEY          — from https://resend.com/api-keys
 //   UPSTASH_REDIS_REST_URL  — from Vercel → Storage → connected Upstash KV
 //   UPSTASH_REDIS_REST_TOKEN
-//   FROM_EMAIL              — verified sender (e.g. "Paul <paul@gostaffify.com>")
+//   FROM_EMAIL              — verified sender (e.g. "Staffify <hello@gostaffify.com>")
 
 import { Redis } from '@upstash/redis';
 
@@ -91,7 +91,7 @@ Founder, Staffify`;
 
 async function sendViaResend({ to, subject, html, text }) {
     const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.FROM_EMAIL || 'Paul <paul@gostaffify.com>';
+    const from = process.env.FROM_EMAIL || 'Staffify <hello@gostaffify.com>';
     if (!apiKey) throw new Error('RESEND_API_KEY not set');
 
     const res = await fetch('https://api.resend.com/emails', {
@@ -100,7 +100,7 @@ async function sendViaResend({ to, subject, html, text }) {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'paul@gostaffify.com' }),
+        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'hello@gostaffify.com' }),
     });
     if (!res.ok) {
         const detail = await res.text().catch(() => '');

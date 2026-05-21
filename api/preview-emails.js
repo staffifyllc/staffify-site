@@ -27,12 +27,12 @@ function isValidEmail(s) {
 
 async function sendViaResend({ to, subject, html, text }) {
     const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.FROM_EMAIL || 'Paul <paul@gostaffify.com>';
+    const from = process.env.FROM_EMAIL || 'Staffify <hello@gostaffify.com>';
     if (!apiKey) throw new Error('RESEND_API_KEY not set');
     const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'paul@gostaffify.com' }),
+        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'hello@gostaffify.com' }),
     });
     if (!r.ok) throw new Error(`Resend ${r.status}: ${await r.text().catch(() => '')}`);
     return r.json();
