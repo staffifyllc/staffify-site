@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hidden Cost of Doing It Yourself: A Founder's Hour Audit | Staffify Blog</title>
+    <meta name="description" content="Most service business owners have no idea what their hour is actually worth. Here's how to calculate it, where it leaks, and what to do this week.">
+    <link rel="canonical" href="https://www.gostaffify.com/blog/hidden-cost-of-doing-it-yourself/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.gostaffify.com/blog/hidden-cost-of-doing-it-yourself/">
+    <meta property="og:title" content="The Hidden Cost of Doing It Yourself: A Founder's Hour Audit">
+    <meta property="og:description" content="Most service business owners have no idea what their hour is actually worth. Here's how to calculate it, where it leaks, and what to do this week.">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="article:published_time" content="2026-05-22T16:31:18Z">
+    <meta property="article:author" content="Staffify">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="The Hidden Cost of Doing It Yourself: A Founder's Hour Audit">
+    <meta name="twitter:description" content="Most service business owners have no idea what their hour is actually worth. Here's how to calculate it, where it leaks, and what to do this week.">
+
+    <!-- Schema.org Article -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "The Hidden Cost of Doing It Yourself: A Founder's Hour Audit",
+      "description": "Most service business owners have no idea what their hour is actually worth. Here's how to calculate it, where it leaks, and what to do this week.",
+      "datePublished": "2026-05-22T16:31:18Z",
+      "author": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "publisher": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://www.gostaffify.com/blog/hidden-cost-of-doing-it-yourself/" }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* POST HEADER */
+        .post-header {
+            padding: 140px 24px 60px;
+            max-width: 760px; margin: 0 auto;
+            text-align: left;
+            border-bottom: 1px solid var(--divider);
+        }
+        .post-meta-top {
+            display: flex; gap: 16px; align-items: center;
+            font-size: 12px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+            margin-bottom: 32px;
+        }
+        .post-meta-top .crumb { color: var(--c); }
+        .post-meta-top .sep { opacity: 0.4; }
+        .post-title {
+            font-size: clamp(34px, 5vw, 56px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08; margin-bottom: 28px;
+            color: var(--white);
+        }
+        .post-dek {
+            font-size: 19px; line-height: 1.6;
+            color: rgba(255,255,255,0.65);
+            max-width: 640px; font-weight: 400;
+            margin-bottom: 36px;
+        }
+        .post-byline {
+            display: flex; gap: 24px; align-items: center;
+            font-size: 13px; color: var(--muted);
+            padding-top: 24px;
+        }
+        .post-byline strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ARTICLE BODY */
+        article {
+            max-width: 720px; margin: 0 auto;
+            padding: 64px 24px 80px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 19px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article p { margin-bottom: 28px; }
+        article h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(26px, 3.5vw, 34px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 56px 0 20px;
+            line-height: 1.2;
+        }
+        article h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+            color: var(--white);
+            margin: 40px 0 14px; line-height: 1.3;
+        }
+        article ul, article ol { margin: 0 0 28px; padding-left: 28px; }
+        article li { margin-bottom: 10px; }
+        article a { color: var(--c); text-decoration: none; border-bottom: 1px solid rgba(26,189,225,0.3); transition: border-color .2s; }
+        article a:hover { border-bottom-color: var(--c); }
+        article strong { color: var(--white); font-weight: 700; }
+        article em { color: rgba(255,255,255,0.7); }
+        article blockquote {
+            border-left: 3px solid var(--c);
+            padding: 8px 24px;
+            margin: 32px 0;
+            font-style: italic;
+            color: rgba(255,255,255,0.7);
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 8px 8px 0;
+        }
+        article hr {
+            border: none;
+            border-top: 1px solid var(--divider);
+            margin: 56px 0;
+        }
+        article code {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.9em;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--c);
+        }
+
+        /* CTA at end of post */
+        .post-cta {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+        .post-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 44px 40px;
+            text-align: left;
+        }
+        .post-cta-eyebrow {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--c);
+            margin-bottom: 16px;
+        }
+        .post-cta-title {
+            font-size: 26px; font-weight: 800;
+            letter-spacing: -0.02em; line-height: 1.2;
+            color: var(--white); margin-bottom: 14px;
+        }
+        .post-cta-body {
+            font-size: 15px; line-height: 1.65;
+            color: var(--muted); margin-bottom: 24px;
+            max-width: 540px;
+        }
+        .post-cta-btn {
+            display: inline-block;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 980px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .post-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* BACK TO BLOG */
+        .post-foot {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 60px;
+            text-align: center;
+        }
+        .post-foot a {
+            color: var(--muted); text-decoration: none;
+            font-size: 13px; font-weight: 500;
+            transition: color .2s;
+        }
+        .post-foot a:hover { color: var(--white); }
+
+        /* FOOTER */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 13px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 12px; color: var(--subtle);
+        }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .post-header { padding-top: 110px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    
+        /* ─── MOBILE NAV (hamburger + drawer) ────────────────── */
+        .nav-hamburger {
+            display: none;
+            width: 44px; height: 44px;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 8px;
+        }
+        .nav-hamburger span {
+            position: relative;
+            display: block;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, opacity .3s, top .3s;
+        }
+        .nav-hamburger span::before,
+        .nav-hamburger span::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, top .3s, opacity .3s;
+        }
+        .nav-hamburger span::before { top: -7px; }
+        .nav-hamburger span::after  { top: 7px; }
+        .nav-hamburger.open span { background: transparent; }
+        .nav-hamburger.open span::before { top: 0; transform: rotate(45deg); }
+        .nav-hamburger.open span::after  { top: 0; transform: rotate(-45deg); }
+
+        .nav-mobile-menu {
+            position: fixed;
+            top: 56px; left: 0; right: 0;
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 24px 24px 32px;
+            z-index: 199;
+            opacity: 0;
+            transform: translateY(-12px);
+            pointer-events: none;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+        .nav-mobile-menu.open {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+        .nav-mobile-menu ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 0 0 22px;
+            padding: 0;
+        }
+        .nav-mobile-menu li a {
+            display: block;
+            padding: 14px 8px;
+            color: rgba(255,255,255,0.78);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-mobile-menu li a:active { background: rgba(255,255,255,0.04); }
+        .nav-mobile-menu li a.active { color: #fff; }
+        .nav-mobile-menu .nav-mobile-cta {
+            display: block;
+            text-align: center;
+            margin-top: 18px;
+            padding: 14px 24px;
+            background: #1abde1;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .nav-hamburger { display: inline-flex; }
+            .nav-cta { display: none; }
+        }
+
+        </style>
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/about/">About</a></li>
+        <li><a href="/apply/">Apply</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
+</nav>
+
+<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
+    <ul>
+            <li><a href="/editors/">Video Editors</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
+            <li><a href="/csr/">CSR</a></li>
+            <li><a href="/campaigns/">Sales</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/about/">About</a></li>
+            <li><a href="/apply/">Apply</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
+</div>
+
+<header class="post-header">
+    <div class="post-meta-top">
+        <a href="/blog/" class="crumb" style="text-decoration:none;color:var(--c);">Blog</a>
+        <span class="sep">/</span>
+        <span>Scaling Service Businesses</span>
+    </div>
+    <h1 class="post-title">The Hidden Cost of Doing It Yourself: A Founder's Hour Audit</h1>
+    <p class="post-dek">Most service business owners have no idea what their hour is actually worth. Here's how to calculate it, where it leaks, and what to do this week.</p>
+    <div class="post-byline">
+        <span><strong>Staffify Team</strong></span>
+        <span>·</span>
+        <span>May 22, 2026</span>
+        <span>·</span>
+        <span>7 min read</span>
+    </div>
+</header>
+
+<article>
+<p>Last month I sat with a roofing company owner doing $1.8M a year. He told me he was "too busy to hire." Then he walked me through his week. Eleven hours on invoicing and follow-ups. Six hours editing photos for his Instagram. Four hours chasing down a parts vendor over email. Three hours on a payroll question he could have handed to a bookkeeper.</p><p>That's 24 hours of $15-to-$25 work. Done by a man whose actual hour, based on his own math, was worth somewhere north of $400.</p><p>He wasn't lazy. He wasn't disorganized. He was doing what almost every founder-operator does: confusing being busy with being valuable. This is the most expensive habit in the service business world, and almost nobody runs the numbers on it.</p><p>Let's run them now.</p><h2>What Your Hour Is Actually Worth</h2><p>There are three ways to calculate your effective hourly rate. Most owners pick the flattering one. Pick the honest one instead.</p><p><strong>The naive version:</strong> Take your annual take-home pay and divide by hours worked. If you pay yourself $180,000 and work 55 hours a week, that's about $63 an hour. This number is wrong because it ignores the upside you create when you do the right work.</p><p><strong>The revenue version:</strong> Take your gross profit and divide by your hours. If your business does $1.5M with a 40% gross margin, that's $600K. Divide by 2,800 hours (55-hour weeks, 51 weeks). That's roughly $214 an hour. Closer, but still misses the point.</p><p><strong>The leverage version:</strong> What does an hour spent on your highest-value work produce? Not on average. At the top. One sales call that closes a $40,000 contract. One partnership conversation that generates ten referrals. One hire that frees 20 hours a week for the next three years.</p><p>Pick the highest-leverage thing you did last quarter. Estimate the dollar value it created or will create. Divide by the hours you spent on it. That's the rate you should benchmark every other task against.</p><p>For most owners doing $300K to $5M, the leverage rate lands somewhere between $300 and $1,500 an hour. If you're doing $40 work, you're not saving money. You're spending the gap.</p><h2>The Hour Audit: Run It This Week</h2><p>You can't fix what you don't track. Here's the protocol I give every operator who tells me they're drowning.</p><p>For five working days, log everything you do in 30-minute blocks. Use a notes app, a spreadsheet, whatever. The format is simple:</p><ul><li>Time spent</li><li>What you did</li><li>What it would cost to hire someone competent to do it</li></ul><p>Don't editorialize. Don't justify. Just log. At the end of the week, sort your tasks into four buckets.</p><p><strong>Bucket 1: $15 to $30 work.</strong> Inbox triage, calendar wrangling, data entry, basic social posts, file organization, expense reports, sending invoices, scheduling, copying notes into your CRM.</p><p><strong>Bucket 2: $30 to $75 work.</strong> Routine client communication, bookkeeping, basic video edits, lead list building, scheduling content, vendor follow-up, light project management, posting jobs.</p><p><strong>Bucket 3: $75 to $200 work.</strong> Hiring, training, building SOPs, reviewing financials, mid-level sales calls, account management, real strategic content, conflict resolution with clients.</p><p><strong>Bucket 4: $200+ work.</strong> Closing big deals, partnership development, hiring senior people, pricing decisions, M&amp;A, vision and direction, the one or two relationships that move the business forward.</p><p>Now add up the hours in each bucket. Most founders I've audited find that 40% to 60% of their week sits in Buckets 1 and 2. The work they can't or won't let go of.</p><h2>Why You're Still Doing the $20 Work</h2><p>If the math is this obvious, why does every operator I meet still do it? Five reasons. You'll recognize at least three.</p><p><strong>It feels productive.</strong> Clearing 80 emails or sending 30 invoices produces a dopamine hit that strategic work doesn't. You can see what you did. Strategic work often looks like staring at a wall.</p><p><strong>You don't trust anyone to do it right.</strong> Maybe you tried once. The VA missed a follow-up. The bookkeeper made an error. You decided it was faster to do it yourself. That decision now costs you 15 hours a week, every week, forever.</p><p><strong>You confuse cost with price.</strong> Hiring a great executive admin at $25 an hour feels expensive when you're not running the math against your own rate. It stops feeling expensive the moment you do.</p><p><strong>Identity.</strong> A lot of founders built their business by being the one who answers every email at 11pm. That story is hard to give up, even when it's the thing keeping you stuck.</p><p><strong>You don't know what to delegate first.</strong> So you delegate nothing.</p><h2>The Order of Operations for Letting Go</h2><p>If you only had to delegate one category at a time, the sequence matters. I've watched a lot of owners try to hire a head of sales before they had an admin, and burn out the new hire in 90 days because the founder was still answering scheduling emails at midnight.</p><p>Here's the order that works for service businesses in your range.</p><h3>1. Administrative load (do this first)</h3><p>Calendar, inbox, scheduling, basic CRM hygiene, expense tracking, document filing. A good executive admin will reclaim 10 to 20 hours a week within 60 days. This is almost always the highest-ROI hire a founder under $3M will ever make, because it unlocks every other delegation that follows. You can't think strategically when you're 200 emails behind.</p><h3>2. Production work that isn't core</h3><p>If you're a marketing agency owner editing your own videos, stop. If you're a consultant building your own slide decks, stop. If you're a roofer doing your own Instagram graphics, stop. Production work has clear deliverables and clear quality bars. It's the easiest category to hand off well.</p><h3>3. Lead generation</h3><p>Most owners do their own outbound until revenue plateaus, then panic-hire a salesperson. Wrong order. Hire a lead gen operator first: someone who builds lists, runs sequences, books qualified calls onto your calendar. You stay on the closing call. They handle everything before it.</p><h3>4. Operations and process</h3><p>Once you've freed 25+ hours a week from the first three, you can start building the operational layer: someone who owns SOPs, onboarding, vendor management, internal coordination. This is where most service businesses break through the $2M ceiling.</p><h3>5. Specialized leadership</h3><p>Now you can hire a head of sales, a head of delivery, a real second in command. Not before. Senior hires fail when the founder hasn't built the infrastructure beneath them.</p><h2>The Math That Should Change Your Mind</h2><p>Let's make this concrete. Say you're doing $900K in revenue, paying yourself $140K, and working 55 hours a week. Your audit shows 18 hours a week in Bucket 1 work.</p><p>You hire a full-time executive admin for $3,500 a month. That's $42,000 a year. Sounds like real money.</p><p>Now look at what you get back. 18 hours a week is 900 hours a year. If you spend even a third of that reclaimed time on Bucket 4 work at, conservatively, $400 an hour, that's $120,000 of created value. You netted $78,000. And that's before you count the strategic clarity that comes from not being buried.</p><p>If you spend half the reclaimed time on Bucket 4 work, you've added $180,000 in created value against a $42,000 cost. The hire pays for itself in about ten weeks.</p><p>This is why founder time is the single most mispriced asset in a service business. You're sitting on a pile of $400 hours and spending them on $20 tasks because the $20 tasks are right in front of you.</p><h2>What to Do Monday Morning</h2><p>Three steps. None of them require a big decision.</p><ol><li><strong>Run the audit.</strong> Five days, 30-minute blocks, four buckets. Don't skip this. The whole exercise breaks down if you guess instead of measure.</li><li><strong>Circle the bottom bucket.</strong> Whatever the largest category of low-value work is, write down the job description for the person who would do it. Not a perfect JD. A rough one. Just enough to know what you're hiring for.</li><li><strong>Set a delegation deadline.</strong> Pick a date 30 days out. By that date, the work in your bottom bucket should be off your plate. Not partially. Not mostly. Off.</li></ol><p>The owners who scale past $2M aren't smarter. They aren't working harder. They figured out earlier that their job is to spend every hour on the thing only they can do, and to build the service business operations layer that handles everything else.</p><p>Your hour is worth more than you think. The question is whether your calendar reflects that, or whether it still looks like the calendar of someone making $25 an hour.</p><p>If it's the second one, the fix isn't more hustle. It's the next hire.</p>
+</article>
+
+<section class="post-cta">
+    <div class="post-cta-card">
+        <div class="post-cta-eyebrow">Built for service businesses</div>
+        <h3 class="post-cta-title">Want the team behind your growth, not in front of it?</h3>
+        <p class="post-cta-body">Staffify gives service businesses the people, systems, and infrastructure to scale without the chaos. Vetted talent, real accountability, lifetime replacement guarantee.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="post-cta-btn">Book a Discovery Call →</a>
+    </div>
+</section>
+
+<div class="post-foot">
+    <a href="/blog/">← Back to all posts</a>
+</div>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/apply/">Apply</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span class="footer-legal" style="display:flex;gap:18px;"><a href="/privacy/" style="color:inherit;text-decoration:none;">Privacy</a><a href="/terms/" style="color:inherit;text-decoration:none;">Terms</a></span><span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+(function(){
+    var btn = document.getElementById('navHamburger');
+    var menu = document.getElementById('navMobileMenu');
+    if (!btn || !menu) return;
+    function open(){
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+        menu.style.opacity = '1';
+        menu.style.transform = 'translateY(0)';
+        menu.style.pointerEvents = 'auto';
+    }
+    function close(){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+        menu.style.opacity = '0';
+        menu.style.transform = 'translateY(-12px)';
+        menu.style.pointerEvents = 'none';
+    }
+    function toggle(){ menu.classList.contains('open') ? close() : open(); }
+    btn.addEventListener('click', toggle);
+    menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
+</body>
+</html>
