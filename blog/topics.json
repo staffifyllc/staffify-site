@@ -91,7 +91,7 @@
     {
       "slug": "coo-function-before-coo",
       "title": "How To Run The COO Function Before You Can Afford A COO",
-      "intent": "$500K–$2M service businesses that need operational lift but can't afford a $180K hire. Position Staffify's infra layer.",
+      "intent": "$500K\u2013$2M service businesses that need operational lift but can't afford a $180K hire. Position Staffify's infra layer.",
       "keywords": [
         "coo",
         "operations leader",
@@ -232,6 +232,247 @@
         "service business cash flow",
         "small business finance",
         "profit margins"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "how-much-does-a-va-cost",
+      "title": "How Much Does A Virtual Assistant Cost In 2026? An Honest Breakdown",
+      "intent": "High-intent buyer searching for pricing. Compare the real cost across regions, vendors, and engagement types. Show why $4-5/hr roles fail and what infrastructure-backed talent actually costs.",
+      "keywords": [
+        "va cost",
+        "virtual assistant pricing",
+        "how much does a va cost",
+        "filipino va rates",
+        "outsourcing cost"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "va-vs-employee-cost",
+      "title": "VA vs Employee: The Real Cost Comparison For Service Businesses",
+      "intent": "Founder weighing first VA against first US hire. Show the loaded-cost math, the management overhead, and the scenarios where each is actually the right answer.",
+      "keywords": [
+        "va vs employee",
+        "virtual assistant vs hire",
+        "outsource vs hire",
+        "first hire service business"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "inbox-zero-system",
+      "title": "The Inbox-To-Zero System: How To Hand Off Email Without Losing Quality",
+      "intent": "Actionable. Founders who know they should delegate inbox but are afraid to lose the relationship layer. Show the audit, the categorization, the draft-and-approve workflow.",
+      "keywords": [
+        "delegate inbox",
+        "inbox zero",
+        "founder email management",
+        "email triage va"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "real-estate-va-tasks",
+      "title": "11 Tasks Every Real Estate Marketing Studio Should Delegate To A VA",
+      "intent": "Vertical-specific. Capture real-estate-marketing search traffic. Concrete task list with hour estimates per task and the order to delegate in.",
+      "keywords": [
+        "real estate va",
+        "real estate marketing va",
+        "photography studio va",
+        "aryeo va"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "video-editor-cost",
+      "title": "How Much Does A Video Editor Cost? Freelance vs Dedicated vs Agency Compared",
+      "intent": "Buyer comparing options. Show per-video freelance math vs flat dedicated vs agency markup. Position dedicated as the math winner above 8 videos/mo.",
+      "keywords": [
+        "video editor cost",
+        "dedicated video editor",
+        "freelance video editor pricing",
+        "video editing service cost"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "dtc-customer-service-playbook",
+      "title": "DTC Customer Service Scaling Playbook: From 100 To 10,000 Orders A Month",
+      "intent": "DTC founders feeling the support wall. Show the staffing model at each volume tier, the tools, the SLAs that hold.",
+      "keywords": [
+        "dtc customer service",
+        "shopify customer support",
+        "ecommerce csr",
+        "gorgias staffing"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "sdr-playbook-coaches",
+      "title": "The SDR Playbook For Coaches And Consultants Who Hate Prospecting",
+      "intent": "Coaches and consultants who refuse to do outbound themselves. Show how to install an SDR that books real meetings without burning the brand.",
+      "keywords": [
+        "sdr for coaches",
+        "consultant outbound",
+        "coaching pipeline",
+        "executive coach prospecting"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "agency-bottleneck-audit",
+      "title": "The Marketing Agency Bottleneck Audit: What Actually Caps Your Growth At $3M",
+      "intent": "Agency founders stuck between $2-4M. Diagnose where the founder is structurally in the middle and how to remove themselves without hiring a $200K COO.",
+      "keywords": [
+        "agency stuck at 3m",
+        "scale marketing agency",
+        "agency founder bottleneck",
+        "agency growth plateau"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "va-onboarding-week-one",
+      "title": "Your VA's First Week, Day By Day (And Why Week Two Matters More)",
+      "intent": "Practical onboarding playbook. Show the day-by-day plan that makes the first 30 days work. Counter the common mistake of dumping everything at once.",
+      "keywords": [
+        "va onboarding",
+        "onboarding a virtual assistant",
+        "first week with va",
+        "remote employee onboarding"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "coo-vs-better-vas",
+      "title": "When To Hire A COO vs When To Hire Better VAs",
+      "intent": "Founders considering a $180K COO. Show when a COO is the right call vs when you actually need infrastructure-backed VAs.",
+      "keywords": [
+        "when to hire a coo",
+        "coo vs va",
+        "fractional coo",
+        "first operations hire"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "service-business-kpis",
+      "title": "The Five KPIs Every Service Business Should Track Weekly",
+      "intent": "KPI hygiene. Diagnose vanity metrics, then show the five that actually move growth. Customer LTV, gross margin per service line, DSO, retention cohort, lead-to-consult rate.",
+      "keywords": [
+        "service business kpis",
+        "small business metrics",
+        "agency kpis",
+        "weekly business metrics"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "customer-service-sops",
+      "title": "The 9 Customer Service SOPs Every Service Business Needs",
+      "intent": "Actionable. List the 9 SOPs that cover 80% of support volume. Refund policy, escalation tree, response templates, edge cases.",
+      "keywords": [
+        "customer service sop",
+        "support sop template",
+        "csr playbook",
+        "customer service procedures"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "founder-hourly-rate-audit",
+      "title": "The Founder Hour Audit: Calculating Your Real Effective Hourly Rate",
+      "intent": "Pull founders into the math of what their hour actually costs the business. Soft CTA to the delegate list / Staffify.",
+      "keywords": [
+        "founder hourly rate",
+        "owner effective hourly rate",
+        "time audit founder",
+        "what is my time worth"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "replace-yourself-90-days",
+      "title": "How To Replace Yourself In Your Business In 90 Days",
+      "intent": "Aspirational + practical. Show the 90-day phased delegation plan. Week-by-week, role-by-role.",
+      "keywords": [
+        "replace yourself in business",
+        "remove yourself from operations",
+        "90 day delegation plan",
+        "owner exit strategy"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "firing-a-va",
+      "title": "How To Let A VA Go Without Burning The Relationship",
+      "intent": "Practical guide for the awkward conversation. Show how lifetime replacement infrastructure changes the dynamic.",
+      "keywords": [
+        "how to fire a va",
+        "letting go of virtual assistant",
+        "va not working out",
+        "va performance management"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "va-management-tools",
+      "title": "The 7 Tools Every Service Business Needs To Manage Remote VAs",
+      "intent": "Tactical stack recommendation. Loom, ClickUp, Slack, password manager, screen recording, time tracking, dashboard.",
+      "keywords": [
+        "va management tools",
+        "remote team tools",
+        "manage virtual assistants",
+        "remote team stack"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "real-estate-photography-business",
+      "title": "How To Run A Real Estate Photography Business Without Doing The Photography",
+      "intent": "Specific vertical. Owners stuck in the field. Show how to systematize shoots, edit pipeline, agent comms.",
+      "keywords": [
+        "real estate photography business",
+        "real estate media studio",
+        "photography studio scale",
+        "aryeo workflow"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "lift-legal-intake-conversion",
+      "title": "How To Lift Legal Intake Conversion 16 Points Without More Leads",
+      "intent": "Law firm operations. Show the after-hours coverage math, the intake script structure, the conversion drivers.",
+      "keywords": [
+        "law firm intake",
+        "legal intake conversion",
+        "personal injury intake",
+        "after hours legal calls"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "agency-margins-fix",
+      "title": "Why Service Agency Margins Suck (And The Three Levers That Fix Them)",
+      "intent": "Agency owners watching margins compress. Diagnose the three structural causes and show the fixes.",
+      "keywords": [
+        "agency margins",
+        "service agency profitability",
+        "improve agency margin",
+        "agency gross margin"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "va-locations-compared",
+      "title": "VA Hiring Locations Compared: Philippines vs Latin America vs US-Based",
+      "intent": "Honest comparison. Cost, English fluency, time zone, work culture, talent depth per role type.",
+      "keywords": [
+        "filipino va",
+        "latam va",
+        "philippines virtual assistant",
+        "va hiring location"
       ],
       "status": "pending"
     }

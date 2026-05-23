@@ -151,6 +151,53 @@
             border-radius: 20px;
         }
 
+        /* COMING UP — editorial calendar preview */
+        .coming-up { max-width: 1100px; margin: 0 auto 80px; padding: 0 24px; }
+        .coming-up-inner {
+            background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+            border-top: 1px solid var(--divider);
+            padding-top: 64px;
+        }
+        .coming-up-eyebrow {
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--c); margin-bottom: 14px;
+        }
+        .coming-up-h2 {
+            font-size: clamp(28px, 3.5vw, 36px);
+            font-weight: 800; letter-spacing: -0.02em;
+            line-height: 1.15; margin-bottom: 10px;
+        }
+        .coming-up-sub {
+            font-size: 15px; color: var(--muted);
+            margin-bottom: 36px;
+        }
+        .coming-up-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+        }
+        .coming-up-card {
+            background: var(--near-black);
+            border: 1px dashed rgba(255,255,255,0.10);
+            border-radius: 14px;
+            padding: 22px 22px 22px;
+            transition: border-color .2s;
+        }
+        .coming-up-card:hover { border-color: rgba(26,189,225,0.32); }
+        .coming-up-card-meta {
+            display: inline-block;
+            font-size: 10px; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--c); padding: 4px 10px;
+            background: rgba(26,189,225,0.08);
+            border-radius: 999px; margin-bottom: 12px;
+        }
+        .coming-up-card h3 {
+            font-size: 15px; font-weight: 600;
+            line-height: 1.45; color: rgba(255,255,255,0.78);
+            letter-spacing: -0.01em;
+        }
+        @media (max-width: 800px) { .coming-up-grid { grid-template-columns: 1fr; } }
+
         /* CTA strip */
         .blog-cta-strip {
             max-width: 900px; margin: 0 auto 120px;
@@ -335,9 +382,8 @@
         <li><a href="/admins/">Exec Admins</a></li>
         <li><a href="/csr/">CSR</a></li>
         <li><a href="/campaigns/">Sales</a></li>
-        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/case-studies/">Case Studies</a></li>
         <li><a href="/about/">About</a></li>
-        <li><a href="/apply/">Apply</a></li>
     </ul>
     <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
     <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
@@ -349,17 +395,17 @@
             <li><a href="/admins/">Exec Admins</a></li>
             <li><a href="/csr/">CSR</a></li>
             <li><a href="/campaigns/">Sales</a></li>
+            <li><a href="/case-studies/">Case Studies</a></li>
             <li><a href="/blog/" class="active">Blog</a></li>
             <li><a href="/about/">About</a></li>
-            <li><a href="/apply/">Apply</a></li>
     </ul>
     <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
 </div>
 
 <header class="blog-header">
-    <div class="blog-eyebrow">Staffify Blog · 5 posts</div>
+    <div class="blog-eyebrow">The Operator's Desk</div>
     <h1 class="blog-h1">Built for <span class="g">service business operators.</span></h1>
-    <p class="blog-sub">Operator-grade writing on hiring, systems, delegation, and the infrastructure behind real growth. No fluff, no jargon, no &ldquo;ultimate guides.&rdquo;</p>
+    <p class="blog-sub">Operator-grade writing on hiring, systems, delegation, and the infrastructure behind real growth. No fluff, no jargon, no &ldquo;ultimate guides.&rdquo; A new piece every weekday.</p>
 </header>
 
 <section class="post-grid">
@@ -418,6 +464,41 @@
             <div class="post-card-tags"><span class="post-tag">hiring</span> <span class="post-tag">operations</span> <span class="post-tag">delegation</span></div>
             <span class="post-card-arrow">Read post →</span>
         </a>
+</section>
+
+<!-- COMING UP — editorial calendar preview -->
+<section class="coming-up">
+    <div class="coming-up-inner">
+        <div class="coming-up-eyebrow">On The Editorial Calendar</div>
+        <h2 class="coming-up-h2">Coming up next.</h2>
+        <p class="coming-up-sub">A look at what's queued for the next two weeks. New piece every weekday.</p>
+        <div class="coming-up-grid">
+            <div class="coming-up-card">
+                <div class="coming-up-card-meta">Pricing</div>
+                <h3>How Much Does A Virtual Assistant Cost In 2026? An Honest Breakdown</h3>
+            </div>
+            <div class="coming-up-card">
+                <div class="coming-up-card-meta">Hiring</div>
+                <h3>VA vs Employee: The Real Cost Comparison For Service Businesses</h3>
+            </div>
+            <div class="coming-up-card">
+                <div class="coming-up-card-meta">Operations</div>
+                <h3>The Inbox-To-Zero System: How To Hand Off Email Without Losing Quality</h3>
+            </div>
+            <div class="coming-up-card">
+                <div class="coming-up-card-meta">Vertical</div>
+                <h3>11 Tasks Every Real Estate Marketing Studio Should Delegate To A VA</h3>
+            </div>
+            <div class="coming-up-card">
+                <div class="coming-up-card-meta">Pricing</div>
+                <h3>How Much Does A Video Editor Cost? Freelance vs Dedicated vs Agency</h3>
+            </div>
+            <div class="coming-up-card">
+                <div class="coming-up-card-meta">DTC</div>
+                <h3>DTC Customer Service Scaling Playbook: 100 to 10,000 Orders A Month</h3>
+            </div>
+        </div>
+    </div>
 </section>
 
 <section class="blog-cta-strip">
