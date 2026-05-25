@@ -75,7 +75,8 @@
         "remote talent",
         "filipino va"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-05-25T16:26:56Z"
     },
     {
       "slug": "client-onboarding-that-scales",
@@ -91,7 +92,7 @@
     {
       "slug": "coo-function-before-coo",
       "title": "How To Run The COO Function Before You Can Afford A COO",
-      "intent": "$500K\u2013$2M service businesses that need operational lift but can't afford a $180K hire. Position Staffify's infra layer.",
+      "intent": "$500K–$2M service businesses that need operational lift but can't afford a $180K hire. Position Staffify's infra layer.",
       "keywords": [
         "coo",
         "operations leader",
