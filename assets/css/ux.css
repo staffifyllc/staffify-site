@@ -123,11 +123,13 @@ html {
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   8. LINK / BUTTON CURSORS
+   8. LINK / BUTTON CURSORS + TAP HIGHLIGHT
    Belt-and-suspenders to ensure pointer cursor on all clickable.
+   Custom tap-highlight uses brand cyan instead of default gray flash.
 ─────────────────────────────────────────────────────────────────── */
 a[href], button:not([disabled]), [role="button"], [onclick] {
     cursor: pointer;
+    -webkit-tap-highlight-color: rgba(26, 189, 225, 0.18);
 }
 button[disabled] {
     cursor: not-allowed;
@@ -157,4 +159,47 @@ button[disabled] {
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   11. ACTIVE NAV INDICATOR
+   Adds a subtle cyan dot under the current page's nav link.
+   Works on top of existing `.nav-links a.active` color treatment.
+─────────────────────────────────────────────────────────────────── */
+.nav-links a.active {
+    position: relative;
+    color: #ffffff !important;
+}
+.nav-links a.active::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #1abde1;
+    box-shadow: 0 0 8px rgba(26,189,225,0.6);
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   12. CALENDLY BUTTON LOADING STATE
+   Tiny visual feedback when a user clicks a Calendly link before the
+   popup widget script finishes loading.
+─────────────────────────────────────────────────────────────────── */
+[data-loading="true"] {
+    pointer-events: none;
+    opacity: 0.78;
+    cursor: progress;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   13. SOFT-YES FORM SUBMIT STATE
+   Submit buttons get a subtle dim while in-flight.
+─────────────────────────────────────────────────────────────────── */
+button[disabled],
+input[type=submit][disabled] {
+    opacity: 0.55;
+    cursor: wait;
 }
