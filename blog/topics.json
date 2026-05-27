@@ -87,7 +87,8 @@
         "service business systems",
         "customer experience"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-05-27T17:25:27Z"
     },
     {
       "slug": "coo-function-before-coo",
