@@ -353,6 +353,23 @@
             .nav-cta { display: none; }
         }
 
+        /* ── READING PROGRESS BAR ── */
+        .reading-progress {
+            position: fixed; top: 56px; left: 0; right: 0; z-index: 199;
+            height: 3px; background: transparent;
+            pointer-events: none;
+        }
+        .reading-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1abde1, #0fa3c5);
+            width: 0%;
+            transition: width .08s linear;
+            box-shadow: 0 0 8px rgba(26,189,225,0.5);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .reading-progress-fill { transition: none; }
+        }
+
         </style>
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
     <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
@@ -360,8 +377,13 @@
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <link rel="stylesheet" href="/assets/css/ux.css">
 </head>
 <body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<!-- Reading progress bar — fills as the user scrolls through the article -->
+<div class="reading-progress" aria-hidden="true"><div class="reading-progress-fill"></div></div>
 
 <nav>
     <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
@@ -486,6 +508,32 @@
     function toggle(){ menu.classList.contains('open') ? close() : open(); }
     btn.addEventListener('click', toggle);
     menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+
+    // Esc closes the mobile menu
+    document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && menu.classList.contains('open')) close();
+    });
+})();
+
+// ── Reading progress bar ──
+(function(){
+    var fill = document.querySelector('.reading-progress-fill');
+    if (!fill) return;
+    var article = document.querySelector('article');
+    if (!article) return;
+    function update(){
+        var rect = article.getBoundingClientRect();
+        var viewportH = window.innerHeight;
+        var articleH = article.offsetHeight;
+        // Progress from when article top hits viewport to when bottom leaves
+        var scrolled = Math.max(0, -rect.top);
+        var total = Math.max(1, articleH - viewportH);
+        var pct = Math.min(100, Math.max(0, (scrolled / total) * 100));
+        fill.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
 })();
 </script>
 </body>
