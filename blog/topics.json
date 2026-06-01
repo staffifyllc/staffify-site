@@ -112,7 +112,8 @@
         "operational audit",
         "business diagnostics"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-06-01T19:23:29Z"
     },
     {
       "slug": "retention-multiplier",
