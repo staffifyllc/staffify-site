@@ -125,7 +125,8 @@
         "ltv",
         "service business metrics"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-06-03T18:25:43Z"
     },
     {
       "slug": "pricing-power",
