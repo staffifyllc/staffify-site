@@ -33,17 +33,33 @@ function btn(href, label) {
     return `<p style="margin:18px 0;"><a href="${href}" style="display:inline-block;background:#0c1118;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:600;font-size:15px;">${label}</a></p>`;
 }
 
+let _lastResendCallAt = 0;
 async function sendViaResend({ to, subject, html, text }) {
     const apiKey = process.env.RESEND_API_KEY;
     const from = process.env.FROM_EMAIL || 'Staffify <hello@gostaffify.com>';
     if (!apiKey) throw new Error('RESEND_API_KEY not set');
-    const r = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'hello@gostaffify.com' }),
-    });
-    if (!r.ok) throw new Error(`Resend ${r.status}: ${await r.text().catch(() => '')}`);
-    return r.json();
+    // Throttle: at most 4 requests/sec to stay under Resend's 5/sec free-tier cap
+    const MIN_GAP_MS = 260;
+    const since = Date.now() - _lastResendCallAt;
+    if (since < MIN_GAP_MS) await new Promise(r => setTimeout(r, MIN_GAP_MS - since));
+    _lastResendCallAt = Date.now();
+    let attempt = 0;
+    while (true) {
+        const r = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from, to, subject, html, text, reply_to: 'hello@gostaffify.com' }),
+        });
+        if (r.ok) return r.json();
+        // Backoff once on 429 (rate limit) before giving up
+        if (r.status === 429 && attempt === 0) {
+            attempt++;
+            await new Promise(r => setTimeout(r, 1200));
+            _lastResendCallAt = Date.now();
+            continue;
+        }
+        throw new Error(`Resend ${r.status}: ${await r.text().catch(() => '')}`);
+    }
 }
 
 const TEMPLATES = {
