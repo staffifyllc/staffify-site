@@ -138,7 +138,8 @@
         "service business pricing",
         "stop trading time for money"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-06-05T16:33:29Z"
     },
     {
       "slug": "lead-gen-vs-sales",
