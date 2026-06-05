@@ -225,3 +225,51 @@ input[type=submit][disabled] {
     opacity: 0.55;
     cursor: wait;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   14. APPLY-LINK CLARIFIER
+   The "Apply" link is for VAs applying for jobs, NOT for clients hiring.
+   Adds a hand-sketched arrow + italic "for VAs" tag wherever Apply lives
+   so visitors don't misread it as a quote/contact form.
+─────────────────────────────────────────────────────────────────── */
+.apply-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 0.85em;
+    letter-spacing: 0.01em;
+    color: #1abde1;
+    vertical-align: middle;
+    transform: rotate(-3deg);
+    transform-origin: left center;
+    white-space: nowrap;
+    opacity: 0.95;
+    /* Subtle drop-shadow makes it feel "annotated" over the link */
+    text-shadow: 0 1px 0 rgba(0,0,0,0.18);
+}
+.apply-hint svg {
+    width: 24px;
+    height: 14px;
+    flex-shrink: 0;
+    color: #1abde1;
+    overflow: visible;
+}
+/* Wobbly hand-drawn animation: arrow gently sways like an arrow drawn live */
+@keyframes apply-hint-wobble {
+    0%, 100% { transform: rotate(-3deg) translateY(0); }
+    50%      { transform: rotate(-1.5deg) translateY(-1px); }
+}
+.apply-hint {
+    animation: apply-hint-wobble 3.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .apply-hint { animation: none; }
+}
+/* In tight footer link rows, scale it down a touch */
+footer .apply-hint, .f-contact .apply-hint, .f-txt .apply-hint {
+    font-size: 0.80em;
+    margin-left: 6px;
+}
