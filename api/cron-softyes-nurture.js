@@ -303,6 +303,19 @@ export default async function handler(req, res) {
             }
         }
 
+        // Write status for the Virtual Office dashboard
+        const totalSent = result.day2_sent + result.day6_sent + result.day12_sent + result.day21_sent + result.day45_sent;
+        const previous = await redis.hgetall('agent:status:email-marketing').catch(() => ({}));
+        const action = totalSent === 0
+            ? `Checked ${result.processed} subscribers. No drips due.`
+            : `Sent ${totalSent} drip emails (d2:${result.day2_sent} d6:${result.day6_sent} d12:${result.day12_sent} d21:${result.day21_sent} d45:${result.day45_sent})`;
+        await redis.hset('agent:status:email-marketing', {
+            last_run_at: String(Date.now()),
+            last_action: action,
+            count_today: String(totalSent),
+            count_total: String(Number(previous?.count_total || 0) + totalSent),
+        });
+
         return res.status(200).json({ ok: true, ts: now, ...result });
     } catch (err) {
         console.error('cron-softyes-nurture fatal', err);
