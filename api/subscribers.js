@@ -41,9 +41,14 @@ function softyesStage(softyes) {
 }
 
 function authorized(req) {
-    const adminToken = process.env.ADMIN_TOKEN;
+    // Accept ADMIN_TOKEN (legacy ?token= query) or CRON_SECRET (Bearer header)
+    const validSecrets = [process.env.ADMIN_TOKEN, process.env.CRON_SECRET].filter(Boolean);
+    if (!validSecrets.length) return false;
     const provided = (req.query.token || '').toString();
-    return !!adminToken && !!provided && provided === adminToken;
+    if (provided && validSecrets.includes(provided)) return true;
+    const hdr = req.headers['authorization'] || '';
+    const m = /^Bearer\s+(.+)$/i.exec(hdr);
+    return !!m && validSecrets.includes(m[1]);
 }
 
 export default async function handler(req, res) {
