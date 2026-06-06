@@ -273,3 +273,49 @@ footer .apply-hint, .f-contact .apply-hint, .f-txt .apply-hint {
     font-size: 0.80em;
     margin-left: 6px;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   15. NAV "APPLY FOR VAS" LINK
+   Sits next to the primary "Get Started" CTA in the desktop nav.
+   Visually subordinate so it doesn't compete with the buyer-focused CTA.
+─────────────────────────────────────────────────────────────────── */
+.nav-apply {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 14px;
+    padding: 7px 14px;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(255,255,255,0.78);
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: border-color .2s, color .2s, background .2s, transform .2s;
+    white-space: nowrap;
+}
+.nav-apply:hover {
+    border-color: rgba(26,189,225,0.45);
+    color: #fff;
+    background: rgba(26,189,225,0.06);
+    transform: translateY(-1px);
+}
+/* Smaller / cleaner hint when inside nav (no wobble, no rotation —
+   the nav has its own visual rhythm and the hint should ride along) */
+.nav-apply .apply-hint {
+    margin-left: 4px;
+    font-size: 0.85em;
+    color: #1abde1;
+    transform: none;
+    animation: none;
+}
+.nav-apply .apply-hint svg {
+    width: 18px;
+    height: 11px;
+}
+/* Hide on mobile — slide-out menu already has Apply */
+@media (max-width: 900px) {
+    .nav-apply { display: none; }
+}
