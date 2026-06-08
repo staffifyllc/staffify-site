@@ -151,7 +151,8 @@
         "b2b lead gen",
         "service business sales"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-06-08T17:26:54Z"
     },
     {
       "slug": "hiring-funnel",

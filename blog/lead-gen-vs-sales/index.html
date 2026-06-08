@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Gen vs Sales: Where Service Business Funnels Actually Break | Staffify Blog</title>
+    <meta name="description" content="Most service business owners blame the wrong stage when revenue stalls. Here's how to find the real leak in your funnel before you spend another dollar on ads.">
+    <link rel="canonical" href="https://www.gostaffify.com/blog/lead-gen-vs-sales/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.gostaffify.com/blog/lead-gen-vs-sales/">
+    <meta property="og:title" content="Lead Gen vs Sales: Where Service Business Funnels Actually Break">
+    <meta property="og:description" content="Most service business owners blame the wrong stage when revenue stalls. Here's how to find the real leak in your funnel before you spend another dollar on ads.">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="article:published_time" content="2026-06-08T17:26:54Z">
+    <meta property="article:author" content="Staffify">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Lead Gen vs Sales: Where Service Business Funnels Actually Break">
+    <meta name="twitter:description" content="Most service business owners blame the wrong stage when revenue stalls. Here's how to find the real leak in your funnel before you spend another dollar on ads.">
+
+    <!-- Schema.org Article -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "Lead Gen vs Sales: Where Service Business Funnels Actually Break",
+      "description": "Most service business owners blame the wrong stage when revenue stalls. Here's how to find the real leak in your funnel before you spend another dollar on ads.",
+      "datePublished": "2026-06-08T17:26:54Z",
+      "author": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "publisher": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://www.gostaffify.com/blog/lead-gen-vs-sales/" }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* POST HEADER */
+        .post-header {
+            padding: 140px 24px 60px;
+            max-width: 760px; margin: 0 auto;
+            text-align: left;
+            border-bottom: 1px solid var(--divider);
+        }
+        .post-meta-top {
+            display: flex; gap: 16px; align-items: center;
+            font-size: 12px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+            margin-bottom: 32px;
+        }
+        .post-meta-top .crumb { color: var(--c); }
+        .post-meta-top .sep { opacity: 0.4; }
+        .post-title {
+            font-size: clamp(34px, 5vw, 56px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08; margin-bottom: 28px;
+            color: var(--white);
+        }
+        .post-dek {
+            font-size: 19px; line-height: 1.6;
+            color: rgba(255,255,255,0.65);
+            max-width: 640px; font-weight: 400;
+            margin-bottom: 36px;
+        }
+        .post-byline {
+            display: flex; gap: 24px; align-items: center;
+            font-size: 13px; color: var(--muted);
+            padding-top: 24px;
+        }
+        .post-byline strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ARTICLE BODY */
+        article {
+            max-width: 720px; margin: 0 auto;
+            padding: 64px 24px 80px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 19px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article p { margin-bottom: 28px; }
+        article h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(26px, 3.5vw, 34px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 56px 0 20px;
+            line-height: 1.2;
+        }
+        article h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+            color: var(--white);
+            margin: 40px 0 14px; line-height: 1.3;
+        }
+        article ul, article ol { margin: 0 0 28px; padding-left: 28px; }
+        article li { margin-bottom: 10px; }
+        article a { color: var(--c); text-decoration: none; border-bottom: 1px solid rgba(26,189,225,0.3); transition: border-color .2s; }
+        article a:hover { border-bottom-color: var(--c); }
+        article strong { color: var(--white); font-weight: 700; }
+        article em { color: rgba(255,255,255,0.7); }
+        article blockquote {
+            border-left: 3px solid var(--c);
+            padding: 8px 24px;
+            margin: 32px 0;
+            font-style: italic;
+            color: rgba(255,255,255,0.7);
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 8px 8px 0;
+        }
+        article hr {
+            border: none;
+            border-top: 1px solid var(--divider);
+            margin: 56px 0;
+        }
+        article code {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.9em;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--c);
+        }
+
+        /* CTA at end of post */
+        .post-cta {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+        .post-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 44px 40px;
+            text-align: left;
+        }
+        .post-cta-eyebrow {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--c);
+            margin-bottom: 16px;
+        }
+        .post-cta-title {
+            font-size: 26px; font-weight: 800;
+            letter-spacing: -0.02em; line-height: 1.2;
+            color: var(--white); margin-bottom: 14px;
+        }
+        .post-cta-body {
+            font-size: 15px; line-height: 1.65;
+            color: var(--muted); margin-bottom: 24px;
+            max-width: 540px;
+        }
+        .post-cta-btn {
+            display: inline-block;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 980px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .post-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* BACK TO BLOG */
+        .post-foot {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 60px;
+            text-align: center;
+        }
+        .post-foot a {
+            color: var(--muted); text-decoration: none;
+            font-size: 13px; font-weight: 500;
+            transition: color .2s;
+        }
+        .post-foot a:hover { color: var(--white); }
+
+        /* FOOTER */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 13px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 12px; color: var(--subtle);
+        }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .post-header { padding-top: 110px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    
+        /* ─── MOBILE NAV (hamburger + drawer) ────────────────── */
+        .nav-hamburger {
+            display: none;
+            width: 44px; height: 44px;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 8px;
+        }
+        .nav-hamburger span {
+            position: relative;
+            display: block;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, opacity .3s, top .3s;
+        }
+        .nav-hamburger span::before,
+        .nav-hamburger span::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, top .3s, opacity .3s;
+        }
+        .nav-hamburger span::before { top: -7px; }
+        .nav-hamburger span::after  { top: 7px; }
+        .nav-hamburger.open span { background: transparent; }
+        .nav-hamburger.open span::before { top: 0; transform: rotate(45deg); }
+        .nav-hamburger.open span::after  { top: 0; transform: rotate(-45deg); }
+
+        .nav-mobile-menu {
+            position: fixed;
+            top: 56px; left: 0; right: 0;
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 24px 24px 32px;
+            z-index: 199;
+            opacity: 0;
+            transform: translateY(-12px);
+            pointer-events: none;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+        .nav-mobile-menu.open {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+        .nav-mobile-menu ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 0 0 22px;
+            padding: 0;
+        }
+        .nav-mobile-menu li a {
+            display: block;
+            padding: 14px 8px;
+            color: rgba(255,255,255,0.78);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-mobile-menu li a:active { background: rgba(255,255,255,0.04); }
+        .nav-mobile-menu li a.active { color: #fff; }
+        .nav-mobile-menu .nav-mobile-cta {
+            display: block;
+            text-align: center;
+            margin-top: 18px;
+            padding: 14px 24px;
+            background: #1abde1;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .nav-hamburger { display: inline-flex; }
+            .nav-cta { display: none; }
+        }
+
+        /* ── READING PROGRESS BAR ── */
+        .reading-progress {
+            position: fixed; top: 56px; left: 0; right: 0; z-index: 199;
+            height: 3px; background: transparent;
+            pointer-events: none;
+        }
+        .reading-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1abde1, #0fa3c5);
+            width: 0%;
+            transition: width .08s linear;
+            box-shadow: 0 0 8px rgba(26,189,225,0.5);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .reading-progress-fill { transition: none; }
+        }
+
+        </style>
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <link rel="stylesheet" href="/assets/css/ux.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<!-- Reading progress bar — fills as the user scrolls through the article -->
+<div class="reading-progress" aria-hidden="true"><div class="reading-progress-fill"></div></div>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/case-studies/">Case Studies</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="/apply/" class="nav-apply">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
+</nav>
+
+<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
+    <ul>
+            <li><a href="/editors/">Video Editors</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
+            <li><a href="/csr/">CSR</a></li>
+            <li><a href="/campaigns/">Sales</a></li>
+            <li><a href="/case-studies/">Case Studies</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
+</div>
+
+<header class="post-header">
+    <div class="post-meta-top">
+        <a href="/blog/" class="crumb" style="text-decoration:none;color:var(--c);">Blog</a>
+        <span class="sep">/</span>
+        <span>Scaling Service Businesses</span>
+    </div>
+    <h1 class="post-title">Lead Gen vs Sales: Where Service Business Funnels Actually Break</h1>
+    <p class="post-dek">Most service business owners blame the wrong stage when revenue stalls. Here's how to find the real leak in your funnel before you spend another dollar on ads.</p>
+    <div class="post-byline">
+        <span><strong>Staffify Team</strong></span>
+        <span>·</span>
+        <span>June 8, 2026</span>
+        <span>·</span>
+        <span>8 min read</span>
+    </div>
+</header>
+
+<article>
+<p>When revenue plateaus, the first instinct is to buy more leads. More ads, more lists, more cold email. It almost never works. After looking at hundreds of service business funnels, the pattern is consistent: the funnel is breaking in one of three specific places, and only one of them is actually a lead volume problem. The other two get worse when you pour more leads in.</p><p>The confusion starts because most founders treat lead generation and sales as the same motion. They are not. Lead gen creates qualified attention. Sales converts that attention into signed contracts. When you blur the two, you end up with a salesperson doing prospecting work, or a marketer trying to close deals over email. Both are expensive failures.</p><p>Let's pull the funnel apart and find your actual break point.</p><h2>The three stages of a service business funnel</h2><p>Every service business sales funnel, whether you have mapped it out or not, has three stages. Get clear on these before you try to diagnose anything.</p><p><strong>Stage one: Sourcing.</strong> Finding the right companies and contacts. Building lists, running outbound, managing inbound from referrals or content. The output is a named human at a named company who has been contacted.</p><p><strong>Stage two: Qualifying.</strong> Turning that contact into a real conversation. Booking the meeting. Confirming they have budget, authority, need, and timeline. The output is a sales-qualified opportunity on the calendar.</p><p><strong>Stage three: Closing.</strong> Discovery, proposal, objection handling, contract. The output is signed paperwork and a kickoff date.</p><p>Most founders look at their pipeline and see one blurry tube. That is why they cannot tell where it is leaking. Pull the stages apart, measure each one, and the break point becomes obvious in about ten minutes.</p><h2>Break point one: Not enough at the top</h2><p>This is the real lead generation problem. You have a working sales motion, your close rate is healthy when you get on calls, and your customers stick. You just are not getting in front of enough new companies each week.</p><p>The math here is simple. If you close 25 percent of qualified opportunities, and your average contract is $30K, you need four opportunities to close $30K. If your sourcing produces six conversations a month and only one becomes a real opportunity, you are running a $30K per month business by default. The ceiling is set by the top of the funnel.</p><p>Symptoms of a sourcing break:</p><ul><li>Your calendar has open slots most weeks</li><li>Your close rate on real opportunities is above 20 percent</li><li>Most of your pipeline comes from one or two referral sources</li><li>You can name every active deal by heart because there are not many</li></ul><p>The fix is uncomfortable for most founders because it requires consistent outbound work that nobody wants to do. Building targeted lists. Sending 200 to 500 personalized touches a week. Following up four to seven times before giving up. Tracking reply rates and iterating on messaging every two weeks. This is the work that produces predictable pipeline, and it is the work that gets dropped first when the founder gets busy delivering.</p><p>This is also the most outsourceable layer of the funnel. B2B lead gen as a discipline has matured. The playbooks are documented. The tools are commodities. What is rare is someone who will actually execute the playbook 40 hours a week without you having to manage them. That is the bottleneck, not strategy.</p><h2>Break point two: Leads come in, conversations do not happen</h2><p>This is the most common break, and the most misdiagnosed. You are generating contacts. People are responding. But nothing makes it to a real sales conversation. You see replies like "send me more info" or "not right now, try us in Q3" and the thread dies.</p><p>This is a qualifying break. The transition from interested contact to booked meeting is its own skill, and it is usually done badly because the founder is trying to do it between client calls.</p><p>What it looks like in practice:</p><ul><li>You have 50 "warm" contacts in your CRM that have gone cold</li><li>You spend hours writing custom replies that get one-line answers</li><li>Your show rate on booked calls is below 70 percent</li><li>You cannot remember the last time a cold contact became a paying client without three months of nurturing</li></ul><p>The fix here is process, not more leads. A qualifying motion needs three things. First, fast response times. Replying within an hour to an inbound is worth more than any clever subject line. Second, a clear next-step ask. Not "want to learn more?" but "I have Tuesday at 2 or Thursday at 10, which works?" Third, a reason for the prospect to actually show up. A short async resource, a specific question you will answer on the call, anything that makes the meeting feel valuable before it happens.</p><p>If you are losing deals here, hiring a closer will not help. The closer needs qualified meetings to close. The work is upstream.</p><h2>Break point three: Meetings happen, deals do not close</h2><p>This is the painful one. You are getting on calls. The calls feel good. Then the proposal goes out and the prospect ghosts, or comes back with "we decided to hold off."</p><p>This is a sales break, and the cause is almost always one of three things.</p><p><strong>You are talking to the wrong person.</strong> If you keep ending up on calls with a marketing manager when the buyer is the COO, you are losing deals before you start. This is a qualifying problem disguised as a sales problem. Add two questions to your booking form: who else needs to be involved in this decision, and what is your timeline.</p><p><strong>Your discovery is shallow.</strong> Most founders running their own sales pitch the service in the first ten minutes. The prospect nods, asks for a proposal, and disappears. Strong discovery means 30 minutes of questions before you say anything about what you do. What have they tried, what did it cost, what happens if they do nothing, who else is involved, what does success look like in 90 days. The proposal then writes itself, and the close rate doubles.</p><p><strong>You are not following up.</strong> Half of all closed deals in B2B service businesses require five or more follow-ups after the proposal. Most founders send the proposal, follow up once, and move on. The deals are not lost. They are sitting in someone's inbox waiting for a reason to be acted on.</p><h2>How to diagnose your funnel this week</h2><p>You do not need a CRM overhaul to find your break point. You need 90 minutes and a spreadsheet. Pull the last 90 days and count four numbers.</p><ol><li>How many new companies did you make first contact with?</li><li>How many of those became a real conversation, meaning a scheduled call or detailed email thread about their actual problem?</li><li>How many of those got a proposal?</li><li>How many of those signed?</li></ol><p>Now look at the conversion rates between each stage. A healthy service business sales funnel for the $300K to $5M range usually looks something like this: 3 to 8 percent of cold contacts become real conversations, 40 to 60 percent of conversations become proposals, and 25 to 40 percent of proposals close.</p><p>If your contact-to-conversation rate is below 2 percent, your sourcing or messaging is broken. If your conversation-to-proposal rate is below 30 percent, your qualifying is broken. If your proposal-to-close rate is below 20 percent, your sales process is broken.</p><p>One of these will be obvious. That is your break point. Fix it before touching anything else.</p><h2>The right order of operations</h2><p>Here is what trips up most operators: they try to fix all three at once. They hire a sales rep, buy a list, and start a podcast in the same month. Nothing gets better because nothing gets focused attention.</p><p>The order matters. Fix sales before qualifying. Fix qualifying before sourcing. Otherwise you are pouring water into a leaky bucket and wondering why the floor is wet.</p><p>If your close rate on real opportunities is bad, more leads make it worse. You will burn through your market faster and develop a reputation for being all over the place. Fix the close motion first. Tighten discovery. Build a proposal template that addresses the three objections you hear most. Set up a follow-up cadence that runs for 60 days.</p><p>Once you can reliably close 25 to 35 percent of real opportunities, fix qualifying. Build a fast-response inbound process. Standardize how you move a contact to a booked meeting. Track show rates.</p><p>Only then should you scale sourcing. At that point, every new contact you generate has a clear path to revenue, and you can predict what spending another 20 hours a week on outbound will produce. This is also when outsourcing the work actually pays off, because the system around it is ready to absorb the volume.</p><h2>What this means for hiring</h2><p>Most founders trying to fix their funnel hire the wrong role first. They hire a closer when the problem is sourcing. They hire a marketer when the problem is sales. They hire a generalist VA when what they need is a specialist who runs the same playbook every day.</p><p>The cleanest split for a service business in this revenue range is to keep closing in-house with the founder or a senior operator, and to fully outsource the sourcing and qualifying work to someone who does only that. Building lists, sending touches, replying to inbounds, booking meetings on your calendar. That role, done well, can add 8 to 15 qualified meetings a month to a founder's calendar without the founder doing any of the prospecting work.</p><p>The founders who break out of the plateau are the ones who stop trying to be three people at once. They figure out which stage of the funnel is actually broken, and they put the right person on it. Usually it is not the person they already have.</p>
+</article>
+
+<section class="post-cta">
+    <div class="post-cta-card">
+        <div class="post-cta-eyebrow">Built for service businesses</div>
+        <h3 class="post-cta-title">Want the team behind your growth, not in front of it?</h3>
+        <p class="post-cta-body">Staffify gives service businesses the people, systems, and infrastructure to scale without the chaos. Vetted talent, real accountability, lifetime replacement guarantee.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="post-cta-btn">Book a Discovery Call →</a>
+    </div>
+</section>
+
+<div class="post-foot">
+    <a href="/blog/">← Back to all posts</a>
+</div>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/apply/">Apply</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span class="footer-legal" style="display:flex;gap:18px;"><a href="/privacy/" style="color:inherit;text-decoration:none;">Privacy</a><a href="/terms/" style="color:inherit;text-decoration:none;">Terms</a></span><span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+(function(){
+    var btn = document.getElementById('navHamburger');
+    var menu = document.getElementById('navMobileMenu');
+    if (!btn || !menu) return;
+    function open(){
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+        menu.style.opacity = '1';
+        menu.style.transform = 'translateY(0)';
+        menu.style.pointerEvents = 'auto';
+    }
+    function close(){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+        menu.style.opacity = '0';
+        menu.style.transform = 'translateY(-12px)';
+        menu.style.pointerEvents = 'none';
+    }
+    function toggle(){ menu.classList.contains('open') ? close() : open(); }
+    btn.addEventListener('click', toggle);
+    menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+
+    // Esc closes the mobile menu
+    document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && menu.classList.contains('open')) close();
+    });
+})();
+
+// ── Reading progress bar ──
+(function(){
+    var fill = document.querySelector('.reading-progress-fill');
+    if (!fill) return;
+    var article = document.querySelector('article');
+    if (!article) return;
+    function update(){
+        var rect = article.getBoundingClientRect();
+        var viewportH = window.innerHeight;
+        var articleH = article.offsetHeight;
+        // Progress from when article top hits viewport to when bottom leaves
+        var scrolled = Math.max(0, -rect.top);
+        var total = Math.max(1, articleH - viewportH);
+        var pct = Math.min(100, Math.max(0, (scrolled / total) * 100));
+        fill.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+})();
+</script>
+  <script src="/assets/js/ux.js" defer></script>
+</body>
+</html>
