@@ -19,24 +19,46 @@ const ADMIN_CASE_URL        = 'https://www.gostaffify.com/case-studies/operator-
 const OPERATOR_TRAP_URL     = 'https://www.gostaffify.com/blog/operator-trap/';
 const BOOK_URL              = 'https://calendly.com/go-staffify/discovery-call?utm_content=softyes';
 
+// "Sexier" 2026 email shell. Matches cron-nurture.js — black band header
+// with Staffify wordmark + cyan dot, white card with cyan top accent,
+// glowing brand-cyan CTA button.
 function shellHTML(bodyHTML, footer) {
     return `<!doctype html>
-<html><body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
-  <tr><td align="center" style="padding:32px 16px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;">
-      <tr><td style="padding:36px 36px 28px 36px;font-size:16px;line-height:1.6;color:#1a1a1a;">${bodyHTML}</td></tr>
-      <tr><td style="padding:18px 36px 28px 36px;border-top:1px solid #eee;font-size:12px;color:#888;line-height:1.5;">
-        ${footer || "You're receiving this because you grabbed the 30-Day ROI list at gostaffify.com. Reply with the word \"stop\" if you'd rather not get the rest."}
+<html><body style="margin:0;padding:0;background:#0d0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d0f14;">
+  <tr><td align="center" style="padding:40px 16px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;">
+      <tr><td style="padding:0 4px 18px 4px;text-align:left;">
+        <span style="font-size:18px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">Staffify</span><span style="display:inline-block;width:7px;height:7px;background:#1abde1;border-radius:50%;margin-left:6px;vertical-align:middle;box-shadow:0 0 12px rgba(26,189,225,0.7);"></span>
       </td></tr>
     </table>
   </td></tr>
+  <tr><td align="center" style="padding:0 16px 32px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.4);">
+      <tr><td style="background:linear-gradient(90deg,#1abde1 0%,#0fa3c5 55%,#0d82b8 100%);height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="padding:42px 38px 30px 38px;font-size:16px;line-height:1.65;color:#1a1a1a;">${bodyHTML}</td></tr>
+      <tr><td style="padding:18px 38px 28px 38px;border-top:1px solid #eee;font-size:11px;color:#9aa3ad;line-height:1.55;text-align:center;letter-spacing:0.02em;">
+        ${footer || "You grabbed the 30-Day ROI list at gostaffify.com. Reply <strong>stop</strong> if you'd rather not get the rest."}
+      </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="height:40px;font-size:0;line-height:0;">&nbsp;</td></tr>
 </table>
 </body></html>`;
 }
 
 function btn(href, label) {
-    return `<p style="margin:20px 0;"><a href="${href}" style="display:inline-block;background:#0c1118;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:600;font-size:15px;">${label}</a></p>`;
+    return `<p style="margin:24px 0 16px 0;"><a href="${href}" style="display:inline-block;background:#1abde1;background-image:linear-gradient(180deg,#1abde1 0%,#0fa3c5 100%);color:#000000;text-decoration:none;padding:15px 30px;border-radius:999px;font-weight:800;font-size:14px;letter-spacing:0.02em;box-shadow:0 8px 24px rgba(26,189,225,0.35);">${label}</a></p>`;
+}
+
+function eyebrow(text) {
+    return `<p style="margin:0 0 14px 0;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#1abde1;">${text}</p>`;
+}
+function pullStat(num, label) {
+    return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;border-left:3px solid #1abde1;padding:8px 0 8px 18px;">` +
+           `<tr><td style="font-size:24px;font-weight:900;color:#0c1118;letter-spacing:-0.02em;line-height:1;">${num}</td></tr>` +
+           `<tr><td style="font-size:12px;color:#666;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;padding-top:6px;">${label}</td></tr>` +
+           `</table>`;
 }
 
 let _lastResendCallAt = 0;
@@ -70,59 +92,67 @@ async function sendViaResend({ to, subject, html, text }) {
 
 const TEMPLATES = {
     day2: ({ firstName }) => ({
-        subject: 'The first one to delegate, and how to start',
+        subject: 'Start with inbox. Here\'s the math.',
         text:
 `Hey ${firstName},
 
-If the list landed and you're wondering which one to actually delegate first, the answer is almost always inbox.
+If the list landed, you're probably wondering which one to actually delegate first.
 
-The math is brutal. Most founders spend 7 to 12 hours per week on email. At $200 per hour of founder time, that's $5,600 to $9,600 per month bleeding out on something a trained assistant handles for about $2,500 per month.
+The answer is almost always inbox. Here's why.
 
-Here's how to start without a six-week training plan:
+  $9,600/mo — bleeding out on email at $200/hr founder time
+  $2,500/mo — what a trained assistant costs to handle it
+  $5K-9K/mo — recapture in month one
 
-1. Pull a week of sent mail. Tag every thread: "decision needed from me" vs "informational" vs "templated reply."
-2. The templated reply pile is what you delegate first. Pull the 8 to 12 most common patterns into one doc.
-3. Hand off "categorize and draft, I approve in one click." Two weeks later, your assistant ships replies on the templated patterns directly.
+Three-step start. No six-week training plan:
 
-The full breakdown (which delegations stack best, in what order) is in the list:
+1. Pull a week of sent mail. Tag every thread "decision needed" vs "informational" vs "templated reply."
+2. The templated pile is what you delegate first. Eight to twelve patterns in one doc.
+3. Hand off "categorize and draft, I approve in one click." Two weeks later your assistant ships the templated patterns directly.
+
+The full breakdown (which delegations stack best, in what order):
 ${DELEGATE_URL}
 
-If you want a second pair of eyes on which delegation pays back fastest in your specific business, my calendar is here:
+If you want a second pair of eyes on yours specifically:
 ${BOOK_URL}
 
 Paul
 Founder, Staffify`,
         html: shellHTML(`
-            <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 14px 0;">If the list landed and you're wondering which one to actually delegate first, the answer is almost always inbox.</p>
-            <p style="margin:0 0 14px 0;"><strong>The math is brutal.</strong> Most founders spend 7 to 12 hours per week on email. At $200 per hour of founder time, that's $5,600 to $9,600 per month bleeding out on something a trained assistant handles for about $2,500 per month.</p>
-            <p style="margin:0 0 10px 0;">Here's how to start without a six-week training plan:</p>
-            <ol style="margin:0 0 14px 18px;padding:0;font-size:15px;line-height:1.7;">
-                <li>Pull a week of sent mail. Tag every thread: "decision needed from me" vs "informational" vs "templated reply."</li>
-                <li>The templated reply pile is what you delegate first. Pull the 8 to 12 most common patterns into one doc.</li>
-                <li>Hand off "categorize and draft, I approve in one click." Two weeks later, your assistant ships replies on the templated patterns directly.</li>
+            ${eyebrow('The first delegation')}
+            <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
+            <p style="margin:0 0 18px 0;">If the list landed, you're probably wondering which one to actually delegate first.</p>
+            <p style="margin:0 0 0 0;font-size:17px;font-weight:700;color:#0c1118;">The answer is almost always inbox. Here's why.</p>
+            ${pullStat('$9,600/mo', 'Bleeding out on email at $200/hr')}
+            ${pullStat('$2,500/mo', 'Trained assistant to handle it')}
+            ${pullStat('$5K-9K/mo', 'Recapture in month one')}
+            <p style="margin:0 0 10px 0;font-weight:700;">Three-step start. No six-week training plan:</p>
+            <ol style="margin:0 0 18px 22px;padding:0;font-size:15px;line-height:1.75;color:#333;">
+                <li>Pull a week of sent mail. Tag every thread "decision needed" vs "informational" vs "templated reply."</li>
+                <li>The templated pile is what you delegate first. Eight to twelve patterns in one doc.</li>
+                <li>Hand off <em>"categorize and draft, I approve in one click."</em> Two weeks later your assistant ships the templated patterns directly.</li>
             </ol>
-            <p style="margin:0 0 14px 0;">The full breakdown (which delegations stack best, in what order) is in the list: <a href="${DELEGATE_URL}" style="color:#0c1118;">${DELEGATE_URL}</a></p>
-            <p style="margin:0 0 6px 0;">If you want a second pair of eyes on which delegation pays back fastest in your specific business:</p>
+            <p style="margin:0 0 4px 0;color:#444;">Want a second pair of eyes on yours specifically?</p>
             ${btn(BOOK_URL, 'Book a 25-min call →')}
-            <p style="margin:18px 0 0 0;">Paul<br><span style="color:#6b6b6b;">Founder, Staffify</span></p>
+            <p style="margin:18px 0 0 0;font-size:14px;color:#666;">Or skim the full breakdown: <a href="${DELEGATE_URL}" style="color:#0d82b8;font-weight:600;">the 30-day list</a>.</p>
+            <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
         `),
     }),
 
     day6: ({ firstName }) => ({
-        subject: 'Why your first hire usually fails',
+        subject: 'Why most first hires fail (and what works)',
         text:
 `Hey ${firstName},
 
-Most founders, when they finally decide to hire, hire the wrong person first. It almost always plays out the same way.
+Most founders, when they finally decide to hire, hire the wrong person first. It almost always plays out the same way:
 
-You're drowning. You decide to hire someone "to help with everything." You make the offer. They start. You spend two months training them on every system, every client, every nuance. By month three you're doing more work than before because now you're a manager AND an operator.
+You're drowning. You hire someone "to help with everything." They start. You spend two months training them on every system, every client, every nuance. By month three you're doing more work than before — because now you're a manager AND an operator.
 
 The trap: trying to clone yourself instead of subtracting from yourself.
 
 The fix is the inverse. Hire one person for one job. The job that costs the most time but takes the least judgment. Usually admin or editing. Get that handoff clean, then add the next.
 
-We wrote the full breakdown here:
+Full breakdown:
 ${OPERATOR_TRAP_URL}
 
 When you're ready to subtract the first job:
@@ -131,62 +161,82 @@ ${BOOK_URL}
 Paul
 Founder, Staffify`,
         html: shellHTML(`
-            <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 14px 0;">Most founders, when they finally decide to hire, hire the wrong person first. It almost always plays out the same way.</p>
-            <p style="margin:0 0 14px 0;">You're drowning. You decide to hire someone "to help with everything." You make the offer. They start. You spend two months training them on every system, every client, every nuance. By month three you're doing more work than before because now you're a manager AND an operator.</p>
-            <p style="margin:0 0 14px 0;"><strong>The trap: trying to clone yourself instead of subtracting from yourself.</strong></p>
-            <p style="margin:0 0 14px 0;">The fix is the inverse. Hire one person for one job. The job that costs the most time but takes the least judgment. Usually admin or editing. Get that handoff clean, then add the next.</p>
+            ${eyebrow('Most first hires fail')}
+            <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
+            <p style="margin:0 0 16px 0;">Most founders, when they finally decide to hire, hire the wrong person first. It almost always plays out the same way:</p>
+            <p style="margin:0 0 16px 0;color:#444;">You're drowning. You hire someone "to help with everything." They start. You spend two months training them on every system, every client, every nuance. By month three you're doing more work than before — because now you're a manager AND an operator.</p>
+            <p style="margin:0 0 16px 0;padding:14px 20px;background:#fff4f4;border-left:3px solid #dc2626;color:#7a1a1a;font-style:italic;">The trap: trying to clone yourself instead of subtracting from yourself.</p>
+            <p style="margin:0 0 14px 0;color:#444;">The fix is the inverse. <strong>Hire one person for one job.</strong> The job that costs the most time but takes the least judgment. Usually admin or editing. Get that handoff clean, then add the next.</p>
             ${btn(OPERATOR_TRAP_URL, 'Read the full breakdown →')}
-            <p style="margin:14px 0 0 0;">When you're ready to subtract the first job: <a href="${BOOK_URL}" style="color:#0c1118;">book a 25-min call</a>.</p>
-            <p style="margin:18px 0 0 0;">Paul<br><span style="color:#6b6b6b;">Founder, Staffify</span></p>
+            <p style="margin:18px 0 0 0;font-size:14px;color:#666;">When you're ready to subtract the first job: <a href="${BOOK_URL}" style="color:#0d82b8;font-weight:600;">25-minute call</a>.</p>
+            <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
         `),
     }),
 
     day12: ({ firstName }) => ({
-        subject: 'How a real-estate marketing studio cut editing spend 60%',
+        subject: '60% off editing. Same quality.',
         text:
 `Hey ${firstName},
 
-A real customer story.
+Real story.
 
-Flylisted is a real-estate marketing studio working with brokerages in Boston and South Florida. Their service was video. Their bottleneck was the editing room.
+Flylisted is a real-estate marketing studio working with brokerages in Boston and South Florida. Service: video. Bottleneck: the editing room.
 
-Before: rotating freelance editors charging per video. As volume grew, the bill scaled linearly. Brand voice drifted between editors. Turnaround was unpredictable, sometimes two days, sometimes ten.
+Before — rotating freelance editors charging per video. As volume grew:
+  · The bill scaled linearly
+  · Brand voice drifted between editors
+  · Turnaround swung wildly. Two days, sometimes ten.
 
-After: one dedicated Staffify editor on a flat monthly rate. Editing spend dropped 60%. Turnaround locked at 12 to 24 hours. Brand voice stabilized because the same editor cuts every video.
+After — one dedicated Staffify editor on a flat monthly rate:
+
+  60% lower    editing spend
+  12-24hr     turnaround locked
+  One voice   across every cut
 
 Full case study with the numbers:
 ${FLYLISTED_URL}
 
-If your situation rhymes with theirs (volume scaling faster than your bench), the 25-minute call is the right next step:
+If your volume is scaling faster than your bench:
 ${BOOK_URL}
 
 Paul
 Founder, Staffify`,
         html: shellHTML(`
-            <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 14px 0;">A real customer story.</p>
-            <p style="margin:0 0 14px 0;"><strong>Flylisted</strong> is a real-estate marketing studio working with brokerages in Boston and South Florida. Their service was video. Their bottleneck was the editing room.</p>
-            <p style="margin:0 0 14px 0;"><strong>Before:</strong> rotating freelance editors charging per video. As volume grew, the bill scaled linearly. Brand voice drifted between editors. Turnaround was unpredictable, sometimes two days, sometimes ten.</p>
-            <p style="margin:0 0 14px 0;"><strong>After:</strong> one dedicated Staffify editor on a flat monthly rate. Editing spend dropped 60%. Turnaround locked at 12 to 24 hours. Brand voice stabilized because the same editor cuts every video.</p>
-            ${btn(FLYLISTED_URL, 'Read the full case study →')}
-            <p style="margin:14px 0 0 0;">If your situation rhymes with theirs (volume scaling faster than your bench), the 25-minute call is the right next step: <a href="${BOOK_URL}" style="color:#0c1118;">book here</a>.</p>
-            <p style="margin:18px 0 0 0;">Paul<br><span style="color:#6b6b6b;">Founder, Staffify</span></p>
+            ${eyebrow('A real customer story')}
+            <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
+            <p style="margin:0 0 16px 0;"><strong>Flylisted</strong> is a real-estate marketing studio working with brokerages in Boston and South Florida. Service: video. Bottleneck: the editing room.</p>
+            <p style="margin:0 0 8px 0;font-weight:700;">Before — rotating freelance editors charging per video.</p>
+            <ul style="margin:0 0 16px 22px;padding:0;font-size:15px;line-height:1.7;color:#444;">
+                <li>The bill scaled linearly</li>
+                <li>Brand voice drifted between editors</li>
+                <li>Turnaround swung wildly. Two days, sometimes ten.</li>
+            </ul>
+            <p style="margin:0 0 6px 0;font-weight:700;">After — one dedicated Staffify editor on a flat monthly rate:</p>
+            ${pullStat('60% lower', 'Editing spend')}
+            ${pullStat('12-24hr', 'Turnaround locked')}
+            ${pullStat('One voice', 'Across every cut')}
+            ${btn(FLYLISTED_URL, 'Read the case study →')}
+            <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If your volume is scaling faster than your bench: <a href="${BOOK_URL}" style="color:#0d82b8;font-weight:600;">25-minute call</a>.</p>
+            <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
         `),
     }),
 
     day21: ({ firstName }) => ({
-        subject: '60 founder-hours, reclaimed',
+        subject: '60 founder-hours, gone. Here\'s where they went.',
         text:
 `Hey ${firstName},
 
-Another one, different shape.
+Different shape, same shock.
 
-A real-estate marketing studio running roughly $50K/month was operating with the founder doing every administrative function. Vendor coordination. Client invoicing. Inbox triage. Calendar control. Listing audits.
+A real-estate marketing studio doing $50K/month, founder doing every admin function. Vendor coordination. Client invoicing. Inbox triage. Calendar control. Listing audits.
 
-After bringing on a Staffify admin, within 30 days: 60 founder hours per month reclaimed. Roughly $10K of opportunity cost recaptured (those hours redirected to sales calls and product work).
+Brought on one Staffify admin. Inside 30 days:
 
-The math is uncomfortable: most founders billing at $200 to $500 per hour are doing $15 to $25 per hour work for 25 to 30% of their week. The recapture pays for the hire inside the first week.
+  60 hrs/mo   founder time reclaimed
+  ~$10K/mo    opportunity cost recaptured
+  $2K/mo      flat cost for the admin
+
+The math is uncomfortable. Most founders billing at $200-500/hr are doing $15-25/hr work for 25-30% of their week. The recapture pays for the hire inside the first week.
 
 Full breakdown:
 ${ADMIN_CASE_URL}
@@ -197,28 +247,32 @@ ${BOOK_URL}
 Paul
 Founder, Staffify`,
         html: shellHTML(`
-            <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 14px 0;">Another one, different shape.</p>
-            <p style="margin:0 0 14px 0;">A real-estate marketing studio running roughly $50K/month was operating with the founder doing every administrative function. Vendor coordination. Client invoicing. Inbox triage. Calendar control. Listing audits.</p>
-            <p style="margin:0 0 14px 0;">After bringing on a Staffify admin, within 30 days: <strong>60 founder hours per month reclaimed</strong>. Roughly $10K of opportunity cost recaptured (those hours redirected to sales calls and product work).</p>
-            <p style="margin:0 0 14px 0;">The math is uncomfortable: most founders billing at $200 to $500 per hour are doing $15 to $25 per hour work for 25 to 30% of their week. The recapture pays for the hire inside the first week.</p>
+            ${eyebrow('60 hours back')}
+            <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
+            <p style="margin:0 0 16px 0;color:#444;">Different shape, same shock. A real-estate marketing studio doing $50K/month, founder doing every admin function — vendor coordination, client invoicing, inbox triage, calendar control, listing audits.</p>
+            <p style="margin:0 0 6px 0;font-weight:700;">Brought on one Staffify admin. Inside 30 days:</p>
+            ${pullStat('60 hrs/mo', 'Founder time reclaimed')}
+            ${pullStat('~$10K/mo', 'Opportunity cost recaptured')}
+            ${pullStat('$2K/mo', 'Flat cost for the admin')}
+            <p style="margin:0 0 16px 0;color:#444;font-style:italic;">The math is uncomfortable. Most founders billing at $200-500/hr are doing $15-25/hr work for 25-30% of their week. <strong style="font-style:normal;color:#0c1118;">The recapture pays for the hire inside the first week.</strong></p>
             ${btn(ADMIN_CASE_URL, 'Read the full breakdown →')}
-            <p style="margin:14px 0 0 0;">If your week looks like that: <a href="${BOOK_URL}" style="color:#0c1118;">book a 25-min call</a>.</p>
-            <p style="margin:18px 0 0 0;">Paul<br><span style="color:#6b6b6b;">Founder, Staffify</span></p>
+            <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If your week looks like that: <a href="${BOOK_URL}" style="color:#0d82b8;font-weight:600;">25-minute call</a>.</p>
+            <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
         `),
     }),
 
     day45: ({ firstName }) => ({
-        subject: 'One last note from me',
+        subject: 'Last one. Then I\'m out.',
         text:
 `Hey ${firstName},
 
-Last note from this sequence. You grabbed the playbook six weeks back and I've sent you a handful of emails. I'd rather not keep going if nothing's landed.
+Last note from this sequence. You grabbed the list six weeks back. I've sent a handful of emails. If nothing's landed, I'd rather not keep going.
 
-If you're still in the same spot (running flat out, no leverage hire yet, knowing it's costing you), here's the door, one more time:
+But if you're still in the same spot — running flat out, no leverage hire yet, knowing it's costing you — here's the door one more time:
+
 ${BOOK_URL}
 
-If you'd rather just keep building the list yourself, that works too. The 30-Day ROI list is yours to keep:
+If you'd rather keep building it yourself, the list is yours to keep:
 ${DELEGATE_URL}
 
 Either way, good luck with what you're building.
@@ -226,14 +280,14 @@ Either way, good luck with what you're building.
 Paul
 Founder, Staffify`,
         html: shellHTML(`
-            <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 14px 0;">Last note from this sequence. You grabbed the playbook six weeks back and I've sent you a handful of emails. I'd rather not keep going if nothing's landed.</p>
-            <p style="margin:0 0 14px 0;">If you're still in the same spot (running flat out, no leverage hire yet, knowing it's costing you), here's the door, one more time:</p>
+            ${eyebrow('Last automated touch')}
+            <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
+            <p style="margin:0 0 16px 0;color:#444;">Last note from this sequence. You grabbed the list six weeks back. I've sent a handful of emails. If nothing's landed, I'd rather not keep going.</p>
+            <p style="margin:0 0 16px 0;">But if you're still in the same spot — <strong>running flat out, no leverage hire yet, knowing it's costing you</strong> — here's the door one more time:</p>
             ${btn(BOOK_URL, 'Book a 25-min call →')}
-            <p style="margin:14px 0 0 0;">If you'd rather just keep building the list yourself, that works too. The 30-Day ROI list is yours to keep: <a href="${DELEGATE_URL}" style="color:#0c1118;">${DELEGATE_URL}</a></p>
-            <p style="margin:14px 0 0 0;">Either way, good luck with what you're building.</p>
-            <p style="margin:18px 0 0 0;">Paul<br><span style="color:#6b6b6b;">Founder, Staffify</span></p>
-        `, 'Last automated touch from this sequence. You can reply with "stop" if you want to be removed entirely.'),
+            <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If you'd rather keep building it yourself, <a href="${DELEGATE_URL}" style="color:#0d82b8;font-weight:600;">the list</a> is yours to keep. Either way, good luck with what you're building.</p>
+            <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
+        `, 'Last automated touch from this sequence. Reply <strong>stop</strong> to be removed entirely.'),
     }),
 };
 

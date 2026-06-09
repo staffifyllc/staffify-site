@@ -13,24 +13,47 @@ const PLAYBOOK_URL = 'https://www.gostaffify.com/playbook/';
 const FLYLISTED_URL = 'https://www.gostaffify.com/case-studies/flylisted/';
 const REOPEN_URL = 'https://calendly.com/go-staffify/discovery-call?utm_content=reengagement';
 
+// "Sexier" 2026 email shell. Black band header with Staffify wordmark +
+// cyan dot, white card body with cyan top accent strip, glowing brand-
+// cyan CTA. Designed to render correctly in Gmail / Apple Mail / Outlook.
 function shellHTML(bodyHTML, footer) {
     return `<!doctype html>
-<html><body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
-  <tr><td align="center" style="padding:32px 16px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;">
-      <tr><td style="padding:36px 36px 28px 36px;font-size:16px;line-height:1.55;color:#1a1a1a;">${bodyHTML}</td></tr>
-      <tr><td style="padding:18px 36px 28px 36px;border-top:1px solid #eee;font-size:12px;color:#888;line-height:1.5;">
-        ${footer || "You're receiving this because we spoke about staffing recently."}
+<html><body style="margin:0;padding:0;background:#0d0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d0f14;">
+  <tr><td align="center" style="padding:40px 16px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;">
+      <tr><td style="padding:0 4px 18px 4px;text-align:left;">
+        <span style="font-size:18px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">Staffify</span><span style="display:inline-block;width:7px;height:7px;background:#1abde1;border-radius:50%;margin-left:6px;vertical-align:middle;box-shadow:0 0 12px rgba(26,189,225,0.7);"></span>
       </td></tr>
     </table>
   </td></tr>
+  <tr><td align="center" style="padding:0 16px 32px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.4);">
+      <tr><td style="background:linear-gradient(90deg,#1abde1 0%,#0fa3c5 55%,#0d82b8 100%);height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="padding:42px 38px 30px 38px;font-size:16px;line-height:1.65;color:#1a1a1a;">${bodyHTML}</td></tr>
+      <tr><td style="padding:18px 38px 28px 38px;border-top:1px solid #eee;font-size:11px;color:#9aa3ad;line-height:1.55;text-align:center;letter-spacing:0.02em;">
+        ${footer || "You're receiving this because we spoke about staffing recently. Reply <strong>stop</strong> if you'd rather not get the rest."}
+      </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="height:40px;font-size:0;line-height:0;">&nbsp;</td></tr>
 </table>
 </body></html>`;
 }
 
 function btn(href, label) {
-    return `<p style="margin:18px 0;"><a href="${href}" style="display:inline-block;background:#0c1118;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:600;font-size:15px;">${label}</a></p>`;
+    return `<p style="margin:24px 0 16px 0;"><a href="${href}" style="display:inline-block;background:#1abde1;background-image:linear-gradient(180deg,#1abde1 0%,#0fa3c5 100%);color:#000000;text-decoration:none;padding:15px 30px;border-radius:999px;font-weight:800;font-size:14px;letter-spacing:0.02em;box-shadow:0 8px 24px rgba(26,189,225,0.35);">${label}</a></p>`;
+}
+
+// Small inline accent helpers reusable in body copy.
+function eyebrow(text) {
+    return `<p style="margin:0 0 14px 0;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#1abde1;">${text}</p>`;
+}
+function pullStat(num, label) {
+    return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;border-left:3px solid #1abde1;padding:8px 0 8px 18px;">` +
+           `<tr><td style="font-size:24px;font-weight:900;color:#0c1118;letter-spacing:-0.02em;line-height:1;">${num}</td></tr>` +
+           `<tr><td style="font-size:12px;color:#666;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;padding-top:6px;">${label}</td></tr>` +
+           `</table>`;
 }
 
 let _lastResendCallAt = 0;
@@ -64,86 +87,118 @@ async function sendViaResend({ to, subject, html, text }) {
 
 const TEMPLATES = {
     day3: ({ firstName }) => ({
-        subject: "Even if the timing wasn't right",
+        subject: "About our call — the playbook I mentioned",
         text:
 `Hey ${firstName},
 
-Following up on our recent conversation. Even if the timing wasn't right for us to work together now, you'll probably want this somewhere you can find it.
+Quick one. The playbook I mentioned on our call is yours:
 
-The Operator's Playbook: ${PLAYBOOK_URL}
+${PLAYBOOK_URL}
 
-Six chapters on the operational moves that separate the $300K service businesses from the $3M ones. Whether you build a team yourself or work with us later, the frameworks land either way.
+Six chapters on the operational moves that move a service business from $300K to $3M. The bottleneck audit, the delegation matrix, the hiring funnel that actually holds, pricing power, retention systems.
 
-If anything changes on your end: ${REOPEN_URL}
+Whether you build the team yourself or end up working with us, the frameworks land either way.
 
-— Paul`,
+If timing shifts on your end:
+${REOPEN_URL}
+
+Paul
+Founder, Staffify`,
         html: shellHTML(`
-            <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 14px 0;">Following up on our recent conversation. Even if the timing wasn't right for us to work together now, you'll probably want this somewhere you can find it.</p>
-            <p style="margin:0 0 14px 0;"><strong>The Operator's Playbook</strong>. Six chapters on the operational moves that separate the $300K service businesses from the $3M ones. Whether you build a team yourself or work with us later, the frameworks land either way.</p>
-            ${btn(PLAYBOOK_URL, 'Read the Playbook →')}
-            <p style="margin:14px 0 0 0;">If anything changes on your end, my calendar is here: <a href="${REOPEN_URL}" style="color:#0c1118;">book a follow-up call</a>.</p>
-            <p style="margin:18px 0 0 0;">— Paul</p>
+            ${eyebrow('After our call')}
+            <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
+            <p style="margin:0 0 16px 0;">Quick one. The playbook I mentioned on our call is yours.</p>
+            <p style="margin:0 0 8px 0;">Six chapters on the operational moves that move a service business from $300K to $3M. <strong>The bottleneck audit. The delegation matrix. The hiring funnel that actually holds. Pricing power. Retention systems.</strong></p>
+            <p style="margin:0 0 16px 0;color:#444;">Whether you build the team yourself or end up working with us, the frameworks land either way.</p>
+            ${btn(PLAYBOOK_URL, 'Read the playbook →')}
+            <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If timing shifts on your end, <a href="${REOPEN_URL}" style="color:#0d82b8;font-weight:600;">grab 25 minutes here</a>.</p>
+            <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
         `),
     }),
 
     day14: ({ firstName }) => ({
-        subject: "How Flylisted cut their editing spend 60%",
+        subject: "60% off editing. Same quality.",
         text:
 `Hey ${firstName},
 
-One real customer story while you're thinking through your options.
+Real story.
 
-Flylisted, a real estate marketing company in Boston and South Florida, was paying per video to a rotating cast of freelance editors. As volume grew, the bill scaled linearly, brand voice drifted between editors, and turnaround was unpredictable.
+Flylisted, a real estate marketing studio working with brokerages in Boston and South Florida, was paying per video to a rotating bench of freelance editors. As volume scaled, three things happened:
 
-They swapped to a dedicated Staffify editor on a flat monthly rate. Editing spend dropped 60%, turnaround locked at 12-24 hours, brand voice stabilized.
+  · The bill scaled linearly
+  · Brand voice drifted between editors
+  · Turnaround swung wildly — sometimes 2 days, sometimes 10
 
-Full case study: ${FLYLISTED_URL}
+They swapped to one dedicated Staffify editor on a flat monthly rate.
 
-If your situation rhymes with theirs: ${REOPEN_URL}
+  60%  editing spend cut
+  12-24hr  turnaround locked
+  1  voice across every cut
 
-— Paul`,
+Full breakdown: ${FLYLISTED_URL}
+
+If your situation rhymes:
+${REOPEN_URL}
+
+Paul`,
         html: shellHTML(`
-            <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 14px 0;">One real customer story while you're thinking through your options.</p>
-            <p style="margin:0 0 14px 0;"><strong>Flylisted</strong>, a real estate marketing company in Boston and South Florida, was paying per video to a rotating cast of freelance editors. As volume grew, the bill scaled linearly, brand voice drifted between editors, and turnaround was unpredictable.</p>
-            <p style="margin:0 0 14px 0;">They swapped to a dedicated Staffify editor on a flat monthly rate. <strong>Editing spend dropped 60%</strong>, turnaround locked at 12-24 hours, brand voice stabilized.</p>
-            ${btn(FLYLISTED_URL, 'Read the full case study →')}
-            <p style="margin:14px 0 0 0;">If your situation rhymes with theirs: <a href="${REOPEN_URL}" style="color:#0c1118;">book a follow-up call</a>.</p>
-            <p style="margin:18px 0 0 0;">— Paul</p>
+            ${eyebrow('A real customer story')}
+            <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
+            <p style="margin:0 0 16px 0;"><strong>Flylisted</strong> is a real estate marketing studio working with brokerages in Boston and South Florida. They were paying per video to a rotating bench of freelance editors.</p>
+            <p style="margin:0 0 14px 0;">Three things happened as volume scaled:</p>
+            <ul style="margin:0 0 18px 22px;padding:0;font-size:15px;line-height:1.7;color:#444;">
+                <li>The bill scaled linearly</li>
+                <li>Brand voice drifted between editors</li>
+                <li>Turnaround swung wildly — sometimes 2 days, sometimes 10</li>
+            </ul>
+            <p style="margin:0 0 6px 0;">Then they swapped to one dedicated Staffify editor on a flat monthly rate:</p>
+            ${pullStat('60% lower', 'Editing spend cut')}
+            ${pullStat('12-24hr', 'Turnaround locked')}
+            ${pullStat('One voice', 'Across every cut')}
+            ${btn(FLYLISTED_URL, 'Read the case study →')}
+            <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If your situation rhymes, my calendar: <a href="${REOPEN_URL}" style="color:#0d82b8;font-weight:600;">25-min follow-up</a>.</p>
+            <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
         `),
     }),
 
     day45: ({ firstName }) => ({
-        subject: "Checking in",
+        subject: "Six weeks later — anything shifted?",
         text:
 `Hey ${firstName},
 
-Quick check-in. It's been about six weeks since we talked. A few things might have shifted on your end:
+Last note from me, then I'll leave the inbox quiet.
 
-— Hiring pressure moved up the priority list
-— Margins got tighter (busy season pricing, freelancer rates climbing)
-— A team member left and you're not eager to replace locally
-— Or none of the above and life is great — in which case ignore this
+It's been about six weeks since we talked. Anything shifted on your end?
 
-If any of those are landing: ${REOPEN_URL}
+  · Hiring pressure climbed the priority list
+  · Margins got tighter (freelancer rates, busy-season pricing)
+  · A team member left and you're not eager to replace locally
+  · Or none of the above. In which case ignore this.
 
-Either way, the playbook is yours to keep: ${PLAYBOOK_URL}
+If any of those landed:
+${REOPEN_URL}
 
-— Paul`,
+Either way, the playbook is yours to keep:
+${PLAYBOOK_URL}
+
+Good luck with what you're building.
+
+Paul`,
         html: shellHTML(`
-            <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 14px 0;">Quick check-in. It's been about six weeks since we talked. A few things might have shifted on your end:</p>
-            <ul style="margin:0 0 14px 18px;padding:0;font-size:15px;line-height:1.6;color:#1a1a1a;">
-                <li>Hiring pressure moved up the priority list</li>
-                <li>Margins got tighter (busy season pricing, freelancer rates climbing)</li>
+            ${eyebrow('Last note')}
+            <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
+            <p style="margin:0 0 16px 0;">Last note from me, then I'll leave the inbox quiet.</p>
+            <p style="margin:0 0 14px 0;">It's been about six weeks since we talked. Anything shifted on your end?</p>
+            <ul style="margin:0 0 18px 22px;padding:0;font-size:15px;line-height:1.7;color:#444;">
+                <li>Hiring pressure climbed the priority list</li>
+                <li>Margins got tighter (freelancer rates, busy-season pricing)</li>
                 <li>A team member left and you're not eager to replace locally</li>
-                <li>Or none of the above and life is great. In which case ignore this.</li>
+                <li>Or none of the above. In which case ignore this.</li>
             </ul>
-            <p style="margin:14px 0 0 0;">If any of those are landing, the 25-minute call is still open:</p>
-            ${btn(REOPEN_URL, 'Book a follow-up call →')}
-            <p style="margin:14px 0 0 0;">Either way, <a href="${PLAYBOOK_URL}" style="color:#0c1118;">the playbook</a> is yours to keep.</p>
-            <p style="margin:18px 0 0 0;">— Paul</p>
+            <p style="margin:0 0 4px 0;">If any of those landed:</p>
+            ${btn(REOPEN_URL, 'Restart the conversation →')}
+            <p style="margin:18px 0 0 0;font-size:14px;color:#666;">Either way, <a href="${PLAYBOOK_URL}" style="color:#0d82b8;font-weight:600;">the playbook</a> is yours to keep. Good luck with what you're building.</p>
+            <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
         `, 'Last automated touch from this drip. You can unsubscribe by replying.'),
     }),
 };

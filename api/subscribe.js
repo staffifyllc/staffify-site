@@ -43,47 +43,75 @@ function isValidEmail(s) {
 function renderEmail(email) {
     const text = `Hey,
 
-Here's what you signed up for. Ten specific things to move off your plate this month, ordered by ROI. Hours saved. Dollar value reclaimed per category. What "done" actually looks like.
+The list is yours. Ten specific things to move off your plate this month, ordered by ROI. Hours saved per category. Dollar value reclaimed. What "done" actually looks like.
 
-Read it here: ${DELEGATE_URL}
+Read it here:
+${DELEGATE_URL}
 
-The short version: across all ten, the average founder we work with reclaims 30 to 50 hours per week within 60 days. At $150 to $300 per hour of founder time, that's $18,000 to $60,000 per month of opportunity cost recaptured. The delegated headcount typically runs $2,000 to $4,500 per role.
+The math:
 
-The math, even ungenerously, is 4 to 15x ROI in month one.
+  30-50 hrs/wk    reclaimed within 60 days (average)
+  $18-60K/mo      opportunity cost recaptured
+  $2-4.5K/mo      delegated headcount cost
+  4-15x           ROI in month one (ungenerously)
 
-The hard part isn't the math. It's picking which one to delegate first, finding the right person, and not blowing it on the handoff. That's what we do at Staffify.
+The hard part isn't the math. It's picking which delegation to start with, finding the right person, and not blowing it on the handoff.
 
-If you want a second pair of eyes on which delegation pays back fastest in your specific business, my calendar:
+That's what we do at Staffify.
 
+If you want a second pair of eyes on yours:
 ${CALENDLY_URL}
 
 Paul
 Founder, Staffify`;
 
     const html = `<!doctype html>
-<html><body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
-    <tr><td align="center" style="padding:32px 16px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;">
-        <tr><td style="padding:36px 36px 28px 36px;font-size:16px;line-height:1.6;color:#1a1a1a;">
-          <p style="margin:0 0 14px 0;">Hey,</p>
-          <p style="margin:0 0 14px 0;">Here's what you signed up for. <strong>Ten specific things to move off your plate this month, ordered by ROI.</strong> Hours saved. Dollar value reclaimed per category. What "done" actually looks like.</p>
-          <p style="margin:22px 0;">
-            <a href="${DELEGATE_URL}" style="display:inline-block;background:#0c1118;color:#ffffff;text-decoration:none;padding:14px 26px;border-radius:10px;font-weight:700;font-size:15px;">Read the list →</a>
-          </p>
-          <p style="margin:0 0 14px 0;"><strong>The short version:</strong> across all ten, the average founder we work with reclaims <strong>30 to 50 hours per week within 60 days</strong>. At $150 to $300 per hour of founder time, that's $18,000 to $60,000 per month of opportunity cost recaptured. The delegated headcount typically runs $2,000 to $4,500 per role.</p>
-          <p style="margin:0 0 14px 0;">The math, even ungenerously, is <strong>4 to 15x ROI in month one</strong>.</p>
-          <p style="margin:0 0 14px 0;">The hard part isn't the math. It's picking which one to delegate first, finding the right person, and not blowing it on the handoff. That's what we do at Staffify.</p>
-          <p style="margin:0 0 14px 0;">If you want a second pair of eyes on which delegation pays back fastest in your specific business:</p>
-          <p style="margin:0 0 22px 0;"><a href="${CALENDLY_URL}" style="color:#0c1118;font-weight:600;">Book a 25-min call →</a></p>
-          <p style="margin:0;">Paul<br><span style="color:#6b6b6b;">Founder, Staffify</span></p>
-        </td></tr>
-        <tr><td style="padding:18px 36px 28px 36px;border-top:1px solid #eee;font-size:12px;color:#888;line-height:1.5;">
-          You're receiving this because you requested the 30-Day ROI List at gostaffify.com. Reply with the word "stop" if you'd rather not get the follow-ups.
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
+<html><body style="margin:0;padding:0;background:#0d0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d0f14;">
+  <tr><td align="center" style="padding:40px 16px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;">
+      <tr><td style="padding:0 4px 18px 4px;text-align:left;">
+        <span style="font-size:18px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">Staffify</span><span style="display:inline-block;width:7px;height:7px;background:#1abde1;border-radius:50%;margin-left:6px;vertical-align:middle;box-shadow:0 0 12px rgba(26,189,225,0.7);"></span>
+      </td></tr>
+    </table>
+  </td></tr>
+  <tr><td align="center" style="padding:0 16px 32px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.4);">
+      <tr><td style="background:linear-gradient(90deg,#1abde1 0%,#0fa3c5 55%,#0d82b8 100%);height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="padding:42px 38px 30px 38px;font-size:16px;line-height:1.65;color:#1a1a1a;">
+        <p style="margin:0 0 14px 0;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#1abde1;">The 30-day ROI list</p>
+        <p style="margin:0 0 16px 0;">Hey,</p>
+        <p style="margin:0 0 16px 0;font-size:17px;font-weight:700;color:#0c1118;line-height:1.45;">The list is yours.</p>
+        <p style="margin:0 0 22px 0;color:#444;">Ten specific things to move off your plate this month, ordered by ROI. Hours saved per category. Dollar value reclaimed. What "done" actually looks like.</p>
+        <p style="margin:24px 0 16px 0;"><a href="${DELEGATE_URL}" style="display:inline-block;background:#1abde1;background-image:linear-gradient(180deg,#1abde1 0%,#0fa3c5 100%);color:#000000;text-decoration:none;padding:15px 30px;border-radius:999px;font-weight:800;font-size:14px;letter-spacing:0.02em;box-shadow:0 8px 24px rgba(26,189,225,0.35);">Read the list →</a></p>
+
+        <p style="margin:28px 0 12px 0;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#1abde1;">The math</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px 0;border-left:3px solid #1abde1;padding:8px 0 8px 18px;">
+          <tr><td style="font-size:24px;font-weight:900;color:#0c1118;letter-spacing:-0.02em;line-height:1;">30-50 hrs/wk</td></tr>
+          <tr><td style="font-size:12px;color:#666;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;padding-top:6px;">Reclaimed within 60 days</td></tr>
+        </table>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px 0;border-left:3px solid #1abde1;padding:8px 0 8px 18px;">
+          <tr><td style="font-size:24px;font-weight:900;color:#0c1118;letter-spacing:-0.02em;line-height:1;">$18-60K/mo</td></tr>
+          <tr><td style="font-size:12px;color:#666;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;padding-top:6px;">Opportunity cost recaptured</td></tr>
+        </table>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px 0;border-left:3px solid #1abde1;padding:8px 0 8px 18px;">
+          <tr><td style="font-size:24px;font-weight:900;color:#0c1118;letter-spacing:-0.02em;line-height:1;">4-15x</td></tr>
+          <tr><td style="font-size:12px;color:#666;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;padding-top:6px;">ROI in month one (ungenerously)</td></tr>
+        </table>
+
+        <p style="margin:0 0 14px 0;color:#444;">The hard part isn't the math. It's picking which delegation to start with, finding the right person, and not blowing it on the handoff.</p>
+        <p style="margin:0 0 20px 0;font-weight:700;color:#0c1118;">That's what we do at Staffify.</p>
+        <p style="margin:0 0 4px 0;font-size:14px;color:#666;">Second pair of eyes on yours?</p>
+        <p style="margin:0;"><a href="${CALENDLY_URL}" style="color:#0d82b8;font-weight:700;text-decoration:none;">Book a 25-min call →</a></p>
+        <p style="margin:24px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
+      </td></tr>
+      <tr><td style="padding:18px 38px 28px 38px;border-top:1px solid #eee;font-size:11px;color:#9aa3ad;line-height:1.55;text-align:center;letter-spacing:0.02em;">
+        You requested the 30-Day ROI List at gostaffify.com. Reply <strong>stop</strong> if you'd rather not get the follow-ups.
+      </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="height:40px;font-size:0;line-height:0;">&nbsp;</td></tr>
+</table>
 </body></html>`;
 
     return { text, html };
