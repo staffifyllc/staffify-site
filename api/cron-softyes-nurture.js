@@ -266,9 +266,9 @@ Founder, Staffify`,
         text:
 `Hey ${firstName},
 
-Last note from this sequence. You grabbed the list a few weeks back. I've sent a handful of emails. If nothing's landed, I'd rather not keep going.
+Quick last note before I quiet down.
 
-But if you're still in the same spot — running flat out, no leverage hire yet, knowing it's costing you — here's the door one more time:
+If you're still in the same spot — running flat out, no leverage hire yet, knowing it's costing you — the door's open one more time:
 
 ${BOOK_URL}
 
@@ -280,14 +280,14 @@ Either way, good luck with what you're building.
 Paul
 Founder, Staffify`,
         html: shellHTML(`
-            ${eyebrow('Last automated touch')}
+            ${eyebrow('One last thought')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 16px 0;color:#444;">Last note from this sequence. You grabbed the list a few weeks back. I've sent a handful of emails. If nothing's landed, I'd rather not keep going.</p>
-            <p style="margin:0 0 16px 0;">But if you're still in the same spot — <strong>running flat out, no leverage hire yet, knowing it's costing you</strong> — here's the door one more time:</p>
+            <p style="margin:0 0 16px 0;color:#444;">Quick last note before I quiet down.</p>
+            <p style="margin:0 0 16px 0;">If you're still in the same spot — <strong>running flat out, no leverage hire yet, knowing it's costing you</strong> — the door's open one more time:</p>
             ${btn(BOOK_URL, 'Book a 25-min call →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If you'd rather keep building it yourself, <a href="${DELEGATE_URL}" style="color:#0d82b8;font-weight:600;">the list</a> is yours to keep. Either way, good luck with what you're building.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `, 'Last automated touch from this sequence. Reply <strong>stop</strong> to be removed entirely.'),
+        `, "You requested the 30-Day ROI list at gostaffify.com. Reply <strong>stop</strong> to be removed."),
     }),
 };
 
