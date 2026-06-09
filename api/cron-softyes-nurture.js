@@ -266,7 +266,7 @@ Founder, Staffify`,
         text:
 `Hey ${firstName},
 
-Last note from this sequence. You grabbed the list six weeks back. I've sent a handful of emails. If nothing's landed, I'd rather not keep going.
+Last note from this sequence. You grabbed the list a few weeks back. I've sent a handful of emails. If nothing's landed, I'd rather not keep going.
 
 But if you're still in the same spot — running flat out, no leverage hire yet, knowing it's costing you — here's the door one more time:
 
@@ -282,7 +282,7 @@ Founder, Staffify`,
         html: shellHTML(`
             ${eyebrow('Last automated touch')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
-            <p style="margin:0 0 16px 0;color:#444;">Last note from this sequence. You grabbed the list six weeks back. I've sent a handful of emails. If nothing's landed, I'd rather not keep going.</p>
+            <p style="margin:0 0 16px 0;color:#444;">Last note from this sequence. You grabbed the list a few weeks back. I've sent a handful of emails. If nothing's landed, I'd rather not keep going.</p>
             <p style="margin:0 0 16px 0;">But if you're still in the same spot — <strong>running flat out, no leverage hire yet, knowing it's costing you</strong> — here's the door one more time:</p>
             ${btn(BOOK_URL, 'Book a 25-min call →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If you'd rather keep building it yourself, <a href="${DELEGATE_URL}" style="color:#0d82b8;font-weight:600;">the list</a> is yours to keep. Either way, good luck with what you're building.</p>
@@ -337,31 +337,35 @@ export default async function handler(req, res) {
                 const ageDays = (now - enrolledAt) / DAY;
                 const firstName = subscriber.first_name || (email.split('@')[0] || 'there');
 
-                if (ageDays >= 2 && !rec.day2_sent_at) {
+                // Weekly cadence: touches at day 7, 14, 21, 28, 35. The internal
+                // flag names (day2_sent_at, etc.) are kept for backwards-compat with
+                // existing Redis records. The "day" in the field name is the touch
+                // number, not the actual day count.
+                if (ageDays >= 7 && !rec.day2_sent_at) {
                     await sendViaResend({ to: email, ...TEMPLATES.day2({ firstName }) });
                     await redis.hset(`softyes:${email}`, { day2_sent_at: Date.now() });
                     result.day2_sent++;
                     continue;
                 }
-                if (ageDays >= 6 && !rec.day6_sent_at) {
+                if (ageDays >= 14 && !rec.day6_sent_at) {
                     await sendViaResend({ to: email, ...TEMPLATES.day6({ firstName }) });
                     await redis.hset(`softyes:${email}`, { day6_sent_at: Date.now() });
                     result.day6_sent++;
                     continue;
                 }
-                if (ageDays >= 12 && !rec.day12_sent_at) {
+                if (ageDays >= 21 && !rec.day12_sent_at) {
                     await sendViaResend({ to: email, ...TEMPLATES.day12({ firstName }) });
                     await redis.hset(`softyes:${email}`, { day12_sent_at: Date.now() });
                     result.day12_sent++;
                     continue;
                 }
-                if (ageDays >= 21 && !rec.day21_sent_at) {
+                if (ageDays >= 28 && !rec.day21_sent_at) {
                     await sendViaResend({ to: email, ...TEMPLATES.day21({ firstName }) });
                     await redis.hset(`softyes:${email}`, { day21_sent_at: Date.now() });
                     result.day21_sent++;
                     continue;
                 }
-                if (ageDays >= 45 && !rec.day45_sent_at) {
+                if (ageDays >= 35 && !rec.day45_sent_at) {
                     await sendViaResend({ to: email, ...TEMPLATES.day45({ firstName }) });
                     await redis.hset(`softyes:${email}`, { day45_sent_at: Date.now(), completed_at: Date.now() });
                     await redis.zrem('softyes:active', email);

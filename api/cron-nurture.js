@@ -162,13 +162,13 @@ Paul`,
     }),
 
     day45: ({ firstName }) => ({
-        subject: "Six weeks later — anything shifted?",
+        subject: "Anything shifted since we talked?",
         text:
 `Hey ${firstName},
 
 Last note from me, then I'll leave the inbox quiet.
 
-It's been about six weeks since we talked. Anything shifted on your end?
+It's been a few weeks since we talked. Anything shifted on your end?
 
   · Hiring pressure climbed the priority list
   · Margins got tighter (freelancer rates, busy-season pricing)
@@ -188,7 +188,7 @@ Paul`,
             ${eyebrow('Last note')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
             <p style="margin:0 0 16px 0;">Last note from me, then I'll leave the inbox quiet.</p>
-            <p style="margin:0 0 14px 0;">It's been about six weeks since we talked. Anything shifted on your end?</p>
+            <p style="margin:0 0 14px 0;">It's been a few weeks since we talked. Anything shifted on your end?</p>
             <ul style="margin:0 0 18px 22px;padding:0;font-size:15px;line-height:1.7;color:#444;">
                 <li>Hiring pressure climbed the priority list</li>
                 <li>Margins got tighter (freelancer rates, busy-season pricing)</li>
@@ -239,7 +239,10 @@ export default async function handler(req, res) {
                     continue;
                 }
 
-                if (ageDays >= 3 && !rec.day3_sent_at) {
+                // Weekly cadence: touches at day 7, 14, 21 (was day 3, 14, 45).
+                // Internal flag names kept for backwards-compat with existing
+                // Redis records.
+                if (ageDays >= 7 && !rec.day3_sent_at) {
                     await sendViaResend({ to: email, ...TEMPLATES.day3({ firstName }) });
                     await redis.hset(`nurture:${email}`, { day3_sent_at: Date.now() });
                     result.day3_sent++;
@@ -251,7 +254,7 @@ export default async function handler(req, res) {
                     result.day14_sent++;
                     continue;
                 }
-                if (ageDays >= 45 && !rec.day45_sent_at) {
+                if (ageDays >= 21 && !rec.day45_sent_at) {
                     await sendViaResend({ to: email, ...TEMPLATES.day45({ firstName }) });
                     await redis.hset(`nurture:${email}`, { day45_sent_at: Date.now() });
                     await redis.zrem('nurture:active', email);
