@@ -85,7 +85,7 @@ async function sendViaResend({ to, subject, html, text }) {
     }
 }
 
-const TEMPLATES = {
+export const TEMPLATES = {
     day3: ({ firstName }) => ({
         subject: "About our call — the playbook I mentioned",
         text:

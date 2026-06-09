@@ -40,7 +40,7 @@ function isValidEmail(s) {
     return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim()) && s.length < 254;
 }
 
-function renderEmail(email) {
+export function renderEmail(email) {
     const text = `Hey,
 
 The list is yours. Ten specific things to move off your plate this month, ordered by ROI. Hours saved per category. Dollar value reclaimed. What "done" actually looks like.

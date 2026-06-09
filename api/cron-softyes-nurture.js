@@ -90,7 +90,7 @@ async function sendViaResend({ to, subject, html, text }) {
     }
 }
 
-const TEMPLATES = {
+export const TEMPLATES = {
     day2: ({ firstName }) => ({
         subject: 'Start with inbox. Here\'s the math.',
         text:
