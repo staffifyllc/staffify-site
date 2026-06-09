@@ -307,7 +307,7 @@ export default async function handler(req, res) {
     const result = {
         processed: 0,
         day2_sent: 0, day6_sent: 0, day12_sent: 0, day21_sent: 0, day45_sent: 0,
-        graduated: 0, errors: 0,
+        graduated: 0, cycle_restarted: 0, errors: 0,
     };
 
     try {
@@ -333,9 +333,35 @@ export default async function handler(req, res) {
                     continue;
                 }
 
-                const enrolledAt = Number(rec.enrolled_at);
-                const ageDays = (now - enrolledAt) / DAY;
+                let enrolledAt = Number(rec.enrolled_at);
+                let ageDays = (now - enrolledAt) / DAY;
                 const firstName = subscriber.first_name || (email.split('@')[0] || 'there');
+
+                // ── COOLDOWN RE-LOOP ──
+                // After touch 5 we mark `cool_off_until = now + 30 days`. When the
+                // cron sees a subscriber whose cool_off_until is in the past, we
+                // reset the cycle: clear the touch flags, advance the cycle counter,
+                // rebase enrolled_at to NOW, and they restart from touch 1 in 7 days.
+                // No email this run. They get the loop going again on the next tick.
+                const coolOffUntil = Number(rec.cool_off_until || 0);
+                if (coolOffUntil && now >= coolOffUntil) {
+                    const newCycle = Number(rec.cycle || 1) + 1;
+                    await redis.hset(`softyes:${email}`, {
+                        enrolled_at: now,
+                        day2_sent_at: '',
+                        day6_sent_at: '',
+                        day12_sent_at: '',
+                        day21_sent_at: '',
+                        day45_sent_at: '',
+                        cool_off_until: '',
+                        completed_at: '',
+                        cycle: newCycle,
+                        last_cycle_started_at: now,
+                    });
+                    await redis.zadd('softyes:active', { score: now, member: email });
+                    result.cycle_restarted = (result.cycle_restarted || 0) + 1;
+                    continue;
+                }
 
                 // Weekly cadence: touches at day 7, 14, 21, 28, 35. The internal
                 // flag names (day2_sent_at, etc.) are kept for backwards-compat with
@@ -367,8 +393,16 @@ export default async function handler(req, res) {
                 }
                 if (ageDays >= 35 && !rec.day45_sent_at) {
                     await sendViaResend({ to: email, ...TEMPLATES.day45({ firstName }) });
-                    await redis.hset(`softyes:${email}`, { day45_sent_at: Date.now(), completed_at: Date.now() });
-                    await redis.zrem('softyes:active', email);
+                    // Touch 5 sent. Don't remove from softyes:active — instead set a
+                    // 30-day cooldown. After cool_off_until passes, the early
+                    // cooldown-check block above resets the cycle and the drip
+                    // restarts from touch 1 in another 7 days.
+                    const COOLDOWN_DAYS = 30;
+                    await redis.hset(`softyes:${email}`, {
+                        day45_sent_at: Date.now(),
+                        completed_at: Date.now(),
+                        cool_off_until: Date.now() + (COOLDOWN_DAYS * DAY),
+                    });
                     result.day45_sent++;
                 }
             } catch (err) {
