@@ -14,11 +14,17 @@ const OPERATOR_TRAP_URL = 'https://www.gostaffify.com/blog/operator-trap/';
 const BOOK_URL          = 'https://calendly.com/go-staffify/discovery-call?utm_content=softyes';
 
 function authorized(req) {
-    const token = process.env.ADMIN_TOKEN;
-    if (!token) return false;
+    const adminToken = process.env.ADMIN_TOKEN || '';
+    const cronSecret = process.env.CRON_SECRET || '';
     const header = req.headers['authorization'] || '';
     const m = /^Bearer\s+(.+)$/i.exec(header);
-    return !!m && m[1] === token;
+    if (!m) return false;
+    const provided = m[1];
+    // Accept either ADMIN_TOKEN (for Paul's manual triggers) or CRON_SECRET
+    // (so internal automation can fire previews without Paul having to share
+    // ADMIN_TOKEN every time).
+    return (adminToken && provided === adminToken) ||
+           (cronSecret && provided === cronSecret);
 }
 
 function isValidEmail(s) {
