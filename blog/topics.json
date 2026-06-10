@@ -163,7 +163,8 @@
         "service business hiring",
         "vetting candidates"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-06-10T17:26:18Z"
     },
     {
       "slug": "when-to-fire-a-client",
