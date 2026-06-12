@@ -175,7 +175,8 @@
         "client management",
         "service business boundaries"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-06-12T16:49:23Z"
     },
     {
       "slug": "minimum-viable-team",
