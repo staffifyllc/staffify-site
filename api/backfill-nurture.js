@@ -49,10 +49,17 @@ export default async function handler(req, res) {
     const enrolled = [];
     const already = [];
     const invalid = [];
+    const tombstoned = [];
 
     for (const entry of emails) {
         const email = String(entry.email || '').trim().toLowerCase();
         if (!isValidEmail(email)) { invalid.push(email); continue; }
+
+        // Tombstone gate — one-click unsubscribers stay off, even from bulk imports.
+        if (await redis.sismember('unsubscribed:set', email)) {
+            tombstoned.push(email);
+            continue;
+        }
 
         // Skip if already in nurture
         const existing = await redis.hget(`nurture:${email}`, 'enrolled_at');
@@ -83,6 +90,7 @@ export default async function handler(req, res) {
         scanned: emails.length,
         enrolled: enrolled.length,
         already_in_nurture: already.length,
+        tombstoned: tombstoned.length,
         invalid: invalid.length,
         sample_enrolled: enrolled.slice(0, 8),
         sample_already: already.slice(0, 5),

@@ -9,6 +9,7 @@
 //   FROM_EMAIL              — verified sender (e.g. "Staffify <hello@gostaffify.com>")
 
 import { Redis } from '@upstash/redis';
+import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
 
 // Vercel's Upstash integration injects KV_REST_API_URL / KV_REST_API_TOKEN.
 // Construct the client explicitly so it works without env var aliasing.
@@ -41,6 +42,7 @@ function isValidEmail(s) {
 }
 
 export function renderEmail(email) {
+    const unsubLink = email ? unsubscribeLink(email) : '';
     const text = `Hey,
 
 The list is yours. Ten specific things to move off your plate this month, ordered by ROI. Hours saved per category. Dollar value reclaimed. What "done" actually looks like.
@@ -63,7 +65,7 @@ If you want a second pair of eyes on yours:
 ${CALENDLY_URL}
 
 Paul
-Founder, Staffify`;
+Founder, Staffify${unsubLink ? `\n\n— Unsubscribe in one click: ${unsubLink}` : ''}`;
 
     const html = `<!doctype html>
 <html><body style="margin:0;padding:0;background:#0d0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
@@ -106,7 +108,8 @@ Founder, Staffify`;
         <p style="margin:24px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
       </td></tr>
       <tr><td style="padding:18px 38px 28px 38px;border-top:1px solid #eee;font-size:11px;color:#9aa3ad;line-height:1.55;text-align:center;letter-spacing:0.02em;">
-        You requested the 30-Day ROI List at gostaffify.com. Reply <strong>stop</strong> if you'd rather not get the follow-ups.
+        You requested the 30-Day ROI List at gostaffify.com.
+        ${unsubLink ? `<div style="margin-top:8px;"><a href="${unsubLink}" style="color:#9aa3ad;text-decoration:underline;">Unsubscribe in one click</a></div>` : ''}
       </td></tr>
     </table>
   </td></tr>
@@ -171,6 +174,14 @@ export default async function handler(req, res) {
             const count = await redis.incr(rlKey);
             if (count === 1) await redis.expire(rlKey, 3600);
             if (count > 10) return res.status(429).json({ error: 'rate_limited' });
+        }
+
+        // Tombstone gate. If they previously hit the one-click unsubscribe,
+        // honor it permanently — no welcome, no drip, no row. Return ok
+        // anyway so the frontend can't probe the unsubscribe list.
+        const tombstoned = await redis.sismember('unsubscribed:set', email);
+        if (tombstoned) {
+            return res.status(200).json({ ok: true, returning: false, suppressed: true });
         }
 
         // Has this email signed up before?

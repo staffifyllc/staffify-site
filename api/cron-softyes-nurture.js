@@ -6,6 +6,7 @@
 // Authorization: Bearer <CRON_SECRET> for manual triggers.
 
 import { Redis } from '@upstash/redis';
+import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -22,7 +23,11 @@ const BOOK_URL              = 'https://calendly.com/go-staffify/discovery-call?u
 // "Sexier" 2026 email shell. Matches cron-nurture.js — black band header
 // with Staffify wordmark + cyan dot, white card with cyan top accent,
 // glowing brand-cyan CTA button.
-function shellHTML(bodyHTML, footer) {
+function shellHTML(bodyHTML, footer, unsubLink) {
+    const footerText = footer || "You grabbed the 30-Day ROI list at gostaffify.com.";
+    const unsubRow = unsubLink
+        ? `<div style="margin-top:8px;"><a href="${unsubLink}" style="color:#9aa3ad;text-decoration:underline;">Unsubscribe in one click</a></div>`
+        : '';
     return `<!doctype html>
 <html><body style="margin:0;padding:0;background:#0d0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d0f14;">
@@ -38,7 +43,8 @@ function shellHTML(bodyHTML, footer) {
       <tr><td style="background:linear-gradient(90deg,#1abde1 0%,#0fa3c5 55%,#0d82b8 100%);height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>
       <tr><td style="padding:42px 38px 30px 38px;font-size:16px;line-height:1.65;color:#1a1a1a;">${bodyHTML}</td></tr>
       <tr><td style="padding:18px 38px 28px 38px;border-top:1px solid #eee;font-size:11px;color:#9aa3ad;line-height:1.55;text-align:center;letter-spacing:0.02em;">
-        ${footer || "You grabbed the 30-Day ROI list at gostaffify.com. Reply <strong>stop</strong> if you'd rather not get the rest."}
+        ${footerText}
+        ${unsubRow}
       </td></tr>
     </table>
   </td></tr>
@@ -90,10 +96,14 @@ async function sendViaResend({ to, subject, html, text }) {
     }
 }
 
+function withUnsubFooter(text, unsubLink) {
+    return unsubLink ? `${text}\n\n— Unsubscribe in one click: ${unsubLink}` : text;
+}
+
 export const TEMPLATES = {
-    day2: ({ firstName }) => ({
+    day2: ({ firstName, unsubLink }) => ({
         subject: 'Start with inbox. Here\'s the math.',
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 If the list landed, you're probably wondering which one to actually delegate first.
@@ -117,7 +127,7 @@ If you want a second pair of eyes on yours specifically:
 ${BOOK_URL}
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML(`
             ${eyebrow('The first delegation')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
@@ -136,12 +146,12 @@ Founder, Staffify`,
             ${btn(BOOK_URL, 'Book a 25-min call →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">Or skim the full breakdown: <a href="${DELEGATE_URL}" style="color:#0d82b8;font-weight:600;">the 30-day list</a>.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `),
+        `, null, unsubLink),
     }),
 
-    day6: ({ firstName }) => ({
+    day6: ({ firstName, unsubLink }) => ({
         subject: 'Why most first hires fail (and what works)',
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Most founders, when they finally decide to hire, hire the wrong person first. It almost always plays out the same way:
@@ -159,7 +169,7 @@ When you're ready to subtract the first job:
 ${BOOK_URL}
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML(`
             ${eyebrow('Most first hires fail')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
@@ -170,12 +180,12 @@ Founder, Staffify`,
             ${btn(OPERATOR_TRAP_URL, 'Read the full breakdown →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">When you're ready to subtract the first job: <a href="${BOOK_URL}" style="color:#0d82b8;font-weight:600;">25-minute call</a>.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `),
+        `, null, unsubLink),
     }),
 
-    day12: ({ firstName }) => ({
+    day12: ({ firstName, unsubLink }) => ({
         subject: '60% off editing. Same quality.',
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Real story.
@@ -200,7 +210,7 @@ If your volume is scaling faster than your bench:
 ${BOOK_URL}
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML(`
             ${eyebrow('A real customer story')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
@@ -218,12 +228,12 @@ Founder, Staffify`,
             ${btn(FLYLISTED_URL, 'Read the case study →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If your volume is scaling faster than your bench: <a href="${BOOK_URL}" style="color:#0d82b8;font-weight:600;">25-minute call</a>.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `),
+        `, null, unsubLink),
     }),
 
-    day21: ({ firstName }) => ({
+    day21: ({ firstName, unsubLink }) => ({
         subject: '60 founder-hours, gone. Here\'s where they went.',
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Different shape, same shock.
@@ -245,7 +255,7 @@ If your week looks like that:
 ${BOOK_URL}
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML(`
             ${eyebrow('60 hours back')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
@@ -258,12 +268,12 @@ Founder, Staffify`,
             ${btn(ADMIN_CASE_URL, 'Read the full breakdown →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If your week looks like that: <a href="${BOOK_URL}" style="color:#0d82b8;font-weight:600;">25-minute call</a>.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `),
+        `, null, unsubLink),
     }),
 
-    day45: ({ firstName }) => ({
+    day45: ({ firstName, unsubLink }) => ({
         subject: 'Last one. Then I\'m out.',
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Quick last note before I quiet down.
@@ -278,7 +288,7 @@ ${DELEGATE_URL}
 Either way, good luck with what you're building.
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML(`
             ${eyebrow('One last thought')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
@@ -287,7 +297,7 @@ Founder, Staffify`,
             ${btn(BOOK_URL, 'Book a 25-min call →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If you'd rather keep building it yourself, <a href="${DELEGATE_URL}" style="color:#0d82b8;font-weight:600;">the list</a> is yours to keep. Either way, good luck with what you're building.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `, "You requested the 30-Day ROI list at gostaffify.com. Reply <strong>stop</strong> to be removed."),
+        `, "You requested the 30-Day ROI list at gostaffify.com.", unsubLink),
     }),
 };
 
@@ -336,6 +346,7 @@ export default async function handler(req, res) {
                 let enrolledAt = Number(rec.enrolled_at);
                 let ageDays = (now - enrolledAt) / DAY;
                 const firstName = subscriber.first_name || (email.split('@')[0] || 'there');
+                const unsubLink = unsubscribeLink(email);
 
                 // ── COOLDOWN RE-LOOP ──
                 // After touch 5 we mark `cool_off_until = now + 30 days`. When the
@@ -368,31 +379,31 @@ export default async function handler(req, res) {
                 // existing Redis records. The "day" in the field name is the touch
                 // number, not the actual day count.
                 if (ageDays >= 7 && !rec.day2_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day2({ firstName }) });
+                    await sendViaResend({ to: email, ...TEMPLATES.day2({ firstName, unsubLink }) });
                     await redis.hset(`softyes:${email}`, { day2_sent_at: Date.now() });
                     result.day2_sent++;
                     continue;
                 }
                 if (ageDays >= 14 && !rec.day6_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day6({ firstName }) });
+                    await sendViaResend({ to: email, ...TEMPLATES.day6({ firstName, unsubLink }) });
                     await redis.hset(`softyes:${email}`, { day6_sent_at: Date.now() });
                     result.day6_sent++;
                     continue;
                 }
                 if (ageDays >= 21 && !rec.day12_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day12({ firstName }) });
+                    await sendViaResend({ to: email, ...TEMPLATES.day12({ firstName, unsubLink }) });
                     await redis.hset(`softyes:${email}`, { day12_sent_at: Date.now() });
                     result.day12_sent++;
                     continue;
                 }
                 if (ageDays >= 28 && !rec.day21_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day21({ firstName }) });
+                    await sendViaResend({ to: email, ...TEMPLATES.day21({ firstName, unsubLink }) });
                     await redis.hset(`softyes:${email}`, { day21_sent_at: Date.now() });
                     result.day21_sent++;
                     continue;
                 }
                 if (ageDays >= 35 && !rec.day45_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day45({ firstName }) });
+                    await sendViaResend({ to: email, ...TEMPLATES.day45({ firstName, unsubLink }) });
                     // Touch 5 sent. Don't remove from softyes:active — instead set a
                     // 30-day cooldown. After cool_off_until passes, the early
                     // cooldown-check block above resets the cycle and the drip

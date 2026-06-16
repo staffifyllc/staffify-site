@@ -14,6 +14,7 @@
 
 import { Redis } from '@upstash/redis';
 import crypto from 'node:crypto';
+import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -71,7 +72,10 @@ function normalizeRole(utm) {
 }
 
 // ─── Email templates (per role) ─────────────────────────────────
-function shellHTML({ subject, bodyHTML }) {
+function shellHTML({ subject, bodyHTML, unsubLink }) {
+    const unsubRow = unsubLink
+        ? `<div style="margin-top:8px;"><a href="${unsubLink}" style="color:#888;text-decoration:underline;">Unsubscribe in one click</a></div>`
+        : '';
     return `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
@@ -80,6 +84,7 @@ function shellHTML({ subject, bodyHTML }) {
       <tr><td style="padding:36px 36px 28px 36px;font-size:16px;line-height:1.55;color:#1a1a1a;">${bodyHTML}</td></tr>
       <tr><td style="padding:18px 36px 28px 36px;border-top:1px solid #eee;font-size:12px;color:#888;line-height:1.5;">
         You're receiving this because you booked a discovery call at gostaffify.com.
+        ${unsubRow}
       </td></tr>
     </table>
   </td></tr>
@@ -87,14 +92,18 @@ function shellHTML({ subject, bodyHTML }) {
 </body></html>`;
 }
 
+function withUnsubFooter(text, unsubLink) {
+    return unsubLink ? `${text}\n\n— Unsubscribe in one click: ${unsubLink}` : text;
+}
+
 function btn(href, label) {
     return `<p style="margin:18px 0;"><a href="${href}" style="display:inline-block;background:#0c1118;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:600;font-size:15px;">${label}</a></p>`;
 }
 
 const TEMPLATES = {
-    editors: ({ firstName }) => ({
+    editors: ({ firstName, unsubLink }) => ({
         subject: "Before our call: how Flylisted cut editing spend 60%",
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Saw you booked a call about video editing — looking forward to it.
@@ -108,9 +117,10 @@ It'll give us a head start on the call — you'll have a concrete model to react
 See you soon.
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML({
             subject: "Before our call: how Flylisted cut editing spend 60%",
+            unsubLink,
             bodyHTML: `
                 <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
                 <p style="margin:0 0 14px 0;">Saw you booked a call about video editing — looking forward to it.</p>
@@ -122,9 +132,9 @@ Founder, Staffify`,
         }),
     }),
 
-    admins: ({ firstName }) => ({
+    admins: ({ firstName, unsubLink }) => ({
         subject: "Before our call: the Operator Trap",
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Saw you booked a call about executive admin support — looking forward to it.
@@ -138,9 +148,10 @@ If you want a sharper sense of what to delegate vs keep, also worth a look: http
 Talk soon.
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML({
             subject: "Before our call: the Operator Trap",
+            unsubLink,
             bodyHTML: `
                 <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
                 <p style="margin:0 0 14px 0;">Saw you booked a call about executive admin support — looking forward to it.</p>
@@ -152,9 +163,9 @@ Founder, Staffify`,
         }),
     }),
 
-    csr: ({ firstName }) => ({
+    csr: ({ firstName, unsubLink }) => ({
         subject: "Before our call: when CSR makes sense",
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Saw you booked a call about customer service support — looking forward to it.
@@ -168,9 +179,10 @@ The CSR overview if you want the full picture: https://www.gostaffify.com/csr/
 Talk soon.
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML({
             subject: "Before our call: when CSR makes sense",
+            unsubLink,
             bodyHTML: `
                 <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
                 <p style="margin:0 0 14px 0;">Saw you booked a call about customer service support — looking forward to it.</p>
@@ -182,9 +194,9 @@ Founder, Staffify`,
         }),
     }),
 
-    sales: ({ firstName }) => ({
+    sales: ({ firstName, unsubLink }) => ({
         subject: "Before our call: the outbound stack",
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Saw you booked a call about sales / SDR support — looking forward to it.
@@ -198,9 +210,10 @@ If you want the why behind "intelligence + human" instead of pure automation, al
 Talk soon.
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML({
             subject: "Before our call: the outbound stack",
+            unsubLink,
             bodyHTML: `
                 <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
                 <p style="margin:0 0 14px 0;">Saw you booked a call about sales / SDR support — looking forward to it.</p>
@@ -212,9 +225,9 @@ Founder, Staffify`,
         }),
     }),
 
-    default: ({ firstName }) => ({
+    default: ({ firstName, unsubLink }) => ({
         subject: "Before our call: the Operator's Playbook",
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Saw you booked a call — looking forward to it.
@@ -226,9 +239,10 @@ Read it: https://www.gostaffify.com/playbook/
 Talk soon.
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML({
             subject: "Before our call: the Operator's Playbook",
+            unsubLink,
             bodyHTML: `
                 <p style="margin:0 0 14px 0;">Hey ${firstName},</p>
                 <p style="margin:0 0 14px 0;">Saw you booked a call — looking forward to it.</p>
@@ -296,15 +310,22 @@ export default async function handler(req, res) {
     const role = normalizeRole(utmContent);
     const builder = TEMPLATES[role] || TEMPLATES.default;
 
+    // Tombstone gate. If they previously hit one-click unsubscribe, don't send
+    // automated emails or enroll them in any drip. The booking itself still
+    // gets recorded so Paul can see they came back, but everything automated
+    // stays off.
+    const tombstoned = await redis.sismember('unsubscribed:set', email);
+
     // Idempotency: don't send the same role's email to the same person within 24h
     const dedupKey = `discovery:sent:${email}:${role}`;
     const already = await redis.get(dedupKey);
     const now = Date.now();
 
     let sent = false;
-    if (!already) {
+    if (!already && !tombstoned) {
         try {
-            const { subject, html, text } = builder({ firstName });
+            const unsubLink = unsubscribeLink(email);
+            const { subject, html, text } = builder({ firstName, unsubLink });
             await sendViaResend({ to: email, subject, html, text });
             await redis.set(dedupKey, now, { ex: 86400 });
             sent = true;

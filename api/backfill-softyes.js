@@ -47,6 +47,7 @@ export default async function handler(req, res) {
         skipped_decision_set: 0,
         skipped_disposition_pending: 0,
         skipped_calendly_source: 0,
+        skipped_tombstoned: 0,
         enrolled: 0,
         sample: [],
     };
@@ -59,6 +60,12 @@ export default async function handler(req, res) {
         for (let i = 0; i < toProcess.length; i++) {
             const email = toProcess[i];
             result.scanned++;
+
+            // Tombstone gate — one-click unsubscribers stay off.
+            if (await redis.sismember('unsubscribed:set', email)) {
+                result.skipped_tombstoned++;
+                continue;
+            }
 
             // Skip if already in softyes track
             const alreadyEnrolled = await redis.hget(`softyes:${email}`, 'enrolled_at');

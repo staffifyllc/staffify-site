@@ -2,6 +2,7 @@
 // Sends day-3, day-14, day-45 emails to prospects in nurture.
 
 import { Redis } from '@upstash/redis';
+import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -16,7 +17,11 @@ const REOPEN_URL = 'https://calendly.com/go-staffify/discovery-call?utm_content=
 // "Sexier" 2026 email shell. Black band header with Staffify wordmark +
 // cyan dot, white card body with cyan top accent strip, glowing brand-
 // cyan CTA. Designed to render correctly in Gmail / Apple Mail / Outlook.
-function shellHTML(bodyHTML, footer) {
+function shellHTML(bodyHTML, footer, unsubLink) {
+    const footerText = footer || "You're receiving this because we spoke about staffing recently.";
+    const unsubRow = unsubLink
+        ? `<div style="margin-top:8px;"><a href="${unsubLink}" style="color:#9aa3ad;text-decoration:underline;">Unsubscribe in one click</a></div>`
+        : '';
     return `<!doctype html>
 <html><body style="margin:0;padding:0;background:#0d0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d0f14;">
@@ -32,13 +37,18 @@ function shellHTML(bodyHTML, footer) {
       <tr><td style="background:linear-gradient(90deg,#1abde1 0%,#0fa3c5 55%,#0d82b8 100%);height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>
       <tr><td style="padding:42px 38px 30px 38px;font-size:16px;line-height:1.65;color:#1a1a1a;">${bodyHTML}</td></tr>
       <tr><td style="padding:18px 38px 28px 38px;border-top:1px solid #eee;font-size:11px;color:#9aa3ad;line-height:1.55;text-align:center;letter-spacing:0.02em;">
-        ${footer || "You're receiving this because we spoke about staffing recently. Reply <strong>stop</strong> if you'd rather not get the rest."}
+        ${footerText}
+        ${unsubRow}
       </td></tr>
     </table>
   </td></tr>
   <tr><td style="height:40px;font-size:0;line-height:0;">&nbsp;</td></tr>
 </table>
 </body></html>`;
+}
+
+function withUnsubFooter(text, unsubLink) {
+    return unsubLink ? `${text}\n\n— Unsubscribe in one click: ${unsubLink}` : text;
 }
 
 function btn(href, label) {
@@ -86,9 +96,9 @@ async function sendViaResend({ to, subject, html, text }) {
 }
 
 export const TEMPLATES = {
-    day3: ({ firstName }) => ({
+    day3: ({ firstName, unsubLink }) => ({
         subject: "About our call — the playbook I mentioned",
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Quick one. The playbook I mentioned on our call is yours:
@@ -103,7 +113,7 @@ If timing shifts on your end:
 ${REOPEN_URL}
 
 Paul
-Founder, Staffify`,
+Founder, Staffify`, unsubLink),
         html: shellHTML(`
             ${eyebrow('After our call')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
@@ -113,12 +123,12 @@ Founder, Staffify`,
             ${btn(PLAYBOOK_URL, 'Read the playbook →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If timing shifts on your end, <a href="${REOPEN_URL}" style="color:#0d82b8;font-weight:600;">grab 25 minutes here</a>.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `),
+        `, null, unsubLink),
     }),
 
-    day14: ({ firstName }) => ({
+    day14: ({ firstName, unsubLink }) => ({
         subject: "60% off editing. Same quality.",
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Real story.
@@ -140,7 +150,7 @@ Full breakdown: ${FLYLISTED_URL}
 If your situation rhymes:
 ${REOPEN_URL}
 
-Paul`,
+Paul`, unsubLink),
         html: shellHTML(`
             ${eyebrow('A real customer story')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
@@ -158,12 +168,12 @@ Paul`,
             ${btn(FLYLISTED_URL, 'Read the case study →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">If your situation rhymes, my calendar: <a href="${REOPEN_URL}" style="color:#0d82b8;font-weight:600;">25-min follow-up</a>.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `),
+        `, null, unsubLink),
     }),
 
-    day45: ({ firstName }) => ({
+    day45: ({ firstName, unsubLink }) => ({
         subject: "Anything shifted since we talked?",
-        text:
+        text: withUnsubFooter(
 `Hey ${firstName},
 
 Last note from me, then I'll leave the inbox quiet.
@@ -183,7 +193,7 @@ ${PLAYBOOK_URL}
 
 Good luck with what you're building.
 
-Paul`,
+Paul`, unsubLink),
         html: shellHTML(`
             ${eyebrow('Last note')}
             <p style="margin:0 0 16px 0;">Hey ${firstName},</p>
@@ -199,7 +209,7 @@ Paul`,
             ${btn(REOPEN_URL, 'Restart the conversation →')}
             <p style="margin:18px 0 0 0;font-size:14px;color:#666;">Either way, <a href="${PLAYBOOK_URL}" style="color:#0d82b8;font-weight:600;">the playbook</a> is yours to keep. Good luck with what you're building.</p>
             <p style="margin:22px 0 0 0;">Paul<br><span style="color:#888;font-size:14px;">Founder, Staffify</span></p>
-        `, 'Last automated touch from this drip. You can unsubscribe by replying.'),
+        `, "You're receiving this because we spoke about staffing recently.", unsubLink),
     }),
 };
 
@@ -231,6 +241,7 @@ export default async function handler(req, res) {
 
                 const subscriber = await redis.hgetall(`subscriber:${email}`);
                 const firstName = (subscriber && subscriber.first_name) || (email.split('@')[0] || 'there');
+                const unsubLink = unsubscribeLink(email);
 
                 // If they've since converted (e.g. booked again and we flipped to client), stop the drip
                 if (subscriber && subscriber.decision && subscriber.decision !== 'nope') {
@@ -243,19 +254,19 @@ export default async function handler(req, res) {
                 // Internal flag names kept for backwards-compat with existing
                 // Redis records.
                 if (ageDays >= 7 && !rec.day3_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day3({ firstName }) });
+                    await sendViaResend({ to: email, ...TEMPLATES.day3({ firstName, unsubLink }) });
                     await redis.hset(`nurture:${email}`, { day3_sent_at: Date.now() });
                     result.day3_sent++;
                     continue;
                 }
                 if (ageDays >= 14 && !rec.day14_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day14({ firstName }) });
+                    await sendViaResend({ to: email, ...TEMPLATES.day14({ firstName, unsubLink }) });
                     await redis.hset(`nurture:${email}`, { day14_sent_at: Date.now() });
                     result.day14_sent++;
                     continue;
                 }
                 if (ageDays >= 21 && !rec.day45_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day45({ firstName }) });
+                    await sendViaResend({ to: email, ...TEMPLATES.day45({ firstName, unsubLink }) });
                     await redis.hset(`nurture:${email}`, { day45_sent_at: Date.now() });
                     await redis.zrem('nurture:active', email);
                     result.day45_sent++;
