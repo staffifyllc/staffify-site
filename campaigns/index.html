@@ -3534,6 +3534,53 @@
 
         <div class="case-grid reveal">
 
+            <!-- Case Study 0 · Flylisted (named client, real numbers) -->
+            <div class="case-card" id="case-flylisted">
+                <div class="case-photo-wrap">
+                    <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&auto=format&fit=crop&q=70"
+                         srcset="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&auto=format&fit=crop&q=65 400w,
+                                 https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&auto=format&fit=crop&q=70 800w"
+                         sizes="(max-width: 768px) 100vw, 50vw"
+                         alt="Flylisted real estate marketing agency: years of manual outbound automated into $230K+ in 9 months with Staffify" loading="lazy" decoding="async" width="800" height="600">
+                    <div class="case-photo-overlay"></div>
+                    <div class="case-results-bar">
+                        <div class="crs">
+                            <div class="crs-n">$230K+</div>
+                            <div class="crs-l">New Revenue</div>
+                        </div>
+                        <div class="crs">
+                            <div class="crs-n">9 mo</div>
+                            <div class="crs-l">Compounding Pipeline</div>
+                        </div>
+                        <div class="crs">
+                            <div class="crs-n">0</div>
+                            <div class="crs-l">New Sales Hires</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="case-body">
+                    <div class="case-industry">Real Estate Marketing Agency</div>
+                    <div class="case-company">Flylisted</div>
+                    <div class="case-loc">Boston, MA &nbsp;·&nbsp; South Florida</div>
+                    <blockquote class="case-quote">
+                        "We had been doing outbound ourselves for years and getting incremental results. Staffify turned the entire top of the funnel into a system that ran without us. The conversations we actually want to be in started showing up in our inbox."
+                    </blockquote>
+                    <div class="case-author">
+                        <div class="case-av">FL</div>
+                        <div>
+                            <div class="case-aname">Flylisted Founders</div>
+                            <div class="case-atitle">Real estate marketing agency &middot; Boston / South FL</div>
+                        </div>
+                    </div>
+                    <div class="case-mets">
+                        <div class="cm"><span class="cm-v">Years</span><span class="cm-l">Of effort automated</span></div>
+                        <div class="cm"><span class="cm-v">$230K+</span><span class="cm-l">Net new revenue</span></div>
+                        <div class="cm"><span class="cm-v">9 mo</span><span class="cm-l">Window</span></div>
+                    </div>
+                    <a href="/case-studies/flylisted-outbound/" class="case-view-link" style="display:inline-block;margin-top:18px;padding:10px 20px;background:rgba(26,189,225,0.12);border:1px solid rgba(26,189,225,0.3);color:#1abde1;border-radius:980px;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.02em;transition:background .2s, border-color .2s;">View full case study →</a>
+                </div>
+            </div>
+
             <!-- Case Study 1 · Landscaping -->
             <div class="case-card">
                 <div class="case-photo-wrap">
@@ -3646,6 +3693,107 @@
                 <div class="ct-l">Average Client ROI</div>
             </div>
         </div>
+    </div>
+</section>
+
+<!-- ═══ FLYLISTED DEEP DIVE ═══ -->
+<section id="flylisted-deep-dive" class="flylisted-deep" aria-labelledby="flylisted-deep-heading" style="background:linear-gradient(180deg,rgba(26,189,225,0.04) 0%, rgba(0,0,0,0) 100%);padding:100px 32px 96px;">
+    <style>
+        .fld-inner { max-width: 1100px; margin: 0 auto; }
+        .fld-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: #1abde1; margin-bottom: 22px; }
+        .fld-title { font-size: clamp(34px, 4.8vw, 56px); font-weight: 900; letter-spacing: -0.025em; line-height: 1.06; color: #fff; margin-bottom: 22px; max-width: 880px; }
+        .fld-title em { font-style: normal; background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .fld-dek { font-size: 19px; line-height: 1.65; color: rgba(255,255,255,0.7); max-width: 720px; margin-bottom: 56px; }
+        .fld-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 64px; padding: 36px 0; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .fld-stat-n { font-size: clamp(28px, 3.6vw, 44px); font-weight: 900; letter-spacing: -0.03em; line-height: 1; background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .fld-stat-l { font-size: 12px; color: rgba(255,255,255,0.5); letter-spacing: 0.04em; margin-top: 10px; line-height: 1.45; max-width: 200px; }
+        .fld-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-bottom: 64px; }
+        .fld-col h3 { font-size: 13px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #1abde1; margin-bottom: 18px; }
+        .fld-col h4 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #fff; margin-bottom: 14px; line-height: 1.25; }
+        .fld-col p { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,0.65); margin-bottom: 14px; }
+        .fld-col ul { padding-left: 22px; margin-top: 12px; }
+        .fld-col li { font-size: 15px; line-height: 1.65; color: rgba(255,255,255,0.65); margin-bottom: 10px; }
+        .fld-col li strong { color: #fff; font-weight: 700; }
+        .fld-pullquote { background: rgba(26,189,225,0.06); border: 1px solid rgba(26,189,225,0.2); border-radius: 18px; padding: 44px 48px; margin: 56px 0; text-align: center; }
+        .fld-pullquote blockquote { font-family: 'Fraunces', Georgia, serif; font-size: clamp(22px, 2.5vw, 28px); font-weight: 500; line-height: 1.35; color: #fff; letter-spacing: -0.01em; max-width: 760px; margin: 0 auto 18px; }
+        .fld-pullquote blockquote::before { content: "\201C"; color: #1abde1; margin-right: 4px; }
+        .fld-pullquote blockquote::after  { content: "\201D"; color: #1abde1; margin-left: 4px; }
+        .fld-pullquote .fld-attrib { font-size: 13px; color: rgba(255,255,255,0.55); letter-spacing: 0.04em; }
+        .fld-pullquote .fld-attrib strong { color: #fff; font-weight: 700; }
+        .fld-cta { display: flex; align-items: center; justify-content: space-between; gap: 32px; background: #0d0d0d; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px 44px; flex-wrap: wrap; }
+        .fld-cta h4 { font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; letter-spacing: -0.02em; color: #fff; margin-bottom: 6px; }
+        .fld-cta p { font-size: 14px; color: rgba(255,255,255,0.55); max-width: 480px; }
+        .fld-view-btn { display: inline-block; flex-shrink: 0; background: #1abde1; color: #000; padding: 16px 30px; border-radius: 980px; font-size: 14px; font-weight: 700; text-decoration: none; letter-spacing: 0.02em; box-shadow: 0 0 32px rgba(26,189,225,0.25); transition: transform .2s, box-shadow .2s; }
+        .fld-view-btn:hover { transform: translateY(-1px); box-shadow: 0 0 48px rgba(26,189,225,0.45); }
+        @media (max-width: 900px) {
+            .fld-stats { grid-template-columns: repeat(2, 1fr); gap: 28px; }
+            .fld-grid { grid-template-columns: 1fr; gap: 36px; }
+            .fld-pullquote { padding: 32px 24px; }
+            .fld-cta { flex-direction: column; align-items: flex-start; padding: 32px 28px; }
+        }
+    </style>
+
+    <div class="fld-inner">
+
+        <div class="fld-eyebrow">Deep Dive · Named Client</div>
+        <h2 id="flylisted-deep-heading" class="fld-title">Years of sales effort, <em>automated</em>. $230K+ in new business across 9 months.</h2>
+        <p class="fld-dek">Flylisted runs real estate marketing in two of the most competitive media markets in the country: Boston and South Florida. Demand was never the problem. Getting in front of the right listing agents and team leads consistently, that was the problem. The founders had carried the entire top of the funnel themselves for years, between production deadlines. Then they handed it to Staffify.</p>
+
+        <div class="fld-stats" role="list">
+            <div role="listitem">
+                <div class="fld-stat-n">$230K+</div>
+                <div class="fld-stat-l">New business in 9 months from automated outbound</div>
+            </div>
+            <div role="listitem">
+                <div class="fld-stat-n">9 mo</div>
+                <div class="fld-stat-l">From first sequence to compounding pipeline</div>
+            </div>
+            <div role="listitem">
+                <div class="fld-stat-n">0</div>
+                <div class="fld-stat-l">Additional sales hires required</div>
+            </div>
+            <div role="listitem">
+                <div class="fld-stat-n">Years</div>
+                <div class="fld-stat-l">Of manual cold outreach, replaced</div>
+            </div>
+        </div>
+
+        <div class="fld-grid">
+            <div class="fld-col">
+                <h3>Before</h3>
+                <h4>Founder-carried outbound that broke every busy week.</h4>
+                <p>The sales motion ran the way most agency sales motions run for the first few years. Hand-built lists. Cold calls between client deliverables. LinkedIn messages drafted one at a time. Follow-ups on Post-it notes.</p>
+                <ul>
+                    <li><strong>Every outbound week reset.</strong> Lists went stale, follow-ups got skipped, and nothing accumulated.</li>
+                    <li><strong>Founders were the bottleneck.</strong> Busy production weeks killed outbound. Pipeline emptied 60 to 90 days later.</li>
+                    <li><strong>Hiring an SDR didn't pencil.</strong> $5,500 to $9,000 a month loaded for a US SDR was a non-starter at the agency's stage.</li>
+                </ul>
+            </div>
+            <div class="fld-col">
+                <h3>After</h3>
+                <h4>An outbound system that runs whether the founders are at a shoot or not.</h4>
+                <p>Staffify deployed verified prospect lists, multi-step sequenced cadences (day 3, day 7, day 14 follow-ups that actually go out), and reply-first routing that surfaces warm replies to the founders within hours.</p>
+                <ul>
+                    <li><strong>The volume job, automated.</strong> List building, deliverability, sequenced sending, follow-ups. The system runs whether anyone is at a desk.</li>
+                    <li><strong>The conversation job, human.</strong> Once a prospect replies with anything substantive, it lands in front of the founders fast. Time finally compounds.</li>
+                    <li><strong>The pipeline uncoupled from production.</strong> Busy shoot weeks no longer collapse the top of funnel.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="fld-pullquote">
+            <blockquote>We had been doing outbound ourselves for years and getting incremental results. Staffify turned the entire top of the funnel into a system that ran without us. The conversations we actually want to be in started showing up in our inbox, and the rest never landed on our plate.</blockquote>
+            <div class="fld-attrib"><strong>Flylisted</strong> &middot; Boston / South Florida</div>
+        </div>
+
+        <div class="fld-cta">
+            <div>
+                <h4>The full breakdown is online.</h4>
+                <p>Granular walkthrough: the setup, the cadence design, what the founders kept doing themselves, what the system absorbed, and how the math worked out month by month.</p>
+            </div>
+            <a href="/case-studies/flylisted-outbound/" class="fld-view-btn">View full case study →</a>
+        </div>
+
     </div>
 </section>
 
