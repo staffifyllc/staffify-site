@@ -234,43 +234,40 @@ input[type=submit][disabled] {
 ─────────────────────────────────────────────────────────────────── */
 .apply-hint {
     display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    align-items: baseline;
+    gap: 2px;
     margin-left: 8px;
     font-style: italic;
-    font-weight: 700;
-    font-size: 0.85em;
+    font-weight: 500;
+    font-size: 0.82em;
     letter-spacing: 0.01em;
     color: #1abde1;
-    vertical-align: middle;
-    transform: rotate(-3deg);
-    transform-origin: left center;
+    vertical-align: baseline;
     white-space: nowrap;
-    opacity: 0.95;
-    /* Subtle drop-shadow makes it feel "annotated" over the link */
-    text-shadow: 0 1px 0 rgba(0,0,0,0.18);
+    opacity: 0.88;
 }
+/* Hide the inline SVG arrow — was rendering as a janky scribble across the site.
+   We use a clean parenthetical clarifier instead: "Apply (for VAs)" */
 .apply-hint svg {
-    width: 24px;
-    height: 14px;
-    flex-shrink: 0;
-    color: #1abde1;
-    overflow: visible;
+    display: none;
 }
-/* Wobbly hand-drawn animation: arrow gently sways like an arrow drawn live */
-@keyframes apply-hint-wobble {
-    0%, 100% { transform: rotate(-3deg) translateY(0); }
-    50%      { transform: rotate(-1.5deg) translateY(-1px); }
+.apply-hint::before {
+    content: "(";
+    margin-right: 1px;
+    font-style: normal;
+    color: inherit;
+    opacity: 0.7;
 }
-.apply-hint {
-    animation: apply-hint-wobble 3.6s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-    .apply-hint { animation: none; }
+.apply-hint::after {
+    content: ")";
+    margin-left: 1px;
+    font-style: normal;
+    color: inherit;
+    opacity: 0.7;
 }
 /* In tight footer link rows, scale it down a touch */
 footer .apply-hint, .f-contact .apply-hint, .f-txt .apply-hint {
-    font-size: 0.80em;
+    font-size: 0.78em;
     margin-left: 6px;
 }
 
