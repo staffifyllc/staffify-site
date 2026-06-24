@@ -3777,7 +3777,7 @@
                 <li><span class="ck">✓</span> Live Multichannel Dashboard</li>
                 <li><span class="ck">✓</span> Unlimited Users</li>
             </ul>
-            <a href="https://buy.stripe.com/6oU8wQb5S4R9cq31a2fIs0G" class="pc-cta cta-s" target="_blank" rel="noopener noreferrer">Get Started →</a>
+            <a href="https://buy.stripe.com/6oU8wQb5S4R9cq31a2fIs0G" data-monthly-url="https://buy.stripe.com/6oU8wQb5S4R9cq31a2fIs0G" data-annual-url="https://buy.stripe.com/5kQ6oI1vi1EX4XB9GyfIs0J" class="pc-cta cta-s" target="_blank" rel="noopener noreferrer">Get Started →</a>
         </div>
 
         <!-- GROWTH -->
@@ -3810,7 +3810,7 @@
                 <li><span class="ck">✓</span> White-Glove Onboarding</li>
                 <li><span class="ck">✓</span> Assembly Support Hub</li>
             </ul>
-            <a href="https://buy.stripe.com/7sY3cw5LycjB4XB2e6fIs0H" class="pc-cta cta-g" target="_blank" rel="noopener noreferrer">Get Started →</a>
+            <a href="https://buy.stripe.com/7sY3cw5LycjB4XB2e6fIs0H" data-monthly-url="https://buy.stripe.com/7sY3cw5LycjB4XB2e6fIs0H" data-annual-url="https://buy.stripe.com/28E00k2zmcjB9dRbOGfIs0K" class="pc-cta cta-g" target="_blank" rel="noopener noreferrer">Get Started →</a>
         </div>
 
         <!-- SCALE -->
@@ -3842,7 +3842,7 @@
                 <li><span class="ckg">✓</span> White-Glove Onboarding</li>
                 <li><span class="ckg">✓</span> Assembly Support Hub</li>
             </ul>
-            <a href="https://buy.stripe.com/6oUfZi8XK3N575J9GyfIs0I" class="pc-cta cta-c" target="_blank" rel="noopener noreferrer">Get Started →</a>
+            <a href="https://buy.stripe.com/6oUfZi8XK3N575J9GyfIs0I" data-monthly-url="https://buy.stripe.com/6oUfZi8XK3N575J9GyfIs0I" data-annual-url="https://buy.stripe.com/9B628sfm85Vd75J1a2fIs0L" class="pc-cta cta-c" target="_blank" rel="noopener noreferrer">Get Started →</a>
         </div>
 
     </div>
@@ -4363,6 +4363,13 @@ function toggleBilling(el) {
     const isAnnual = el.classList.contains('annual');
     document.getElementById('lbl-m').classList.toggle('active', !isAnnual);
     document.getElementById('lbl-a').classList.toggle('active', isAnnual);
+
+    // Swap each Get Started CTA's href to the matching Stripe Payment Link
+    // (data-monthly-url and data-annual-url are set on each .pc-cta).
+    document.querySelectorAll('.pc-cta').forEach(cta => {
+        const next = isAnnual ? cta.dataset.annualUrl : cta.dataset.monthlyUrl;
+        if (next) cta.href = next;
+    });
 }
 
 /* ── SCROLL REVEAL ── */
