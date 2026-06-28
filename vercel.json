@@ -18,7 +18,7 @@
   ],
   "redirects": [
     {
-      "source": "/services",
+      "source": "/services/",
       "destination": "/",
       "permanent": true
     },
@@ -33,7 +33,7 @@
       "permanent": true
     },
     {
-      "source": "/videoeditors",
+      "source": "/videoeditors/",
       "destination": "/editors/",
       "permanent": true
     },
@@ -43,7 +43,7 @@
       "permanent": true
     },
     {
-      "source": "/aiagents",
+      "source": "/aiagents/",
       "destination": "/campaigns/",
       "permanent": true
     },
@@ -53,7 +53,7 @@
       "permanent": true
     },
     {
-      "source": "/post/generating-leads-by-creating-content",
+      "source": "/post/generating-leads-by-creating-content/",
       "destination": "/blog/lead-gen-vs-sales/",
       "permanent": true
     },
@@ -63,17 +63,17 @@
       "permanent": true
     },
     {
-      "source": "/sherrysoriano",
+      "source": "/sherrysoriano/",
       "destination": "/about/",
       "permanent": true
     },
     {
-      "source": "/fernaciagopabelonia",
+      "source": "/fernaciagopabelonia/",
       "destination": "/about/",
       "permanent": true
     },
     {
-      "source": "/edlengatchalian",
+      "source": "/edlengatchalian/",
       "destination": "/about/",
       "permanent": true
     }
