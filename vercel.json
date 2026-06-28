@@ -23,12 +23,12 @@
       "permanent": true
     },
     {
-      "source": "/services/:slug*",
+      "source": "/services/:slug+/",
       "destination": "/",
       "permanent": true
     },
     {
-      "source": "/service-page/:slug*",
+      "source": "/service-page/:slug+/",
       "destination": "/",
       "permanent": true
     },
@@ -38,7 +38,7 @@
       "permanent": true
     },
     {
-      "source": "/videoeditors/:slug*",
+      "source": "/videoeditors/:slug+/",
       "destination": "/editors/",
       "permanent": true
     },
@@ -48,7 +48,7 @@
       "permanent": true
     },
     {
-      "source": "/aiagents/:slug*",
+      "source": "/aiagents/:slug+/",
       "destination": "/campaigns/",
       "permanent": true
     },
@@ -58,7 +58,7 @@
       "permanent": true
     },
     {
-      "source": "/post/:slug*",
+      "source": "/post/:slug+/",
       "destination": "/blog/",
       "permanent": true
     },
