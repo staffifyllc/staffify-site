@@ -15,5 +15,67 @@
       "path": "/api/cron-softyes-nurture",
       "schedule": "20 14 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/services",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/services/:slug*",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/service-page/:slug*",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/videoeditors",
+      "destination": "/editors/",
+      "permanent": true
+    },
+    {
+      "source": "/videoeditors/:slug*",
+      "destination": "/editors/",
+      "permanent": true
+    },
+    {
+      "source": "/aiagents",
+      "destination": "/campaigns/",
+      "permanent": true
+    },
+    {
+      "source": "/aiagents/:slug*",
+      "destination": "/campaigns/",
+      "permanent": true
+    },
+    {
+      "source": "/post/generating-leads-by-creating-content",
+      "destination": "/blog/lead-gen-vs-sales/",
+      "permanent": true
+    },
+    {
+      "source": "/post/:slug*",
+      "destination": "/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/sherrysoriano",
+      "destination": "/about/",
+      "permanent": true
+    },
+    {
+      "source": "/fernaciagopabelonia",
+      "destination": "/about/",
+      "permanent": true
+    },
+    {
+      "source": "/edlengatchalian",
+      "destination": "/about/",
+      "permanent": true
+    }
   ]
 }
