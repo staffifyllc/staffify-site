@@ -199,7 +199,8 @@
         "business metrics",
         "vanity metrics"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-07-01T16:30:49Z"
     },
     {
       "slug": "specialists-vs-generalists",
