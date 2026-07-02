@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Staffify Works: Pricing, Process, and What You Actually Get | Staffify</title>
+    <meta name="description" content="The full Staffify process from first call to your VA's first task. Where the $2,499 onboarding fee goes, how hourly rates work, volume pricing for 3 or more hires, how we pay our people, how we stay in the process, and our lifetime replacement guarantee.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.gostaffify.com/how-it-works/">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/icon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/brand/icon-192.png">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8;
+            --paper: #fdfcf9; --ink: #14181f; --ink-soft: #3a4150; --ink-mute: #71798a;
+            --rule: rgba(20,24,31,0.08); --tint: #f4f1ea; --tint-2: #eae4d5;
+            --ok: #2f9d6b; --warn: #b8892b;
+        }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Fraunces', Georgia, serif; background: var(--paper); color: var(--ink); line-height: 1.7; font-size: 18px; -webkit-font-smoothing: antialiased; }
+        h1, h2, h3, h4, .ui { font-family: 'Inter', -apple-system, sans-serif; letter-spacing: -0.02em; }
+        .serif { font-family: 'Fraunces', Georgia, serif; }
+
+        .topbar { position: sticky; top: 0; z-index: 50; background: rgba(253,252,249,0.94); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; }
+        .topbar-brand { font-family: 'Inter', sans-serif; font-weight: 900; font-size: 18px; color: var(--ink); text-decoration: none; letter-spacing: -0.02em; }
+        .topbar-cta { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #fff; background: var(--ink); padding: 10px 20px; border-radius: 999px; text-decoration: none; }
+        .topbar-cta:hover { background: var(--c3); }
+
+        .page { max-width: 920px; margin: 0 auto; padding: 0 32px; }
+        .crumbs { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--ink-mute); letter-spacing: 0.04em; padding: 24px 0 0; }
+        .crumbs a { color: var(--ink-mute); text-decoration: none; }
+
+        .cover { padding: 56px 0 40px; }
+        .cover-eyebrow { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--c2); margin-bottom: 22px; }
+        .cover h1 { font-family: 'Fraunces', serif; font-size: clamp(38px, 6vw, 64px); font-weight: 700; line-height: 1.05; color: var(--ink); margin-bottom: 24px; }
+        .cover h1 em { font-style: italic; color: var(--c3); }
+        .cover-sub { font-size: 20px; color: var(--ink-soft); line-height: 1.55; margin-bottom: 32px; max-width: 720px; }
+        .cover-cta { display: inline-flex; gap: 12px; align-items: center; background: var(--ink); color: #fff; padding: 16px 28px; border-radius: 999px; text-decoration: none; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px; }
+        .cover-cta:hover { background: var(--c3); }
+
+        section { padding: 56px 0; border-top: 1px solid var(--rule); }
+        .eyebrow { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--c2); margin-bottom: 14px; }
+        h2 { font-family: 'Fraunces', serif; font-size: clamp(28px, 4vw, 40px); font-weight: 700; line-height: 1.15; margin-bottom: 16px; color: var(--ink); }
+        h2 em { font-style: italic; color: var(--c3); }
+        .lede { font-size: 19px; color: var(--ink-soft); margin-bottom: 32px; max-width: 720px; }
+        h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: var(--ink); margin: 24px 0 10px; }
+        p { color: var(--ink-soft); margin-bottom: 16px; }
+
+        .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 32px 0 0; }
+        @media (max-width: 720px) { .paths { grid-template-columns: 1fr; } }
+        .path { background: var(--tint); border-radius: 16px; padding: 28px 28px 24px; border: 2px solid transparent; }
+        .path.featured { border-color: var(--c); background: #fff; box-shadow: 0 12px 32px rgba(26,189,225,0.08); }
+        .path-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c2); margin-bottom: 8px; }
+        .path h3 { font-size: 24px; margin: 0 0 8px; }
+        .path .tag { display: inline-block; background: var(--c); color: #fff; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; margin-bottom: 14px; }
+        .price-block { margin: 18px 0 14px; padding: 16px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+        .price-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; }
+        .price-row .label { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--ink-mute); }
+        .price-row .amount { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: var(--ink); }
+        .price-row .amount.small { font-size: 20px; }
+        .price-row .amount .strike { text-decoration: line-through; color: var(--ink-mute); font-size: 16px; margin-right: 6px; }
+        .path .note { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--ink-mute); margin-top: 8px; }
+
+        .breakdown { background: var(--tint); border-radius: 16px; padding: 32px; margin-top: 24px; }
+        .breakdown-total { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 16px; border-bottom: 2px solid var(--ink); margin-bottom: 20px; }
+        .breakdown-total .label { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+        .breakdown-total .amount { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 700; color: var(--ink); }
+        .breakdown-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
+        .breakdown-row:last-child { border-bottom: none; }
+        .breakdown-row .desc { font-family: 'Inter', sans-serif; font-size: 15px; color: var(--ink-soft); }
+        .breakdown-row .desc strong { color: var(--ink); font-weight: 700; }
+        .breakdown-row .amt { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+
+        .hourly-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 24px; }
+        @media (max-width: 720px) { .hourly-grid { grid-template-columns: 1fr; } }
+        .hourly-card { background: var(--tint); border-radius: 14px; padding: 22px 24px; }
+        .hourly-card.mid { background: #fff; border: 2px solid var(--c); }
+        .hourly-tier { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--c2); margin-bottom: 8px; }
+        .hourly-price { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 700; color: var(--ink); line-height: 1; margin-bottom: 4px; }
+        .hourly-price .unit { font-size: 15px; color: var(--ink-mute); font-family: 'Inter', sans-serif; font-weight: 500; }
+        .hourly-card p { font-family: 'Inter', sans-serif; font-size: 14px; color: var(--ink-soft); margin: 8px 0 0; }
+
+        .compare-strip { background: var(--ink); color: #fff; border-radius: 14px; padding: 24px 28px; margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        @media (max-width: 720px) { .compare-strip { grid-template-columns: 1fr; } }
+        .compare-strip .box { text-align: center; }
+        .compare-strip .box .n { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; }
+        .compare-strip .box .n em { font-style: italic; color: var(--c); }
+        .compare-strip .box .l { font-family: 'Inter', sans-serif; font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 4px; letter-spacing: 0.06em; }
+
+        table.vol { width: 100%; margin-top: 20px; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.04); }
+        table.vol th { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; text-align: left; padding: 16px 20px; background: var(--tint); color: var(--ink); border-bottom: 2px solid var(--rule); }
+        table.vol th.num { text-align: right; }
+        table.vol td { padding: 16px 20px; font-family: 'Inter', sans-serif; font-size: 15px; color: var(--ink-soft); border-bottom: 1px solid var(--rule); }
+        table.vol td.num { text-align: right; font-family: 'Fraunces', serif; font-weight: 700; font-size: 18px; color: var(--ink); }
+        table.vol td.num.save { color: var(--ok); font-size: 14px; }
+        table.vol tr.hi td { background: rgba(26,189,225,0.06); }
+        table.vol tr:last-child td { border-bottom: none; }
+        @media (max-width: 600px) {
+            table.vol th, table.vol td { padding: 10px 12px; font-size: 13px; }
+            table.vol td.num { font-size: 15px; }
+        }
+
+        .steps { margin-top: 30px; }
+        .step { display: grid; grid-template-columns: 60px 1fr; gap: 20px; padding: 20px 0; border-top: 1px solid var(--rule); }
+        .step:first-child { border-top: none; }
+        .step-num { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 700; color: var(--c2); line-height: 1; font-style: italic; }
+        .step-body h4 { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+        .step-body p { font-family: 'Inter', sans-serif; font-size: 15px; margin-bottom: 0; }
+        .step-body .meta { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c2); margin-bottom: 4px; }
+
+        .infra-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+        @media (max-width: 720px) { .infra-grid { grid-template-columns: 1fr; } }
+        .infra { background: var(--tint); border-radius: 12px; padding: 22px 24px; }
+        .infra h4 { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+        .infra p { font-family: 'Inter', sans-serif; font-size: 14px; color: var(--ink-soft); margin: 0; }
+
+        .pay-card { background: var(--ink); color: #fff; border-radius: 16px; padding: 36px 32px; margin-top: 24px; }
+        .pay-card h3 { color: #fff; font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; margin-bottom: 12px; }
+        .pay-card p { color: rgba(255,255,255,0.82); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.7; margin-bottom: 14px; }
+        .pay-card p strong { color: var(--c); font-weight: 700; }
+        .pay-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.15); }
+        @media (max-width: 620px) { .pay-stats { grid-template-columns: 1fr; } }
+        .pay-stats .stat { text-align: center; }
+        .pay-stats .stat .n { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: var(--c); }
+        .pay-stats .stat .l { font-family: 'Inter', sans-serif; font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 4px; letter-spacing: 0.04em; }
+
+        .guarantee { background: #fff; border: 2px solid var(--c); border-radius: 16px; padding: 32px; margin-top: 24px; }
+        .guarantee-badge { display: inline-block; background: var(--c); color: #fff; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; padding: 6px 14px; border-radius: 999px; margin-bottom: 14px; }
+        .guarantee h3 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; margin-bottom: 12px; }
+        .guarantee p { font-family: 'Inter', sans-serif; font-size: 15px; }
+
+        .timeline { position: relative; margin-top: 30px; padding-left: 30px; }
+        .timeline::before { content: ''; position: absolute; left: 8px; top: 8px; bottom: 8px; width: 2px; background: var(--rule); }
+        .tl-item { position: relative; padding: 14px 0 14px 20px; }
+        .tl-item::before { content: ''; position: absolute; left: -30px; top: 20px; width: 16px; height: 16px; border-radius: 50%; background: var(--c); border: 3px solid var(--paper); box-shadow: 0 0 0 2px var(--c); }
+        .tl-day { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--c2); margin-bottom: 4px; }
+        .tl-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+        .tl-desc { font-family: 'Inter', sans-serif; font-size: 14px; color: var(--ink-soft); }
+
+        details { border-bottom: 1px solid var(--rule); padding: 20px 0; }
+        details summary { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--ink); cursor: pointer; list-style: none; position: relative; padding-right: 40px; }
+        details summary::-webkit-details-marker { display: none; }
+        details summary::after { content: '+'; position: absolute; right: 0; top: -4px; font-family: 'Inter', sans-serif; font-size: 30px; font-weight: 300; color: var(--c2); transition: transform 0.2s; line-height: 1; }
+        details[open] summary::after { content: '−'; }
+        details p { font-family: 'Inter', sans-serif; font-size: 15px; color: var(--ink-soft); margin-top: 14px; margin-bottom: 0; }
+
+        .final-cta { background: var(--ink); color: #fff; border-radius: 20px; padding: 56px 40px; margin: 40px 0 60px; text-align: center; }
+        .final-cta h2 { color: #fff; font-family: 'Fraunces', serif; font-size: clamp(30px, 4vw, 42px); margin-bottom: 16px; }
+        .final-cta h2 em { color: var(--c); font-style: italic; }
+        .final-cta p { color: rgba(255,255,255,0.75); font-family: 'Inter', sans-serif; font-size: 16px; max-width: 520px; margin: 0 auto 26px; }
+        .final-cta a { display: inline-flex; align-items: center; gap: 10px; background: var(--c); color: var(--ink); font-family: 'Inter', sans-serif; font-weight: 700; font-size: 16px; padding: 16px 30px; border-radius: 999px; text-decoration: none; }
+        .final-cta a:hover { background: #fff; }
+
+        footer { padding: 60px 32px 50px; text-align: center; font-family: 'Inter', sans-serif; font-size: 13px; color: var(--ink-mute); border-top: 1px solid var(--rule); }
+        footer a { color: var(--ink-soft); text-decoration: none; }
+        footer .row { margin-top: 8px; font-size: 11px; }
+
+        ul.check { list-style: none; margin: 12px 0; padding: 0; }
+        ul.check li { font-family: 'Inter', sans-serif; font-size: 15px; color: var(--ink-soft); padding: 6px 0 6px 26px; position: relative; }
+        ul.check li::before { content: '✓'; position: absolute; left: 0; top: 6px; color: var(--c2); font-weight: 700; }
+        ul.check.dark li { color: rgba(255,255,255,0.85); }
+        ul.check.dark li::before { color: var(--c); }
+
+        /* Intake form */
+        .intake-form { margin-top: 28px; }
+        .bubbles { display: grid; gap: 12px; margin-bottom: 32px; }
+        .bubble { position: relative; display: block; cursor: pointer; }
+        .bubble input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+        .bubble-inner { display: grid; grid-template-columns: 44px 1fr; grid-template-rows: auto auto; column-gap: 16px; background: var(--tint); border: 2px solid transparent; border-radius: 14px; padding: 20px 22px; transition: border-color .15s, background .15s, transform .1s; }
+        .bubble:hover .bubble-inner { background: var(--tint-2); }
+        .bubble input:checked ~ .bubble-inner { background: #fff; border-color: var(--c); box-shadow: 0 8px 24px rgba(26,189,225,0.12); }
+        .bubble input:focus-visible ~ .bubble-inner { outline: 2px solid var(--c2); outline-offset: 2px; }
+        .bubble-num { grid-row: 1 / 3; align-self: start; width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: #fff; font-family: 'Fraunces', serif; font-weight: 700; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+        .bubble input:checked ~ .bubble-inner .bubble-num { background: var(--c); color: var(--ink); }
+        .bubble-title { grid-column: 2; font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }
+        .bubble-desc { grid-column: 2; font-family: 'Inter', sans-serif; font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+
+        .intake-fields { display: none; background: var(--tint); border-radius: 16px; padding: 28px 28px 24px; }
+        .intake-fields.active { display: block; animation: fadeIn .25s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .intake-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 560px) { .intake-row { grid-template-columns: 1fr; } }
+        .intake-field { display: block; margin-bottom: 14px; }
+        .intake-field > span { display: block; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); margin-bottom: 6px; }
+        .intake-field > span em { font-style: normal; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--ink-mute); }
+        .intake-field input, .intake-field textarea { width: 100%; font-family: 'Inter', sans-serif; font-size: 15px; padding: 12px 14px; border: 1.5px solid var(--rule); border-radius: 10px; background: #fff; color: var(--ink); transition: border-color .15s; }
+        .intake-field input:focus, .intake-field textarea:focus { outline: none; border-color: var(--c); }
+        .intake-field textarea { resize: vertical; min-height: 80px; font-family: 'Inter', sans-serif; line-height: 1.5; }
+        .honeypot { position: absolute; left: -9999px; }
+        .intake-submit-row { display: flex; align-items: center; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+        .intake-submit { background: var(--ink); color: #fff; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 15px; padding: 14px 28px; border-radius: 999px; border: none; cursor: pointer; transition: background .15s; }
+        .intake-submit:hover:not(:disabled) { background: var(--c3); }
+        .intake-submit:disabled { opacity: 0.6; cursor: wait; }
+        .intake-hint { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--ink-mute); }
+        .intake-error { margin-top: 14px; padding: 12px 14px; background: #fef2f2; color: #991b1b; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; }
+
+        .intake-success { background: #fff; border: 2px solid var(--c); border-radius: 16px; padding: 32px; text-align: center; }
+        .intake-success h3 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+        .intake-success p { font-family: 'Inter', sans-serif; font-size: 15px; color: var(--ink-soft); margin-bottom: 22px; max-width: 480px; margin-left: auto; margin-right: auto; }
+        .intake-success .success-cta { display: inline-flex; gap: 10px; align-items: center; background: var(--c); color: var(--ink); font-family: 'Inter', sans-serif; font-weight: 700; font-size: 15px; padding: 14px 26px; border-radius: 999px; text-decoration: none; }
+        .intake-success .success-cta:hover { background: var(--ink); color: #fff; }
+        .intake-success .success-cta.secondary { background: var(--ink); color: #fff; }
+        .intake-success .success-cta.secondary:hover { background: var(--c); color: var(--ink); }
+        .intake-success .success-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    </style>
+    <link rel="stylesheet" href="/assets/css/ux.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<header class="topbar">
+    <a href="/" class="topbar-brand">Staffify</a>
+    <a href="https://calendly.com/go-staffify/discovery-call?utm_content=how-it-works" class="topbar-cta">Book a Strategy Call</a>
+</header>
+
+<main class="page" id="content">
+    <nav class="crumbs"><a href="/">Home</a> / How It Works</nav>
+
+    <section class="cover" style="border-top: none; padding-top: 40px;">
+        <div class="cover-eyebrow">The Full Process, Nothing Hidden</div>
+        <h1>Exactly what happens when you <em>hire with Staffify</em>.</h1>
+        <p class="cover-sub">From your first strategy call to your VA's first task, every dollar accounted for, every step laid out. If you have ever wondered where the onboarding fee goes or how we pick the top 1%, this page answers it.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=how-it-works-hero" class="cover-cta">Book a 25-minute strategy call →</a>
+    </section>
+
+    <section id="pricing">
+        <div class="eyebrow">Two Ways to Onboard</div>
+        <h2>Pick the path that <em>fits your cash</em>.</h2>
+        <p class="lede">Onboarding costs the same either way. You decide whether to pay it up front or roll it into your hourly rate. Both paths include the full sourcing, screening, training, and infrastructure build. Nothing is stripped.</p>
+
+        <div class="paths">
+            <div class="path featured">
+                <div class="path-label">Path A</div>
+                <h3>Pay Upfront</h3>
+                <span class="tag">Fastest Start</span>
+                <div class="price-block">
+                    <div class="price-row">
+                        <span class="label">Standard onboarding</span>
+                        <span class="amount">$2,499</span>
+                    </div>
+                    <div class="price-row">
+                        <span class="label">Action Taker (decide within 24h)</span>
+                        <span class="amount"><span class="strike">$2,499</span>$2,099</span>
+                    </div>
+                </div>
+                <p class="note">One-time. Covers everything below: ad spend, sourcing, screening, business analysis, platform training, ChatGPT bot build, resource library, Assembly HR+ integration, and job flow optimization.</p>
+            </div>
+            <div class="path">
+                <div class="path-label">Path B</div>
+                <h3>Roll It Into Your Rate</h3>
+                <span class="tag" style="background: var(--ink);">Zero Upfront</span>
+                <div class="price-block">
+                    <div class="price-row">
+                        <span class="label">+$1/hr for ~14 months</span>
+                        <span class="amount small">$0 today</span>
+                    </div>
+                    <div class="price-row">
+                        <span class="label">+$2/hr for ~7 months</span>
+                        <span class="amount small">$0 today</span>
+                    </div>
+                </div>
+                <p class="note">No interest. No fees. Your hourly rate carries $1 or $2 above base until the $2,499 is fully paid, then drops back to base. If you cancel before payoff, remaining balance is due. Pick the pace that fits your cash flow.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="breakdown">
+        <div class="eyebrow">Where Your Money Actually Goes</div>
+        <h2>The $2,499, <em>line by line</em>.</h2>
+        <p class="lede">Most agencies charge a placement fee and never tell you what it covers. Here is the honest breakdown of what you are paying for.</p>
+
+        <div class="breakdown">
+            <div class="breakdown-total">
+                <span class="label">Total Onboarding Investment</span>
+                <span class="amount">$2,499</span>
+            </div>
+            <div class="breakdown-row">
+                <div class="desc"><strong>Talent acquisition spend.</strong> Paid job posts on Indeed, JobStreet, OnlineJobs.ph, LinkedIn, and targeted Facebook and WhatsApp groups. This is the biggest single line item. Free posts pull the bottom of the market. Paid posts pull the top 1%.</div>
+                <div class="amt">$1,000</div>
+            </div>
+            <div class="breakdown-row">
+                <div class="desc"><strong>Recruiter time and screening.</strong> Our team reviews 150 to 250 applicants per role, runs first-round video interviews, checks references, and hands you three finalists we would hire ourselves.</div>
+                <div class="amt">$450</div>
+            </div>
+            <div class="breakdown-row">
+                <div class="desc"><strong>Strategy and business analysis call.</strong> 60 to 90 minutes with you to scope the role, map your tools, define success, and lock the first 30-day workload. This shapes the job description and the interview.</div>
+                <div class="amt">$300</div>
+            </div>
+            <div class="breakdown-row">
+                <div class="desc"><strong>Platform training and job flow build.</strong> We train your new hire on your specific stack, build the SOPs and job flow, and stress-test the workflow before day one so you are not paying to have someone learn on the job.</div>
+                <div class="amt">$400</div>
+            </div>
+            <div class="breakdown-row">
+                <div class="desc"><strong>Custom ChatGPT bot for the role.</strong> A role-specific assistant your VA can use as a second brain: knows your voice, your process, your escalation paths. Speeds them up from week one.</div>
+                <div class="amt">$150</div>
+            </div>
+            <div class="breakdown-row">
+                <div class="desc"><strong>Infrastructure setup.</strong> Assembly HR+ channel, Hubstaff time tracking, resource library access, weekly check-in cadence, and lifetime replacement guarantee provisioning.</div>
+                <div class="amt">$199</div>
+            </div>
+        </div>
+        <p style="margin-top: 20px; font-family: 'Inter', sans-serif; font-size: 14px; color: var(--ink-mute);">You could piece this together yourself for less. Most business owners try, spend three weeks doing it badly, and hand it to us anyway. This is what a done-right onboarding costs.</p>
+    </section>
+
+    <section id="hourly">
+        <div class="eyebrow">Ongoing Hourly Rate</div>
+        <h2>One inclusive rate. <em>No extras.</em></h2>
+        <p class="lede">After onboarding, you pay one hourly rate for your VA's time. Payroll, benefits, HR support, replacement guarantee, Hubstaff license, and ongoing training are all inside it. Average client cost is $12.50 an hour.</p>
+
+        <div class="hourly-grid">
+            <div class="hourly-card">
+                <div class="hourly-tier">C-List</div>
+                <div class="hourly-price">$11.25<span class="unit">/hr</span></div>
+                <p>Solid VA for well-scoped work. Inbox, calendar, data entry, list building, routine follow-ups.</p>
+            </div>
+            <div class="hourly-card mid">
+                <div class="hourly-tier">B-List · Most Common</div>
+                <div class="hourly-price">$12.50<span class="unit">/hr</span></div>
+                <p>Strong communicator, 3+ years experience, comfortable with judgment calls. This is where most Staffify placements land.</p>
+            </div>
+            <div class="hourly-card">
+                <div class="hourly-tier">A-List</div>
+                <div class="hourly-price">$13-$14<span class="unit">/hr</span></div>
+                <p>Senior operator. Runs projects end-to-end, manages other VAs, owns outcomes. For roles that need real ownership.</p>
+            </div>
+        </div>
+
+        <div class="compare-strip">
+            <div class="box">
+                <div class="n">$12.50<em>/hr</em></div>
+                <div class="l">Staffify (all-in)</div>
+            </div>
+            <div class="box">
+                <div class="n">$18-$25<em>/hr</em></div>
+                <div class="l">US VA services</div>
+            </div>
+            <div class="box">
+                <div class="n">$25-$40<em>/hr</em></div>
+                <div class="l">US employee (fully loaded)</div>
+            </div>
+        </div>
+        <p style="margin-top: 20px; font-family: 'Inter', sans-serif; font-size: 14px; color: var(--ink-mute);">40 hours a week at $12.50 is $2,167 a month. A US junior admin costs $4,500 to $6,500 a month after taxes, benefits, and software. Same output, different math.</p>
+    </section>
+
+    <section id="volume">
+        <div class="eyebrow">Economies of Scale</div>
+        <h2>Hiring three or more? <em>The math changes.</em></h2>
+        <p class="lede">Batch hires cost us less to source and onboard. We pass that back to you. Volume pricing kicks in at three hires and scales through ten plus. Same-role batches (multiple VAs for the same job) unlock further discounts inside consultation.</p>
+
+        <h3 style="margin-top: 24px;">Per-hire onboarding, by volume</h3>
+        <table class="vol">
+            <thead>
+                <tr>
+                    <th>Hires (same engagement)</th>
+                    <th class="num">Per-hire onboarding</th>
+                    <th class="num">You save per hire</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1 hire</td>
+                    <td class="num">$2,499</td>
+                    <td class="num save">—</td>
+                </tr>
+                <tr>
+                    <td>2 hires</td>
+                    <td class="num">$2,299</td>
+                    <td class="num save">$200</td>
+                </tr>
+                <tr class="hi">
+                    <td>3-4 hires</td>
+                    <td class="num">$2,099</td>
+                    <td class="num save">$400</td>
+                </tr>
+                <tr class="hi">
+                    <td>5-9 hires</td>
+                    <td class="num">$1,799</td>
+                    <td class="num save">$700</td>
+                </tr>
+                <tr class="hi">
+                    <td>10+ hires</td>
+                    <td class="num">$1,499</td>
+                    <td class="num save">$1,000</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="margin-top: 32px;">Same role bonus</h3>
+        <p>When you hire multiple VAs for the same role (a support team, a sales pod, three admins), we run one search, one screening pipeline, and one training track. That gets you an additional 5 to 10% off the per-hire number above. Confirmed on your strategy call once we scope the roles.</p>
+
+        <h3>Action Taker still applies</h3>
+        <p>Decide during your strategy call and confirm within 24 hours, and any volume tier drops another $200 per hire.</p>
+    </section>
+
+    <section id="review">
+        <div class="eyebrow">How We Pick the Top 1%</div>
+        <h2>The applicant review process, <em>step by step</em>.</h2>
+        <p class="lede">For every seat we fill, we look at 150 to 250 applicants. You see three. Here is how we cut the pool.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <div class="meta">Sourcing · Days 1-3</div>
+                    <h4>Post everywhere the top 1% actually reads.</h4>
+                    <p>Paid posts on Indeed, JobStreet, OnlineJobs.ph, and LinkedIn. Targeted outreach in curated Facebook and WhatsApp VA communities we have vetted over 5 years. This alone rules out 80% of what generic services get.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <div class="meta">Application Filter · Day 4</div>
+                    <h4>Written screen: can they think, can they write.</h4>
+                    <p>Applicants answer a 5-question written screen tailored to the role. We read every single answer. Bad grammar, generic responses, or copied AI answers get cut. Roughly 40% of applicants do not clear this bar.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <div class="meta">First Video · Days 5-8</div>
+                    <h4>15-minute video interview: how do they show up.</h4>
+                    <p>Camera on. Real conversation. We test articulation, English fluency, listening, and how they handle an unexpected question. Roughly 15% of the original pool makes it past this stage.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                    <div class="meta">Skills Test · Days 9-11</div>
+                    <h4>Paid test task on the actual work.</h4>
+                    <p>We give a paid 60 to 90-minute test task modeled on the real role. Tool use, judgment, communication back to us. We pay for the time either way. This is where most of the remaining pool falls off.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                    <div class="meta">Reference Check · Day 12</div>
+                    <h4>Two references, both called.</h4>
+                    <p>Not emailed. Called. We ask specific questions about how they handle stress, how they take feedback, and whether the reference would hire them again. If they hesitate, we move on.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">6</div>
+                <div class="step-body">
+                    <div class="meta">Your Interview · Days 13-15</div>
+                    <h4>Three finalists we would hire ourselves.</h4>
+                    <p>You interview three. We share our written notes on each, ranked. You pick. If none feel right, we go back and source more at no charge. We would rather delay a placement than rush a bad fit.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="infrastructure">
+        <div class="eyebrow">What We Build Around Them</div>
+        <h2>Great VAs still need <em>infrastructure</em>.</h2>
+        <p class="lede">Talent without a system is a lottery ticket. Here is what we set up before your VA's first day so they can actually succeed.</p>
+
+        <div class="infra-grid">
+            <div class="infra">
+                <h4>Custom SOPs and job flow</h4>
+                <p>We document the workflow before day one. Not a folder full of Loom videos. Real, structured SOPs your VA can execute from.</p>
+            </div>
+            <div class="infra">
+                <h4>Platform training</h4>
+                <p>Your specific stack. HubSpot, Clio, Kajabi, ClickUp, Gorgias, whatever you use. Trained on your setup, not the generic version.</p>
+            </div>
+            <div class="infra">
+                <h4>Custom ChatGPT bot</h4>
+                <p>A role-specific assistant that knows your voice, escalation paths, and process. Your VA uses it as a second brain from week one.</p>
+            </div>
+            <div class="infra">
+                <h4>Resource library</h4>
+                <p>Access to templates, scripts, playbooks, and micro-training built up over hundreds of placements. Not reinvented per client.</p>
+            </div>
+            <div class="infra">
+                <h4>Assembly HR+ integration</h4>
+                <p>Your VA, your Staffify HR contact, and you in one shared Assembly workspace. Questions get answered in minutes, not days.</p>
+            </div>
+            <div class="infra">
+                <h4>Hubstaff time tracking</h4>
+                <p>Screenshots every 10 minutes, activity level, URL and app tracking, timesheet approval. You see exactly what you are paying for.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="pay-vas">
+        <div class="eyebrow">How We Pay Our People</div>
+        <h2>We pay <em>above-market</em>, on purpose.</h2>
+        <p class="lede">Retention is the whole game. A VA who feels underpaid quits or coasts. A VA who is paid well above their local market stays for years and treats your business like their own.</p>
+
+        <div class="pay-card">
+            <h3>Above-market compensation, weekly pay</h3>
+            <p>Staffify VAs earn 1.5 to 2 times the average local rate for their skill level. Paid weekly, not every two weeks. Direct to their bank. No middleman deductions, no delays.</p>
+            <p>We also cover <strong>paid time off, health stipends, performance bonuses, and continuing education budgets</strong>. Not because it is required. Because it works. Our average tenure is over 3 years, in an industry where most VAs turn over in 12 to 18 months.</p>
+            <div class="pay-stats">
+                <div class="stat">
+                    <div class="n">1.5-2x</div>
+                    <div class="l">Above local market pay</div>
+                </div>
+                <div class="stat">
+                    <div class="n">Weekly</div>
+                    <div class="l">Direct-deposit pay cycle</div>
+                </div>
+                <div class="stat">
+                    <div class="n">3+ yrs</div>
+                    <div class="l">Average VA tenure</div>
+                </div>
+            </div>
+        </div>
+        <p style="margin-top: 20px; font-family: 'Inter', sans-serif; font-size: 14px; color: var(--ink-mute);">This is why our replacement rate is under 8% and our clients keep the same VA for years. You do not just get talent. You get talent that is motivated to stay.</p>
+    </section>
+
+    <section id="stay-in-process">
+        <div class="eyebrow">How We Stay In The Process</div>
+        <h2>Hire and forget is a lie. <em>We do not disappear.</em></h2>
+        <p class="lede">Most VA services hand you a person and vanish. We stay in the workflow so your VA succeeds and you do not become a full-time manager for them.</p>
+
+        <h3>Weekly Hubstaff review</h3>
+        <p>We pull Hubstaff activity every Monday. Not to spy. To catch drift early. If a VA is drifting off task or hitting a blocker, we see it before you do and step in.</p>
+
+        <h3>Bi-weekly 1:1 with your VA</h3>
+        <p>Your Staffify HR contact meets with your VA every two weeks. What is working, what is stuck, what needs escalation. You do not have to run this. We do.</p>
+
+        <h3>Monthly job flow optimization</h3>
+        <p>Once a month we look at what your VA is spending time on and ask: is this still the highest-leverage use of their hours? Roles evolve. We evolve them with you.</p>
+
+        <h3>Assembly HR+ channel, always on</h3>
+        <p>Question about hours, PTO, a tool, a task priority? Post in the shared Assembly workspace. Real human replies during business hours. No ticketing system, no email chain.</p>
+    </section>
+
+    <section id="guarantee">
+        <div class="eyebrow">The Backstop</div>
+        <h2>Our <em>lifetime replacement guarantee</em>.</h2>
+
+        <div class="guarantee">
+            <span class="guarantee-badge">Lifetime Replacement Guarantee</span>
+            <h3>If your VA does not work out, we replace them. At no additional charge. For the life of your engagement.</h3>
+            <p>No 30-day window. No "you have to prove it did not work" hoops. If the fit is wrong at month 2 or month 22, we source, screen, and place a replacement on our dime. We built this into the model because we know the alternative (you eat the loss) breaks trust. We would rather absorb the cost than break the relationship.</p>
+        </div>
+    </section>
+
+    <section id="timeline">
+        <div class="eyebrow">Day 0 to Day 30</div>
+        <h2>What the <em>first month</em> looks like.</h2>
+        <p class="lede">From the moment you say yes to your VA's first billable hour, here is the timeline.</p>
+
+        <div class="timeline">
+            <div class="tl-item">
+                <div class="tl-day">Day 0</div>
+                <div class="tl-title">Strategy Call</div>
+                <div class="tl-desc">60 to 90-minute business analysis. Scope the role, define success, map your tools. You leave with a written role charter.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-day">Days 1-3</div>
+                <div class="tl-title">Sourcing Live</div>
+                <div class="tl-desc">Paid job posts go live across our channels. Written screen goes out. Ad spend deployed. We start reviewing applicants same day.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-day">Days 4-11</div>
+                <div class="tl-title">Screening</div>
+                <div class="tl-desc">Written screens, video interviews, skills tests, reference calls. Roughly 200 applicants become 3 finalists.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-day">Days 12-15</div>
+                <div class="tl-title">Your Interviews</div>
+                <div class="tl-desc">You interview the top 3. Written notes and rankings from our team. You pick. Backup finalist on standby.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-day">Days 16-22</div>
+                <div class="tl-title">Onboarding + Training</div>
+                <div class="tl-desc">Platform training on your stack. SOPs written. ChatGPT bot built. Assembly HR+ channel opened. Hubstaff installed. First test tasks run.</div>
+            </div>
+            <div class="tl-item">
+                <div class="tl-day">Days 23-30</div>
+                <div class="tl-title">Ramp + First Wins</div>
+                <div class="tl-desc">Live work, ramp-up hours. Daily check-ins in week one, weekly by week four. Job flow optimization based on what you learn.</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq">
+        <div class="eyebrow">Common Objections</div>
+        <h2>Why not just hire from <em>Upwork or Fiverr</em>?</h2>
+        <p class="lede">Fair question. Here is what most people run into.</p>
+
+        <details>
+            <summary>Why can't I just post the job on Upwork or OnlineJobs.ph myself?</summary>
+            <p>You can. Most of our clients tried before they came to us. What you learn: the top 1% do not respond to generic posts. Ad spend is a moving target. Screening 200 applicants takes 40 to 60 hours of your time. Reference checks get skipped. You place someone who looks great, then quits at week 6. You start over. Our model exists because doing this well is genuinely full-time work.</p>
+        </details>
+        <details>
+            <summary>Why $2,499 when I could hire direct for $0 in placement fees?</summary>
+            <p>Because the $2,499 buys you a placement that lasts, backed by a lifetime replacement guarantee. A direct hire that quits at week 6 has cost you the recruiter time, the training time, and the opportunity cost of every week your work did not get done. If you value your time at $100 an hour and it takes 30 hours to source-screen-hire, you are already at $3,000 before software, ad spend, or the risk of a bad hire.</p>
+        </details>
+        <details>
+            <summary>What if I don't like the finalists?</summary>
+            <p>We source more. No additional charge. We would rather delay a week than place someone we would not hire ourselves. That is what "top 1%" has to mean or it does not mean anything.</p>
+        </details>
+        <details>
+            <summary>How fast can I have someone starting?</summary>
+            <p>Typical timeline is 21 days from strategy call to first day. Urgent needs can be compressed to 14 days if a strong candidate hits the pipeline early. We will tell you honestly if the timeline is unrealistic for the role.</p>
+        </details>
+        <details>
+            <summary>What if I need to hire more than one?</summary>
+            <p>Volume pricing kicks in at 3+ hires. Same-role batches (multiple VAs for the same role) get an additional 5 to 10% off inside consultation. Details in the volume pricing table above.</p>
+        </details>
+        <details>
+            <summary>Can I finance the onboarding fee if cash flow is tight?</summary>
+            <p>Yes. Path B rolls the $2,499 into your hourly rate as a $1 or $2 an hour markup until fully paid. No interest. No fees. Rate drops back to base once paid. Pick during your strategy call.</p>
+        </details>
+        <details>
+            <summary>What about time zones? My work is in US Eastern.</summary>
+            <p>Our VAs work your hours. Standard is 40 hours a week aligned to your time zone. Part-time and split shifts are supported.</p>
+        </details>
+        <details>
+            <summary>Do I own the relationship with the VA?</summary>
+            <p>Yes. Your VA is dedicated to you. Not shared, not pooled, not rotating. They message you directly, they know your business, they show up in your standup. Staffify sits behind them as HR + operations backstop.</p>
+        </details>
+        <details>
+            <summary>What if my VA quits?</summary>
+            <p>Our attrition rate is under 8% a year. If it happens, our lifetime replacement guarantee kicks in. We source, screen, and place at no charge. Typical replacement timeline is 14 days.</p>
+        </details>
+    </section>
+
+    <section id="get-started">
+        <div class="eyebrow">Ready to Move?</div>
+        <h2>What's your <em>next move</em>?</h2>
+        <p class="lede">Pick the option that fits, drop your info, and we take it from there. Human reply within 4 business hours.</p>
+
+        <form id="intake-form" class="intake-form" novalidate>
+            <div class="bubbles" role="radiogroup" aria-label="What do you want to do next?">
+                <label class="bubble">
+                    <input type="radio" name="intent" value="talk-first" required>
+                    <span class="bubble-inner">
+                        <span class="bubble-num">1</span>
+                        <span class="bubble-title">Talk it through first</span>
+                        <span class="bubble-desc">60 to 90 minute strategy call. Map the role, scope your tools, decide the path. No card needed.</span>
+                    </span>
+                </label>
+                <label class="bubble">
+                    <input type="radio" name="intent" value="ready-single" required>
+                    <span class="bubble-inner">
+                        <span class="bubble-num">2</span>
+                        <span class="bubble-title">Ready to start. One VA.</span>
+                        <span class="bubble-desc">I know what I need. Skip the wait. We reach out same day to confirm and get sourcing started.</span>
+                    </span>
+                </label>
+                <label class="bubble">
+                    <input type="radio" name="intent" value="volume" required>
+                    <span class="bubble-inner">
+                        <span class="bubble-num">3</span>
+                        <span class="bubble-title">Hiring 3 or more people</span>
+                        <span class="bubble-desc">Volume pricing conversation. Same-role batches unlock further discount.</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="intake-fields">
+                <div class="intake-row">
+                    <label class="intake-field">
+                        <span>Your name</span>
+                        <input type="text" name="name" required autocomplete="name">
+                    </label>
+                    <label class="intake-field">
+                        <span>Email</span>
+                        <input type="email" name="email" required autocomplete="email">
+                    </label>
+                </div>
+                <label class="intake-field">
+                    <span>Company or website <em>(optional)</em></span>
+                    <input type="text" name="company" autocomplete="organization">
+                </label>
+                <label class="intake-field">
+                    <span>Anything we should know? <em>(optional)</em></span>
+                    <textarea name="note" rows="3" placeholder="Role you're hiring for, timeline, biggest headache — whatever helps us come prepared."></textarea>
+                </label>
+
+                <input type="text" name="website" tabindex="-1" autocomplete="off" class="honeypot" aria-hidden="true">
+
+                <div class="intake-submit-row">
+                    <button type="submit" class="intake-submit">Send it →</button>
+                    <span class="intake-hint">We reply within 4 business hours.</span>
+                </div>
+                <div class="intake-error" id="intake-error" role="alert" hidden></div>
+            </div>
+
+            <div class="intake-success" id="intake-success" hidden></div>
+        </form>
+    </section>
+
+    <div class="final-cta">
+        <h2>Book a 25-minute strategy call. <em>See if we're a fit.</em></h2>
+        <p>No pitch deck. No pressure. Just a real conversation about what you need help with and whether we are the right build. If we are not, we will tell you.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=how-it-works-footer">Book Your Strategy Call →</a>
+    </div>
+</main>
+
+<footer>
+    <p>Built by <a href="/">Staffify</a> · More Done. Less Stress.</p>
+    <p class="row">© 2026 Staffify · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Why can't I just post the job on Upwork or OnlineJobs.ph myself?",
+      "acceptedAnswer": {"@type": "Answer", "text": "You can. Most of our clients tried before they came to us. The top 1% do not respond to generic posts. Screening 200 applicants takes 40 to 60 hours. Our model exists because doing this well is genuinely full-time work."}
+    },
+    {
+      "@type": "Question",
+      "name": "Why $2,499 when I could hire direct for $0 in placement fees?",
+      "acceptedAnswer": {"@type": "Answer", "text": "Because the $2,499 buys you a placement that lasts, backed by a lifetime replacement guarantee. A direct hire that quits at week 6 has already cost you more in recruiter time and opportunity cost."}
+    },
+    {
+      "@type": "Question",
+      "name": "How fast can I have someone starting?",
+      "acceptedAnswer": {"@type": "Answer", "text": "Typical timeline is 21 days from strategy call to first day. Urgent needs can be compressed to 14 days."}
+    },
+    {
+      "@type": "Question",
+      "name": "Can I finance the onboarding fee if cash flow is tight?",
+      "acceptedAnswer": {"@type": "Answer", "text": "Yes. Path B rolls the $2,499 into your hourly rate as a $1 or $2 an hour markup until fully paid. No interest. No fees. Rate drops back to base once paid."}
+    },
+    {
+      "@type": "Question",
+      "name": "What if my VA quits?",
+      "acceptedAnswer": {"@type": "Answer", "text": "Our attrition rate is under 8% a year. Our lifetime replacement guarantee covers replacements at no charge, for the life of your engagement."}
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": "Staffify Virtual Assistant Placement",
+  "provider": {"@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com"},
+  "description": "Full-service dedicated virtual assistant placement including sourcing, screening, training, ChatGPT bot build, Hubstaff time tracking, Assembly HR+ integration, and lifetime replacement guarantee.",
+  "offers": [
+    {"@type": "Offer", "name": "Standard Onboarding", "price": "2499", "priceCurrency": "USD"},
+    {"@type": "Offer", "name": "Action Taker Onboarding (24-hour decision)", "price": "2099", "priceCurrency": "USD"}
+  ]
+}
+</script>
+<script>
+(function () {
+    const form = document.getElementById('intake-form');
+    if (!form) return;
+    const fields = form.querySelector('.intake-fields');
+    const successBox = document.getElementById('intake-success');
+    const errorBox = document.getElementById('intake-error');
+    const submitBtn = form.querySelector('.intake-submit');
+
+    // Reveal fields when a bubble is picked
+    form.querySelectorAll('input[name="intent"]').forEach(el => {
+        el.addEventListener('change', () => {
+            fields.classList.add('active');
+            fields.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    });
+
+    // Post-submit success content by intent
+    const successByIntent = {
+        'talk-first': {
+            title: "Got it. Let's book that call.",
+            body: "We received your info. Pick a time on the calendar below and we will come prepared with a role scope draft based on what you shared.",
+            ctas: [
+                { label: 'Book your strategy call →', href: 'https://calendly.com/go-staffify/discovery-call?utm_content=how-it-works-intake-talk', primary: true },
+            ],
+        },
+        'ready-single': {
+            title: "Perfect. We are on it.",
+            body: "We will reach out today to confirm the role and get sourcing started. Watch your inbox in the next few hours. If you want to lock a specific time to walk through it, grab a slot below.",
+            ctas: [
+                { label: 'Grab a time on the calendar →', href: 'https://calendly.com/go-staffify/discovery-call?utm_content=how-it-works-intake-ready', primary: true },
+            ],
+        },
+        'volume': {
+            title: "Volume call incoming.",
+            body: "For 3+ hires we run a scoping call to structure the search and lock the discount tier. You will hear from us within 4 business hours to schedule.",
+            ctas: [
+                { label: 'Book the volume call →', href: 'https://calendly.com/go-staffify/discovery-call?utm_content=how-it-works-intake-volume&intent=volume', primary: true },
+            ],
+        },
+    };
+
+    function renderSuccess(intent) {
+        const cfg = successByIntent[intent] || successByIntent['talk-first'];
+        const ctasHtml = cfg.ctas.map(c =>
+            `<a class="success-cta ${c.primary ? '' : 'secondary'}" href="${c.href}">${c.label}</a>`
+        ).join('');
+        successBox.innerHTML = `
+            <h3>${cfg.title}</h3>
+            <p>${cfg.body}</p>
+            <div class="success-ctas">${ctasHtml}</div>
+        `;
+        successBox.hidden = false;
+        // Hide the bubbles and fields
+        form.querySelector('.bubbles').style.display = 'none';
+        fields.style.display = 'none';
+    }
+
+    function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.hidden = false;
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorBox.hidden = true;
+
+        const data = new FormData(form);
+        const payload = {
+            intent: data.get('intent'),
+            name: (data.get('name') || '').toString().trim(),
+            email: (data.get('email') || '').toString().trim(),
+            company: (data.get('company') || '').toString().trim(),
+            note: (data.get('note') || '').toString().trim(),
+            website: (data.get('website') || '').toString(),
+        };
+
+        if (!payload.intent) { showError('Pick one of the three options above.'); return; }
+        if (!payload.name) { showError('Your name, please.'); return; }
+        if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) { showError('That email looks off — double-check it.'); return; }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+
+        try {
+            const res = await fetch('/api/lead-intake', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                if (err.error === 'rate_limited') { showError('Too many submissions from this network. Try again in an hour, or email hello@gostaffify.com.'); }
+                else if (err.error === 'invalid_email') { showError('That email looks off — double-check it.'); }
+                else { showError('Something went wrong on our end. Please email hello@gostaffify.com and we will pick it up manually.'); }
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send it →';
+                return;
+            }
+            renderSuccess(payload.intent);
+        } catch (err) {
+            showError('Network hiccup. Please try again, or email hello@gostaffify.com directly.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send it →';
+        }
+    });
+})();
+</script>
+<script src="/assets/js/ux.js" defer></script>
+<!-- Vercel Web Analytics + Speed Insights (Pro plan, no cookies) -->
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
