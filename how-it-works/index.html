@@ -836,7 +836,7 @@
         submitBtn.textContent = 'Sending...';
 
         try {
-            const res = await fetch('/api/lead-intake', {
+            const res = await fetch('/api/lead-intake/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
