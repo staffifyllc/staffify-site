@@ -76,6 +76,126 @@
       "source": "/edlengatchalian/",
       "destination": "/about/",
       "permanent": true
+    },
+    {
+      "source": "/home/",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/main/",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/copy-of-:slug+/",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/blank/",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/blank-:slug+/",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/contact/",
+      "destination": "/about/",
+      "permanent": true
+    },
+    {
+      "source": "/contact-us/",
+      "destination": "/about/",
+      "permanent": true
+    },
+    {
+      "source": "/about-us/",
+      "destination": "/about/",
+      "permanent": true
+    },
+    {
+      "source": "/team/",
+      "destination": "/about/",
+      "permanent": true
+    },
+    {
+      "source": "/testimonials/",
+      "destination": "/case-studies/",
+      "permanent": true
+    },
+    {
+      "source": "/pricing/",
+      "destination": "/how-it-works/",
+      "permanent": true
+    },
+    {
+      "source": "/hourly-rates/",
+      "destination": "/how-it-works/",
+      "permanent": true
+    },
+    {
+      "source": "/faq/",
+      "destination": "/how-it-works/",
+      "permanent": true
+    },
+    {
+      "source": "/get-started/",
+      "destination": "/how-it-works/",
+      "permanent": true
+    },
+    {
+      "source": "/schedule/",
+      "destination": "/how-it-works/",
+      "permanent": true
+    },
+    {
+      "source": "/careers/",
+      "destination": "/apply/",
+      "permanent": true
+    },
+    {
+      "source": "/work-with-us/",
+      "destination": "/apply/",
+      "permanent": true
+    },
+    {
+      "source": "/hire/",
+      "destination": "/how-it-works/",
+      "permanent": true
+    },
+    {
+      "source": "/find-talent/",
+      "destination": "/how-it-works/",
+      "permanent": true
+    },
+    {
+      "source": "/staff/",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/virtual-assistants/",
+      "destination": "/admins/",
+      "permanent": true
+    },
+    {
+      "source": "/admin-support/",
+      "destination": "/admins/",
+      "permanent": true
+    },
+    {
+      "source": "/video-editors/",
+      "destination": "/editors/",
+      "permanent": true
+    },
+    {
+      "source": "/customer-service/",
+      "destination": "/csr/",
+      "permanent": true
     }
   ]
 }
