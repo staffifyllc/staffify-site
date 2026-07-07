@@ -197,10 +197,10 @@
                 <label class="field"><span>Email</span><input type="email" name="email" required autocomplete="email"></label>
             </div>
             <div class="frow2">
-                <label class="field"><span>Phone <em>(optional)</em></span><input type="tel" name="phone" autocomplete="tel"></label>
+                <label class="field"><span>Phone</span><input type="tel" name="phone" required autocomplete="tel"></label>
                 <label class="field"><span>Location + time zone</span><input type="text" name="location" required placeholder="e.g. Tampa, FL (ET)"></label>
             </div>
-            <label class="field"><span>LinkedIn or portfolio URL <em>(optional)</em></span><input type="url" name="linkedin" placeholder="https://linkedin.com/in/you"></label>
+            <label class="field"><span>LinkedIn or portfolio URL</span><input type="text" name="linkedin" required placeholder="linkedin.com/in/you"></label>
             <div class="frow2">
                 <label class="field"><span>Years of B2B sales experience</span>
                     <select name="experience" required>
@@ -223,7 +223,7 @@
             </div>
             <label class="field"><span>What have you sold, and to whom?</span><input type="text" name="sold" required placeholder="e.g. SaaS to agencies, insurance B2C, staffing to law firms"></label>
             <label class="field"><span>Your biggest sales win</span><textarea name="win" required placeholder="The deal you're proudest of. What it was, how you closed it, what it was worth. Specifics beat adjectives."></textarea></label>
-            <label class="field"><span>60-second video intro <em>(optional, but it moves you up the stack)</em></span><input type="url" name="video" placeholder="Loom / YouTube / Drive link"></label>
+            <label class="field"><span>60-second video intro <em>(Loom, YouTube, or Drive link. 60 seconds on your phone is fine.)</em></span><input type="text" name="video" required placeholder="loom.com/share/..."></label>
 
             <input type="text" name="website" tabindex="-1" autocomplete="off" class="honeypot" aria-hidden="true">
 
@@ -272,6 +272,9 @@
         if (!payload.availability) return showError('Select the hours per week you can commit.');
         if (!payload.sold) return showError('Tell us what you have sold.');
         if (!payload.win) return showError('Tell us about your biggest win — that field matters most.');
+        if (!payload.phone || payload.phone.replace(/\D/g, '').length < 7) return showError('A working phone number, please — the intro call happens on it.');
+        if (!payload.linkedin || !payload.linkedin.includes('.')) return showError('Your LinkedIn or portfolio URL — we check every one.');
+        if (!payload.video || !payload.video.includes('.')) return showError('The 60-second video is required. A phone selfie video on Loom or Drive works.');
 
         btn.disabled = true; btn.textContent = 'Submitting...';
         try {

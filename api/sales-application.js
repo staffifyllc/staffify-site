@@ -86,24 +86,34 @@ export default async function handler(req, res) {
     // Honeypot
     if (body.website) return res.status(200).json({ ok: true });
 
+    // Prepend https:// to bare URLs so pasted "linkedin.com/in/x" links stay clickable
+    const normalizeUrl = (s) => {
+        const v = (s || '').toString().trim().slice(0, 300);
+        if (!v) return '';
+        return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+    };
+
     const name = (body.name || '').toString().trim().slice(0, 120);
     const email = (body.email || '').toString().trim().toLowerCase();
     const phone = (body.phone || '').toString().trim().slice(0, 40);
     const location = (body.location || '').toString().trim().slice(0, 120);
-    const linkedin = (body.linkedin || '').toString().trim().slice(0, 300);
+    const linkedin = normalizeUrl(body.linkedin);
     const experience = (body.experience || '').toString().trim();
     const sold = (body.sold || '').toString().trim().slice(0, 500);
     const win = (body.win || '').toString().trim().slice(0, 3000);
     const availability = (body.availability || '').toString().trim();
-    const video = (body.video || '').toString().trim().slice(0, 300);
+    const video = normalizeUrl(body.video);
 
     if (!name) return res.status(400).json({ error: 'name_required' });
     if (!isValidEmail(email)) return res.status(400).json({ error: 'invalid_email' });
+    if (phone.replace(/\D/g, '').length < 7) return res.status(400).json({ error: 'phone_required' });
     if (!location) return res.status(400).json({ error: 'location_required' });
+    if (!linkedin || !linkedin.includes('.')) return res.status(400).json({ error: 'linkedin_required' });
     if (!EXPERIENCE_LEVELS.includes(experience)) return res.status(400).json({ error: 'invalid_experience' });
     if (!sold) return res.status(400).json({ error: 'sold_required' });
     if (!win) return res.status(400).json({ error: 'win_required' });
     if (!AVAILABILITY.includes(availability)) return res.status(400).json({ error: 'invalid_availability' });
+    if (!video || !video.includes('.')) return res.status(400).json({ error: 'video_required' });
 
     const now = Date.now();
     const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim();
