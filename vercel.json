@@ -201,11 +201,6 @@
       "source": "/assets/decks/staffify-pitch.pptx",
       "destination": "/assets/decks/staffify-pitch.pdf",
       "permanent": false
-    },
-    {
-      "source": "/pitch/",
-      "destination": "/assets/decks/staffify-pitch.pdf",
-      "permanent": false
     }
   ]
 }
