@@ -211,6 +211,25 @@
   .browser .burl { margin-left: 10px; flex: 1; background: rgba(255,255,255,0.055); border-radius: 999px; font-size: 11.5px; color: var(--muted); padding: 5px 14px; letter-spacing: 0.02em; }
   .browser img { display: block; width: 100%; }
 
+  /* ---------- live embed ---------- */
+  .cap-line { margin-top: 16px; font-size: 17px; line-height: 1.5; color: var(--muted); max-width: 900px; }
+  .cap-line b { color: var(--cyan); font-weight: 700; }
+  .embed-browser {
+    margin: 22px 56px 0; border-radius: 14px; overflow: hidden; position: relative; z-index: 2;
+    background: #0b0e12; border: 1px solid rgba(26,189,225,0.35);
+    box-shadow: 0 34px 90px rgba(0,0,0,0.65), 0 0 70px rgba(26,189,225,0.13);
+  }
+  .embed-browser .bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #10141a; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .embed-browser .bdot { width: 10px; height: 10px; border-radius: 50%; }
+  .embed-browser .burl { margin-left: 10px; flex: 1; background: rgba(255,255,255,0.055); border-radius: 999px; font-size: 12px; color: var(--muted); padding: 6px 16px; letter-spacing: 0.02em; }
+  .embed-browser .openx { margin-left: 12px; color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none; opacity: .85; white-space: nowrap; }
+  .embed-browser .openx:hover { opacity: 1; }
+  .embed-body { position: relative; height: 424px; background: #050507; }
+  .embed-body .poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+  .embed-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: none; background: #050507; }
+  .embed-body.live iframe { display: block; }
+  .embed-body.live .poster { opacity: 0; }
+
   /* ---------- math / comparison ---------- */
   .math-cards { display: flex; gap: 24px; margin: 42px 56px 0; align-items: stretch; position: relative; z-index: 2; }
   .mcard {
@@ -434,43 +453,25 @@
   <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
 </section>
 
-<!-- SLIDE 5 - MEET A REAL EDITOR -->
+<!-- SLIDE 5 - MEET A REAL EDITOR (LIVE EMBED) -->
 <section class="slide" id="s5">
   <div class="orb cyan" style="width:480px;height:480px;right:-160px;top:-170px;"></div>
   <div class="pad">
-    <div class="eyebrow anim" style="--d:.1s">Proof, Not Promises</div>
-    <h1 class="title anim" style="--d:.2s">Meet a real editor <span class="grad">on our roster</span>.</h1>
-    <div class="cam-cols">
-      <div class="cam-left">
-        <div class="cam-item anim" style="--d:.45s">
-          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div>Unedited intro video. You hear them <b>before</b> you meet them.</div>
-        </div>
-        <div class="cam-item anim" style="--d:.55s">
-          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div><b>5+ years</b>, real estate and YouTube. Premiere, After Effects, Photoshop.</div>
-        </div>
-        <div class="cam-item anim" style="--d:.65s">
-          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div>Full workstation and internet verified. Locked 40-hour schedule.</div>
-        </div>
-        <div class="cam-item anim" style="--d:.75s">
-          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div>Cleared a paid trial cut on real footage before we presented him.</div>
-        </div>
-        <div class="cam-note anim" style="--d:.85s">Your editor is matched to your brief, software, and hours. Same bar across the board.</div>
-      </div>
-      <div class="cam-right anim" style="--d:.5s">
-        <div class="browser">
-          <div class="bar">
-            <span class="bdot" style="background:#ff5f57"></span>
-            <span class="bdot" style="background:#febc2e"></span>
-            <span class="bdot" style="background:#28c840"></span>
-            <span class="burl">recruiting.gostaffify.com/editor-demo</span>
-          </div>
-          <img src="/assets/pitch/editor-julius.png" alt="Julius, a real editor on the Staffify roster">
-        </div>
-      </div>
+    <div class="eyebrow anim" style="--d:.1s">See A Real Editor, Live</div>
+    <h1 class="title anim" style="--d:.2s">Not a mockup. <span class="grad">The real page.</span></h1>
+    <div class="cap-line anim" style="--d:.32s">His unedited intro video, five gates of screening, the paid trial cut, and his full portfolio. <b>Scroll it live on the call.</b></div>
+  </div>
+  <div class="embed-browser anim" style="--d:.45s">
+    <div class="bar">
+      <span class="bdot" style="background:#ff5f57"></span>
+      <span class="bdot" style="background:#febc2e"></span>
+      <span class="bdot" style="background:#28c840"></span>
+      <span class="burl">recruiting.gostaffify.com/editor-demo</span>
+      <a class="openx" href="https://recruiting.gostaffify.com/editor-demo" target="_blank" rel="noopener">Open &#8599;</a>
+    </div>
+    <div class="embed-body" data-embed="https://recruiting.gostaffify.com/editor-demo">
+      <img class="poster" src="/assets/pitch/editor-demo-poster.png" alt="Live Staffify video editor demo page">
+      <iframe title="Staffify video editor demo" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
   </div>
   <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
@@ -627,6 +628,14 @@
   const count = nav.querySelector('.count');
 
   document.body.classList.add('present');
+
+  // Activate live embeds only in presentation mode (never in ?print/?only,
+  // which return early above so the PDF and per-slide QA keep the poster).
+  document.querySelectorAll('.embed-body[data-embed]').forEach(function (b) {
+    var f = b.querySelector('iframe');
+    if (f && !f.src) f.src = b.dataset.embed;
+    b.classList.add('live');
+  });
 
   let cur = Math.min(Math.max(parseInt(location.hash.slice(1), 10) || 1, 1), n) - 1;
 
