@@ -266,6 +266,25 @@
   .frow.last .fn, .frow.last .fl { color: #04222b; font-weight: 900; }
   .funnel-note { text-align: center; margin-top: 28px; font-size: 18px; font-style: italic; color: var(--muted); position: relative; z-index: 2; }
 
+
+  /* ---------- candidate proof ---------- */
+  .cam-cols { display: flex; gap: 46px; margin-top: 30px; align-items: flex-start; }
+  .cam-left { flex: 1; display: flex; flex-direction: column; gap: 22px; padding-top: 10px; }
+  .cam-item { display: flex; gap: 16px; align-items: flex-start; font-size: 18.5px; line-height: 1.45; font-weight: 500; }
+  .cam-item .check { margin-top: 2px; }
+  .cam-item b { color: var(--cyan); font-weight: 700; }
+  .cam-note { margin-top: 6px; font-size: 14.5px; color: var(--muted); font-style: italic; }
+  .cam-right { flex: 1.02; }
+  .browser {
+    border-radius: 14px; overflow: hidden; background: #0b0e12;
+    border: 1px solid rgba(26,189,225,0.35);
+    box-shadow: 0 34px 90px rgba(0,0,0,0.65), 0 0 70px rgba(26,189,225,0.13);
+  }
+  .browser .bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #10141a; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .browser .bdot { width: 10px; height: 10px; border-radius: 50%; }
+  .browser .burl { margin-left: 10px; flex: 1; background: rgba(255,255,255,0.055); border-radius: 999px; font-size: 11.5px; color: var(--muted); padding: 5px 14px; letter-spacing: 0.02em; }
+  .browser img { display: block; width: 100%; }
+
   /* ---------- pricing ---------- */
   .price-cards { display: flex; gap: 26px; margin: 38px 56px 0; position: relative; z-index: 2; }
   .pcard { flex: 1; border-radius: 22px; padding: 30px 34px; }
@@ -602,8 +621,51 @@
   <div class="foot"><img class="brand-logo" src="../assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
 </section>
 
-<!-- SLIDE 11 — PRICING -->
+
+<!-- SLIDE 11 — REAL CANDIDATE PROFILE -->
 <section class="slide" id="s11">
+  <div class="orb cyan" style="width:480px;height:480px;right:-160px;top:-170px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Proof, Not Promises</div>
+    <h1 class="title anim" style="--d:.2s">Every finalist arrives as a <span class="grad">full profile</span>.</h1>
+    <div class="cam-cols">
+      <div class="cam-left">
+        <div class="cam-item anim" style="--d:.45s">
+          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>Unscripted intro video. You hear them <b>before</b> you meet them.</div>
+        </div>
+        <div class="cam-item anim" style="--d:.55s">
+          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>AI-scored English assessment. Camille: <b>83/100</b>.</div>
+        </div>
+        <div class="cam-item anim" style="--d:.65s">
+          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>Workspace and internet verification. No surprises on day one.</div>
+        </div>
+        <div class="cam-item anim" style="--d:.75s">
+          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>Skills-tested on real tasks. Reference-checked by phone.</div>
+        </div>
+        <div class="cam-note anim" style="--d:.85s">This is a live profile, not a mockup. Every finalist you interview gets one.</div>
+      </div>
+      <div class="cam-right anim" style="--d:.5s">
+        <div class="browser">
+          <div class="bar">
+            <span class="bdot" style="background:#ff5f57"></span>
+            <span class="bdot" style="background:#febc2e"></span>
+            <span class="bdot" style="background:#28c840"></span>
+            <span class="burl">recruiting.gostaffify.com</span>
+          </div>
+          <img src="../assets/pitch/camille-lander.png" alt="Camille's live candidate profile">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="../assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 12 — PRICING -->
+<section class="slide" id="s12">
   <div class="orb cyan" style="width:500px;height:500px;right:-160px;bottom:-200px;"></div>
   <div class="pad">
     <div class="eyebrow anim" style="--d:.1s">Two Ways to Onboard</div>
@@ -629,8 +691,8 @@
   <div class="foot"><img class="brand-logo" src="../assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
 </section>
 
-<!-- SLIDE 12 — WHAT'S INCLUDED -->
-<section class="slide" id="s12">
+<!-- SLIDE 13 — WHAT'S INCLUDED -->
+<section class="slide" id="s13">
   <div class="orb blue" style="width:460px;height:460px;right:-150px;top:-170px;"></div>
   <div class="pad">
     <div class="eyebrow anim" style="--d:.1s">All In, Nothing Extra</div>
@@ -648,8 +710,8 @@
   <div class="foot"><img class="brand-logo" src="../assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
 </section>
 
-<!-- SLIDE 13 — GUARANTEES + CTA -->
-<section class="slide" id="s13">
+<!-- SLIDE 14 — GUARANTEES + CTA -->
+<section class="slide" id="s14">
   <div class="orb cyan" style="width:560px;height:560px;left:360px;bottom:-280px;"></div>
   <div class="pad">
     <div class="eyebrow anim" style="--d:.1s">Our Guarantees</div>
