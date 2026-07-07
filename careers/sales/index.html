@@ -253,6 +253,11 @@
     const successBox = document.getElementById('form-success');
     const btn = form.querySelector('.submit-btn');
 
+    if (localStorage.getItem('staffify_sales_applied')) {
+        form.hidden = true;
+        successBox.hidden = false;
+    }
+
     function showError(msg) { errorBox.textContent = msg; errorBox.hidden = false; }
 
     form.addEventListener('submit', async (e) => {
@@ -290,6 +295,7 @@
                 btn.disabled = false; btn.textContent = 'Submit application →';
                 return;
             }
+            try { localStorage.setItem('staffify_sales_applied', '1'); } catch {}
             form.hidden = true;
             successBox.hidden = false;
             successBox.scrollIntoView({ behavior: 'smooth', block: 'center' });

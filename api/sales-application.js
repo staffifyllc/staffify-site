@@ -128,6 +128,28 @@ export default async function handler(req, res) {
             if (count > 4) return res.status(429).json({ error: 'rate_limited' });
         }
 
+        // One application per email, ever. Backfill the dedupe set from
+        // existing records on first run, then silently swallow duplicates
+        // (200 ok, no record, no email) so repeat submitters learn nothing.
+        const emailSetSize = await redis.scard('salesapps:emails');
+        if (!emailSetSize) {
+            const existing = await redis.zrange('salesapps:by_date', 0, -1);
+            for (const id of existing) {
+                const parts = String(id).split(':');
+                if (parts.length >= 3) await redis.sadd('salesapps:emails', parts.slice(2).join(':'));
+            }
+        }
+        const isDupeEmail = await redis.sismember('salesapps:emails', email);
+        if (isDupeEmail) return res.status(200).json({ ok: true });
+
+        // Lifetime cap per IP (no expiry): 3 submissions, then silent swallow
+        if (ip) {
+            const lifeCount = await redis.incr(`salesapps:ipcount:${ip}`);
+            if (lifeCount > 3) return res.status(200).json({ ok: true });
+        }
+
+        await redis.sadd('salesapps:emails', email);
+
         const appId = `salesapp:${now}:${email}`;
         await redis.hset(appId, {
             name, email, phone, location, linkedin, experience, sold, win, availability, video,
