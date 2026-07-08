@@ -211,7 +211,8 @@
         "first hires",
         "small business staffing"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-07-08T16:04:56Z"
     },
     {
       "slug": "outsource-or-hire",

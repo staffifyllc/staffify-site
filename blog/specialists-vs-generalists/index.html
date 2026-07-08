@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Specialists or Generalists? How to Staff Your First Five Roles | Staffify Blog</title>
+    <meta name="description" content="The specialist vs generalist debate gets messy fast when you're making your first hires. Here's a framework that actually works under $5M in revenue.">
+    <link rel="canonical" href="https://www.gostaffify.com/blog/specialists-vs-generalists/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.gostaffify.com/blog/specialists-vs-generalists/">
+    <meta property="og:title" content="Specialists or Generalists? How to Staff Your First Five Roles">
+    <meta property="og:description" content="The specialist vs generalist debate gets messy fast when you're making your first hires. Here's a framework that actually works under $5M in revenue.">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="article:published_time" content="2026-07-08T16:04:56Z">
+    <meta property="article:author" content="Staffify">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Specialists or Generalists? How to Staff Your First Five Roles">
+    <meta name="twitter:description" content="The specialist vs generalist debate gets messy fast when you're making your first hires. Here's a framework that actually works under $5M in revenue.">
+
+    <!-- Schema.org Article -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "Specialists or Generalists? How to Staff Your First Five Roles",
+      "description": "The specialist vs generalist debate gets messy fast when you're making your first hires. Here's a framework that actually works under $5M in revenue.",
+      "datePublished": "2026-07-08T16:04:56Z",
+      "author": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "publisher": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://www.gostaffify.com/blog/specialists-vs-generalists/" }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* POST HEADER */
+        .post-header {
+            padding: 140px 24px 60px;
+            max-width: 760px; margin: 0 auto;
+            text-align: left;
+            border-bottom: 1px solid var(--divider);
+        }
+        .post-meta-top {
+            display: flex; gap: 16px; align-items: center;
+            font-size: 12px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+            margin-bottom: 32px;
+        }
+        .post-meta-top .crumb { color: var(--c); }
+        .post-meta-top .sep { opacity: 0.4; }
+        .post-title {
+            font-size: clamp(34px, 5vw, 56px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08; margin-bottom: 28px;
+            color: var(--white);
+        }
+        .post-dek {
+            font-size: 19px; line-height: 1.6;
+            color: rgba(255,255,255,0.65);
+            max-width: 640px; font-weight: 400;
+            margin-bottom: 36px;
+        }
+        .post-byline {
+            display: flex; gap: 24px; align-items: center;
+            font-size: 13px; color: var(--muted);
+            padding-top: 24px;
+        }
+        .post-byline strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ARTICLE BODY */
+        article {
+            max-width: 720px; margin: 0 auto;
+            padding: 64px 24px 80px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 19px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article p { margin-bottom: 28px; }
+        article h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(26px, 3.5vw, 34px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 56px 0 20px;
+            line-height: 1.2;
+        }
+        article h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+            color: var(--white);
+            margin: 40px 0 14px; line-height: 1.3;
+        }
+        article ul, article ol { margin: 0 0 28px; padding-left: 28px; }
+        article li { margin-bottom: 10px; }
+        article a { color: var(--c); text-decoration: none; border-bottom: 1px solid rgba(26,189,225,0.3); transition: border-color .2s; }
+        article a:hover { border-bottom-color: var(--c); }
+        article strong { color: var(--white); font-weight: 700; }
+        article em { color: rgba(255,255,255,0.7); }
+        article blockquote {
+            border-left: 3px solid var(--c);
+            padding: 8px 24px;
+            margin: 32px 0;
+            font-style: italic;
+            color: rgba(255,255,255,0.7);
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 8px 8px 0;
+        }
+        article hr {
+            border: none;
+            border-top: 1px solid var(--divider);
+            margin: 56px 0;
+        }
+        article code {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.9em;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--c);
+        }
+
+        /* CTA at end of post */
+        .post-cta {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+        .post-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 44px 40px;
+            text-align: left;
+        }
+        .post-cta-eyebrow {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--c);
+            margin-bottom: 16px;
+        }
+        .post-cta-title {
+            font-size: 26px; font-weight: 800;
+            letter-spacing: -0.02em; line-height: 1.2;
+            color: var(--white); margin-bottom: 14px;
+        }
+        .post-cta-body {
+            font-size: 15px; line-height: 1.65;
+            color: var(--muted); margin-bottom: 24px;
+            max-width: 540px;
+        }
+        .post-cta-btn {
+            display: inline-block;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 980px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .post-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* BACK TO BLOG */
+        .post-foot {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 60px;
+            text-align: center;
+        }
+        .post-foot a {
+            color: var(--muted); text-decoration: none;
+            font-size: 13px; font-weight: 500;
+            transition: color .2s;
+        }
+        .post-foot a:hover { color: var(--white); }
+
+        /* FOOTER */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 13px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 12px; color: var(--subtle);
+        }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .post-header { padding-top: 110px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    
+        /* ─── MOBILE NAV (hamburger + drawer) ────────────────── */
+        .nav-hamburger {
+            display: none;
+            width: 44px; height: 44px;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 8px;
+        }
+        .nav-hamburger span {
+            position: relative;
+            display: block;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, opacity .3s, top .3s;
+        }
+        .nav-hamburger span::before,
+        .nav-hamburger span::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, top .3s, opacity .3s;
+        }
+        .nav-hamburger span::before { top: -7px; }
+        .nav-hamburger span::after  { top: 7px; }
+        .nav-hamburger.open span { background: transparent; }
+        .nav-hamburger.open span::before { top: 0; transform: rotate(45deg); }
+        .nav-hamburger.open span::after  { top: 0; transform: rotate(-45deg); }
+
+        .nav-mobile-menu {
+            position: fixed;
+            top: 56px; left: 0; right: 0;
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 24px 24px 32px;
+            z-index: 199;
+            opacity: 0;
+            transform: translateY(-12px);
+            pointer-events: none;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+        .nav-mobile-menu.open {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+        .nav-mobile-menu ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 0 0 22px;
+            padding: 0;
+        }
+        .nav-mobile-menu li a {
+            display: block;
+            padding: 14px 8px;
+            color: rgba(255,255,255,0.78);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-mobile-menu li a:active { background: rgba(255,255,255,0.04); }
+        .nav-mobile-menu li a.active { color: #fff; }
+        .nav-mobile-menu .nav-mobile-cta {
+            display: block;
+            text-align: center;
+            margin-top: 18px;
+            padding: 14px 24px;
+            background: #1abde1;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .nav-hamburger { display: inline-flex; }
+            .nav-cta { display: none; }
+        }
+
+        /* ── READING PROGRESS BAR ── */
+        .reading-progress {
+            position: fixed; top: 56px; left: 0; right: 0; z-index: 199;
+            height: 3px; background: transparent;
+            pointer-events: none;
+        }
+        .reading-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1abde1, #0fa3c5);
+            width: 0%;
+            transition: width .08s linear;
+            box-shadow: 0 0 8px rgba(26,189,225,0.5);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .reading-progress-fill { transition: none; }
+        }
+
+        </style>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/icon-32.png">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/brand/icon-192.png">
+
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <link rel="stylesheet" href="/assets/css/ux.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<!-- Reading progress bar — fills as the user scrolls through the article -->
+<div class="reading-progress" aria-hidden="true"><div class="reading-progress-fill"></div></div>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/case-studies/">Case Studies</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="/apply/" class="nav-apply">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
+</nav>
+
+<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
+    <ul>
+            <li><a href="/editors/">Video Editors</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
+            <li><a href="/csr/">CSR</a></li>
+            <li><a href="/campaigns/">Sales</a></li>
+            <li><a href="/case-studies/">Case Studies</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
+</div>
+
+<header class="post-header">
+    <div class="post-meta-top">
+        <a href="/blog/" class="crumb" style="text-decoration:none;color:var(--c);">Blog</a>
+        <span class="sep">/</span>
+        <span>Scaling Service Businesses</span>
+    </div>
+    <h1 class="post-title">Specialists or Generalists? How to Staff Your First Five Roles</h1>
+    <p class="post-dek">The specialist vs generalist debate gets messy fast when you're making your first hires. Here's a framework that actually works under $5M in revenue.</p>
+    <div class="post-byline">
+        <span><strong>Staffify Team</strong></span>
+        <span>·</span>
+        <span>July 8, 2026</span>
+        <span>·</span>
+        <span>7 min read</span>
+    </div>
+</header>
+
+<article>
+<p>Every founder I talk to hits the same wall around $500K in revenue. The work is there. The clients are happy. But you're the bottleneck, and every task you hand off comes back wrong or comes back slow. So you start hiring. And within six months, half of those hires aren't working out.</p><p>The core mistake is almost always the same. Founders hire the wrong shape of person for the stage they're in. They bring on a specialist when they need a generalist, or a generalist when they finally need a specialist. Both are expensive errors. Both feel like the person's fault when it's actually a structural miscalculation.</p><p>Here's how to think about your first five hires without guessing.</p><h2>The real question isn't specialist vs generalist</h2><p>The real question is: what stage is this role at inside your business?</p><p>Every function inside a service business goes through three stages. Stage one is undefined. Nobody has done the job before, and the process lives inside your head. Stage two is defined but not optimized. Somebody wrote it down, but the outputs are inconsistent. Stage three is repeatable. The same inputs produce the same outputs, and you can hand it to almost anyone with the right skills.</p><p>Generalists thrive in stage one and stage two. They figure things out. They wear multiple hats. They tolerate ambiguity because they enjoy it.</p><p>Specialists thrive in stage three. They want a defined lane, clear metrics, and the freedom to go deep on their craft. Drop them into ambiguity and they get anxious or disengaged.</p><p>So the small business staffing question becomes: is this role at stage one, two, or three inside my company? If it's stage one, you need a generalist even if the title sounds specialized. If it's stage three, you need a specialist even if the role feels small.</p><h2>Your first hire should almost always be a generalist</h2><p>When you're doing less than $1M, your first hire is not a marketer or a salesperson or a project manager. It's a right hand.</p><p>The right hand does whatever needs doing. This week it's client onboarding. Next week it's chasing invoices. The week after it's helping you clean up your CRM and drafting your proposal template. If you try to hire a specialist for this seat, they will either quit within four months or spend all their time asking you what to prioritize.</p><p>The best first hires I've seen at this stage share a few traits. They've worked in small companies before. They're comfortable saying "I don't know, but I'll figure it out." They don't need a job description longer than one page. And they get their satisfaction from things getting done, not from doing one thing perfectly.</p><p>A good executive admin or operations coordinator fits this mold. So does a strong account manager who has run their own side projects. Titles matter less than temperament.</p><h2>Hires two and three: extend your capacity, not your title list</h2><p>Once your right hand is in place, resist the urge to build an org chart with five different functions on it. You don't need a head of marketing and a head of sales and a head of operations when you're doing $1.5M. You need more hands doing the work that already produces revenue.</p><p>For most service businesses, the second and third hires should be delivery focused. If you run a video production company, hire another editor. If you run a lead gen agency, hire another SDR or researcher. If you run a bookkeeping firm, hire another bookkeeper.</p><p>This is where the specialist vs generalist call starts to shift. Delivery roles are usually stage two or stage three inside your business. You already know what good looks like. You have templates, checklists, quality standards. That means you can and should hire specialists for these seats.</p><p>The mistake here is hiring another generalist because your first generalist worked out. Two generalists on a five-person team creates chaos. Everyone touches everything. Nothing gets owned. Quality slips because nobody is deep enough in the craft to catch what's slipping.</p><h2>Hire four: the person who runs the work, not the people</h2><p>Somewhere between $1.5M and $3M, you'll notice you're spending more time reviewing work than doing it. Clients are asking about timelines. Your delivery specialists are asking you questions they should be answering themselves.</p><p>This is where a lot of founders make their most expensive hire. They bring in a "head of operations" or a "COO" at $150K and expect that person to fix everything. Nine times out of ten, that hire doesn't survive the year.</p><p>The problem is that you don't need a leader yet. You need a doer with coordination skills. Someone who can own the production calendar, run the weekly standup, chase the loose ends, and free you from being the traffic controller. Call them a project manager, an operations lead, or a delivery manager. The title matters less than what you're actually asking for.</p><p>This person sits somewhere between specialist and generalist. They need to understand the craft well enough to spot when something's off. But their real skill is systems, communication, and follow-through. Look for someone who has run projects before, not someone who has run people.</p><h2>Hire five: now you can specialize</h2><p>By the fifth hire, your business has enough shape that a true specialist can land and add value quickly. This is when it makes sense to bring in someone with deep expertise in a narrow area. A B2B lead gen specialist who only does outbound. A senior editor who owns your highest-tier deliverables. A finance person who owns your books and forecasting.</p><p>The signal that you're ready for a specialist is simple. You can write a one-page scorecard for the role that includes three to five specific outcomes, the metrics that measure them, and the tools the person will use. If you can't write that scorecard, the role isn't defined enough for a specialist to succeed in it.</p><p>Another signal: you can name at least two people currently in your company or network who could tell you whether a candidate is any good. Specialists need to be evaluated by people who know the craft. If nobody around you can vet the hire, you'll end up with someone who talks a good game but delivers mediocre work.</p><h2>Where founders get the sequencing wrong</h2><p>A few patterns I see repeatedly, and the fix for each:</p><ul><li><strong>Hiring a marketing specialist too early.</strong> Marketing is stage one for most service businesses under $2M. The founder is still figuring out positioning, messaging, and channels. A specialist marketer walks in expecting a plan and finds a whiteboard. Wait until you have one channel that reliably produces leads, then hire someone to scale it.</li><li><strong>Hiring a sales rep before the founder has closed 50 deals.</strong> If you haven't personally closed enough deals to articulate exactly why people buy, you have nothing to hand a salesperson. They'll flail, and you'll blame them.</li><li><strong>Hiring an assistant when you actually need a deputy.</strong> An assistant handles tasks. A deputy owns outcomes. If you find yourself constantly directing your assistant, you didn't need an assistant. You needed someone with more judgment.</li><li><strong>Hiring for titles instead of scorecards.</strong> "Head of Client Success" sounds great. But if you can't list the five things that role will do next quarter, the title is theater.</li></ul><h2>How to test the shape of a hire before you commit</h2><p>Before you post a job, write down two things.</p><p>First, list the ten things this person will actually do in their first ninety days. Not aspirational things. Real tasks. If more than seven of them are the same type of work, you're hiring a specialist. If they span three or more categories, you're hiring a generalist. Now match that against the person you're about to interview.</p><p>Second, ask yourself who trains this person. If the answer is "they should be able to figure it out," you need a generalist with strong self-direction. If the answer is "I'll spend two weeks walking them through our system," you need a specialist who thrives on structure. If the answer is "I have no idea," the role isn't ready to be filled yet.</p><p>Getting your first five hires right won't guarantee you scale past $5M. But getting them wrong will cost you 12 to 18 months and somewhere north of $200K in salary, severance, and lost productivity. The teams that grow cleanly aren't the ones that hire fastest. They're the ones that hire in the right shape for the stage they're in.</p><p>Look at the seat you're about to fill. Ask what stage the work is in. Then hire the person who fits that stage, not the person who fits the title you wish you could afford.</p>
+</article>
+
+<section class="post-cta">
+    <div class="post-cta-card">
+        <div class="post-cta-eyebrow">Built for service businesses</div>
+        <h3 class="post-cta-title">Want the team behind your growth, not in front of it?</h3>
+        <p class="post-cta-body">Staffify gives service businesses the people, systems, and infrastructure to scale without the chaos. Vetted talent, real accountability, lifetime replacement guarantee.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="post-cta-btn">Book a Discovery Call →</a>
+    </div>
+</section>
+
+<div class="post-foot">
+    <a href="/blog/">← Back to all posts</a>
+</div>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/apply/">Apply</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span class="footer-legal" style="display:flex;gap:18px;"><a href="/privacy/" style="color:inherit;text-decoration:none;">Privacy</a><a href="/terms/" style="color:inherit;text-decoration:none;">Terms</a></span><span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+(function(){
+    var btn = document.getElementById('navHamburger');
+    var menu = document.getElementById('navMobileMenu');
+    if (!btn || !menu) return;
+    function open(){
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+        menu.style.opacity = '1';
+        menu.style.transform = 'translateY(0)';
+        menu.style.pointerEvents = 'auto';
+    }
+    function close(){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+        menu.style.opacity = '0';
+        menu.style.transform = 'translateY(-12px)';
+        menu.style.pointerEvents = 'none';
+    }
+    function toggle(){ menu.classList.contains('open') ? close() : open(); }
+    btn.addEventListener('click', toggle);
+    menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+
+    // Esc closes the mobile menu
+    document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && menu.classList.contains('open')) close();
+    });
+})();
+
+// ── Reading progress bar ──
+(function(){
+    var fill = document.querySelector('.reading-progress-fill');
+    if (!fill) return;
+    var article = document.querySelector('article');
+    if (!article) return;
+    function update(){
+        var rect = article.getBoundingClientRect();
+        var viewportH = window.innerHeight;
+        var articleH = article.offsetHeight;
+        // Progress from when article top hits viewport to when bottom leaves
+        var scrolled = Math.max(0, -rect.top);
+        var total = Math.max(1, articleH - viewportH);
+        var pct = Math.min(100, Math.max(0, (scrolled / total) * 100));
+        fill.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+})();
+</script>
+  <script src="/assets/js/ux.js" defer></script>
+<!-- Vercel Web Analytics + Speed Insights (Pro plan, no cookies) -->
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
