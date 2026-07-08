@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staffify Sales Training — Internal</title>
+    <meta name="description" content="Internal sales training library for Staffify closers.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #050507; --white: #ffffff;
+            --cyan: #1abde1; --cyan-hi: #5fe0fa; --cyan-dark: #0d82b8;
+            --muted: #9ba1ab; --card: rgba(255,255,255,0.035); --card-border: rgba(255,255,255,0.09);
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: "Inter", -apple-system, sans-serif;
+            background:
+                radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%),
+                radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%),
+                var(--bg);
+            color: var(--white); line-height: 1.65; -webkit-font-smoothing: antialiased;
+        }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .topbar { position: sticky; top: 0; z-index: 50; background: rgba(5,5,7,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--card-border); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; }
+        .topbar img { height: 26px; display: block; }
+        .badge { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--card-border); border-radius: 999px; padding: 6px 13px; }
+        .page { max-width: 880px; margin: 0 auto; padding: 0 28px; }
+        .hero { padding: 64px 0 30px; }
+        .hero h1 { font-size: clamp(34px, 5.5vw, 52px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.06; margin-bottom: 18px; }
+        .hero .sub { font-size: 19px; color: var(--muted); max-width: 660px; }
+        .hero .sub b { color: var(--white); }
+        section { padding: 34px 0; border-top: 1px solid var(--card-border); }
+        .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 20px; }
+        h2 { font-size: 22px; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 14px; }
+        p { color: var(--muted); margin-bottom: 12px; font-size: 16px; }
+        p b, li b { color: var(--white); }
+        .module { background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px 24px; margin-bottom: 16px; }
+        .module.anchor { border-color: rgba(26,189,225,0.45); background: rgba(26,189,225,0.05); }
+        .mhead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+        .mnum { font-size: 13px; font-weight: 800; color: var(--cyan); letter-spacing: 0.1em; }
+        .mtitle { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+        .status { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 11px; border-radius: 999px; }
+        .st-ready { color: #7ef5c2; background: rgba(29,158,117,0.16); border: 1px solid rgba(29,158,117,0.4); }
+        .st-prog { color: var(--cyan-hi); background: rgba(26,189,225,0.12); border: 1px solid rgba(26,189,225,0.4); }
+        .st-soon { color: var(--muted); background: rgba(255,255,255,0.04); border: 1px solid var(--card-border); }
+        .mdesc { font-size: 15px; color: var(--muted); margin: 8px 0 14px; }
+        .lessons { list-style: none; }
+        .lessons li { position: relative; padding: 6px 0 6px 26px; font-size: 14.5px; color: #cfd4da; }
+        .lessons li::before { content: ''; position: absolute; left: 0; top: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); opacity: 0.6; }
+        .lessons li a { color: var(--cyan-hi); text-decoration: none; }
+        .lessons li a:hover { text-decoration: underline; }
+        .lessons li.done::before { background: #1d9e75; opacity: 1; }
+        footer { padding: 44px 32px; text-align: center; font-size: 13px; color: var(--muted); border-top: 1px solid var(--card-border); }
+        footer a { color: #d7dde2; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <span class="badge">Sales Training · Internal</span>
+</header>
+
+<main class="page">
+
+    <section class="hero" style="border-top:none;">
+        <h1>The Staffify <span class="grad">sales playbook</span>.</h1>
+        <p class="sub">Everything you need to close, in one place. This is the library we train every closer on before live pipeline and keep coming back to. <b>Work it in order.</b> Real recordings, real scripts, real objections, built from calls that actually closed.</p>
+    </section>
+
+    <section>
+        <div class="eyebrow">The Curriculum</div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">01</span><span class="mtitle">The Offer, Inside Out</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">You cannot sell what you do not understand cold. Know the offer well enough to answer anything without checking notes.</p>
+            <ul class="lessons">
+                <li>The VA model: what we place, and what makes our talent top 1%</li>
+                <li>Pricing and onboarding: the fee, both payment paths, what is included</li>
+                <li>The lifetime replacement guarantee, and why it removes the risk</li>
+                <li>What fulfillment handles after the close, so you stay in your lane</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">02</span><span class="mtitle">Who Buys, and Why</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">The right prospect closes themselves. Know exactly who to look for and the pain that makes them buy.</p>
+            <ul class="lessons">
+                <li>The ICP: service businesses, agencies, real estate, law firms, ecommerce</li>
+                <li>The bottleneck: the operator drowning in work they should not be doing</li>
+                <li>Buying triggers, and the prospects to disqualify fast</li>
+                <li>Case studies: who we placed and the result</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">03</span><span class="mtitle">Building Pipeline</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">Warm leads get you started. Your own pipeline is what takes you to the top of the curve.</p>
+            <ul class="lessons">
+                <li>Working the warm inbound from our site, ads, and referrals</li>
+                <li>Outbound that works: cold calls, networking, sharing the opportunity</li>
+                <li>Scripts and templates for the first touch</li>
+                <li>Booking the discovery call</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">04</span><span class="mtitle">The Discovery Call</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">The close is won in discovery. Diagnose the real bottleneck, qualify hard, and set up the yes.</p>
+            <ul class="lessons">
+                <li>The discovery framework, start to finish</li>
+                <li>The question bank: what to ask to surface the pain</li>
+                <li>Qualifying: budget, authority, urgency</li>
+                <li>Setting the agenda for the close</li>
+            </ul>
+        </div>
+
+        <div class="module anchor">
+            <div class="mhead"><span class="mnum">05</span><span class="mtitle">The Presentation &amp; Close</span><span class="status st-prog">In progress</span></div>
+            <p class="mdesc">Where it all comes together. Present the offer remotely, handle the moment, and ask for the business.</p>
+            <ul class="lessons">
+                <li class="done"><b>Live close, full recording:</b> <a href="https://drive.google.com/file/d/1lOCuJx967rb1evWVSc_s2HDMBva7O60P/view">Paul closes Ensuel Kola (07/08)</a> — a real deal, start to finish</li>
+                <li>Timestamped breakdown of the call: structure, section by section <i>(building)</i></li>
+                <li>The talk tracks that landed, pulled out to practice</li>
+                <li>The close: the exact words right before the yes</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">06</span><span class="mtitle">Objection Handling</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">Every objection has a proven answer. Learn the bank cold so nothing catches you flat.</p>
+            <ul class="lessons">
+                <li>Price: "it's too expensive" and "I can find cheaper"</li>
+                <li>Stall: "let me think about it" and "send me info"</li>
+                <li>Doubt: quality, offshore concerns, "will it actually work"</li>
+                <li>Timing: "not right now", seeded from real calls</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">07</span><span class="mtitle">Tools &amp; Process</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">Run your business like a pro. Know the systems, the comp, and the handoff cold.</p>
+            <ul class="lessons">
+                <li>Lead flow and the CRM: how deals move</li>
+                <li>The comp plan: commission, residuals, accelerator, bonuses, payouts</li>
+                <li>The handoff to fulfillment after the close</li>
+                <li>Logins and access</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">08</span><span class="mtitle">Certification</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">Prove it before you touch live pipeline. Pass a mock rep with the CEO and you are cleared to sell.</p>
+            <ul class="lessons">
+                <li>The mock-call rubric: what "ready" looks like</li>
+                <li>Your certification checklist</li>
+                <li>Ongoing call reviews once you are live</li>
+            </ul>
+        </div>
+
+    </section>
+
+</main>
+
+<footer>
+    <p>Staffify Sales Training · Internal use only · <a href="https://www.gostaffify.com/">gostaffify.com</a></p>
+</footer>
+
+</body>
+</html>
