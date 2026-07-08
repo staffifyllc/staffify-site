@@ -1,3 +1,41 @@
+// Sitewide conversion events for Vercel Web Analytics. Runs on every device —
+// keep this ABOVE the motion IIFE, which bails on touch/reduced-motion.
+(function () {
+    'use strict';
+
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+
+    function track(name, data) {
+        try { window.va('event', { name: name, data: data }); } catch (e) {}
+    }
+
+    // Clicks on booking + checkout links, wherever they live
+    document.addEventListener('click', function (e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) return;
+        var href = a.getAttribute('href') || '';
+        if (href.indexOf('calendly.com') !== -1) {
+            var cta = '';
+            var m = /utm_content=([^&]+)/.exec(href);
+            if (m) cta = decodeURIComponent(m[1]);
+            track('book_call_click', { page: location.pathname, cta: cta });
+        } else if (href.indexOf('buy.stripe.com') !== -1) {
+            track('stripe_checkout_click', { page: location.pathname });
+        }
+    }, true);
+
+    // Email-capture submits (soft-yes forms, lead modal, intake forms). Fires
+    // on the submit event itself, so it works alongside each page's own
+    // fetch handler even when that handler calls preventDefault.
+    document.addEventListener('submit', function (e) {
+        var f = e.target;
+        if (!f || !f.querySelector) return;
+        if (f.querySelector('input[type="email"], input[name="email"]')) {
+            track('email_capture_submit', { page: location.pathname, form: f.id || 'unknown' });
+        }
+    }, true);
+})();
+
 // Sitewide UX micro-interactions. Loaded async after the page so it never
 // blocks render. Everything here is a polish layer — the site must work
 // fully without this file.
