@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Staffify | Admin Pitch</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #050507;
+    --white: #ffffff;
+    --cyan: #1abde1;
+    --cyan-hi: #5fe0fa;
+    --cyan-dark: #0d82b8;
+    --red: #e74c3c;
+    --red-soft: #ff7364;
+    --muted: #9ba1ab;
+    --card: rgba(255,255,255,0.035);
+    --card-border: rgba(255,255,255,0.09);
+  }
+  html, body { background: #000; }
+  body { font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(26,189,225,0.10), transparent 60%),
+      radial-gradient(700px 500px at -5% 110%, rgba(13,86,164,0.14), transparent 55%),
+      var(--bg);
+    color: var(--white);
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+  .slide.hot {
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(231,76,60,0.11), transparent 60%),
+      radial-gradient(700px 500px at -5% 110%, rgba(120,20,20,0.16), transparent 55%),
+      var(--bg);
+  }
+  .slide::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 90px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 90px);
+    mask-image: radial-gradient(75% 75% at 50% 45%, black, transparent);
+    -webkit-mask-image: radial-gradient(75% 75% at 50% 45%, black, transparent);
+  }
+  @media print {
+    html, body { background: var(--bg); }
+    .slide { page-break-after: always; }
+  }
+  @page { size: 1280px 720px; margin: 0; }
+
+  .orb { position: absolute; border-radius: 50%; filter: blur(110px); pointer-events: none; }
+  .orb.cyan { background: rgba(26,189,225,0.17); }
+  .orb.blue { background: rgba(13,86,164,0.20); }
+  .orb.red  { background: rgba(231,76,60,0.15); }
+  .streak {
+    position: absolute; height: 2px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(26,189,225,0.5), transparent);
+  }
+  .streak.red { background: linear-gradient(90deg, transparent, rgba(231,76,60,0.4), transparent); }
+
+  .grad {
+    background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .grad-red {
+    background: linear-gradient(100deg, #ff9a8d 0%, var(--red-soft) 45%, var(--red) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+
+  .eyebrow {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 13px; font-weight: 800; letter-spacing: 0.34em;
+    color: var(--cyan); text-transform: uppercase;
+  }
+  .eyebrow::before {
+    content: ''; width: 34px; height: 2px; flex: 0 0 auto;
+    background: linear-gradient(90deg, var(--cyan), transparent);
+  }
+  .eyebrow.hot { color: var(--red-soft); }
+  .eyebrow.hot::before { background: linear-gradient(90deg, var(--red), transparent); }
+
+  .foot {
+    position: absolute; bottom: 26px; left: 56px; right: 56px; z-index: 5;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .foot .brand { font-size: 16px; font-weight: 900; color: var(--white); letter-spacing: -0.02em; }
+  .foot .brand::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); margin-left: 5px; box-shadow: 0 0 12px rgba(26,189,225,0.9); }
+  .foot .url { font-size: 13px; color: var(--muted); letter-spacing: 0.08em; }
+
+  .pad { padding: 54px 56px 0; position: relative; z-index: 2; }
+  h1.title { font-size: 52px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.06; margin-top: 18px; }
+
+  .check {
+    flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, rgba(26,189,225,0.25), rgba(13,130,184,0.12));
+    border: 1px solid rgba(26,189,225,0.45);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 18px rgba(26,189,225,0.18);
+  }
+  .check svg { width: 13px; height: 13px; }
+  .check.xmark { background: linear-gradient(135deg, rgba(231,76,60,0.22), rgba(120,20,20,0.12)); border-color: rgba(231,76,60,0.45); box-shadow: 0 0 18px rgba(231,76,60,0.14); }
+
+  /* ---------- cover ---------- */
+  .cover { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .cover h1 { font-size: 63px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.07; max-width: 1160px; position: relative; z-index: 2; }
+  .cover .sub { margin-top: 34px; font-size: 24px; font-style: italic; font-weight: 500; color: var(--muted); position: relative; z-index: 2; }
+  .cover .sub b { color: var(--cyan); font-weight: 700; }
+  .cover .contact { position: absolute; bottom: 42px; width: 100%; text-align: center; font-size: 14px; color: var(--muted); letter-spacing: 0.16em; z-index: 2; }
+
+  /* ---------- pain ---------- */
+  .pain-cards { display: flex; gap: 24px; margin: 46px 56px 0; position: relative; z-index: 2; }
+  .pain-card {
+    flex: 1; border-radius: 20px; padding: 36px 30px 30px; text-align: center;
+    background: linear-gradient(180deg, rgba(231,76,60,0.09), rgba(231,76,60,0.02));
+    border: 1px solid rgba(231,76,60,0.32);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 50px rgba(0,0,0,0.5);
+  }
+  .pain-card .n { font-size: 48px; font-weight: 900; letter-spacing: -0.03em; }
+  .pain-card .n .unit { font-size: 22px; font-weight: 600; }
+  .pain-card .l { margin-top: 16px; font-size: 15.5px; line-height: 1.5; color: var(--muted); }
+  .pain-note { text-align: center; margin-top: 42px; font-size: 24px; font-weight: 800; position: relative; z-index: 2; }
+
+  /* ---------- failures ---------- */
+  .fail-cards { display: flex; gap: 24px; margin: 42px 56px 0; position: relative; z-index: 2; }
+  .fail-card {
+    flex: 1; border-radius: 20px; padding: 30px 28px 28px; position: relative; overflow: hidden;
+    background: var(--card); border: 1px solid var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 24px 50px rgba(0,0,0,0.45);
+  }
+  .fail-card .ghost {
+    position: absolute; top: -22px; right: 6px; font-size: 120px; font-weight: 900; letter-spacing: -0.05em;
+    color: transparent; -webkit-text-stroke: 1.5px rgba(231,76,60,0.28); line-height: 1;
+  }
+  .fail-card h3 { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; position: relative; }
+  .fail-card p { margin-top: 12px; font-size: 16px; line-height: 1.55; color: var(--muted); position: relative; }
+  .fail-card p b { color: var(--red-soft); font-weight: 700; }
+  .fail-closer { text-align: center; margin-top: 40px; font-size: 23px; font-weight: 800; letter-spacing: -0.01em; padding: 0 90px; line-height: 1.45; position: relative; z-index: 2; }
+
+  /* ---------- what we do ---------- */
+  .wwd-cols { display: flex; margin-top: 42px; gap: 54px; }
+  .wwd-left { flex: 1.35; display: flex; flex-direction: column; gap: 26px; }
+  .wwd-item { display: flex; gap: 18px; align-items: flex-start; font-size: 21px; line-height: 1.45; font-weight: 500; }
+  .wwd-item .check { margin-top: 3px; }
+  .wwd-right { flex: 1; display: flex; flex-direction: column; gap: 26px; padding-left: 52px; border-left: 1px solid rgba(26,189,225,0.25); }
+  .stat .n { font-size: 54px; font-weight: 900; line-height: 1; letter-spacing: -0.03em; }
+  .stat .n .unit { font-size: 22px; font-weight: 600; }
+  .stat .l { margin-top: 8px; font-size: 15px; color: var(--muted); letter-spacing: 0.04em; font-weight: 500; }
+
+  /* ---------- trial cut (quote) ---------- */
+  .quote-wrap { margin: 40px 56px 0; position: relative; z-index: 2; }
+  .big-quote {
+    max-width: 1050px; padding: 26px 34px;
+    border-left: 3px solid var(--cyan); border-radius: 0 16px 16px 0;
+    background: linear-gradient(90deg, rgba(26,189,225,0.08), transparent 80%);
+    font-size: 26px; font-style: italic; font-weight: 500; color: #e8ebee; line-height: 1.5;
+  }
+  .big-quote .who { color: var(--muted); font-style: normal; font-weight: 700; font-size: 15px; display: block; margin-top: 16px; letter-spacing: 0.04em; }
+  .chip-row { display: flex; gap: 24px; margin-top: 34px; }
+  .chip {
+    flex: 1; border-radius: 18px; padding: 24px 28px;
+    background: var(--card); border: 1px solid var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .chip .cl { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; color: var(--muted); text-transform: uppercase; }
+  .chip .cv { margin-top: 8px; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+
+  /* ---------- funnel ---------- */
+  .funnel { margin-top: 34px; display: flex; flex-direction: column; align-items: center; gap: 11px; position: relative; z-index: 2; }
+  .frow {
+    width: var(--w); height: 46px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--card-border);
+    display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 17.5px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .frow .fn { font-weight: 900; color: var(--cyan); }
+  .frow .fl { color: #cfd4da; font-weight: 500; }
+  .frow.last {
+    background: linear-gradient(100deg, var(--cyan-hi), var(--cyan) 55%, var(--cyan-dark));
+    border: none; box-shadow: 0 0 50px rgba(26,189,225,0.4);
+  }
+  .frow.last .fn, .frow.last .fl { color: #04222b; font-weight: 900; }
+  .funnel-note { text-align: center; margin-top: 28px; font-size: 18px; font-style: italic; color: var(--muted); position: relative; z-index: 2; }
+
+  /* ---------- candidate proof ---------- */
+  .cam-cols { display: flex; gap: 46px; margin-top: 30px; align-items: flex-start; }
+  .cam-left { flex: 1; display: flex; flex-direction: column; gap: 20px; padding-top: 6px; }
+  .cam-item { display: flex; gap: 16px; align-items: flex-start; font-size: 18px; line-height: 1.45; font-weight: 500; }
+  .cam-item .check { margin-top: 2px; }
+  .cam-item b { color: var(--cyan); font-weight: 700; }
+  .cam-note { margin-top: 6px; font-size: 14.5px; color: var(--muted); font-style: italic; }
+  .cam-right { flex: 1.05; }
+  .browser {
+    border-radius: 14px; overflow: hidden; background: #0b0e12;
+    border: 1px solid rgba(26,189,225,0.35);
+    box-shadow: 0 34px 90px rgba(0,0,0,0.65), 0 0 70px rgba(26,189,225,0.13);
+  }
+  .browser .bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #10141a; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .browser .bdot { width: 10px; height: 10px; border-radius: 50%; }
+  .browser .burl { margin-left: 10px; flex: 1; background: rgba(255,255,255,0.055); border-radius: 999px; font-size: 11.5px; color: var(--muted); padding: 5px 14px; letter-spacing: 0.02em; }
+  .browser img { display: block; width: 100%; }
+
+  /* ---------- live embed ---------- */
+  .cap-line { margin-top: 16px; font-size: 17px; line-height: 1.5; color: var(--muted); max-width: 900px; }
+  .cap-line b { color: var(--cyan); font-weight: 700; }
+  .embed-browser {
+    margin: 22px 56px 0; border-radius: 14px; overflow: hidden; position: relative; z-index: 2;
+    background: #0b0e12; border: 1px solid rgba(26,189,225,0.35);
+    box-shadow: 0 34px 90px rgba(0,0,0,0.65), 0 0 70px rgba(26,189,225,0.13);
+  }
+  .embed-browser .bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #10141a; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .embed-browser .bdot { width: 10px; height: 10px; border-radius: 50%; }
+  .embed-browser .burl { margin-left: 10px; flex: 1; background: rgba(255,255,255,0.055); border-radius: 999px; font-size: 12px; color: var(--muted); padding: 6px 16px; letter-spacing: 0.02em; }
+  .embed-browser .openx { margin-left: 12px; color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none; opacity: .85; white-space: nowrap; }
+  .embed-browser .openx:hover { opacity: 1; }
+  .embed-body { position: relative; height: 424px; background: #050507; }
+  .embed-body .poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+  .embed-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: none; background: #050507; }
+  .embed-body.live iframe { display: block; }
+  .embed-body.live .poster { opacity: 0; }
+
+  /* ---------- math / comparison ---------- */
+  .math-cards { display: flex; gap: 24px; margin: 42px 56px 0; align-items: stretch; position: relative; z-index: 2; }
+  .mcard {
+    flex: 1; border-radius: 20px; padding: 34px 28px; text-align: center;
+    background: var(--card); border: 1px solid var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 24px 50px rgba(0,0,0,0.45);
+  }
+  .mcard.featured {
+    background: linear-gradient(180deg, rgba(26,189,225,0.12), rgba(26,189,225,0.025));
+    border: 1.5px solid rgba(26,189,225,0.55);
+    box-shadow: 0 0 70px rgba(26,189,225,0.16), inset 0 1px 0 rgba(255,255,255,0.08);
+    transform: scale(1.04);
+  }
+  .mcard .cap { font-size: 12.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .mcard.featured .cap { color: var(--cyan); }
+  .mcard .n { font-size: 44px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
+  .mcard .n .unit { font-size: 19px; font-weight: 600; }
+  .mcard:not(.featured) .n { color: var(--white); }
+  .mcard .l { margin-top: 16px; font-size: 15px; line-height: 1.5; color: var(--muted); }
+  .mcard.featured .l { color: #d7dde2; }
+  .math-note { text-align: center; margin-top: 40px; font-size: 22px; font-weight: 800; position: relative; z-index: 2; }
+
+  /* ---------- pricing ---------- */
+  .price-cards { display: flex; gap: 26px; margin: 40px 56px 0; position: relative; z-index: 2; }
+  .pcard { flex: 1; border-radius: 22px; padding: 32px 34px; }
+  .pcard.a {
+    background: linear-gradient(180deg, rgba(26,189,225,0.11), rgba(26,189,225,0.02));
+    border: 1.5px solid rgba(26,189,225,0.55);
+    box-shadow: 0 0 70px rgba(26,189,225,0.13), inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+  .pcard.b { background: var(--card); border: 1px solid var(--card-border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+  .pcard .plabel { font-size: 12px; font-weight: 800; letter-spacing: 0.32em; color: var(--cyan); text-transform: uppercase; }
+  .pcard.b .plabel { color: var(--muted); }
+  .pcard h3 { font-size: 28px; font-weight: 900; letter-spacing: -0.02em; margin-top: 10px; }
+  .pcard .pline { margin-top: 16px; display: flex; align-items: baseline; gap: 12px; }
+  .pcard .pline .amt { font-size: 42px; font-weight: 900; letter-spacing: -0.02em; }
+  .pcard .pline .desc { font-size: 15.5px; color: var(--muted); }
+  .pcard .fine { margin-top: 14px; font-size: 15px; line-height: 1.5; color: #c9ced4; }
+  .plist { margin-top: 6px; display: flex; flex-direction: column; gap: 14px; }
+  .plist .pi { display: flex; gap: 14px; align-items: flex-start; font-size: 17px; line-height: 1.4; }
+  .plist .pi .check { width: 24px; height: 24px; }
+  .plist .pi .check svg { width: 11px; height: 11px; }
+  .price-note { text-align: center; margin-top: 30px; font-size: 18px; font-style: italic; color: var(--muted); position: relative; z-index: 2; }
+
+  /* ---------- guarantees + cta ---------- */
+  .guar-list { margin-top: 26px; display: flex; flex-direction: column; gap: 20px; max-width: 1130px; }
+  .guar-item { display: flex; gap: 18px; align-items: flex-start; font-size: 18.5px; line-height: 1.45; }
+  .guar-item .check { margin-top: 1px; }
+  .guar-item b { color: var(--white); font-weight: 800; }
+  .guar-item span.d { color: var(--muted); }
+  .cta-box {
+    position: absolute; left: 56px; right: 56px; bottom: 62px; z-index: 2;
+    border: 1.5px solid rgba(26,189,225,0.6); border-radius: 26px;
+    background: linear-gradient(180deg, rgba(26,189,225,0.12), rgba(26,189,225,0.02));
+    text-align: center; padding: 38px 20px 36px;
+    box-shadow: 0 0 80px rgba(26,189,225,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .cta-box h2 { font-size: 50px; font-weight: 900; letter-spacing: -0.03em; }
+  .cta-box .cal { margin-top: 16px; font-size: 26px; font-weight: 800; color: var(--cyan); letter-spacing: -0.01em; }
+  .cta-box .alt { margin-top: 10px; font-size: 16px; color: var(--muted); }
+
+  /* ===== Presentation mode ===== */
+  body.present { overflow: hidden; height: 100vh; background: #000; }
+  body.present .stage { position: fixed; left: 50%; top: 50%; width: 1280px; height: 720px; }
+  body.present .slide {
+    position: absolute; inset: 0;
+    opacity: 0; visibility: hidden;
+    transform: translateX(140px) scale(0.96);
+    filter: blur(6px);
+    transition: opacity .6s ease, transform .75s cubic-bezier(.22,.61,.36,1), filter .6s ease, visibility 0s linear .75s;
+    will-change: opacity, transform, filter;
+  }
+  body.present .slide.before { transform: translateX(-140px) scale(0.96); }
+  body.present .slide.active {
+    opacity: 1; visibility: visible; transform: none; filter: none;
+    transition: opacity .6s ease .08s, transform .75s cubic-bezier(.22,.61,.36,1) .08s, filter .6s ease .08s, visibility 0s;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  @keyframes popNum { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+  @keyframes growBar { from { width: 130px; opacity: 0; } to { width: var(--w); opacity: 1; } }
+  @keyframes ctaPulse {
+    0%, 100% { box-shadow: 0 0 60px rgba(26,189,225,0.16), inset 0 1px 0 rgba(255,255,255,0.08); }
+    50% { box-shadow: 0 0 110px rgba(26,189,225,0.4), inset 0 1px 0 rgba(255,255,255,0.08); }
+  }
+  body.present .slide.active .anim { animation: rise .7s cubic-bezier(.22,.61,.36,1) both; animation-delay: var(--d, .15s); }
+  body.present .slide.active .pop { animation: popNum .65s cubic-bezier(.34,1.56,.64,1) both; animation-delay: var(--d, .3s); }
+  body.present .slide.active .frow { animation: growBar .7s cubic-bezier(.22,.61,.36,1) both; animation-delay: var(--d, .2s); }
+  body.present .slide.active .cta-box { animation: rise .7s cubic-bezier(.22,.61,.36,1) .5s both, ctaPulse 3.2s ease-in-out 1.4s infinite; }
+  body.present .slide.active .foot { animation: rise .5s ease .85s both; }
+  body.present .foot .url { visibility: hidden; }
+
+  .deck-progress { display: none; }
+  body.present .deck-progress {
+    display: block; position: fixed; left: 0; bottom: 0; height: 4px;
+    background: linear-gradient(90deg, var(--cyan-dark), var(--cyan));
+    z-index: 40; transition: width .5s cubic-bezier(.22,.61,.36,1);
+    box-shadow: 0 0 16px rgba(26,189,225,0.8);
+  }
+  .deck-nav { display: none; }
+  body.present .deck-nav {
+    display: flex; position: fixed; right: 26px; bottom: 20px; z-index: 41;
+    align-items: center; gap: 14px;
+  }
+  .deck-nav button {
+    width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid rgba(26,189,225,0.45);
+    background: rgba(5,5,7,0.75); color: var(--cyan); font-size: 19px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .2s;
+  }
+  .deck-nav button:hover { background: rgba(26,189,225,0.2); border-color: var(--cyan); box-shadow: 0 0 24px rgba(26,189,225,0.35); }
+  .deck-nav .count { font-size: 13px; color: var(--muted); letter-spacing: .12em; min-width: 52px; text-align: center; font-weight: 600; }
+  .deck-pdf { display: none; }
+  body.present .deck-pdf {
+    display: block; position: fixed; top: 20px; right: 26px; z-index: 41;
+    font-size: 11px; letter-spacing: .22em; font-weight: 700;
+    color: var(--muted); text-decoration: none; text-transform: uppercase; opacity: .5; transition: opacity .2s, color .2s;
+  }
+  .deck-pdf:hover { opacity: 1; color: var(--cyan); }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1 - COVER -->
+<section class="slide cover" id="s1">
+  <div class="orb cyan" style="width:560px;height:560px;right:-160px;top:-200px;"></div>
+  <div class="orb blue" style="width:520px;height:520px;left:-180px;bottom:-220px;"></div>
+  <div class="streak" style="width:560px;left:-80px;top:170px;transform:rotate(-20deg);"></div>
+  <div class="streak" style="width:420px;right:-60px;bottom:210px;transform:rotate(-20deg);opacity:.6;"></div>
+  <img class="anim" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:60px;margin-bottom:44px;--d:.1s">
+  <h1 class="anim" style="--d:.25s">The full-time admin<br>your business <span class="grad">actually needs</span>.</h1>
+  <div class="sub anim" style="--d:.45s">On your team full-time, vetted through five gates. <b>Starting at $12.50/hr.</b></div>
+  <div class="contact anim" style="--d:.6s">gostaffify.com&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;hello@gostaffify.com</div>
+</section>
+
+<!-- SLIDE 2 - THE BOTTLENECK -->
+<section class="slide hot" id="s2">
+  <div class="orb red" style="width:520px;height:520px;right:-150px;top:-190px;"></div>
+  <div class="streak red" style="width:480px;left:-60px;top:150px;transform:rotate(-18deg);"></div>
+  <div class="pad">
+    <div class="eyebrow hot anim" style="--d:.1s">The Operator Trap</div>
+    <h1 class="title anim" style="--d:.2s">The busywork is <span class="grad-red">burying you</span>.</h1>
+  </div>
+  <div class="pain-cards">
+    <div class="pain-card anim" style="--d:.4s">
+      <div class="n grad-red pop" style="--d:.55s">11pm</div>
+      <div class="l">The admin only gets done after the real work. You are answering emails and fixing the calendar at 11pm.</div>
+    </div>
+    <div class="pain-card anim" style="--d:.55s">
+      <div class="n grad-red pop" style="--d:.7s">$30K<span class="unit">/yr</span></div>
+      <div class="l">You draw $80K a year, about $40 an hour. Ten hours a week on inbox and data entry is $30K of your time.</div>
+    </div>
+    <div class="pain-card anim" style="--d:.7s">
+      <div class="n grad-red pop" style="--d:.85s">Dropped</div>
+      <div class="l">Leads go cold, follow-ups slip, and invoices sit. The things that grow the business fall through the cracks.</div>
+    </div>
+  </div>
+  <div class="pain-note anim" style="--d:.95s">Not another app. Not a part-timer. <span class="grad-red">A full-time admin on your team.</span></div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 3 - WHY STAFFIFY EXISTS -->
+<section class="slide" id="s3">
+  <div class="orb blue" style="width:500px;height:500px;left:-170px;top:-180px;"></div>
+  <div class="orb cyan" style="width:420px;height:420px;right:-130px;bottom:-160px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Why Staffify Exists</div>
+    <h1 class="title anim" style="--d:.2s">I didn't set out to build a VA company.<br>I set out to <span class="grad">hire one</span>.</h1>
+  </div>
+  <div class="fail-cards">
+    <div class="fail-card anim" style="--d:.4s">
+      <div class="ghost">01</div>
+      <h3>Premium Agencies</h3>
+      <p><b>$3-5K upfront</b>, 90-120 day guarantees. Every hire turned over right after the window closed.</p>
+    </div>
+    <div class="fail-card anim" style="--d:.55s">
+      <div class="ghost">02</div>
+      <h3>Managed Model</h3>
+      <p>They handled everything. Until I found my VAs took home <b>50% at best</b>. No stability, no commitment.</p>
+    </div>
+    <div class="fail-card anim" style="--d:.7s">
+      <div class="ghost">03</div>
+      <h3>Going Direct</h3>
+      <p>Compliance headaches and <b>$4-5/hr roles</b> no one could survive on. My hires juggled five clients to get by.</p>
+    </div>
+  </div>
+  <div class="fail-closer anim" style="--d:.9s">So I built the system myself. It took Flylisted to seven figures across six states. <span class="grad">Staffify staffs admins the same way.</span></div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 4 - WHAT YOU GET -->
+<section class="slide" id="s4">
+  <div class="orb cyan" style="width:520px;height:520px;right:-160px;top:-190px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">What You Get</div>
+    <h1 class="title anim" style="--d:.2s">A full-time admin, <span class="grad">on your team</span>.</h1>
+    <div class="wwd-cols">
+      <div class="wwd-left">
+        <div class="wwd-item anim" style="--d:.4s">
+          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>Dedicated to you and matched to your workflow. Your tools, your inbox, your calendar.</div>
+        </div>
+        <div class="wwd-item anim" style="--d:.5s">
+          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>An employee in your business, not a task service. Works live in your hours, in real time.</div>
+        </div>
+        <div class="wwd-item anim" style="--d:.6s">
+          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>Inbox and calendar, CRM and data entry, follow-ups and light bookkeeping.</div>
+        </div>
+        <div class="wwd-item anim" style="--d:.7s">
+          <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>We run payroll, HR, and compliance. You manage the work, we handle the rest.</div>
+        </div>
+      </div>
+      <div class="wwd-right">
+        <div class="stat anim" style="--d:.5s"><div class="n grad pop" style="--d:.6s">Day 1</div><div class="l">productive from day one</div></div>
+        <div class="stat anim" style="--d:.62s"><div class="n grad pop" style="--d:.72s">$12.50<span class="unit">/hr</span></div><div class="l">starting rate, all-in</div></div>
+        <div class="stat anim" style="--d:.74s"><div class="n grad pop" style="--d:.84s">40<span class="unit">/wk</span></div><div class="l">full-time, locked schedule</div></div>
+        <div class="stat anim" style="--d:.86s"><div class="n grad pop" style="--d:.96s">5+ <span class="unit">yrs</span></div><div class="l">typical admin experience</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 5 - MEET A REAL ADMIN (LIVE EMBED) -->
+<section class="slide" id="s5">
+  <div class="orb cyan" style="width:480px;height:480px;right:-160px;top:-170px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">See A Real Admin, Live</div>
+    <h1 class="title anim" style="--d:.2s">Not a mockup. <span class="grad">A real candidate.</span></h1>
+    <div class="cap-line anim" style="--d:.32s">Her intro video, five gates of screening, skills tests, and called references. <b>Scroll it live on the call.</b></div>
+  </div>
+  <div class="embed-browser anim" style="--d:.45s">
+    <div class="bar">
+      <span class="bdot" style="background:#ff5f57"></span>
+      <span class="bdot" style="background:#febc2e"></span>
+      <span class="bdot" style="background:#28c840"></span>
+      <span class="burl">recruiting.gostaffify.com/lander</span>
+      <a class="openx" href="https://recruiting.gostaffify.com/lander/fmreHQqQ3K3Dxb5cRdZTpKiVV9Cd6XKv" target="_blank" rel="noopener">Open &#8599;</a>
+    </div>
+    <div class="embed-body" data-embed="https://recruiting.gostaffify.com/lander/fmreHQqQ3K3Dxb5cRdZTpKiVV9Cd6XKv">
+      <img class="poster" src="/assets/pitch/camille-lander-poster.png" alt="Live Staffify admin candidate profile, Camille">
+      <iframe title="Staffify admin candidate profile" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 6 - THE SKILLS TEST -->
+<section class="slide" id="s6">
+  <div class="orb blue" style="width:500px;height:500px;left:-160px;top:-190px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Tested On The Real Job</div>
+    <h1 class="title anim" style="--d:.2s">Every admin clears a paid <span class="grad">skills test</span>.</h1>
+  </div>
+  <div class="quote-wrap">
+    <div class="big-quote anim" style="--d:.35s">A timed task on the actual work: triage a messy inbox, book against a real calendar, clean a spreadsheet, and draft the client replies. We grade it before anyone reaches you.<span class="who">The same test every admin on our roster has passed.</span></div>
+    <div class="chip-row">
+      <div class="chip anim" style="--d:.55s"><div class="cl">Test Task</div><div class="cv grad">60-90 min</div></div>
+      <div class="chip anim" style="--d:.65s"><div class="cl">English</div><div class="cv">AI-scored</div></div>
+      <div class="chip anim" style="--d:.75s"><div class="cl">References</div><div class="cv">2 called</div></div>
+    </div>
+  </div>
+  <div class="funnel-note anim" style="--d:.9s">You see the graded results before you meet them, not just a resume.</div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 7 - FIVE GATES -->
+<section class="slide" id="s7">
+  <div class="orb blue" style="width:480px;height:480px;left:-160px;bottom:-200px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Five Gates of Screening</div>
+    <h1 class="title anim" style="--d:.2s">500 to 800 in. <span class="grad">Two or three admins out.</span></h1>
+  </div>
+  <div class="funnel">
+    <div class="frow" style="--w:840px;--d:.4s"><span class="fn">500-800</span><span class="fl">applicants sourced per role</span></div>
+    <div class="frow" style="--w:712px;--d:.52s"><span class="fn">~300</span><span class="fl">pass the application screen</span></div>
+    <div class="frow" style="--w:584px;--d:.64s"><span class="fn">~80</span><span class="fl">pass the AI English screen</span></div>
+    <div class="frow" style="--w:456px;--d:.76s"><span class="fn">~25</span><span class="fl">pass the paid skills test</span></div>
+    <div class="frow" style="--w:328px;--d:.88s"><span class="fn">~6</span><span class="fl">pass recruiter and reference review</span></div>
+    <div class="frow last" style="--w:260px;--d:1s"><span class="fn">2-3</span><span class="fl">admins matched to you</span></div>
+  </div>
+  <div class="funnel-note anim" style="--d:1.15s">You meet two or three, matched to your workflow and tools. You pick.</div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 8 - CHEAPER THAN IN-HOUSE, MORE RELIABLE THAN FREELANCE -->
+<section class="slide" id="s8">
+  <div class="orb cyan" style="width:480px;height:480px;right:-150px;top:-180px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">How We Beat The Alternatives</div>
+    <h1 class="title anim" style="--d:.2s">Cheaper than in-house. <span class="grad">More reliable than freelance.</span></h1>
+  </div>
+  <div class="math-cards">
+    <div class="mcard featured anim" style="--d:.4s">
+      <div class="cap">Staffify admin / yr</div>
+      <div class="n grad pop" style="--d:.55s">$26-29K</div>
+      <div class="l">Starting at $12.50/hr, all-in and billed bi-weekly. A dedicated employee, not a vendor.</div>
+    </div>
+    <div class="mcard anim" style="--d:.55s">
+      <div class="cap">US in-house / yr</div>
+      <div class="n pop" style="--d:.7s">~$65K</div>
+      <div class="l">Salary plus payroll taxes, benefits, equipment, and recruiting. Two to three times a Staffify placement.</div>
+    </div>
+    <div class="mcard anim" style="--d:.7s">
+      <div class="cap">Freelance and task apps</div>
+      <div class="n pop" style="--d:.85s">$0 <span class="unit">continuity</span></div>
+      <div class="l">Cheap per task, no one who learns your business. A new person every time, nothing owned, nothing vetted.</div>
+    </div>
+  </div>
+  <div class="math-note anim" style="--d:.95s">You save <span class="grad">$35K+ a year</span> versus in-house. Reliable, because they are your employee.</div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 9 - PRICING -->
+<section class="slide" id="s9">
+  <div class="orb cyan" style="width:500px;height:500px;right:-160px;bottom:-200px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Two Ways to Onboard</div>
+    <h1 class="title anim" style="--d:.2s">Pick the path that <span class="grad">fits your cash</span>.</h1>
+  </div>
+  <div class="price-cards">
+    <div class="pcard a anim" style="--d:.4s">
+      <div class="plabel">Path A</div>
+      <h3>Pay Upfront</h3>
+      <div class="pline"><span class="amt">$2,499</span><span class="desc">standard onboarding</span></div>
+      <div class="pline"><span class="amt grad">$2,099</span><span class="desc">action taker, 24-hour decision</span></div>
+      <div class="fine">One-time. Sourcing, five-gate screening, skills testing, and onboarding. Then $12.50/hr all-in.</div>
+    </div>
+    <div class="pcard b anim" style="--d:.55s">
+      <div class="plabel">Path B</div>
+      <h3>Roll It Into Your Rate</h3>
+      <div class="pline"><span class="amt">$0</span><span class="desc">today</span></div>
+      <div class="fine">+$1/hr for ~14 months, or +$2/hr for ~7 months, until $2,499 is paid.</div>
+      <div class="fine"><em>Rate drops back to base once paid. No interest, no fees.</em></div>
+    </div>
+  </div>
+  <div class="price-note anim" style="--d:.75s">Ongoing rate: $12.50 to $14/hr all-in. That is about $2,167 a month, full-time.</div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 10 - GUARANTEES + CTA -->
+<section class="slide" id="s10">
+  <div class="orb cyan" style="width:560px;height:560px;left:360px;bottom:-280px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Our Guarantees</div>
+    <div class="guar-list">
+      <div class="guar-item anim" style="--d:.25s">
+        <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><b>Lifetime replacement guarantee.</b> <span class="d">If your admin does not work out, we replace them at no additional charge. No 30-day window.</span></div>
+      </div>
+      <div class="guar-item anim" style="--d:.38s">
+        <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><b>Matched to your workflow.</b> <span class="d">Your tools, your inbox, your hours. Not a shared task queue.</span></div>
+      </div>
+      <div class="guar-item anim" style="--d:.51s">
+        <div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><b>Cleared five gates before you meet them.</b> <span class="d">Application, AI English screen, paid skills test, recruiter and reference review, client-fit match.</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="cta-box">
+    <h2>See a real admin <span class="grad">this week</span>?</h2>
+    <div class="cal">calendly.com/go-staffify/discovery-call</div>
+    <div class="alt">or reach us direct: hello@gostaffify.com</div>
+  </div>
+  <div class="foot" style="bottom: 20px;"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<script>
+(function () {
+  const p = new URLSearchParams(location.search);
+  const only = p.get('only');
+  if (only) {
+    document.querySelectorAll('.slide').forEach(s => { if (s.id !== only) s.style.display = 'none'; });
+    return; // QA mode: stacked, no presentation
+  }
+  if (p.has('print')) return; // print/PDF mode: stacked
+
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const n = slides.length;
+
+  const stage = document.createElement('div');
+  stage.className = 'stage';
+  slides.forEach(s => stage.appendChild(s));
+  document.body.appendChild(stage);
+
+  const bar = document.createElement('div'); bar.className = 'deck-progress'; document.body.appendChild(bar);
+  const nav = document.createElement('div'); nav.className = 'deck-nav';
+  nav.innerHTML = '<button type="button" data-go="-1" aria-label="Previous">&#8592;</button>' +
+                  '<span class="count"></span>' +
+                  '<button type="button" data-go="1" aria-label="Next">&#8594;</button>';
+  document.body.appendChild(nav);
+  const pdf = document.createElement('a'); pdf.className = 'deck-pdf'; pdf.href = '/assets/decks/staffify-admin-pitch.pdf'; pdf.textContent = 'PDF';
+  document.body.appendChild(pdf);
+  const count = nav.querySelector('.count');
+
+  document.body.classList.add('present');
+
+  // Activate live embeds only in presentation mode (never in ?print/?only,
+  // which return early above so the PDF and per-slide QA keep the poster).
+  document.querySelectorAll('.embed-body[data-embed]').forEach(function (b) {
+    var f = b.querySelector('iframe');
+    if (f && !f.src) f.src = b.dataset.embed;
+    b.classList.add('live');
+  });
+
+  let cur = Math.min(Math.max(parseInt(location.hash.slice(1), 10) || 1, 1), n) - 1;
+
+  function render() {
+    slides.forEach((s, i) => {
+      s.classList.toggle('active', i === cur);
+      s.classList.toggle('before', i < cur);
+    });
+    bar.style.width = (((cur + 1) / n) * 100) + '%';
+    count.textContent = (cur + 1) + ' / ' + n;
+    history.replaceState(null, '', '#' + (cur + 1));
+  }
+
+  function go(d) { const next = Math.min(Math.max(cur + d, 0), n - 1); if (next !== cur) { cur = next; render(); } }
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  addEventListener('resize', fit); fit();
+
+  nav.addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(parseInt(b.dataset.go, 10)); });
+  addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'Home') { cur = 0; render(); }
+    else if (e.key === 'End') { cur = n - 1; render(); }
+  });
+  let tx = null;
+  addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', e => {
+    if (tx === null) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    tx = null;
+  }, { passive: true });
+  addEventListener('hashchange', () => {
+    const h = Math.min(Math.max(parseInt(location.hash.slice(1), 10) || 1, 1), n) - 1;
+    if (h !== cur) { cur = h; render(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
