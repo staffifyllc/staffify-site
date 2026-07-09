@@ -274,6 +274,13 @@
   .plist .pi .check svg { width: 11px; height: 11px; }
   .price-note { text-align: center; margin-top: 30px; font-size: 18px; font-style: italic; color: var(--muted); position: relative; z-index: 2; }
 
+  /* ---------- included (cost breakdown) ---------- */
+  .inc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 52px; margin: 40px 56px 0; position: relative; z-index: 2; }
+  .inc-item { display: flex; gap: 20px; align-items: flex-start; }
+  .inc-item .amt { flex: 0 0 92px; font-size: 26px; font-weight: 900; letter-spacing: -0.02em; }
+  .inc-item .txt { font-size: 15.5px; line-height: 1.5; color: #d7dde2; padding-top: 4px; }
+  .inc-note { text-align: center; margin-top: 34px; font-size: 21px; font-weight: 800; position: relative; z-index: 2; }
+
   /* ---------- guarantees + cta ---------- */
   .guar-list { margin-top: 26px; display: flex; flex-direction: column; gap: 20px; max-width: 1130px; }
   .guar-item { display: flex; gap: 18px; align-items: flex-start; font-size: 18.5px; line-height: 1.45; }
@@ -548,32 +555,50 @@
 <section class="slide" id="s9">
   <div class="orb cyan" style="width:500px;height:500px;right:-160px;bottom:-200px;"></div>
   <div class="pad">
-    <div class="eyebrow anim" style="--d:.1s">Simple Pricing</div>
-    <h1 class="title anim" style="--d:.2s">One rate. <span class="grad">No setup fee.</span></h1>
+    <div class="eyebrow anim" style="--d:.1s">Two Ways to Onboard</div>
+    <h1 class="title anim" style="--d:.2s">Pick the path that <span class="grad">fits your cash</span>.</h1>
   </div>
   <div class="price-cards">
     <div class="pcard a anim" style="--d:.4s">
-      <div class="plabel">The Rate</div>
-      <h3>All-In, Hourly</h3>
-      <div class="pline"><span class="amt grad">$11.75-14</span><span class="desc">per hour, billed bi-weekly</span></div>
-      <div class="fine">Starts at $11.75/hr for proven editors and moves with the specialty stack. Full-time is about $2,040 a month.</div>
+      <div class="plabel">Path A</div>
+      <h3>Pay Upfront</h3>
+      <div class="pline"><span class="amt">$2,499</span><span class="desc">standard onboarding</span></div>
+      <div class="pline"><span class="amt grad">$2,099</span><span class="desc">action taker, 24-hour decision</span></div>
+      <div class="fine">One-time. Sourcing, five-gate screening, the paid trial cut, and onboarding. Then $11.75/hr all-in.</div>
     </div>
     <div class="pcard b anim" style="--d:.55s">
-      <div class="plabel">What You Skip</div>
-      <div class="plist">
-        <div class="pi"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>No setup fee</div></div>
-        <div class="pi"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>No contracts. Cancel anytime</div></div>
-        <div class="pi"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>No payroll, HR, or taxes to run</div></div>
-        <div class="pi"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Lifetime replacement guarantee</div></div>
-      </div>
+      <div class="plabel">Path B</div>
+      <h3>Roll It Into Your Rate</h3>
+      <div class="pline"><span class="amt">$0</span><span class="desc">today</span></div>
+      <div class="fine">+$1/hr for ~14 months, or +$2/hr for ~7 months, until $2,499 is paid.</div>
+      <div class="fine"><em>Rate drops back to base once paid. No interest, no fees.</em></div>
     </div>
   </div>
-  <div class="price-note anim" style="--d:.75s">Start inside a week. They work inside your business from day one, not a queue.</div>
+  <div class="price-note anim" style="--d:.75s">Ongoing rate: $11.75 to $14/hr all-in. That is about $2,040 a month, full-time.</div>
   <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
 </section>
 
-<!-- SLIDE 10 - GUARANTEES + CTA -->
+<!-- SLIDE 10 - WHAT'S INCLUDED (COST BREAKDOWN) -->
 <section class="slide" id="s10">
+  <div class="orb blue" style="width:460px;height:460px;right:-150px;top:-170px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">All In, Nothing Extra</div>
+    <h1 class="title anim" style="--d:.2s">What your <span class="grad">$2,499</span> onboarding buys.</h1>
+  </div>
+  <div class="inc-grid">
+    <div class="inc-item anim" style="--d:.4s"><div class="amt grad">$1,000</div><div class="txt">Talent acquisition spend across Indeed, OnlineJobs.ph, LinkedIn, and curated editor communities.</div></div>
+    <div class="inc-item anim" style="--d:.5s"><div class="amt grad">$450</div><div class="txt">Recruiter time. We source 500 to 800 applicants, run video interviews, and call references.</div></div>
+    <div class="inc-item anim" style="--d:.6s"><div class="amt grad">$300</div><div class="txt">Strategy call. 60 to 90 minutes to scope the role and lock your style.</div></div>
+    <div class="inc-item anim" style="--d:.7s"><div class="amt grad">$400</div><div class="txt">Onboarding on your editing stack, with SOPs and job flow built for your brand.</div></div>
+    <div class="inc-item anim" style="--d:.8s"><div class="amt grad">$150</div><div class="txt">Custom AI assistant for the role. Your voice, your process.</div></div>
+    <div class="inc-item anim" style="--d:.9s"><div class="amt grad">$199</div><div class="txt">Infrastructure: Assembly HR+, Hubstaff, resource library, and lifetime replacement provisioning.</div></div>
+  </div>
+  <div class="inc-note anim" style="--d:1.05s">Total: $2,499. <span class="grad">No hidden fees. No contracts.</span></div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 11 - GUARANTEES + CTA -->
+<section class="slide" id="s11">
   <div class="orb cyan" style="width:560px;height:560px;left:360px;bottom:-280px;"></div>
   <div class="pad">
     <div class="eyebrow anim" style="--d:.1s">Our Guarantees</div>
