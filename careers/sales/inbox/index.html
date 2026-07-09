@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applicant Inbox — Staffify Sales</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); }
+        body { font-family:"Inter",-apple-system,sans-serif; background:radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), var(--bg); color:var(--white); line-height:1.55; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .tb-right { display:flex; align-items:center; gap:14px; font-size:13px; color:var(--muted); }
+        .tb-right a { color:var(--cyan-hi); text-decoration:none; }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; }
+        .btn:hover { background:var(--cyan-hi); }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .btn-ghost:hover { color:var(--white); }
+        .wrap { max-width:900px; margin:0 auto; padding:28px; }
+        h1 { font-size:26px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+        .count { font-size:14px; color:var(--muted); margin-bottom:22px; }
+        .gate { max-width:440px; margin:60px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
+        .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; }
+        .gate p { font-size:14px; color:var(--muted); margin-bottom:20px; }
+        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+        .gate input:focus { outline:none; border-color:var(--cyan); }
+        .gate .btn { width:100%; padding:13px; font-size:15px; }
+        .err { color:#ff9a8d; font-size:13px; margin-top:10px; min-height:18px; }
+        .card { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:20px 22px; margin-bottom:14px; }
+        .card-top { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+        .name { font-size:19px; font-weight:800; }
+        .date { font-size:12.5px; color:var(--muted); white-space:nowrap; }
+        .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+        .chip { font-size:11.5px; font-weight:600; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); border-radius:999px; padding:4px 11px; }
+        .links { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; font-size:13.5px; }
+        .links a { color:var(--cyan-hi); text-decoration:none; font-weight:600; }
+        .links a:hover { text-decoration:underline; }
+        .qa { margin-top:10px; }
+        .qa .q { font-size:11.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+        .qa .a { font-size:14.5px; color:#dfe3e8; margin-bottom:12px; white-space:pre-wrap; }
+        .empty { text-align:center; color:var(--muted); padding:60px 20px; font-size:15px; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <div class="tb-right" id="tbRight"></div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<script>
+(function(){
+  var KEY='sfy_applicants_token';
+  var app=document.getElementById('app');
+  var tbRight=document.getElementById('tbRight');
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function fmtDate(ts){var n=Number(ts); if(!n) return ''; var d=new Date(n); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
+
+  function showGate(msg){
+    tbRight.innerHTML='';
+    app.innerHTML='<div class="gate"><h2>Applicant inbox</h2><p>Paste your access key once. It stays on this device, so next time this page just opens.</p><input id="tok" type="password" placeholder="Access key" autocomplete="off"><button class="btn" id="go">Open inbox</button><div class="err" id="err">'+(msg||'')+'</div></div>';
+    document.getElementById('go').onclick=function(){var v=document.getElementById('tok').value.trim(); if(!v){return;} localStorage.setItem(KEY,v); load();};
+    document.getElementById('tok').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('go').click();});
+  }
+
+  function signOut(){localStorage.removeItem(KEY); showGate('');}
+
+  async function load(){
+    var tok=localStorage.getItem(KEY);
+    if(!tok){showGate('');return;}
+    app.innerHTML='<div class="empty">Loading applicants...</div>';
+    tbRight.innerHTML='';
+    try{
+      var r=await fetch('/api/sales-applicants/?format=json&token='+encodeURIComponent(tok),{cache:'no-store'});
+      if(r.status===401||r.status===403){localStorage.removeItem(KEY); showGate('That key was not accepted. Try again.'); return;}
+      if(!r.ok){app.innerHTML='<div class="empty">Could not load ('+r.status+'). Try refresh.</div>'; return;}
+      var j=await r.json();
+      var recs=Array.isArray(j)?j:(j.applicants||j.data||[]);
+      render(recs, tok);
+    }catch(e){app.innerHTML='<div class="empty">Network error. Try refresh.</div>';}
+  }
+
+  function render(recs, tok){
+    tbRight.innerHTML='<a href="/api/sales-applicants/?format=csv&token='+encodeURIComponent(tok)+'">Download CSV</a><button class="btn btn-ghost" id="refresh">Refresh</button><button class="btn btn-ghost" id="out">Sign out</button>';
+    document.getElementById('refresh').onclick=load;
+    document.getElementById('out').onclick=signOut;
+    var n=recs.length;
+    var head='<h1>Applicant inbox</h1><div class="count">'+n+' applicant'+(n===1?'':'s')+' &middot; newest first</div>';
+    if(!n){app.innerHTML=head+'<div class="empty">No applications yet. When someone applies at gostaffify.com/careers/sales/, they show up here automatically.</div>'; return;}
+    var html=head;
+    recs.forEach(function(x){
+      var chips=[];
+      if(x.experience) chips.push(esc(x.experience)+' yrs B2B');
+      if(x.availability) chips.push(esc(x.availability)+' hrs/wk');
+      if(x.location) chips.push(esc(x.location));
+      var links=[];
+      if(x.email) links.push('<a href="mailto:'+esc(x.email)+'">'+esc(x.email)+'</a>');
+      if(x.phone) links.push('<a href="tel:'+esc(x.phone)+'">'+esc(x.phone)+'</a>');
+      if(x.linkedin) links.push('<a href="'+esc(x.linkedin)+'" target="_blank" rel="noopener">LinkedIn</a>');
+      if(x.video) links.push('<a href="'+esc(x.video)+'" target="_blank" rel="noopener">Video intro</a>');
+      html+='<div class="card"><div class="card-top"><div class="name">'+esc(x.name||'(no name)')+'</div><div class="date">'+fmtDate(x.created_at)+'</div></div>'+
+        (chips.length?'<div class="chips">'+chips.map(function(c){return '<span class="chip">'+c+'</span>';}).join('')+'</div>':'')+
+        (links.length?'<div class="links">'+links.join('')+'</div>':'')+
+        (x.sold?'<div class="qa"><div class="q">What they’ve sold</div><div class="a">'+esc(x.sold)+'</div></div>':'')+
+        (x.win?'<div class="qa"><div class="q">Biggest win</div><div class="a">'+esc(x.win)+'</div></div>':'')+
+        '</div>';
+    });
+    app.innerHTML=html;
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
