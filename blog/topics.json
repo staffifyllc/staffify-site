@@ -223,7 +223,8 @@
         "hire in house",
         "build vs buy talent"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-07-10T16:28:44Z"
     },
     {
       "slug": "process-before-people",

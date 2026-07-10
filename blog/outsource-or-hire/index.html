@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outsource or Hire? A Decision Tree for Every Role in Your Business | Staffify Blog</title>
+    <meta name="description" content="A practical framework for deciding when to outsource, when to hire in house, and when to build vs buy talent for each seat on your org chart.">
+    <link rel="canonical" href="https://www.gostaffify.com/blog/outsource-or-hire/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.gostaffify.com/blog/outsource-or-hire/">
+    <meta property="og:title" content="Outsource or Hire? A Decision Tree for Every Role in Your Business">
+    <meta property="og:description" content="A practical framework for deciding when to outsource, when to hire in house, and when to build vs buy talent for each seat on your org chart.">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="article:published_time" content="2026-07-10T16:28:44Z">
+    <meta property="article:author" content="Staffify">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Outsource or Hire? A Decision Tree for Every Role in Your Business">
+    <meta name="twitter:description" content="A practical framework for deciding when to outsource, when to hire in house, and when to build vs buy talent for each seat on your org chart.">
+
+    <!-- Schema.org Article -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "Outsource or Hire? A Decision Tree for Every Role in Your Business",
+      "description": "A practical framework for deciding when to outsource, when to hire in house, and when to build vs buy talent for each seat on your org chart.",
+      "datePublished": "2026-07-10T16:28:44Z",
+      "author": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "publisher": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://www.gostaffify.com/blog/outsource-or-hire/" }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--black); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* POST HEADER */
+        .post-header {
+            padding: 140px 24px 60px;
+            max-width: 760px; margin: 0 auto;
+            text-align: left;
+            border-bottom: 1px solid var(--divider);
+        }
+        .post-meta-top {
+            display: flex; gap: 16px; align-items: center;
+            font-size: 12px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+            margin-bottom: 32px;
+        }
+        .post-meta-top .crumb { color: var(--c); }
+        .post-meta-top .sep { opacity: 0.4; }
+        .post-title {
+            font-size: clamp(34px, 5vw, 56px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08; margin-bottom: 28px;
+            color: var(--white);
+        }
+        .post-dek {
+            font-size: 19px; line-height: 1.6;
+            color: rgba(255,255,255,0.65);
+            max-width: 640px; font-weight: 400;
+            margin-bottom: 36px;
+        }
+        .post-byline {
+            display: flex; gap: 24px; align-items: center;
+            font-size: 13px; color: var(--muted);
+            padding-top: 24px;
+        }
+        .post-byline strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ARTICLE BODY */
+        article {
+            max-width: 720px; margin: 0 auto;
+            padding: 64px 24px 80px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 19px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article p { margin-bottom: 28px; }
+        article h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(26px, 3.5vw, 34px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 56px 0 20px;
+            line-height: 1.2;
+        }
+        article h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+            color: var(--white);
+            margin: 40px 0 14px; line-height: 1.3;
+        }
+        article ul, article ol { margin: 0 0 28px; padding-left: 28px; }
+        article li { margin-bottom: 10px; }
+        article a { color: var(--c); text-decoration: none; border-bottom: 1px solid rgba(26,189,225,0.3); transition: border-color .2s; }
+        article a:hover { border-bottom-color: var(--c); }
+        article strong { color: var(--white); font-weight: 700; }
+        article em { color: rgba(255,255,255,0.7); }
+        article blockquote {
+            border-left: 3px solid var(--c);
+            padding: 8px 24px;
+            margin: 32px 0;
+            font-style: italic;
+            color: rgba(255,255,255,0.7);
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 8px 8px 0;
+        }
+        article hr {
+            border: none;
+            border-top: 1px solid var(--divider);
+            margin: 56px 0;
+        }
+        article code {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.9em;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--c);
+        }
+
+        /* CTA at end of post */
+        .post-cta {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+        .post-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 44px 40px;
+            text-align: left;
+        }
+        .post-cta-eyebrow {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--c);
+            margin-bottom: 16px;
+        }
+        .post-cta-title {
+            font-size: 26px; font-weight: 800;
+            letter-spacing: -0.02em; line-height: 1.2;
+            color: var(--white); margin-bottom: 14px;
+        }
+        .post-cta-body {
+            font-size: 15px; line-height: 1.65;
+            color: var(--muted); margin-bottom: 24px;
+            max-width: 540px;
+        }
+        .post-cta-btn {
+            display: inline-block;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 980px;
+            font-size: 14px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .post-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* BACK TO BLOG */
+        .post-foot {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 60px;
+            text-align: center;
+        }
+        .post-foot a {
+            color: var(--muted); text-decoration: none;
+            font-size: 13px; font-weight: 500;
+            transition: color .2s;
+        }
+        .post-foot a:hover { color: var(--white); }
+
+        /* FOOTER */
+        footer {
+            background: var(--black);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 13px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 14px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 12px; color: var(--subtle);
+        }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .post-header { padding-top: 110px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    
+        /* ─── MOBILE NAV (hamburger + drawer) ────────────────── */
+        .nav-hamburger {
+            display: none;
+            width: 44px; height: 44px;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 8px;
+        }
+        .nav-hamburger span {
+            position: relative;
+            display: block;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, opacity .3s, top .3s;
+        }
+        .nav-hamburger span::before,
+        .nav-hamburger span::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, top .3s, opacity .3s;
+        }
+        .nav-hamburger span::before { top: -7px; }
+        .nav-hamburger span::after  { top: 7px; }
+        .nav-hamburger.open span { background: transparent; }
+        .nav-hamburger.open span::before { top: 0; transform: rotate(45deg); }
+        .nav-hamburger.open span::after  { top: 0; transform: rotate(-45deg); }
+
+        .nav-mobile-menu {
+            position: fixed;
+            top: 56px; left: 0; right: 0;
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 24px 24px 32px;
+            z-index: 199;
+            opacity: 0;
+            transform: translateY(-12px);
+            pointer-events: none;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+        .nav-mobile-menu.open {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+        .nav-mobile-menu ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 0 0 22px;
+            padding: 0;
+        }
+        .nav-mobile-menu li a {
+            display: block;
+            padding: 14px 8px;
+            color: rgba(255,255,255,0.78);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-mobile-menu li a:active { background: rgba(255,255,255,0.04); }
+        .nav-mobile-menu li a.active { color: #fff; }
+        .nav-mobile-menu .nav-mobile-cta {
+            display: block;
+            text-align: center;
+            margin-top: 18px;
+            padding: 14px 24px;
+            background: #1abde1;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .nav-hamburger { display: inline-flex; }
+            .nav-cta { display: none; }
+        }
+
+        /* ── READING PROGRESS BAR ── */
+        .reading-progress {
+            position: fixed; top: 56px; left: 0; right: 0; z-index: 199;
+            height: 3px; background: transparent;
+            pointer-events: none;
+        }
+        .reading-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1abde1, #0fa3c5);
+            width: 0%;
+            transition: width .08s linear;
+            box-shadow: 0 0 8px rgba(26,189,225,0.5);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .reading-progress-fill { transition: none; }
+        }
+
+        </style>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/icon-32.png">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/brand/icon-192.png">
+
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <link rel="stylesheet" href="/assets/css/ux.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<!-- Reading progress bar — fills as the user scrolls through the article -->
+<div class="reading-progress" aria-hidden="true"><div class="reading-progress-fill"></div></div>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/case-studies/">Case Studies</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="/apply/" class="nav-apply">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
+</nav>
+
+<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
+    <ul>
+            <li><a href="/editors/">Video Editors</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
+            <li><a href="/csr/">CSR</a></li>
+            <li><a href="/campaigns/">Sales</a></li>
+            <li><a href="/case-studies/">Case Studies</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
+</div>
+
+<header class="post-header">
+    <div class="post-meta-top">
+        <a href="/blog/" class="crumb" style="text-decoration:none;color:var(--c);">Blog</a>
+        <span class="sep">/</span>
+        <span>Scaling Service Businesses</span>
+    </div>
+    <h1 class="post-title">Outsource or Hire? A Decision Tree for Every Role in Your Business</h1>
+    <p class="post-dek">A practical framework for deciding when to outsource, when to hire in house, and when to build vs buy talent for each seat on your org chart.</p>
+    <div class="post-byline">
+        <span><strong>Staffify Team</strong></span>
+        <span>·</span>
+        <span>July 10, 2026</span>
+        <span>·</span>
+        <span>7 min read</span>
+    </div>
+</header>
+
+<article>
+<p>Every founder-operator I talk to hits the same wall around $500K in revenue. The work is there. The clients are there. But you're doing three jobs, sleeping six hours, and every new hire feels like a coin flip. The question isn't whether to add capacity. It's whether that capacity should live inside your company or outside it.</p><p>Most advice on this is useless. It either tells you to outsource everything (VA agencies love this framing) or to hire in house for anything important (recruiters love this one). The truth is more boring. Some roles belong inside. Some belong outside. And some belong outside first, then inside once you actually understand the work.</p><p>Below is the decision tree I use with operators running service businesses between $300K and $5M. It's not clever. It's just the questions I've watched work.</p><h2>Start With One Question: Is This Role Client-Facing in a Way That Requires Judgment?</h2><p>This is the first fork. If a role involves making judgment calls that directly shape client outcomes, it usually needs to be in house. Not always. But usually.</p><p>By judgment, I mean the person has to weigh tradeoffs specific to your business. A senior account manager deciding whether to push back on a client's timeline. A lead strategist choosing which of three campaign directions to pitch. These calls compound. Get them wrong and the client leaves. Get them right and the client refers three more.</p><p>Roles that pass this test almost always need in-house owners. That doesn't mean everything in the role needs to be in house. The strategist can own strategy and hand execution to someone outside. But the judgment layer stays close.</p><p>Roles that fail this test, meaning the work is defined, repeatable, and doesn't require weighing your specific business context, are candidates for outsourcing. Bookkeeping. Video editing to a brief. LinkedIn outreach following a playbook. Executive scheduling. Podcast production. These are process roles. Process roles travel well.</p><h2>The Second Fork: How Often Does the Work Happen?</h2><p>Frequency changes the math. If you need something done 40 hours a week, every week, indefinitely, you probably want a dedicated person. Whether that person is a W-2 employee or a full-time contractor placed by a workforce partner is a separate question, but you want one human, not a rotating team.</p><p>Here's why. Dedicated people build context. They learn your clients' names, your file naming conventions, your unspoken preferences. Rotating teams don't. A dedicated video editor knows that your CEO client hates jump cuts and that the fitness client wants captions burned in at 80% opacity. A generic agency assigns whoever's available on Tuesday.</p><p>For work that happens sporadically, less than 15 hours a week or in unpredictable bursts, project-based outsourcing wins. Paying a full salary for someone who has 12 hours of actual work is how service businesses go broke.</p><p>The awkward middle is 15 to 35 hours a week. This is where most operators overthink. The answer is usually a full-time offshore or nearshore hire through a placement partner. You get the dedication of a full-time person without the fully loaded cost of a US-based W-2 employee. This is the build vs buy talent question at its most concrete.</p><h2>The Third Fork: Does the Role Own Revenue, Delivery, or Overhead?</h2><p>Categorize every role into one of three buckets before you decide anything about staffing.</p><ul><li><strong>Revenue roles</strong> bring money in. Sales, marketing, business development, account expansion.</li><li><strong>Delivery roles</strong> produce what you sold. Editors, designers, project managers, client success.</li><li><strong>Overhead roles</strong> keep the machine running. Bookkeeping, HR, admin, IT, ops support.</li></ul><p>Revenue roles are the trickiest. You cannot fully outsource the top of your revenue engine if you're under $2M. Nobody outside your company will care about your pipeline the way you do. But you can absolutely outsource the mechanical parts. B2B lead generation, list building, first-touch email sequences, LinkedIn connection requests. The pattern that works: outsource the mechanical top of funnel, keep the closing and strategy in house.</p><p>Delivery roles are where most service businesses waste the most money. Founders hire full-time US-based video editors at $75K plus benefits when a vetted full-time editor placed offshore can do the same work for a third of the cost. If your delivery is well-documented (and if it's not, that's your real problem), delivery roles are the highest-leverage place to buy talent instead of build it locally.</p><p>Overhead roles should almost never be full-time US hires until you're past $3M. A part-time bookkeeper, a fractional CFO, and a full-time executive admin placed through a staffing partner will handle 90% of what a growing service business needs. Save the in-house overhead hires for when you have real complexity.</p><h2>The Fourth Fork: Do You Actually Know What Good Looks Like?</h2><p>This is the fork most founders skip and it costs them the most.</p><p>Before you hire in house for any role, you need to be able to answer three questions: What does great work in this role look like? What does mediocre work look like? How would I know the difference in the first 30 days?</p><p>If you can't answer those, do not hire in house yet. You'll pick the wrong person, blame them when things don't work, and repeat the cycle. Instead, outsource the role first, even at a premium, until you understand it well enough to hire for it.</p><p>I watched an agency owner burn through four in-house paid ads managers in 18 months because he didn't know what a good media buyer actually did day to day. He finally hired a fractional media buyer for six months, watched the work, and then hired his fifth in-house person, who's still there three years later. The fractional hire cost him $9K a month. It saved him from a fifth $95K salary mistake.</p><p>Outsource to learn. Hire to scale. In that order.</p><h2>Putting the Tree Together</h2><p>Here's the whole thing in one flow. Walk any role through it.</p><ol><li><strong>Is this role judgment-heavy and client-facing?</strong> If yes, plan to own it in house eventually. If no, it's outsourceable.</li><li><strong>How many hours per week does the work require?</strong> Under 15 hours: project-based outsourcing. 15 to 35 hours: full-time placement through a workforce partner. 35 plus hours: dedicated full-time hire, US or offshore depending on the role.</li><li><strong>Which bucket does the role fall into?</strong> Revenue: keep strategy in house, outsource the mechanics. Delivery: buy talent globally if the process is documented. Overhead: don't hire in house until past $3M.</li><li><strong>Do I know what good looks like?</strong> If no, outsource first to learn the role. If yes, you're ready to hire.</li></ol><p>Applied to real seats, the tree spits out predictable answers. A video editor doing 40 hours a week of edits to a documented style guide: full-time placement, offshore, dedicated. A head of sales for a $2M agency: US hire, in house, non-negotiable. An executive assistant for a founder who lives in email: full-time placement, likely offshore, dedicated. A bookkeeper for a $600K business: fractional, outsourced, ten hours a month. A lead generation SDR: full-time placement following your playbook, with you owning the pipeline strategy.</p><h2>The Mistake That Kills Growth</h2><p>The failure mode I see most often isn't outsourcing too much or hiring too fast. It's mixing the two badly. Founders hire a full-time US employee for a role that should be outsourced, then outsource the wrong parts of a role that needed a dedicated owner.</p><p>Two examples. First, the $1.2M agency that hired a full-time US-based project coordinator at $65K. The role was 90% status updates, meeting scheduling, and client email triage. A dedicated full-time executive admin placed offshore would have done the same work at a fraction of the cost, freeing budget for a senior strategist the agency actually needed.</p><p>Second, the consulting firm that outsourced its entire lead generation function to a fly-by-night agency charging $4K a month for a shared SDR. Nobody owned the pipeline. Leads came in cold, unqualified, and inconsistent. What they needed was a dedicated lead gen person following their specific ICP and messaging, with the founder owning strategy and reviewing output weekly. Same monthly cost. Ten times the results.</p><p>The right question is never just outsource or hire. It's what shape of talent fits this specific role at this specific stage. Get that shape right and you compound. Get it wrong and you spend the next year explaining to your accountant why payroll went up but revenue didn't.</p><h2>What to Do This Week</h2><p>Pull up your org chart, or the version of it that exists in your head. List every role, real or aspirational, that touches the business. For each one, run it through the four forks above and write down the answer.</p><p>You'll find three things. Some roles you're paying too much for. Some you're underinvesting in. And at least one role that you've been treating as a hiring problem is actually a documentation problem. Fix the documentation and the staffing question answers itself.</p><p>That's the real work. Staffing decisions look strategic from the outside. From the inside, they're almost always about clarity. Know the role, know the frequency, know the bucket, know what good looks like. The build vs buy talent decision stops being a decision at that point. It becomes obvious.</p>
+</article>
+
+<section class="post-cta">
+    <div class="post-cta-card">
+        <div class="post-cta-eyebrow">Built for service businesses</div>
+        <h3 class="post-cta-title">Want the team behind your growth, not in front of it?</h3>
+        <p class="post-cta-body">Staffify gives service businesses the people, systems, and infrastructure to scale without the chaos. Vetted talent, real accountability, lifetime replacement guarantee.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="post-cta-btn">Book a Discovery Call →</a>
+    </div>
+</section>
+
+<div class="post-foot">
+    <a href="/blog/">← Back to all posts</a>
+</div>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/apply/">Apply</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span class="footer-legal" style="display:flex;gap:18px;"><a href="/privacy/" style="color:inherit;text-decoration:none;">Privacy</a><a href="/terms/" style="color:inherit;text-decoration:none;">Terms</a></span><span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+(function(){
+    var btn = document.getElementById('navHamburger');
+    var menu = document.getElementById('navMobileMenu');
+    if (!btn || !menu) return;
+    function open(){
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+        menu.style.opacity = '1';
+        menu.style.transform = 'translateY(0)';
+        menu.style.pointerEvents = 'auto';
+    }
+    function close(){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+        menu.style.opacity = '0';
+        menu.style.transform = 'translateY(-12px)';
+        menu.style.pointerEvents = 'none';
+    }
+    function toggle(){ menu.classList.contains('open') ? close() : open(); }
+    btn.addEventListener('click', toggle);
+    menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+
+    // Esc closes the mobile menu
+    document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && menu.classList.contains('open')) close();
+    });
+})();
+
+// ── Reading progress bar ──
+(function(){
+    var fill = document.querySelector('.reading-progress-fill');
+    if (!fill) return;
+    var article = document.querySelector('article');
+    if (!article) return;
+    function update(){
+        var rect = article.getBoundingClientRect();
+        var viewportH = window.innerHeight;
+        var articleH = article.offsetHeight;
+        // Progress from when article top hits viewport to when bottom leaves
+        var scrolled = Math.max(0, -rect.top);
+        var total = Math.max(1, articleH - viewportH);
+        var pct = Math.min(100, Math.max(0, (scrolled / total) * 100));
+        fill.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+})();
+</script>
+  <script src="/assets/js/ux.js" defer></script>
+<!-- Vercel Web Analytics + Speed Insights (Pro plan, no cookies) -->
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
