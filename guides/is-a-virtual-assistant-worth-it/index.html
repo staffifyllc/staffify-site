@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Is a Virtual Assistant Worth It? The Honest Math for 2026 | Staffify</title>
+    <meta name="description" content="Is hiring a virtual assistant worth it? The break-even math: a $12.50/hr dedicated VA pays for itself once you delegate about 10 hours a week of sub-$25/hr work. When it's worth it, when it isn't, and what the first 90 days look like.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.gostaffify.com/guides/is-a-virtual-assistant-worth-it/">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/icon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/brand/icon-192.png">
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --paper: #fdfcf9; --ink: #14181f; --ink-soft: #3a4150; --ink-mute: #71798a; --rule: rgba(20,24,31,0.08); --tint: #f4f1ea; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Fraunces', Georgia, serif; background: var(--paper); color: var(--ink); line-height: 1.7; font-size: 18px; -webkit-font-smoothing: antialiased; }
+        h1, h2, h3 { font-family: 'Inter', -apple-system, sans-serif; letter-spacing: -0.02em; }
+        .topbar { position: sticky; top: 0; z-index: 50; background: rgba(253,252,249,0.94); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; }
+        .topbar-brand { font-family: 'Inter', sans-serif; font-weight: 900; font-size: 18px; color: var(--ink); text-decoration: none; letter-spacing: -0.02em; }
+        .topbar-cta { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #fff; background: var(--ink); padding: 8px 18px; border-radius: 999px; text-decoration: none; }
+        .page { max-width: 760px; margin: 0 auto; padding: 0 32px; }
+        .crumbs { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--ink-mute); letter-spacing: 0.04em; padding: 24px 0 0; }
+        .crumbs a { color: var(--ink-mute); text-decoration: none; }
+        .cover { padding: 52px 0 12px; }
+        .cover-eyebrow { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--c2); margin-bottom: 20px; }
+        .cover h1 { font-family: 'Fraunces', serif; font-size: clamp(32px, 5vw, 48px); font-weight: 700; line-height: 1.1; color: var(--ink); margin-bottom: 18px; }
+        .cover h1 em { font-style: italic; color: var(--c3); }
+        .cover-meta { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--ink-mute); }
+        .quick-answer { background: #fff; border: 1.5px solid rgba(13,130,184,0.25); border-left: 5px solid var(--c); border-radius: 0 12px 12px 0; padding: 16px 20px; margin: 22px 0 8px; font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.65; color: var(--ink-soft); }
+        .quick-answer .qa-tag { display: block; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--c2); margin-bottom: 6px; }
+        .quick-answer b { color: var(--ink); }
+        section.body { padding: 36px 0; }
+        h2 { font-family: 'Fraunces', serif; font-size: clamp(24px, 3.6vw, 32px); font-weight: 700; line-height: 1.2; margin: 40px 0 14px; color: var(--ink); }
+        h3 { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 700; margin: 26px 0 10px; color: var(--ink); }
+        p { color: var(--ink-soft); margin-bottom: 16px; }
+        p b { color: var(--ink); }
+        a { color: var(--c3); }
+        ul { margin: 0 0 16px 22px; color: var(--ink-soft); }
+        ul li { margin-bottom: 8px; font-family: 'Inter', sans-serif; font-size: 16px; }
+        ul li b { color: var(--ink); }
+        .math-card { background: var(--tint); border-radius: 14px; padding: 24px 26px; margin: 20px 0; font-family: 'Inter', sans-serif; }
+        .math-card .mc-title { font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--c2); margin-bottom: 12px; }
+        .math-row { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 15px; color: var(--ink-soft); }
+        .math-row:last-child { border-bottom: none; }
+        .math-row .v { font-weight: 700; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .math-row.total .v { color: var(--c3); }
+        details { border-bottom: 1px solid var(--rule); padding: 18px 0; }
+        details summary { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 700; color: var(--ink); cursor: pointer; list-style: none; position: relative; padding-right: 36px; }
+        details summary::-webkit-details-marker { display: none; }
+        details summary::after { content: '+'; position: absolute; right: 0; top: -4px; font-family: 'Inter', sans-serif; font-size: 26px; font-weight: 300; color: var(--c2); }
+        details[open] summary::after { content: '−'; }
+        details p { font-family: 'Inter', sans-serif; font-size: 15px; margin-top: 12px; margin-bottom: 0; }
+        .sfy-numbers { border-top: 1px solid var(--rule); padding: 44px 0 52px; }
+        .sfy-numbers .sn-title { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+        .sfy-numbers .sn-sub { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--ink-mute); margin-bottom: 20px; }
+        .sfy-numbers .sn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        @media (max-width: 640px) { .sfy-numbers .sn-grid { grid-template-columns: 1fr; } }
+        .sfy-numbers .sn-cell { background: var(--tint); border-radius: 10px; padding: 14px 16px; }
+        .sfy-numbers .sn-cell .n { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: var(--c3); }
+        .sfy-numbers .sn-cell .d { font-family: 'Inter', sans-serif; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin-top: 3px; }
+        .final-cta { background: var(--ink); color: #fff; border-radius: 18px; padding: 44px 36px; margin: 44px 0 60px; text-align: center; }
+        .final-cta h2 { color: #fff; font-family: 'Fraunces', serif; margin: 0 0 12px; }
+        .final-cta h2 em { color: var(--c); font-style: italic; }
+        .final-cta p { color: rgba(255,255,255,0.75); font-family: 'Inter', sans-serif; font-size: 15px; max-width: 480px; margin: 0 auto 22px; }
+        .final-cta a.btn { display: inline-block; background: var(--c); color: var(--ink); font-family: 'Inter', sans-serif; font-weight: 700; font-size: 15px; padding: 14px 28px; border-radius: 999px; text-decoration: none; }
+        footer { padding: 50px 32px; text-align: center; font-family: 'Inter', sans-serif; font-size: 13px; color: var(--ink-mute); }
+        footer a { color: var(--ink-soft); text-decoration: none; }
+    </style>
+    <link rel="stylesheet" href="/assets/css/ux.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<header class="topbar">
+    <a href="/" class="topbar-brand">Staffify</a>
+    <a href="https://calendly.com/go-staffify/discovery-call?utm_content=va-worth-it" class="topbar-cta">Book a 25-min call</a>
+</header>
+
+<main class="page" id="content">
+    <nav class="crumbs"><a href="/">Home</a> / <a href="/guides/">Guides</a> / Is a VA Worth It?</nav>
+
+    <section class="cover">
+        <div class="cover-eyebrow">The Honest Math · 2026</div>
+        <h1>Is a virtual assistant <em>actually worth it</em>?</h1>
+        <div class="cover-meta">Last updated July 2026 · 8-minute read</div>
+        <div class="quick-answer">
+            <span class="qa-tag">Quick answer</span>
+            For most service business owners, yes — and the break-even is lower than expected. A dedicated full-time VA at <b>$12.50/hr (~$2,167/month all-in)</b> pays for itself once you hand off roughly <b>10 hours a week</b> of work that isn't worth your hourly value. If your time is worth $100/hr and you're doing $15/hr work, every delegated hour nets you $85. It is NOT worth it if you can't name 10+ recurring weekly hours to delegate, or if your processes live only in your head and you won't document them.
+        </div>
+    </section>
+
+    <section class="body">
+        <h2>The math, without the fluff.</h2>
+        <p>The question isn't "can I afford a VA" — it's "what is my hour worth, and what am I spending it on." Every founder we work with does inbox, scheduling, follow-ups, data entry, and reporting. That's $12 to $20 per hour work. If your effective hourly value is $100-plus (most owners doing $200K-plus in revenue), the arithmetic is brutal:</p>
+        <div class="math-card">
+            <div class="mc-title">Break-even at a $100/hr owner rate</div>
+            <div class="math-row"><span>Full-time dedicated VA, all-in (Staffify avg)</span><span class="v">$2,167/mo</span></div>
+            <div class="math-row"><span>Owner hours to cover that cost</span><span class="v">~22 hrs/mo</span></div>
+            <div class="math-row"><span>That's per week</span><span class="v">~5 hrs/wk</span></div>
+            <div class="math-row total"><span>Typical hours actually reclaimed by our clients</span><span class="v">20-30 hrs/wk</span></div>
+        </div>
+        <p>Reclaim 20 hours a week at $100/hr and the VA generates roughly <b>$8,600 a month in recovered capacity</b> against a $2,167 cost. Even if you only monetize a third of the recovered time, it's a 30%-plus monthly return. The full delegation list with per-category hours is in our <a href="/delegate/">30-Day ROI playbook</a>.</p>
+
+        <h2>What actually gets delegated.</h2>
+        <ul>
+            <li><b>Inbox and calendar</b> — triage, drafts in your voice, zero double-books (5-10 hrs/wk)</li>
+            <li><b>Follow-ups</b> — leads, invoices, vendors, the money that leaks when nobody chases it (3-6 hrs/wk)</li>
+            <li><b>CRM and reporting</b> — clean data, weekly numbers on your desk (2-4 hrs/wk)</li>
+            <li><b>Client onboarding admin</b> — welcome emails, document collection, kickoff scheduling (2-5 hrs/wk)</li>
+            <li><b>Research and prep</b> — meeting briefs, vendor quotes, travel (2-4 hrs/wk)</li>
+        </ul>
+        <p>Not sure what to hand off first? That's the exact subject of <a href="/guides/what-to-delegate-first/">What to Delegate First</a>.</p>
+
+        <h2>When it's NOT worth it.</h2>
+        <p>Honesty keeps this page useful, so here's the other side:</p>
+        <ul>
+            <li><b>You can't name 10 recurring weekly hours.</b> If the work is sporadic, an on-demand service beats a dedicated hire. Do the smaller thing first.</li>
+            <li><b>Your process lives only in your head and you won't document it.</b> A VA amplifies systems; they can't replace ones that don't exist. (Documenting takes days, not months — but it takes intent.)</li>
+            <li><b>You're hiring to avoid a decision.</b> A VA executes; they don't set strategy. If the bottleneck is direction, fix that first.</li>
+            <li><b>You expect an employee's context on hour one.</b> Weeks one and two are ramp. Owners who quit in week two lose exactly when compounding starts.</li>
+        </ul>
+
+        <h2>What the first 90 days look like.</h2>
+        <h3>Days 1-14: handoff</h3>
+        <p>Your VA is trained on your tools before day one (that's part of <a href="/how-it-works/">Staffify onboarding</a>), then ramps on live work with daily check-ins. You'll spend 2-3 hours a week reviewing output early — this is the investment phase.</p>
+        <h3>Days 15-45: ownership</h3>
+        <p>Tasks move from "done with review" to "done." Inbox, calendar, and follow-ups typically run without you by week four. Your review time drops under an hour a week.</p>
+        <h3>Days 46-90: compounding</h3>
+        <p>The VA starts catching things before you do — the unpaid invoice, the lead nobody chased, the meeting missing an agenda. This is where "worth it" stops being a math question.</p>
+
+        <h2>Common questions.</h2>
+        <details>
+            <summary>How much does a virtual assistant cost?</summary>
+            <p>Dedicated full-time VAs through a managed service run $11 to $20 per hour all-in. Staffify's band is $11.25 to $14 per hour ($12.50 typical, ~$2,167/month full-time) including payroll, HR, training, monitoring, and a lifetime replacement guarantee. Full market breakdown in the <a href="/cost/virtual-assistant/">VA cost guide</a>.</p>
+        </details>
+        <details>
+            <summary>Is a part-time VA worth it?</summary>
+            <p>Yes, when your delegable hours are real but under 30 a week. The math scales down cleanly — a 20-hour part-time placement at $12.50/hr runs about $1,083 a month, and the same break-even logic applies at half scale.</p>
+        </details>
+        <details>
+            <summary>VA vs hiring an employee — which is worth more?</summary>
+            <p>For operational roles, a dedicated VA typically delivers the same output at roughly half the fully-loaded cost of a US hire, with 3x faster time-to-start and none of the payroll/compliance overhead. The full side-by-side is in <a href="/guides/virtual-assistant-vs-employee/">Virtual Assistant vs Employee</a>.</p>
+        </details>
+        <details>
+            <summary>What if it doesn't work out?</summary>
+            <p>With Staffify, the lifetime replacement guarantee means we re-source and replace at no charge, whether it's month 2 or month 22 — and terms are month to month. The downside case is capped by design.</p>
+        </details>
+    </section>
+
+    <section class="sfy-numbers" aria-label="Staffify by the numbers">
+        <div class="sn-title">Staffify by the numbers</div>
+        <div class="sn-sub">Current as of July 2026.</div>
+        <div class="sn-grid">
+            <div class="sn-cell"><div class="n">$12.50/hr</div><div class="d">Average all-in client rate: payroll, HR, training, monitoring, and replacement included</div></div>
+            <div class="sn-cell"><div class="n">95%</div><div class="d">Client retention, on month-to-month terms with no contracts</div></div>
+            <div class="sn-cell"><div class="n">14-20 days</div><div class="d">From kickoff to the VA's first billable hour</div></div>
+            <div class="sn-cell"><div class="n">200 &rarr; 3</div><div class="d">Applicants screened per role vs. finalists the client interviews</div></div>
+            <div class="sn-cell"><div class="n">8%</div><div class="d">Annual VA attrition, against a 12-18 month industry churn cycle</div></div>
+            <div class="sn-cell"><div class="n">1 client</div><div class="d">Every placement is dedicated: never shared, pooled, or rotating</div></div>
+        </div>
+    </section>
+
+    <div class="final-cta">
+        <h2>Run the math on <em>your hours</em>.</h2>
+        <p>25 minutes. We scope what you'd delegate and tell you honestly if the math doesn't work for your situation yet.</p>
+        <a class="btn" href="https://calendly.com/go-staffify/discovery-call?utm_content=va-worth-it-footer">Book a Discovery Call →</a>
+    </div>
+</main>
+
+<footer>
+    <p>Built by <a href="/">Staffify</a> &middot; More Done. Less Stress.</p>
+    <p style="margin-top:8px;font-size:11px;">&copy; 2026 Staffify &middot; <a href="/privacy/">Privacy</a> &middot; <a href="/terms/">Terms</a></p>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Is a virtual assistant worth it?", "acceptedAnswer": {"@type": "Answer", "text": "For most service business owners, yes. A dedicated full-time VA at $12.50/hr (about $2,167/month all-in) breaks even once roughly 10 hours a week of low-value work is delegated. At a $100/hr owner rate, reclaiming 20 hours a week generates about $8,600/month in recovered capacity against a $2,167 cost. It is not worth it without 10+ recurring weekly delegable hours or without documented processes."}},
+    {"@type": "Question", "name": "How much does a virtual assistant cost in 2026?", "acceptedAnswer": {"@type": "Answer", "text": "Dedicated full-time VAs through a managed service run $11 to $20 per hour all-in. Staffify's band is $11.25 to $14 per hour, $12.50 typical, about $2,167 per month full-time, including payroll, HR, training, monitoring, and a lifetime replacement guarantee."}},
+    {"@type": "Question", "name": "When is a virtual assistant not worth it?", "acceptedAnswer": {"@type": "Answer", "text": "When you cannot name 10 recurring weekly hours to delegate, when processes exist only in your head and you will not document them, when the real bottleneck is strategic direction rather than execution, or when you expect employee-level context in the first week."}}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.gostaffify.com/"},
+    {"@type": "ListItem", "position": 2, "name": "Guides", "item": "https://www.gostaffify.com/guides/"},
+    {"@type": "ListItem", "position": 3, "name": "Is a Virtual Assistant Worth It?", "item": "https://www.gostaffify.com/guides/is-a-virtual-assistant-worth-it/"}
+  ]
+}
+</script>
+<script src="/assets/js/ux.js" defer></script>
+<!-- Vercel Web Analytics + Speed Insights (Pro plan, no cookies) -->
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
