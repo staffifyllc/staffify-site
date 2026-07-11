@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Pipeline — Staffify</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); }
+        body { font-family:"Inter",-apple-system,sans-serif; background:radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .tb-right { display:flex; align-items:center; gap:14px; font-size:13px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; }
+        .btn:hover { background:var(--cyan-hi); }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .btn-ghost:hover { color:var(--white); }
+        .nav { display:flex; gap:6px; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        .nav a:hover { color:var(--white); }
+        .wrap { max-width:920px; margin:0 auto; padding:28px; }
+        h1 { font-size:26px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+        .count { font-size:14px; color:var(--muted); margin-bottom:24px; }
+        .gate { max-width:440px; margin:60px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
+        .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; }
+        .gate p { font-size:14px; color:var(--muted); margin-bottom:20px; }
+        .gate input { width:100%; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+        .gate input:focus { outline:none; border-color:var(--cyan); }
+        .gate .btn { width:100%; padding:13px; font-size:15px; }
+        .err { color:#ff9a8d; font-size:13px; margin-top:10px; min-height:18px; }
+        .group-h { font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:var(--cyan); margin:26px 0 12px; }
+        .row { display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--card-border); border-radius:12px; padding:14px 18px; margin-bottom:10px; flex-wrap:wrap; }
+        .when { font-size:12.5px; color:var(--muted); width:118px; flex-shrink:0; }
+        .who { flex:1; min-width:180px; }
+        .who .n { font-size:16px; font-weight:700; }
+        .who .e { font-size:13px; }
+        .who .e a { color:var(--cyan-hi); text-decoration:none; }
+        .who .e a:hover { text-decoration:underline; }
+        .type { font-size:11.5px; font-weight:600; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); border-radius:999px; padding:4px 11px; white-space:nowrap; }
+        .join { font-size:13px; font-weight:700; color:var(--cyan-hi); text-decoration:none; white-space:nowrap; }
+        .join:hover { text-decoration:underline; }
+        .empty { text-align:center; color:var(--muted); padding:60px 20px; font-size:15px; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <nav class="nav">
+        <a href="/careers/sales/inbox/">Applicants</a>
+        <a href="/pipeline/" class="active">Pipeline</a>
+    </nav>
+    <div class="tb-right" id="tbRight"></div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<script>
+(function(){
+  var KEY='sfy_applicants_token';
+  var app=document.getElementById('app');
+  var tbRight=document.getElementById('tbRight');
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function fmt(ts){var d=new Date(ts); return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})+', '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
+
+  function showGate(msg){
+    tbRight.innerHTML='';
+    app.innerHTML='<div class="gate"><h2>Sales pipeline</h2><p>Paste your access key once. Same key as the applicant inbox. It stays on this device.</p><input id="tok" type="password" placeholder="Access key" autocomplete="off"><button class="btn" id="go">Open pipeline</button><div class="err" id="err">'+(msg||'')+'</div></div>';
+    document.getElementById('go').onclick=function(){var v=document.getElementById('tok').value.trim(); if(!v)return; localStorage.setItem(KEY,v); load();};
+    document.getElementById('tok').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('go').click();});
+  }
+  function signOut(){localStorage.removeItem(KEY); showGate('');}
+
+  async function load(){
+    var tok=localStorage.getItem(KEY);
+    if(!tok){showGate('');return;}
+    app.innerHTML='<div class="empty">Loading pipeline from Calendly...</div>';
+    tbRight.innerHTML='';
+    try{
+      var r=await fetch('/api/sales-pipeline?token='+encodeURIComponent(tok),{cache:'no-store'});
+      if(r.status===401||r.status===403){localStorage.removeItem(KEY); showGate('That key was not accepted. Try again.'); return;}
+      if(!r.ok){app.innerHTML='<div class="empty">Could not load ('+r.status+'). Try refresh.</div>'; return;}
+      var j=await r.json();
+      render(j.bookings||[], tok);
+    }catch(e){app.innerHTML='<div class="empty">Network error. Try refresh.</div>';}
+  }
+
+  function rowHtml(b){
+    var join=b.join && /^https?:/.test(b.join) ? '<a class="join" href="'+esc(b.join)+'" target="_blank" rel="noopener">Join &#8599;</a>' : '';
+    return '<div class="row"><div class="when">'+fmt(b.start)+'</div>'+
+      '<div class="who"><div class="n">'+esc(b.name||'(no name)')+'</div>'+
+      (b.email?'<div class="e"><a href="mailto:'+esc(b.email)+'">'+esc(b.email)+'</a></div>':'')+'</div>'+
+      '<span class="type">'+esc(b.type||'Call')+'</span>'+join+'</div>';
+  }
+
+  function render(list, tok){
+    tbRight.innerHTML='<button class="btn btn-ghost" id="refresh">Refresh</button><button class="btn btn-ghost" id="out">Sign out</button>';
+    document.getElementById('refresh').onclick=load;
+    document.getElementById('out').onclick=signOut;
+    var up=list.filter(function(b){return b.when==='upcoming';}).sort(function(a,b){return new Date(a.start)-new Date(b.start);});
+    var past=list.filter(function(b){return b.when!=='upcoming';}).sort(function(a,b){return new Date(b.start)-new Date(a.start);});
+    var n=list.length;
+    var html='<h1>Sales pipeline</h1><div class="count">'+n+' booking'+(n===1?'':'s')+' &middot; last 30 days and upcoming, live from Calendly</div>';
+    if(!n){app.innerHTML=html+'<div class="empty">No bookings in this window.</div>'; return;}
+    if(up.length){ html+='<div class="group-h">Upcoming ('+up.length+')</div>'+up.map(rowHtml).join(''); }
+    if(past.length){ html+='<div class="group-h">Recent ('+past.length+')</div>'+past.map(rowHtml).join(''); }
+    app.innerHTML=html;
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
