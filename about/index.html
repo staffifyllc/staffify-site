@@ -714,6 +714,49 @@
             color: var(--subtle);
         }
 
+        /* VA voice: video testimonial inside Life at Staffify */
+        .va-voice {
+            display: flex;
+            align-items: center;
+            gap: 56px;
+            margin: 24px 0 72px;
+        }
+        .va-voice-frame {
+            width: 320px;
+            min-width: 320px;
+            flex-shrink: 0;
+            border-radius: 22px;
+            overflow: hidden;
+            border: 1px solid rgba(26,189,225,0.35);
+            box-shadow: 0 0 60px rgba(26,189,225,0.12), 0 24px 60px rgba(0,0,0,0.5);
+            background: #000;
+            line-height: 0;
+        }
+        .va-voice-frame video {
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            object-fit: cover;
+            display: block;
+        }
+        .va-voice-copy { flex: 1; }
+        .va-voice-copy .vv-eyebrow {
+            font-size: 12px; font-weight: 800; letter-spacing: 0.28em;
+            text-transform: uppercase; color: var(--c); margin-bottom: 16px;
+        }
+        .va-voice-copy .vv-quote {
+            font-size: clamp(22px, 2.6vw, 30px); font-weight: 700;
+            line-height: 1.35; letter-spacing: -0.015em; color: var(--white);
+        }
+        .va-voice-copy .vv-sub {
+            margin-top: 18px; font-size: 16px; color: var(--muted); line-height: 1.65; max-width: 480px;
+        }
+        @media (max-width: 820px) {
+            .va-voice { flex-direction: column; gap: 32px; margin: 12px 0 56px; }
+            .va-voice-frame { flex: none; width: min(320px, 86vw); }
+            .va-voice-copy { text-align: center; }
+            .va-voice-copy .vv-sub { margin-left: auto; margin-right: auto; }
+        }
+
         /* ── Life at Staffify (how we treat our team) ─────────── */
         .team-care-section {
             padding: 120px 24px;
@@ -1457,10 +1500,34 @@
             </div>
         </div>
 
+        <div class="va-voice reveal">
+            <div class="va-voice-frame">
+                <video controls preload="metadata" playsinline src="/assets/video/va-testimonial.mp4#t=0.5"></video>
+            </div>
+            <div class="va-voice-copy">
+                <div class="vv-eyebrow">Hear It From The Team</div>
+                <div class="vv-quote">Don't take our word for it. One of our VAs, in her own words, on why she's here.</div>
+                <p class="vv-sub">Unscripted, straight from her phone. This is what the deal on this page actually feels like from the other side of it.</p>
+            </div>
+        </div>
+
         <blockquote class="care-quote reveal">
             "Our team isn't an expense line. They're the reason this works. If we wouldn't take the deal ourselves, we don't offer it to them."
             <span class="care-quote-cite">Paul Chareth, Founder</span>
         </blockquote>
+        <script>
+        (function () {
+            var v = document.querySelector('.va-voice video');
+            if (!v) return;
+            var fired = false;
+            v.addEventListener('play', function () {
+                if (fired) return;
+                fired = true;
+                window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+                window.va('event', { name: 'va_video_play', data: { page: '/about/' } });
+            });
+        })();
+        </script>
     </div>
 </section>
 
