@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Staffify | Remote Staffing Presentation</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #050507;
+    --white: #ffffff;
+    --cyan: #1abde1;
+    --cyan-hi: #5fe0fa;
+    --cyan-dark: #0d82b8;
+    --red: #e74c3c;
+    --red-soft: #ff7364;
+    --muted: #9ba1ab;
+    --card: rgba(255,255,255,0.035);
+    --card-border: rgba(255,255,255,0.09);
+  }
+  html, body { background: #000; }
+  body { font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(26,189,225,0.10), transparent 60%),
+      radial-gradient(700px 500px at -5% 110%, rgba(13,86,164,0.14), transparent 55%),
+      var(--bg);
+    color: var(--white);
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+  .slide.hot {
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(231,76,60,0.11), transparent 60%),
+      radial-gradient(700px 500px at -5% 110%, rgba(120,20,20,0.16), transparent 55%),
+      var(--bg);
+  }
+  .slide::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 90px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 90px);
+    mask-image: radial-gradient(75% 75% at 50% 45%, black, transparent);
+    -webkit-mask-image: radial-gradient(75% 75% at 50% 45%, black, transparent);
+  }
+  @media print {
+    html, body { background: var(--bg); }
+    .slide { page-break-after: always; }
+  }
+  @page { size: 1280px 720px; margin: 0; }
+
+  .orb { position: absolute; border-radius: 50%; filter: blur(110px); pointer-events: none; }
+  .orb.cyan { background: rgba(26,189,225,0.17); }
+  .orb.blue { background: rgba(13,86,164,0.20); }
+  .orb.red  { background: rgba(231,76,60,0.15); }
+  .streak {
+    position: absolute; height: 2px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(26,189,225,0.5), transparent);
+  }
+  .streak.red { background: linear-gradient(90deg, transparent, rgba(231,76,60,0.4), transparent); }
+
+  .grad {
+    background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .grad-red {
+    background: linear-gradient(100deg, #ff9a8d 0%, var(--red-soft) 45%, var(--red) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+
+  .eyebrow {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 13px; font-weight: 800; letter-spacing: 0.34em;
+    color: var(--cyan); text-transform: uppercase;
+  }
+  .eyebrow::before {
+    content: ''; width: 34px; height: 2px; flex: 0 0 auto;
+    background: linear-gradient(90deg, var(--cyan), transparent);
+  }
+  .eyebrow.hot { color: var(--red-soft); }
+  .eyebrow.hot::before { background: linear-gradient(90deg, var(--red), transparent); }
+
+  .foot {
+    position: absolute; bottom: 26px; left: 56px; right: 56px; z-index: 5;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .foot .brand { font-size: 16px; font-weight: 900; color: var(--white); letter-spacing: -0.02em; }
+  .foot .brand::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); margin-left: 5px; box-shadow: 0 0 12px rgba(26,189,225,0.9); }
+  .foot .url { font-size: 13px; color: var(--muted); letter-spacing: 0.08em; }
+
+  .pad { padding: 54px 56px 0; position: relative; z-index: 2; }
+  h1.title { font-size: 52px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.06; margin-top: 18px; }
+
+  .check {
+    flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, rgba(26,189,225,0.25), rgba(13,130,184,0.12));
+    border: 1px solid rgba(26,189,225,0.45);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 18px rgba(26,189,225,0.18);
+  }
+  .check svg { width: 13px; height: 13px; }
+  .check.xmark { background: linear-gradient(135deg, rgba(231,76,60,0.22), rgba(120,20,20,0.12)); border-color: rgba(231,76,60,0.45); box-shadow: 0 0 18px rgba(231,76,60,0.14); }
+
+  /* ---------- cover ---------- */
+  .cover { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .cover h1 { font-size: 63px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.07; max-width: 1160px; position: relative; z-index: 2; }
+  .cover .sub { margin-top: 34px; font-size: 24px; font-style: italic; font-weight: 500; color: var(--muted); position: relative; z-index: 2; }
+  .cover .sub b { color: var(--cyan); font-weight: 700; }
+  .cover .contact { position: absolute; bottom: 42px; width: 100%; text-align: center; font-size: 14px; color: var(--muted); letter-spacing: 0.16em; z-index: 2; }
+
+  /* ---------- pain ---------- */
+  .pain-cards { display: flex; gap: 24px; margin: 46px 56px 0; position: relative; z-index: 2; }
+  .pain-card {
+    flex: 1; border-radius: 20px; padding: 36px 30px 30px; text-align: center;
+    background: linear-gradient(180deg, rgba(231,76,60,0.09), rgba(231,76,60,0.02));
+    border: 1px solid rgba(231,76,60,0.32);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 50px rgba(0,0,0,0.5);
+  }
+  .pain-card .n { font-size: 48px; font-weight: 900; letter-spacing: -0.03em; }
+  .pain-card .n .unit { font-size: 22px; font-weight: 600; }
+  .pain-card .l { margin-top: 16px; font-size: 15.5px; line-height: 1.5; color: var(--muted); }
+  .pain-note { text-align: center; margin-top: 42px; font-size: 24px; font-weight: 800; position: relative; z-index: 2; }
+
+  /* ---------- failures ---------- */
+  .fail-cards { display: flex; gap: 24px; margin: 42px 56px 0; position: relative; z-index: 2; }
+  .fail-card {
+    flex: 1; border-radius: 20px; padding: 30px 28px 28px; position: relative; overflow: hidden;
+    background: var(--card); border: 1px solid var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 24px 50px rgba(0,0,0,0.45);
+  }
+  .fail-card .ghost {
+    position: absolute; top: -22px; right: 6px; font-size: 120px; font-weight: 900; letter-spacing: -0.05em;
+    color: transparent; -webkit-text-stroke: 1.5px rgba(231,76,60,0.28); line-height: 1;
+  }
+  .fail-card h3 { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; position: relative; }
+  .fail-card p { margin-top: 12px; font-size: 16px; line-height: 1.55; color: var(--muted); position: relative; }
+  .fail-card p b { color: var(--red-soft); font-weight: 700; }
+  .fail-closer { text-align: center; margin-top: 40px; font-size: 23px; font-weight: 800; letter-spacing: -0.01em; padding: 0 90px; line-height: 1.45; position: relative; z-index: 2; }
+
+  /* ---------- what we do ---------- */
+  .wwd-cols { display: flex; margin-top: 42px; gap: 54px; }
+  .wwd-left { flex: 1.35; display: flex; flex-direction: column; gap: 26px; }
+  .wwd-item { display: flex; gap: 18px; align-items: flex-start; font-size: 21px; line-height: 1.45; font-weight: 500; }
+  .wwd-item .check { margin-top: 3px; }
+  .wwd-right { flex: 1; display: flex; flex-direction: column; gap: 26px; padding-left: 52px; border-left: 1px solid rgba(26,189,225,0.25); }
+  .stat .n { font-size: 54px; font-weight: 900; line-height: 1; letter-spacing: -0.03em; }
+  .stat .n .unit { font-size: 22px; font-weight: 600; }
+  .stat .l { margin-top: 8px; font-size: 15px; color: var(--muted); letter-spacing: 0.04em; font-weight: 500; }
+
+  /* ---------- trial cut (quote) ---------- */
+  .quote-wrap { margin: 40px 56px 0; position: relative; z-index: 2; }
+  .big-quote {
+    max-width: 1050px; padding: 26px 34px;
+    border-left: 3px solid var(--cyan); border-radius: 0 16px 16px 0;
+    background: linear-gradient(90deg, rgba(26,189,225,0.08), transparent 80%);
+    font-size: 26px; font-style: italic; font-weight: 500; color: #e8ebee; line-height: 1.5;
+  }
+  .big-quote .who { color: var(--muted); font-style: normal; font-weight: 700; font-size: 15px; display: block; margin-top: 16px; letter-spacing: 0.04em; }
+  .chip-row { display: flex; gap: 24px; margin-top: 34px; }
+  .chip {
+    flex: 1; border-radius: 18px; padding: 24px 28px;
+    background: var(--card); border: 1px solid var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .chip .cl { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; color: var(--muted); text-transform: uppercase; }
+  .chip .cv { margin-top: 8px; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+
+  /* ---------- funnel ---------- */
+  .funnel { margin-top: 34px; display: flex; flex-direction: column; align-items: center; gap: 11px; position: relative; z-index: 2; }
+  .frow {
+    width: var(--w); height: 46px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--card-border);
+    display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 17.5px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .frow .fn { font-weight: 900; color: var(--cyan); }
+  .frow .fl { color: #cfd4da; font-weight: 500; }
+  .frow.last {
+    background: linear-gradient(100deg, var(--cyan-hi), var(--cyan) 55%, var(--cyan-dark));
+    border: none; box-shadow: 0 0 50px rgba(26,189,225,0.4);
+  }
+  .frow.last .fn, .frow.last .fl { color: #04222b; font-weight: 900; }
+  .funnel-note { text-align: center; margin-top: 28px; font-size: 18px; font-style: italic; color: var(--muted); position: relative; z-index: 2; }
+
+  /* ---------- candidate proof ---------- */
+  .cam-cols { display: flex; gap: 46px; margin-top: 30px; align-items: flex-start; }
+  .cam-left { flex: 1; display: flex; flex-direction: column; gap: 20px; padding-top: 6px; }
+  .cam-item { display: flex; gap: 16px; align-items: flex-start; font-size: 18px; line-height: 1.45; font-weight: 500; }
+  .cam-item .check { margin-top: 2px; }
+  .cam-item b { color: var(--cyan); font-weight: 700; }
+  .cam-note { margin-top: 6px; font-size: 14.5px; color: var(--muted); font-style: italic; }
+  .cam-right { flex: 1.05; }
+  .browser {
+    border-radius: 14px; overflow: hidden; background: #0b0e12;
+    border: 1px solid rgba(26,189,225,0.35);
+    box-shadow: 0 34px 90px rgba(0,0,0,0.65), 0 0 70px rgba(26,189,225,0.13);
+  }
+  .browser .bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #10141a; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .browser .bdot { width: 10px; height: 10px; border-radius: 50%; }
+  .browser .burl { margin-left: 10px; flex: 1; background: rgba(255,255,255,0.055); border-radius: 999px; font-size: 11.5px; color: var(--muted); padding: 5px 14px; letter-spacing: 0.02em; }
+  .browser img { display: block; width: 100%; }
+
+  /* ---------- live embed ---------- */
+  .cap-line { margin-top: 16px; font-size: 17px; line-height: 1.5; color: var(--muted); max-width: 900px; }
+  .cap-line b { color: var(--cyan); font-weight: 700; }
+  .embed-browser {
+    margin: 22px 56px 0; border-radius: 14px; overflow: hidden; position: relative; z-index: 2;
+    background: #0b0e12; border: 1px solid rgba(26,189,225,0.35);
+    box-shadow: 0 34px 90px rgba(0,0,0,0.65), 0 0 70px rgba(26,189,225,0.13);
+  }
+  .embed-browser .bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #10141a; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .embed-browser .bdot { width: 10px; height: 10px; border-radius: 50%; }
+  .embed-browser .burl { margin-left: 10px; flex: 1; background: rgba(255,255,255,0.055); border-radius: 999px; font-size: 12px; color: var(--muted); padding: 6px 16px; letter-spacing: 0.02em; }
+  .embed-browser .openx { margin-left: 12px; color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none; opacity: .85; white-space: nowrap; }
+  .embed-browser .openx:hover { opacity: 1; }
+  .embed-body { position: relative; height: 424px; background: #050507; }
+  .embed-body .poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+  .embed-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: none; background: #050507; }
+  .embed-body.live iframe { display: block; }
+  .embed-body.live .poster { opacity: 0; }
+
+  /* ---------- math / comparison ---------- */
+  .math-cards { display: flex; gap: 24px; margin: 42px 56px 0; align-items: stretch; position: relative; z-index: 2; }
+  .mcard {
+    flex: 1; border-radius: 20px; padding: 34px 28px; text-align: center;
+    background: var(--card); border: 1px solid var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 24px 50px rgba(0,0,0,0.45);
+  }
+  .mcard.featured {
+    background: linear-gradient(180deg, rgba(26,189,225,0.12), rgba(26,189,225,0.025));
+    border: 1.5px solid rgba(26,189,225,0.55);
+    box-shadow: 0 0 70px rgba(26,189,225,0.16), inset 0 1px 0 rgba(255,255,255,0.08);
+    transform: scale(1.04);
+  }
+  .mcard .cap { font-size: 12.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .mcard.featured .cap { color: var(--cyan); }
+  .mcard .n { font-size: 44px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
+  .mcard .n .unit { font-size: 19px; font-weight: 600; }
+  .mcard:not(.featured) .n { color: var(--white); }
+  .mcard .l { margin-top: 16px; font-size: 15px; line-height: 1.5; color: var(--muted); }
+  .mcard.featured .l { color: #d7dde2; }
+  .math-note { text-align: center; margin-top: 40px; font-size: 22px; font-weight: 800; position: relative; z-index: 2; }
+
+  /* ---------- pricing ---------- */
+  .price-cards { display: flex; gap: 26px; margin: 40px 56px 0; position: relative; z-index: 2; }
+  .pcard { flex: 1; border-radius: 22px; padding: 32px 34px; }
+  .pcard.a {
+    background: linear-gradient(180deg, rgba(26,189,225,0.11), rgba(26,189,225,0.02));
+    border: 1.5px solid rgba(26,189,225,0.55);
+    box-shadow: 0 0 70px rgba(26,189,225,0.13), inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+  .pcard.b { background: var(--card); border: 1px solid var(--card-border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+  .pcard .plabel { font-size: 12px; font-weight: 800; letter-spacing: 0.32em; color: var(--cyan); text-transform: uppercase; }
+  .pcard.b .plabel { color: var(--muted); }
+  .pcard h3 { font-size: 28px; font-weight: 900; letter-spacing: -0.02em; margin-top: 10px; }
+  .pcard .pline { margin-top: 16px; display: flex; align-items: baseline; gap: 12px; }
+  .pcard .pline .amt { font-size: 42px; font-weight: 900; letter-spacing: -0.02em; }
+  .pcard .pline .desc { font-size: 15.5px; color: var(--muted); }
+  .pcard .fine { margin-top: 14px; font-size: 15px; line-height: 1.5; color: #c9ced4; }
+  .plist { margin-top: 6px; display: flex; flex-direction: column; gap: 14px; }
+  .plist .pi { display: flex; gap: 14px; align-items: flex-start; font-size: 17px; line-height: 1.4; }
+  .plist .pi .check { width: 24px; height: 24px; }
+  .plist .pi .check svg { width: 11px; height: 11px; }
+  .price-note { text-align: center; margin-top: 30px; font-size: 18px; font-style: italic; color: var(--muted); position: relative; z-index: 2; }
+
+  /* ---------- included (cost breakdown) ---------- */
+  .inc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 52px; margin: 40px 56px 0; position: relative; z-index: 2; }
+  .inc-item { display: flex; gap: 20px; align-items: flex-start; }
+  .inc-item .amt { flex: 0 0 92px; font-size: 26px; font-weight: 900; letter-spacing: -0.02em; }
+  .inc-item .txt { font-size: 15.5px; line-height: 1.5; color: #d7dde2; padding-top: 4px; }
+  .inc-note { text-align: center; margin-top: 34px; font-size: 21px; font-weight: 800; position: relative; z-index: 2; }
+
+  /* ---------- guarantees + cta ---------- */
+  .guar-list { margin-top: 26px; display: flex; flex-direction: column; gap: 20px; max-width: 1130px; }
+  .guar-item { display: flex; gap: 18px; align-items: flex-start; font-size: 18.5px; line-height: 1.45; }
+  .guar-item .check { margin-top: 1px; }
+  .guar-item b { color: var(--white); font-weight: 800; }
+  .guar-item span.d { color: var(--muted); }
+  .cta-box {
+    position: absolute; left: 56px; right: 56px; bottom: 62px; z-index: 2;
+    border: 1.5px solid rgba(26,189,225,0.6); border-radius: 26px;
+    background: linear-gradient(180deg, rgba(26,189,225,0.12), rgba(26,189,225,0.02));
+    text-align: center; padding: 38px 20px 36px;
+    box-shadow: 0 0 80px rgba(26,189,225,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .cta-box h2 { font-size: 50px; font-weight: 900; letter-spacing: -0.03em; }
+  .cta-box .cal { margin-top: 16px; font-size: 26px; font-weight: 800; color: var(--cyan); letter-spacing: -0.01em; }
+  .cta-box .alt { margin-top: 10px; font-size: 16px; color: var(--muted); }
+
+  /* ---------- benefits (reuses guar-list) ---------- */
+
+  /* ---------- services ---------- */
+  .svc-cols { display: flex; gap: 22px; margin: 34px 56px 0; position: relative; z-index: 2; }
+  .svc-col { flex: 1; border-radius: 18px; padding: 24px 22px 22px; background: var(--card); border: 1px solid var(--card-border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+  .svc-col h3 { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: var(--cyan); line-height: 1.2; min-height: 44px; }
+  .svc-col ul { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+  .svc-col li { font-size: 13.5px; line-height: 1.35; color: #cfd4da; padding-left: 16px; position: relative; }
+  .svc-col li::before { content: ''; position: absolute; left: 0; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); }
+
+  /* ---------- approach / steps grid ---------- */
+  .ap-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 22px 26px; margin: 38px 56px 0; position: relative; z-index: 2; }
+  .ap-item { border-radius: 16px; padding: 22px 24px; background: var(--card); border: 1px solid var(--card-border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+  .ap-item .num { font-size: 14px; font-weight: 900; color: var(--cyan); letter-spacing: 0.14em; }
+  .ap-item h4 { font-size: 18px; font-weight: 800; margin-top: 6px; letter-spacing: -0.01em; }
+  .ap-item p { font-size: 13.5px; line-height: 1.45; color: var(--muted); margin-top: 8px; }
+
+  /* ---------- testimonials ---------- */
+  .testi-cards { display: flex; gap: 26px; margin: 38px 56px 0; position: relative; z-index: 2; align-items: stretch; }
+  .testi-card { flex: 1; border-radius: 20px; padding: 30px 26px 24px; background: var(--card); border: 1px solid var(--card-border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 24px 50px rgba(0,0,0,0.45); display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .testi-card .ava { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; object-position: top center; border: 2px solid var(--cyan); box-shadow: 0 0 24px rgba(26,189,225,0.3); }
+  .testi-card .nm { margin-top: 16px; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+  .testi-card .co { margin-top: 4px; font-size: 13px; color: var(--muted); }
+  .testi-card .qt { margin-top: 16px; font-size: 14.5px; line-height: 1.5; color: #e8ebee; font-style: italic; flex: 1; }
+  .testi-card .stars { margin-top: 16px; color: #ffc34d; font-size: 16px; letter-spacing: 3px; }
+
+  /* ---------- pillars closer / section subhead ---------- */
+  .sub-note { text-align: center; margin-top: 38px; font-size: 21px; font-weight: 800; position: relative; z-index: 2; }
+
+  /* ---------- difference (them vs us) ---------- */
+  .diff-title { text-align: center; font-size: 56px; font-weight: 900; letter-spacing: -0.02em; margin-top: 44px; position: relative; z-index: 2; }
+  .vs-wrap { position: relative; margin: 34px 64px 0; z-index: 2; }
+  .vs-grid { display: flex; gap: 26px; }
+  .vs-panel { flex: 1; border-radius: 22px; padding: 26px 30px 22px; }
+  .vs-panel.them { background: linear-gradient(180deg, rgba(231,76,60,0.07), rgba(231,76,60,0.015)); border: 1px solid rgba(231,76,60,0.3); }
+  .vs-panel.us { background: linear-gradient(180deg, rgba(26,189,225,0.10), rgba(26,189,225,0.02)); border: 1.5px solid rgba(26,189,225,0.5); box-shadow: 0 0 70px rgba(26,189,225,0.13), inset 0 1px 0 rgba(255,255,255,0.07); }
+  .vs-panel h2 { text-align: center; font-size: 26px; font-weight: 900; letter-spacing: 0.18em; margin-bottom: 20px; }
+  .vs-panel.them h2 { color: var(--red-soft); }
+  .vs-panel.us h2 { color: var(--cyan); }
+  .vs-row { display: flex; gap: 14px; align-items: center; padding: 9px 0; font-size: 18px; }
+  .vs-panel.them .vs-row { color: #d9a49d; }
+  .vs-panel.us .vs-row { color: var(--white); font-weight: 600; }
+  .vs-badge { position: absolute; left: 50%; top: 50%; margin-left: -32px; margin-top: -32px; z-index: 3; width: 64px; height: 64px; border-radius: 50%; background: #0a0d10; border: 2px solid rgba(26,189,225,0.6); box-shadow: 0 0 40px rgba(26,189,225,0.35); display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 900; letter-spacing: 0.06em; color: var(--cyan); }
+
+  /* ===== Presentation mode ===== */
+  body.present { overflow: hidden; height: 100vh; background: #000; }
+  body.present .stage { position: fixed; left: 50%; top: 50%; width: 1280px; height: 720px; }
+  body.present .slide {
+    position: absolute; inset: 0;
+    opacity: 0; visibility: hidden;
+    transform: translateX(140px) scale(0.96);
+    filter: blur(6px);
+    transition: opacity .6s ease, transform .75s cubic-bezier(.22,.61,.36,1), filter .6s ease, visibility 0s linear .75s;
+    will-change: opacity, transform, filter;
+  }
+  body.present .slide.before { transform: translateX(-140px) scale(0.96); }
+  body.present .slide.active {
+    opacity: 1; visibility: visible; transform: none; filter: none;
+    transition: opacity .6s ease .08s, transform .75s cubic-bezier(.22,.61,.36,1) .08s, filter .6s ease .08s, visibility 0s;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  @keyframes popNum { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+  @keyframes growBar { from { width: 130px; opacity: 0; } to { width: var(--w); opacity: 1; } }
+  @keyframes ctaPulse {
+    0%, 100% { box-shadow: 0 0 60px rgba(26,189,225,0.16), inset 0 1px 0 rgba(255,255,255,0.08); }
+    50% { box-shadow: 0 0 110px rgba(26,189,225,0.4), inset 0 1px 0 rgba(255,255,255,0.08); }
+  }
+  body.present .slide.active .anim { animation: rise .7s cubic-bezier(.22,.61,.36,1) both; animation-delay: var(--d, .15s); }
+  body.present .slide.active .pop { animation: popNum .65s cubic-bezier(.34,1.56,.64,1) both; animation-delay: var(--d, .3s); }
+  body.present .slide.active .frow { animation: growBar .7s cubic-bezier(.22,.61,.36,1) both; animation-delay: var(--d, .2s); }
+  body.present .slide.active .cta-box { animation: rise .7s cubic-bezier(.22,.61,.36,1) .5s both, ctaPulse 3.2s ease-in-out 1.4s infinite; }
+  body.present .slide.active .foot { animation: rise .5s ease .85s both; }
+  body.present .foot .url { visibility: hidden; }
+
+  .deck-progress { display: none; }
+  body.present .deck-progress {
+    display: block; position: fixed; left: 0; bottom: 0; height: 4px;
+    background: linear-gradient(90deg, var(--cyan-dark), var(--cyan));
+    z-index: 40; transition: width .5s cubic-bezier(.22,.61,.36,1);
+    box-shadow: 0 0 16px rgba(26,189,225,0.8);
+  }
+  .deck-nav { display: none; }
+  body.present .deck-nav {
+    display: flex; position: fixed; right: 26px; bottom: 20px; z-index: 41;
+    align-items: center; gap: 14px;
+  }
+  .deck-nav button {
+    width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid rgba(26,189,225,0.45);
+    background: rgba(5,5,7,0.75); color: var(--cyan); font-size: 19px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .2s;
+  }
+  .deck-nav button:hover { background: rgba(26,189,225,0.2); border-color: var(--cyan); box-shadow: 0 0 24px rgba(26,189,225,0.35); }
+  .deck-nav .count { font-size: 13px; color: var(--muted); letter-spacing: .12em; min-width: 52px; text-align: center; font-weight: 600; }
+  .deck-pdf { display: none; }
+  body.present .deck-pdf {
+    display: block; position: fixed; top: 20px; right: 26px; z-index: 41;
+    font-size: 11px; letter-spacing: .22em; font-weight: 700;
+    color: var(--muted); text-decoration: none; text-transform: uppercase; opacity: .5; transition: opacity .2s, color .2s;
+  }
+  .deck-pdf:hover { opacity: 1; color: var(--cyan); }
+</style>
+</head>
+<body>
+<!-- SLIDE 1 - COVER -->
+<section class="slide cover" id="s1">
+  <div class="orb cyan" style="width:560px;height:560px;right:-160px;top:-200px;"></div>
+  <div class="orb blue" style="width:520px;height:520px;left:-180px;bottom:-220px;"></div>
+  <div class="streak" style="width:560px;left:-80px;top:170px;transform:rotate(-20deg);"></div>
+  <div class="streak" style="width:420px;right:-60px;bottom:210px;transform:rotate(-20deg);opacity:.6;"></div>
+  <img class="anim" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:60px;margin-bottom:44px;--d:.1s">
+  <h1 class="anim" style="--d:.25s">Remote staffing,<br><span class="grad">made easy</span>.</h1>
+  <div class="sub anim" style="--d:.45s">Your partner in growth. Vetted talent across admin, sales, customer service, and more.</div>
+  <div class="contact anim" style="--d:.6s">gostaffify.com&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;hello@gostaffify.com</div>
+</section>
+
+<!-- SLIDE 2 - THE POWER OF OUTSOURCING -->
+<section class="slide" id="s2">
+  <div class="orb cyan" style="width:500px;height:500px;right:-160px;top:-190px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Why Outsource</div>
+    <h1 class="title anim" style="--d:.2s">The power of <span class="grad">outsourcing</span>.</h1>
+    <div class="guar-list" style="margin-top:30px;">
+      <div class="guar-item anim" style="--d:.35s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Cost-effective.</b> <span class="d">Cut overhead like office space, equipment, and utilities.</span></div></div>
+      <div class="guar-item anim" style="--d:.46s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Flexible.</b> <span class="d">Scale your team up or down as the business evolves.</span></div></div>
+      <div class="guar-item anim" style="--d:.57s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Global talent pool.</b> <span class="d">A wider range of skills and expertise, at a lower cost.</span></div></div>
+      <div class="guar-item anim" style="--d:.68s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Compliant.</b> <span class="d">Skip the complexities of stateside hiring and payroll. We handle it.</span></div></div>
+      <div class="guar-item anim" style="--d:.79s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Balanced.</b> <span class="d">Delegate the busywork, reduce burnout, and get your time back.</span></div></div>
+    </div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 3 - STAFFING REINVENTED (PILLARS) -->
+<section class="slide" id="s3">
+  <div class="orb blue" style="width:500px;height:500px;left:-170px;top:-180px;"></div>
+  <div class="orb cyan" style="width:420px;height:420px;right:-130px;bottom:-160px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Staffing Reinvented</div>
+    <h1 class="title anim" style="--d:.2s">A true extension of your business, <span class="grad">not a contractor</span>.</h1>
+  </div>
+  <div class="fail-cards">
+    <div class="fail-card anim" style="--d:.4s"><div class="ghost" style="-webkit-text-stroke-color:rgba(26,189,225,0.28);">01</div><h3>Vetted Talent</h3><p>Every applicant clears screening, skills tests, interviews, and cultural-fit checks. Top 1% only.</p></div>
+    <div class="fail-card anim" style="--d:.52s"><div class="ghost" style="-webkit-text-stroke-color:rgba(26,189,225,0.28);">02</div><h3>Tailored Match</h3><p>We learn your business and goals, and match for the vision you have for tomorrow, not just today.</p></div>
+    <div class="fail-card anim" style="--d:.64s"><div class="ghost" style="-webkit-text-stroke-color:rgba(26,189,225,0.28);">03</div><h3>Systems Integration</h3><p>Custom workflows, channels, and SOPs so your hire runs as part of your team from day one.</p></div>
+    <div class="fail-card anim" style="--d:.76s"><div class="ghost" style="-webkit-text-stroke-color:rgba(26,189,225,0.28);">04</div><h3>Ongoing Support</h3><p>Dedicated HR, performance guidance, and full payroll, tax, and compliance handled for you.</p></div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 4 - OUR SERVICES -->
+<section class="slide" id="s4">
+  <div class="orb cyan" style="width:480px;height:480px;right:-150px;top:-180px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">What We Staff</div>
+    <h1 class="title anim" style="--d:.2s">Talent for every <span class="grad">high-impact role</span>.</h1>
+  </div>
+  <div class="svc-cols">
+    <div class="svc-col anim" style="--d:.4s"><h3>Admin / Executive Assistant</h3><ul><li>Calendar &amp; scheduling</li><li>Email management</li><li>Data entry</li><li>Document creation</li><li>CRM management</li><li>Client communication</li><li>Internal reporting</li></ul></div>
+    <div class="svc-col anim" style="--d:.5s"><h3>Sales / Lead Generation</h3><ul><li>Identify decision-makers</li><li>Qualify leads</li><li>Overcome objections</li><li>Secure quality meetings</li><li>Conduct follow-ups</li><li>Lead records &amp; notes</li><li>Campaign reporting</li></ul></div>
+    <div class="svc-col anim" style="--d:.6s"><h3>Transaction Coordinator</h3><ul><li>Transaction management</li><li>Contract preparation</li><li>Document tracking</li><li>Deadline monitoring</li><li>Compliance coordination</li><li>Client &amp; vendor liaison</li><li>Status reporting</li></ul></div>
+    <div class="svc-col anim" style="--d:.7s"><h3>Customer Service / Support</h3><ul><li>Inquiry resolution</li><li>Ticket management</li><li>Customer concern handling</li><li>Prompt follow-ups</li><li>Knowledge base support</li><li>Escalation handling</li><li>Service recovery</li></ul></div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 5 - OUR APPROACH -->
+<section class="slide" id="s5">
+  <div class="orb blue" style="width:480px;height:480px;left:-160px;bottom:-200px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">How It Works</div>
+    <h1 class="title anim" style="--d:.2s">Our <span class="grad">approach</span>, end to end.</h1>
+  </div>
+  <div class="ap-grid">
+    <div class="ap-item anim" style="--d:.4s"><div class="num">STEP 1</div><h4>Recruitment &amp; Vetting</h4><p>Fewer than 1% pass our English, background, internet, and system-capability checks.</p></div>
+    <div class="ap-item anim" style="--d:.5s"><div class="num">STEP 2</div><h4>Business Consulting Call</h4><p>A deep dive on your workflows, culture, and goals. We craft the job scope with you.</p></div>
+    <div class="ap-item anim" style="--d:.6s"><div class="num">STEP 3</div><h4>Curated Candidate List</h4><p>A tailored shortlist on an easy review page. You pick who to move forward.</p></div>
+    <div class="ap-item anim" style="--d:.7s"><div class="num">STEP 4</div><h4>Supported Interviews</h4><p>You lead, we join to ask the key questions, then align on your ideal hire.</p></div>
+    <div class="ap-item anim" style="--d:.8s"><div class="num">STEP 5</div><h4>Seamless Onboarding</h4><p>Backend setup, workflow integration, and SOPs so everyone starts aligned.</p></div>
+    <div class="ap-item anim" style="--d:.9s"><div class="num">STEP 6</div><h4>Ongoing Support</h4><p>You delegate and scale, backed by our dedicated client-success team.</p></div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 6 - SEE THE DIFFERENCE -->
+<section class="slide" id="s6">
+  <div class="orb cyan" style="width:460px;height:460px;right:-150px;bottom:-180px;"></div>
+  <div class="orb red" style="width:400px;height:400px;left:-150px;top:-150px;"></div>
+  <div class="diff-title anim" style="--d:.1s">SEE THE <span class="grad">DIFFERENCE</span></div>
+  <div class="vs-wrap">
+    <div class="vs-grid">
+      <div class="vs-panel them anim" style="--d:.3s">
+        <h2>THEM</h2>
+        <div class="vs-row"><div class="check xmark"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="#ff7364" stroke-width="2.4" stroke-linecap="round"/></svg></div><div>$3,000-$5,000 finders fee</div></div>
+        <div class="vs-row"><div class="check xmark"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="#ff7364" stroke-width="2.4" stroke-linecap="round"/></svg></div><div>No formal recruitment process</div></div>
+        <div class="vs-row"><div class="check xmark"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="#ff7364" stroke-width="2.4" stroke-linecap="round"/></svg></div><div>You handle payroll, HR, taxes</div></div>
+        <div class="vs-row"><div class="check xmark"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="#ff7364" stroke-width="2.4" stroke-linecap="round"/></svg></div><div>High turnover</div></div>
+        <div class="vs-row"><div class="check xmark"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="#ff7364" stroke-width="2.4" stroke-linecap="round"/></svg></div><div>Contracts required</div></div>
+        <div class="vs-row"><div class="check xmark"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="#ff7364" stroke-width="2.4" stroke-linecap="round"/></svg></div><div>Support ends at 90-120 days</div></div>
+      </div>
+      <div class="vs-panel us anim" style="--d:.45s">
+        <h2>US</h2>
+        <div class="vs-row"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>$2,499 flat, all-inclusive</div></div>
+        <div class="vs-row"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Advanced recruitment standards</div></div>
+        <div class="vs-row"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>We handle payroll, HR, taxes</div></div>
+        <div class="vs-row"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>95% retention rate</div></div>
+        <div class="vs-row"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>No contracts</div></div>
+        <div class="vs-row"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Lifetime replacement guarantee</div></div>
+      </div>
+    </div>
+    <div class="vs-badge pop" style="--d:.7s">VS</div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 7 - TESTIMONIALS -->
+<section class="slide" id="s7">
+  <div class="orb cyan" style="width:480px;height:480px;left:-160px;top:-170px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Real Results, Real Voices</div>
+    <h1 class="title anim" style="--d:.2s">Don't take our word. <span class="grad">Take theirs.</span></h1>
+  </div>
+  <div class="testi-cards">
+    <div class="testi-card anim" style="--d:.4s">
+      <img class="ava" src="/assets/pitch/testi-aaron.jpg" alt="Aaron Bradley">
+      <div class="nm">Aaron Bradley</div>
+      <div class="co">Bluegrass Real Estate Media</div>
+      <div class="qt">"Staffify did all of the heavy lifting in terms of helping me find someone, hire someone, and offered so many resources on how to train them as well."</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+    </div>
+    <div class="testi-card anim" style="--d:.52s">
+      <img class="ava" src="/assets/pitch/testi-patrick.jpg" alt="Patrick Szydlik">
+      <div class="nm">Patrick Szydlik</div>
+      <div class="co">Hephaestus Innovation</div>
+      <div class="qt">"I couldn't be more thankful for Staffify. Our VAs have been killing it, they're unreal. We have probably the most advanced editing system in the world right now, all because of the VAs we got."</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+    </div>
+    <div class="testi-card anim" style="--d:.64s">
+      <img class="ava" src="/assets/pitch/testi-trey.jpg" alt="Trey Tatro">
+      <div class="nm">Trey Tatro</div>
+      <div class="co">Amazing List Photos</div>
+      <div class="qt">"If you're thinking about working with Staffify and getting a VA in place to help your team, trust me, you're at the point where you definitely need it. Do it."</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+    </div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 8 - WHAT'S INCLUDED -->
+<section class="slide" id="s8">
+  <div class="orb blue" style="width:460px;height:460px;right:-150px;top:-170px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">All In, Nothing Extra</div>
+    <h1 class="title anim" style="--d:.2s">Every placement <span class="grad">includes</span>.</h1>
+    <div class="wwd-cols">
+      <div class="wwd-left">
+        <div class="wwd-item anim" style="--d:.4s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Targeted ad spend to attract top talent</div></div>
+        <div class="wwd-item anim" style="--d:.5s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Comprehensive business consulting call</div></div>
+        <div class="wwd-item anim" style="--d:.6s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Customized talent sourcing</div></div>
+        <div class="wwd-item anim" style="--d:.7s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Thorough candidate screening</div></div>
+      </div>
+      <div class="wwd-left">
+        <div class="wwd-item anim" style="--d:.5s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Job description optimization</div></div>
+        <div class="wwd-item anim" style="--d:.6s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Supported interviews</div></div>
+        <div class="wwd-item anim" style="--d:.7s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Seamless onboarding</div></div>
+        <div class="wwd-item anim" style="--d:.8s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div>Lifetime replacement guarantee</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 9 - PRICING -->
+<section class="slide" id="s9">
+  <div class="orb cyan" style="width:500px;height:500px;right:-160px;bottom:-200px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Invest in Growth</div>
+    <h1 class="title anim" style="--d:.2s">Two ways to <span class="grad">get started</span>.</h1>
+  </div>
+  <div class="price-cards">
+    <div class="pcard a anim" style="--d:.4s">
+      <div class="plabel">Action Taker</div>
+      <h3>Decide Today</h3>
+      <div class="pline"><span class="amt grad">$2,099</span><span class="desc">per hire</span></div>
+      <div class="fine">A special rate for moving forward on the call. Our way of rewarding momentum, so you start seeing results sooner.</div>
+    </div>
+    <div class="pcard b anim" style="--d:.55s">
+      <div class="plabel">Standard</div>
+      <h3>Take Your Time</h3>
+      <div class="pline"><span class="amt">$2,499</span><span class="desc">per hire</span></div>
+      <div class="fine">For those who prefer to wait before launching. We will be here when you are ready. Launching sooner is what earns the discount.</div>
+    </div>
+  </div>
+  <div class="price-note anim" style="--d:.75s">One-time onboarding. Ongoing talent is billed at a simple all-in hourly rate.</div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 10 - NEXT STEPS -->
+<section class="slide" id="s10">
+  <div class="orb blue" style="width:480px;height:480px;left:-160px;top:-190px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Our Next Steps</div>
+    <h1 class="title anim" style="--d:.2s">From yes to your first <span class="grad">candidates</span>.</h1>
+  </div>
+  <div class="ap-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="ap-item anim" style="--d:.4s"><div class="num">STEP 1</div><h4>Business Consulting Call</h4><p>A deep dive on your goals, workflows, and where you need support most.</p></div>
+    <div class="ap-item anim" style="--d:.52s"><div class="num">STEP 2</div><h4>Client Welcome Packet</h4><p>A detailed guide with best practices and everything you need for a smooth start.</p></div>
+    <div class="ap-item anim" style="--d:.64s"><div class="num">STEP 3</div><h4>Assembly Channel Setup</h4><p>Your dedicated channel for candidate review, approvals, and HR and success support.</p></div>
+    <div class="ap-item anim" style="--d:.76s"><div class="num">STEP 4</div><h4>Candidate Delivery Begins</h4><p>Top candidates for review within one week of job description approval.</p></div>
+  </div>
+  <div class="foot"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<!-- SLIDE 11 - CTA -->
+<section class="slide" id="s11">
+  <div class="orb cyan" style="width:560px;height:560px;left:360px;bottom:-280px;"></div>
+  <div class="pad">
+    <div class="eyebrow anim" style="--d:.1s">Take Advantage</div>
+    <div class="guar-list" style="margin-top:24px;">
+      <div class="guar-item anim" style="--d:.25s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Action Taker discount.</b> <span class="d">Decide on the call and start at $2,099 per hire instead of $2,499.</span></div></div>
+      <div class="guar-item anim" style="--d:.38s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Candidates within a week.</b> <span class="d">Top talent shortlisted within one week of job description approval.</span></div></div>
+      <div class="guar-item anim" style="--d:.51s"><div class="check"><svg viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5l3.5 3.5 7-8" stroke="#5fe0fa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Backed for life.</b> <span class="d">Lifetime replacement guarantee. If a hire does not work out, we replace them.</span></div></div>
+    </div>
+  </div>
+  <div class="cta-box">
+    <h2>Let's build your <span class="grad">team</span>.</h2>
+    <div class="cal">calendly.com/go-staffify/discovery-call</div>
+    <div class="alt">or reach us direct: hello@gostaffify.com</div>
+  </div>
+  <div class="foot" style="bottom: 20px;"><img class="brand-logo" src="/assets/brand/logo-blue.svg" alt="Staffify" style="height:22px"><span class="url">gostaffify.com</span></div>
+</section>
+
+<script>
+(function () {
+  const p = new URLSearchParams(location.search);
+  const only = p.get('only');
+  if (only) {
+    document.querySelectorAll('.slide').forEach(s => { if (s.id !== only) s.style.display = 'none'; });
+    return; // QA mode: stacked, no presentation
+  }
+  if (p.has('print')) return; // print/PDF mode: stacked
+
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const n = slides.length;
+
+  const stage = document.createElement('div');
+  stage.className = 'stage';
+  slides.forEach(s => stage.appendChild(s));
+  document.body.appendChild(stage);
+
+  const bar = document.createElement('div'); bar.className = 'deck-progress'; document.body.appendChild(bar);
+  const nav = document.createElement('div'); nav.className = 'deck-nav';
+  nav.innerHTML = '<button type="button" data-go="-1" aria-label="Previous">&#8592;</button>' +
+                  '<span class="count"></span>' +
+                  '<button type="button" data-go="1" aria-label="Next">&#8594;</button>';
+  document.body.appendChild(nav);
+  const pdf = document.createElement('a'); pdf.className = 'deck-pdf'; pdf.href = '/assets/decks/staffify-general-pitch.pdf'; pdf.textContent = 'PDF';
+  document.body.appendChild(pdf);
+  const count = nav.querySelector('.count');
+
+  document.body.classList.add('present');
+
+  // Activate live embeds only in presentation mode (never in ?print/?only,
+  // which return early above so the PDF and per-slide QA keep the poster).
+  document.querySelectorAll('.embed-body[data-embed]').forEach(function (b) {
+    var f = b.querySelector('iframe');
+    if (f && !f.src) f.src = b.dataset.embed;
+    b.classList.add('live');
+  });
+
+  let cur = Math.min(Math.max(parseInt(location.hash.slice(1), 10) || 1, 1), n) - 1;
+
+  function render() {
+    slides.forEach((s, i) => {
+      s.classList.toggle('active', i === cur);
+      s.classList.toggle('before', i < cur);
+    });
+    bar.style.width = (((cur + 1) / n) * 100) + '%';
+    count.textContent = (cur + 1) + ' / ' + n;
+    history.replaceState(null, '', '#' + (cur + 1));
+  }
+
+  function go(d) { const next = Math.min(Math.max(cur + d, 0), n - 1); if (next !== cur) { cur = next; render(); } }
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  addEventListener('resize', fit); fit();
+
+  nav.addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(parseInt(b.dataset.go, 10)); });
+  addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(-1); }
+    else if (e.key === 'Home') { cur = 0; render(); }
+    else if (e.key === 'End') { cur = n - 1; render(); }
+  });
+  let tx = null;
+  addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', e => {
+    if (tx === null) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    tx = null;
+  }, { passive: true });
+  addEventListener('hashchange', () => {
+    const h = Math.min(Math.max(parseInt(location.hash.slice(1), 10) || 1, 1), n) - 1;
+    if (h !== cur) { cur = h; render(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
