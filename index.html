@@ -450,6 +450,21 @@
             background: rgba(255,255,255,0.04);
         }
 
+        /* Poster child: Irish Raine (dormant until video arrives) */
+        .irish-section { padding: 110px 24px; background: var(--near-black); border-top: 1px solid var(--divider); }
+        .irish-inner { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; gap: 64px; }
+        .irish-frame { width: 320px; min-width: 320px; flex-shrink: 0; }
+        .irish-frame video { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; border-radius: 22px; border: 1px solid rgba(26,189,225,0.35); box-shadow: 0 0 60px rgba(26,189,225,0.12), 0 24px 60px rgba(0,0,0,0.5); background: #000; }
+        .irish-caption { margin-top: 14px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+        .irish-caption strong { color: var(--white); }
+        .irish-caption .booked { color: var(--c); font-weight: 700; }
+        .irish-copy { flex: 1; }
+        @media (max-width: 820px) {
+            .irish-inner { flex-direction: column; gap: 36px; }
+            .irish-frame { width: min(320px, 86vw); min-width: 0; }
+            .irish-copy { text-align: center; }
+        }
+
         /* Hero stats */
         .hero-stats {
             display: flex;
@@ -1944,6 +1959,27 @@
         </div>
     </div>
 </section>
+
+<!-- ─── POSTER CHILD: IRISH RAINE ───
+     DORMANT until her video arrives. To go live:
+     1. Drop the file at /assets/video/irish-raine.mp4
+     2. Remove this comment wrapper (the two lines marked IRISH-START / IRISH-END)
+     3. Fill [TENURE] in the caption
+<!~~ IRISH-START
+<section class="irish-section">
+    <div class="irish-inner">
+        <div class="irish-frame reveal">
+            <video controls preload="metadata" playsinline src="/assets/video/irish-raine.mp4#t=0.5"></video>
+            <div class="irish-caption"><strong>Irish Raine</strong> · Executive Assistant · with Staffify since [TENURE] · <span class="booked">fully booked</span></div>
+        </div>
+        <div class="irish-copy">
+            <div class="section-eyebrow reveal">The Caliber We Hire</div>
+            <h2 class="section-title reveal">Meet Irish.<br><span class="g">We hire people just like her.</span></h2>
+            <p class="section-sub reveal">Irish is one of ours: dedicated to a single client, trained on their exact stack, and the reason their day runs without them touching the small stuff. She's fully booked, and she's the standard. When you hire with Staffify, this is who shows up.</p>
+        </div>
+    </div>
+</section>
+IRISH-END ~~> -->
 
 <!-- ─── OPERATIONS LAYER ─── -->
 <section class="ops-section">
