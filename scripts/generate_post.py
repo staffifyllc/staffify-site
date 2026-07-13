@@ -221,15 +221,30 @@ def regenerate_index():
 # Sitemap
 # ────────────────────────────────────────────────────────────────────────────
 def update_sitemap():
+    # Scan the site for every indexable page instead of hardcoding a list.
+    # A page belongs in the sitemap iff it's an index.html outside excluded
+    # dirs and does not declare noindex. Keeps hand-built SEO sections
+    # (cost/, compare/, industry/, guides/, how-it-works/, ...) from being
+    # clobbered on every blog publish.
     sitemap_path = REPO_ROOT / "sitemap.xml"
     base = "https://www.gostaffify.com"
-    urls = [
-        f"{base}/", f"{base}/about/", f"{base}/editors/", f"{base}/admins/", f"{base}/csr/",
-        f"{base}/campaigns/", f"{base}/apply/", f"{base}/blog/", f"{base}/book/",
-    ]
-    for meta_path in sorted(BLOG_DIR.glob("*/meta.json")):
-        m = json.loads(meta_path.read_text())
-        urls.append(f"{base}/blog/{m['slug']}/")
+    EXCLUDED_TOP = {"assets", "api", "scripts", "_archive", "node_modules",
+                    "proposals", "pitch", "careers", "thank-you", "lib"}
+    urls = [f"{base}/"]
+    for page in sorted(REPO_ROOT.rglob("index.html")):
+        rel = page.relative_to(REPO_ROOT)
+        parts = rel.parts
+        if len(parts) == 1:
+            continue  # root already added
+        if parts[0].startswith(".") or parts[0] in EXCLUDED_TOP:
+            continue
+        try:
+            head = page.read_text(errors="ignore")[:4000]
+        except OSError:
+            continue
+        if "noindex" in head:
+            continue
+        urls.append(f"{base}/" + "/".join(parts[:-1]) + "/")
 
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
