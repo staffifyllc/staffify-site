@@ -410,7 +410,7 @@
     </clipPath>
       <mask id="aHole" maskUnits="userSpaceOnUse">
       <rect x="0" y="0" width="864" height="256" fill="#fff"/>
-      <circle cx="326.8" cy="137.2" r="33" fill="#000"/>
+      <circle cx="320" cy="137.2" r="33" fill="#000"/>
     </mask>
   </defs>
   <g mask="url(#aHole)">
