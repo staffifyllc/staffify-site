@@ -983,6 +983,25 @@
             font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.6);
             background: rgba(26,189,225,0.045);
         }
+        /* Anomaly-detection strip */
+        .ops-dash-insight {
+            display: flex; align-items: center; gap: 13px; flex-wrap: wrap;
+            padding: 13px 22px; border-top: 1px solid rgba(255,255,255,0.06);
+            background: rgba(224,164,95,0.055);
+            font-size: 12.5px;
+        }
+        .odi-icon { color: #e0a45f; font-size: 15px; line-height: 1; flex-shrink: 0; }
+        .odi-body { display: flex; align-items: baseline; gap: 11px; flex: 1; min-width: 240px; flex-wrap: wrap; }
+        .odi-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #e0a45f; font-weight: 800; white-space: nowrap; }
+        .odi-text { color: rgba(255,255,255,0.82); }
+        .odi-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11.5px; font-weight: 700; color: #5fe0fa;
+            background: rgba(26,189,225,0.1); border: 1px solid rgba(26,189,225,0.28);
+            border-radius: 20px; padding: 4px 12px; white-space: nowrap;
+        }
+        .odi-badge::before { content: '\2713'; font-weight: 800; }
+        @media (max-width: 520px) { .odi-badge { width: 100%; justify-content: center; } }
         @media (max-width: 860px) { .ops-dash-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 480px) {
             .ops-dash-grid { grid-template-columns: 1fr; }
@@ -2150,7 +2169,15 @@
                     </ul>
                 </div>
             </div>
-            <div class="ops-dash-foot"><span class="live-dot"></span>Live monitoring on every placement &mdash; we flag anomalies and step in before they reach you.</div>
+            <div class="ops-dash-insight">
+                <span class="odi-icon">&#9873;</span>
+                <div class="odi-body">
+                    <span class="odi-label">Anomaly flagged</span>
+                    <span class="odi-text">Activity rate unusually consistent for 40+ min &middot; auto-detected 2:30 PM</span>
+                </div>
+                <span class="odi-badge">Ops reviewed screenshots &amp; cleared &middot; 2:38 PM</span>
+            </div>
+            <div class="ops-dash-foot"><span class="live-dot"></span>Every placement monitored in real time &mdash; a real manager in your time zone reviews the flags and steps in before they reach you.</div>
         </div>
 
         <div class="ops-grid">
