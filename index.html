@@ -1316,6 +1316,16 @@
             line-height: 1.75;
             max-width: 270px;
         }
+        .footer-social { display: flex; gap: 10px; margin-top: 18px; }
+        .footer-social a {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 38px; height: 38px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.55);
+            transition: color .2s, border-color .2s, background .2s;
+        }
+        .footer-social a:hover { color: #fff; border-color: var(--c); background: rgba(26,189,225,0.08); }
+        .footer-social svg { width: 19px; height: 19px; }
         .footer-col h4 {
             font-size: 10px;
             font-weight: 700;
@@ -2406,6 +2416,11 @@
         <div class="footer-brand">
             <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
             <p>Operational infrastructure for growing businesses. Elite overseas teams with real systems, real accountability, and real results.</p>
+            <div class="footer-social">
+                <a href="https://www.instagram.com/staffify/" target="_blank" rel="noopener" aria-label="Staffify on Instagram">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"/></svg>
+                </a>
+            </div>
         </div>
         <div class="footer-col">
             <h4>Services</h4>
