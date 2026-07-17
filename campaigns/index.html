@@ -380,6 +380,41 @@
             bottom: 0; left: 0; right: 0;
             height: 1px;
             background: linear-gradient(90deg, transparent, rgba(26,189,225,0.4), transparent);
+            z-index: 4;
+        }
+
+        /* Faded ambient hero photo (subject on the right) */
+        @keyframes heroMediaIn { to { opacity: 1; } }
+        .hero-media {
+            position: absolute; inset: 0; z-index: 1;
+            pointer-events: none; opacity: 0;
+            animation: heroMediaIn 1.3s cubic-bezier(.16,1,.3,1) .5s forwards;
+        }
+        .hero-media img {
+            width: 100%; height: 100%;
+            object-fit: cover; object-position: 72% center;
+            filter: brightness(.72) contrast(1.03);
+        }
+        .hero-media::after {
+            content: ''; position: absolute; inset: 0;
+            background:
+                linear-gradient(90deg, #000 22%, rgba(5,5,7,0.84) 40%, rgba(5,5,7,0.44) 58%, rgba(5,5,7,0.12) 80%, transparent 100%),
+                linear-gradient(180deg, #000 0%, transparent 22%, transparent 72%, #000 100%);
+        }
+        .hero > .hero-eyebrow,
+        .hero > h1,
+        .hero > .hero-sub,
+        .hero > .hero-social-proof,
+        .hero > .hero-ctas,
+        .hero > .hero-microcopy,
+        .hero > .hero-stats { position: relative; z-index: 3; }
+        @media (max-width: 899px) {
+            .hero-media img { object-position: 62% 18%; filter: brightness(.5); }
+            .hero-media::after {
+                background:
+                    linear-gradient(180deg, rgba(5,5,7,0.72) 0%, rgba(5,5,7,0.52) 34%, rgba(5,5,7,0.66) 62%, #000 100%),
+                    radial-gradient(120% 74% at 50% 36%, rgba(5,5,7,0) 8%, rgba(5,5,7,0.55) 92%);
+            }
         }
 
         /* Ambient orb */
@@ -3092,6 +3127,9 @@
 <main>
 <section class="hero" id="content" aria-labelledby="hero-heading">
     <div class="orb" aria-hidden="true"></div>
+    <div class="hero-media" aria-hidden="true">
+        <img src="/assets/img/campaigns-hero.jpg" alt="" fetchpriority="high">
+    </div>
     <div class="hero-eyebrow">
         <span class="pulse-dot" aria-hidden="true"></span>
         Email &nbsp;·&nbsp; LinkedIn &nbsp;·&nbsp; Database Reactivation
