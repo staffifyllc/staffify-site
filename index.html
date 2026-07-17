@@ -910,6 +910,47 @@
             pointer-events: none;
         }
         .ops-inner { max-width: 1180px; margin: 0 auto; position: relative; }
+
+        /* Mission-control banner */
+        .ops-banner {
+            position: relative;
+            margin: 40px auto 60px;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid rgba(26,189,225,0.16);
+            box-shadow: 0 34px 90px rgba(0,0,0,0.55);
+            aspect-ratio: 16 / 6.4;
+        }
+        .ops-banner img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            object-position: center 40%;
+            display: block;
+        }
+        .ops-banner::after {
+            content: '';
+            position: absolute; inset: 0;
+            background:
+                linear-gradient(180deg, rgba(5,5,7,0.28) 0%, transparent 34%, rgba(5,5,7,0.6) 100%),
+                radial-gradient(120% 120% at 50% -10%, transparent 55%, rgba(5,5,7,0.45) 100%);
+            pointer-events: none;
+        }
+        .ops-banner-cap {
+            position: absolute; left: 26px; bottom: 22px; z-index: 2;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: #fff;
+            text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+        }
+        .ops-banner-cap .live-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--c); box-shadow: 0 0 10px var(--c);
+            animation: opsPulse 2.4s ease-in-out infinite;
+        }
+        @keyframes opsPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+        @media (max-width: 640px) {
+            .ops-banner { aspect-ratio: 16 / 10; }
+            .ops-banner-cap { left: 16px; bottom: 14px; font-size: 12px; }
+        }
         .ops-grid {
             margin-top: 64px;
             display: grid;
@@ -2022,6 +2063,11 @@
         <div class="section-eyebrow reveal" style="text-align:center;">After the hire</div>
         <h2 class="section-title reveal" style="text-align:center;">We don&rsquo;t just place.<br><span class="g">We operate around you.</span></h2>
         <p class="section-sub reveal" style="text-align:center;max-width:640px;margin:0 auto;">The reason our placements stay productive is the operations layer behind them. While you focus on your business, we run the system.</p>
+
+        <div class="ops-banner reveal">
+            <img src="/assets/img/ops-command.jpg" alt="Staffify operations team monitoring placements in real time" loading="lazy">
+            <div class="ops-banner-cap"><span class="live-dot"></span>Live monitoring on every placement</div>
+        </div>
 
         <div class="ops-grid">
             <div class="ops-card reveal">
