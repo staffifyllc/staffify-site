@@ -1072,6 +1072,49 @@
             pointer-events: none;
         }
         .ops-strip-inner { max-width: 1180px; margin: 0 auto; position: relative; }
+
+        /* Productivity dashboard mockup (Hubstaff-style) */
+        @keyframes opsPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+        .ops-dash { margin: 44px auto 8px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, #0c0e12, #090a0d); box-shadow: 0 34px 90px rgba(0,0,0,0.5); overflow: hidden; text-align: left; }
+        .ops-dash-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 22px; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.015); }
+        .ops-dash-id { display: flex; align-items: center; gap: 11px; }
+        .ods-avatar { width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0; background: linear-gradient(135deg, var(--c), var(--c3)); color: #04121a; font-weight: 800; font-size: 12px; display: grid; place-items: center; }
+        .ods-name { display: block; font-size: 13.5px; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+        .ods-role { display: block; font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 500; }
+        .ops-dash-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.45); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .ops-dash-meta .live-dot, .ops-dash-foot .live-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--c); box-shadow: 0 0 9px var(--c); animation: opsPulse 2.4s ease-in-out infinite; }
+        .ops-dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(255,255,255,0.06); }
+        .odt { background: #0a0c0f; padding: 20px; display: flex; flex-direction: column; gap: 11px; }
+        .odt-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.35); font-weight: 700; }
+        .odt-big { font-size: 25px; font-weight: 800; color: #fff; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+        .odt-big span { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.4); margin-left: 6px; letter-spacing: 0; }
+        .odt-sub { font-size: 11.5px; color: rgba(255,255,255,0.42); font-variant-numeric: tabular-nums; }
+        .odt-util { display: flex; align-items: center; gap: 14px; }
+        .odt-ring { width: 66px; height: 66px; border-radius: 50%; flex-shrink: 0; background: conic-gradient(var(--c) calc(var(--p) * 1%), rgba(255,255,255,0.08) 0); display: grid; place-items: center; position: relative; }
+        .odt-ring::before { content: ''; position: absolute; inset: 8px; border-radius: 50%; background: #0a0c0f; }
+        .odt-ring b { position: relative; font-size: 14px; font-weight: 800; color: #fff; }
+        .odt-bar { height: 8px; border-radius: 6px; overflow: hidden; display: flex; }
+        .odt-bar i { display: block; height: 100%; }
+        .odt-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10.5px; color: rgba(255,255,255,0.5); }
+        .odt-legend span { display: inline-flex; align-items: center; gap: 5px; }
+        .odt-legend .k { width: 8px; height: 8px; border-radius: 2px; }
+        .odt-apps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+        .odt-apps li { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: rgba(255,255,255,0.72); }
+        .odt-apps .row { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+        .odt-apps .track { height: 4px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .odt-apps .track i { display: block; height: 100%; background: linear-gradient(90deg, var(--c), var(--c3)); }
+        .ops-dash-insight { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; padding: 13px 22px; border-top: 1px solid rgba(255,255,255,0.06); background: rgba(224,164,95,0.055); font-size: 12.5px; }
+        .odi-icon { color: #e0a45f; font-size: 15px; line-height: 1; flex-shrink: 0; }
+        .odi-body { display: flex; align-items: baseline; gap: 11px; flex: 1; min-width: 240px; flex-wrap: wrap; }
+        .odi-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #e0a45f; font-weight: 800; white-space: nowrap; }
+        .odi-text { color: rgba(255,255,255,0.82); }
+        .odi-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color: #5fe0fa; background: rgba(26,189,225,0.1); border: 1px solid rgba(26,189,225,0.28); border-radius: 20px; padding: 4px 12px; white-space: nowrap; }
+        .odi-badge::before { content: '\2713'; font-weight: 800; }
+        .ops-dash-foot { display: flex; align-items: center; gap: 10px; padding: 13px 22px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.6); background: rgba(26,189,225,0.045); }
+        @media (max-width: 860px) { .ops-dash-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 520px) { .odi-badge { width: 100%; justify-content: center; } }
+        @media (max-width: 480px) { .ops-dash-grid { grid-template-columns: 1fr; } .ops-dash-meta { display: none; } }
+
         .ops-strip-eyebrow {
             text-align: center;
             font-size: 11px; font-weight: 700;
@@ -1850,6 +1893,66 @@
         <div class="ops-strip-inner">
             <div class="ops-strip-eyebrow">After the hire</div>
             <h2 class="ops-strip-title">We don&rsquo;t just place. We operate around you.</h2>
+
+            <div class="ops-dash reveal" role="img" aria-label="Live productivity dashboard for an executive admin: 96 percent utilization, 71 percent core work, 4 hours 41 minutes of focus time, top apps, and an anomaly that was flagged and cleared by ops">
+                <div class="ops-dash-head">
+                    <div class="ops-dash-id">
+                        <span class="ods-avatar">CA</span>
+                        <span><span class="ods-name">Camille A.</span><span class="ods-role">Executive Admin &middot; Manila</span></span>
+                    </div>
+                    <div class="ops-dash-meta"><span class="live-dot"></span>Live &middot; Today</div>
+                </div>
+                <div class="ops-dash-grid">
+                    <div class="odt">
+                        <div class="odt-label">Utilization</div>
+                        <div class="odt-util">
+                            <div class="odt-ring" style="--p:96"><b>96%</b></div>
+                            <div style="display:flex;flex-direction:column;gap:5px">
+                                <div class="odt-big" style="font-size:21px">7:42<span>avg</span></div>
+                                <div class="odt-sub">Target 8:00</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="odt">
+                        <div class="odt-label">Work time</div>
+                        <div class="odt-big">71%<span>core work</span></div>
+                        <div class="odt-bar">
+                            <i style="width:71%;background:var(--c)"></i>
+                            <i style="width:27%;background:rgba(255,255,255,0.28)"></i>
+                            <i style="width:2%;background:#e0a45f"></i>
+                        </div>
+                        <div class="odt-legend">
+                            <span><i class="k" style="background:var(--c)"></i>Core</span>
+                            <span><i class="k" style="background:rgba(255,255,255,0.28)"></i>Non-core</span>
+                            <span><i class="k" style="background:#e0a45f"></i>Idle</span>
+                        </div>
+                    </div>
+                    <div class="odt">
+                        <div class="odt-label">Focus time</div>
+                        <div class="odt-big">4:41</div>
+                        <div class="odt-sub">3 deep-work sessions &middot; 1:33 avg</div>
+                        <div class="odt-sub" style="color:var(--c);font-weight:600">Activity 41%</div>
+                    </div>
+                    <div class="odt">
+                        <div class="odt-label">Top apps today</div>
+                        <ul class="odt-apps">
+                            <li><div class="row"><span>Google Workspace</span><span>38%</span></div><div class="track"><i style="width:38%"></i></div></li>
+                            <li><div class="row"><span>HubSpot CRM</span><span>22%</span></div><div class="track"><i style="width:22%"></i></div></li>
+                            <li><div class="row"><span>Slack</span><span>16%</span></div><div class="track"><i style="width:16%"></i></div></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="ops-dash-insight">
+                    <span class="odi-icon">&#9873;</span>
+                    <div class="odi-body">
+                        <span class="odi-label">Anomaly flagged</span>
+                        <span class="odi-text">Activity rate unusually consistent for 40+ min &middot; auto-detected 2:30 PM</span>
+                    </div>
+                    <span class="odi-badge">Ops reviewed screenshots &amp; cleared &middot; 2:38 PM</span>
+                </div>
+                <div class="ops-dash-foot"><span class="live-dot"></span>Every placement monitored in real time &mdash; a real manager in your time zone reviews the flags and steps in before they reach you.</div>
+            </div>
+
             <div class="ops-strip-grid">
                 <div class="ops-strip-pill">
                     <div class="ops-strip-icon">
