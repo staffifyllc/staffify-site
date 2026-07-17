@@ -3,103 +3,103 @@
   <defs>
     <style>
       .cls-1 {
-        fill: #ffffff;
+        fill: #c2c1c1;
       }
 
       .cls-2 {
-        fill: #ffffff;
+        fill: #fafafa;
       }
 
       .cls-3 {
-        fill: #ffffff;
+        fill: #cbcaca;
       }
 
       .cls-4 {
-        fill: #ffffff;
+        fill: #bebdbd;
       }
 
       .cls-5 {
-        fill: #ffffff;
+        fill: #bdbdbd;
       }
 
       .cls-6 {
-        fill: #ffffff;
+        fill: #e0dfdf;
       }
 
       .cls-7 {
-        fill: #ffffff;
+        fill: #edecec;
       }
 
       .cls-8 {
-        fill: #ffffff;
+        fill: #f1f0f0;
       }
 
       .cls-9 {
-        fill: #ffffff;
+        fill: #cdcccc;
       }
 
       .cls-10 {
-        fill: #ffffff;
+        fill: #c5c4c4;
       }
 
       .cls-11 {
-        fill: #ffffff;
+        fill: #e5e4e3;
       }
 
       .cls-12 {
-        fill: #ffffff;
+        fill: #c3c2c2;
       }
 
       .cls-13 {
-        fill: #ffffff;
+        fill: #f8f8f7;
       }
 
       .cls-14 {
-        fill: #ffffff;
+        fill: #eeedec;
       }
 
       .cls-15 {
-        fill: #ffffff;
+        fill: #fefefe;
       }
 
       .cls-16 {
-        fill: #ffffff;
+        fill: #c1c0c0;
       }
 
       .cls-17 {
-        fill: #ffffff;
+        fill: #cfcece;
       }
 
       .cls-18 {
-        fill: #ffffff;
+        fill: #e7e6e5;
       }
 
       .cls-19 {
-        fill: #ffffff;
+        fill: #d7d6d6;
       }
 
       .cls-20 {
-        fill: #ffffff;
+        fill: #c5c5c5;
       }
 
       .cls-21 {
-        fill: #ffffff;
+        fill: #e8e7e7;
       }
 
       .cls-22 {
-        fill: #ffffff;
+        fill: #d1d1d0;
       }
 
       .cls-23 {
-        fill: #ffffff;
+        fill: #dedddd;
       }
 
       .cls-24 {
-        fill: #ffffff;
+        fill: #d0cfcf;
       }
 
       .cls-25 {
-        fill: #ffffff;
+        fill: #d8d7d7;
       }
 
       .cls-26, .cls-27 {
@@ -107,59 +107,59 @@
       }
 
       .cls-28 {
-        fill: #ffffff;
+        fill: #fbfbfb;
       }
 
       .cls-29 {
-        fill: #ffffff;
+        fill: #e8e7e6;
       }
 
       .cls-30 {
-        fill: #ffffff;
+        fill: #bcbbbc;
       }
 
       .cls-31 {
-        fill: #ffffff;
+        fill: #eae9e9;
       }
 
       .cls-32 {
-        fill: #ffffff;
+        fill: #ecebeb;
       }
 
       .cls-33 {
-        fill: #ffffff;
+        fill: #d9d8d8;
       }
 
       .cls-34 {
-        fill: #ffffff;
+        fill: #efeeee;
       }
 
       .cls-35 {
-        fill: #ffffff;
+        fill: #f5f4f4;
       }
 
       .cls-36 {
-        fill: #ffffff;
+        fill: #bcbcbc;
       }
 
       .cls-37 {
-        fill: #ffffff;
+        fill: #f7f6f6;
       }
 
       .cls-38 {
-        fill: #ffffff;
+        fill: #cac9c9;
       }
 
       .cls-39 {
-        fill: #ffffff;
+        fill: #d6d5d5;
       }
 
       .cls-40 {
-        fill: #ffffff;
+        fill: #ebeaea;
       }
 
       .cls-41 {
-        fill: #ffffff;
+        fill: #f9f9f8;
       }
 
       .cls-42 {
@@ -167,11 +167,11 @@
       }
 
       .cls-43 {
-        fill: #ffffff;
+        fill: #e6e5e4;
       }
 
       .cls-44 {
-        fill: #ffffff;
+        fill: #e3e2e2;
       }
 
       .cls-27 {
@@ -179,7 +179,7 @@
       }
 
       .cls-45 {
-        fill: #ffffff;
+        fill: #c7c6c6;
       }
 
       .cls-46 {
@@ -187,79 +187,79 @@
       }
 
       .cls-47 {
-        fill: #ffffff;
+        fill: #c4c3c3;
       }
 
       .cls-48 {
-        fill: #ffffff;
+        fill: #bbbaba;
       }
 
       .cls-49 {
-        fill: #ffffff;
+        fill: #e2e1e0;
       }
 
       .cls-50 {
-        fill: #ffffff;
+        fill: #ecebea;
       }
 
       .cls-51 {
-        fill: #ffffff;
+        fill: #f7f7f6;
       }
 
       .cls-52 {
-        fill: #ffffff;
+        fill: #c2c2c2;
       }
 
       .cls-53 {
-        fill: #ffffff;
+        fill: #f2f1f1;
       }
 
       .cls-54 {
-        fill: #ffffff;
+        fill: #d4d3d3;
       }
 
       .cls-55 {
-        fill: #ffffff;
+        fill: #cecdcd;
       }
 
       .cls-56 {
-        fill: #ffffff;
+        fill: #bfbebe;
       }
 
       .cls-57 {
-        fill: #ffffff;
+        fill: #f4f3f3;
       }
 
       .cls-58 {
-        fill: #ffffff;
+        fill: #e0dfde;
       }
 
       .cls-59 {
-        fill: #ffffff;
+        fill: #c9c8c8;
       }
 
       .cls-60 {
-        fill: #ffffff;
+        fill: #cececd;
       }
 
       .cls-61 {
-        fill: #ffffff;
+        fill: #e2e1e1;
       }
 
       .cls-62 {
-        fill: #ffffff;
+        fill: #bebebe;
       }
 
       .cls-63 {
-        fill: #ffffff;
+        fill: #d5d4d4;
       }
 
       .cls-64 {
-        fill: #ffffff;
+        fill: #d3d2d2;
       }
 
       .cls-65 {
-        fill: #ffffff;
+        fill: #f0efee;
       }
 
       .cls-66 {
@@ -267,79 +267,79 @@
       }
 
       .cls-67 {
-        fill: #ffffff;
+        fill: #c0bfbf;
       }
 
       .cls-68 {
-        fill: #ffffff;
+        fill: #cccbcb;
       }
 
       .cls-69 {
-        fill: #ffffff;
+        fill: #f6f5f5;
       }
 
       .cls-70 {
-        fill: #ffffff;
+        fill: #d2d1d1;
       }
 
       .cls-71 {
-        fill: #ffffff;
+        fill: #dbdada;
       }
 
       .cls-72 {
-        fill: #ffffff;
+        fill: #c6c5c5;
       }
 
       .cls-73 {
-        fill: #ffffff;
+        fill: #dad9d8;
       }
 
       .cls-74 {
-        fill: #ffffff;
+        fill: #f1f0ef;
       }
 
       .cls-75 {
-        fill: #ffffff;
+        fill: #e6e5e5;
       }
 
       .cls-76 {
-        fill: #ffffff;
+        fill: #d8d7d6;
       }
 
       .cls-77 {
-        fill: #ffffff;
+        fill: #dad9d9;
       }
 
       .cls-78 {
-        fill: #ffffff;
+        fill: #dcdbda;
       }
 
       .cls-79 {
-        fill: #ffffff;
+        fill: #c8c7c7;
       }
 
       .cls-80 {
-        fill: #ffffff;
+        fill: #eae9e8;
       }
 
       .cls-81 {
-        fill: #ffffff;
+        fill: #d5d4d3;
       }
 
       .cls-82 {
-        fill: #ffffff;
+        fill: #f3f2f1;
       }
 
       .cls-83 {
-        fill: #ffffff;
+        fill: #d6d6d5;
       }
 
       .cls-84 {
-        fill: #ffffff;
+        fill: #fcfcfc;
       }
 
       .cls-85 {
-        fill: #ffffff;
+        fill: #c8c8c7;
       }
 
       .cls-86 {
@@ -347,59 +347,59 @@
       }
 
       .cls-87 {
-        fill: #ffffff;
+        fill: #e1e0e0;
       }
 
       .cls-88 {
-        fill: #ffffff;
+        fill: #c1c1c1;
       }
 
       .cls-89 {
-        fill: #ffffff;
+        fill: #efeded;
       }
 
       .cls-90 {
-        fill: #ffffff;
+        fill: #dcdbdb;
       }
 
       .cls-91 {
-        fill: #ffffff;
+        fill: #dddcdc;
       }
 
       .cls-92 {
-        fill: #ffffff;
+        fill: #bfbfbf;
       }
 
       .cls-93 {
-        fill: #ffffff;
+        fill: #e4e3e3;
       }
 
       .cls-94 {
-        fill: #ffffff;
+        fill: #dedddc;
       }
 
       .cls-95 {
-        fill: #ffffff;
+        fill: #cbcbca;
       }
 
       .cls-96 {
-        fill: #ffffff;
+        fill: #e4e3e2;
       }
 
       .cls-97 {
-        fill: #ffffff;
+        fill: #d1d0d0;
       }
 
       .cls-98 {
-        fill: #ffffff;
+        fill: #e9e8e7;
       }
 
       .cls-99 {
-        fill: #ffffff;
+        fill: #dfdede;
       }
 
       .cls-100 {
-        fill: #ffffff;
+        fill: #f3f3f2;
       }
     </style>
     <clipPath id="clippath">
@@ -408,12 +408,7 @@
     <clipPath id="clippath-1">
       <path class="cls-27" d="M351.31,131.31c0,16.75-13.58,30.33-30.33,30.33s-31.13-13.2-31.63-30.05c-.52-17.51,13.58-31.93,30.97-31.93s30.99,13.9,30.99,30.99v.66Z"/>
     </clipPath>
-      <mask id="aHole" maskUnits="userSpaceOnUse">
-      <rect x="0" y="0" width="864" height="256" fill="#fff"/>
-      <circle cx="326.8" cy="137.2" r="33" fill="#000"/>
-    </mask>
   </defs>
-  <g mask="url(#aHole)">
   <g class="cls-46">
     <g id="Layer_1">
       <g>
@@ -538,6 +533,5 @@
         </g>
       </g>
     </g>
-  </g>
   </g>
 </svg>
