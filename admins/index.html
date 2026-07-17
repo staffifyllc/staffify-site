@@ -108,6 +108,39 @@
             background: #000;
         }
 
+        /* Faded ambient hero photo */
+        .hero-media {
+            position: absolute; inset: 0; z-index: 1;
+            pointer-events: none; opacity: 0;
+            animation: fadeUp 1.4s cubic-bezier(.16,1,.3,1) .5s forwards;
+        }
+        .hero-media img {
+            width: 100%; height: 100%;
+            object-fit: cover; object-position: 28% center;
+            filter: brightness(.74) contrast(1.03);
+        }
+        .hero-media::after {
+            content: ''; position: absolute; inset: 0;
+            background:
+                linear-gradient(90deg, transparent 0%, rgba(5,5,7,0.2) 34%, rgba(5,5,7,0.55) 64%, #000 100%),
+                linear-gradient(180deg, #000 0%, transparent 24%, transparent 66%, #000 100%),
+                radial-gradient(85% 90% at 32% 46%, transparent 32%, rgba(5,5,7,0.38) 100%);
+        }
+        /* lift hero copy above the photo */
+        .hero > .hero-badge,
+        .hero > .hero-headline,
+        .hero > .hero-rule-new,
+        .hero > .hero-sub-new,
+        .hero > .hero-ctas-new { position: relative; z-index: 3; }
+        @media (max-width: 899px) {
+            .hero-media img { object-position: 40% 22%; filter: brightness(.55); }
+            .hero-media::after {
+                background:
+                    linear-gradient(180deg, rgba(5,5,7,0.68) 0%, rgba(5,5,7,0.5) 34%, rgba(5,5,7,0.66) 62%, #000 100%),
+                    radial-gradient(120% 74% at 50% 38%, rgba(5,5,7,0) 8%, rgba(5,5,7,0.55) 92%);
+            }
+        }
+
         .hero-grid {
             position: absolute; inset: 0;
             background-image: radial-gradient(circle, rgba(26,189,225,0.13) 1px, transparent 1px);
@@ -1403,6 +1436,10 @@
         <div class="orb-2"></div>
     <div class="orb-3"></div>
     <div class="aurora"></div>
+
+        <div class="hero-media">
+            <img src="/assets/img/admin-hero.jpg" alt="A Staffify executive admin managing communications at her desk" fetchpriority="high">
+        </div>
 
         <div class="hero-badge"><span class="badge-dot"></span> Executive Admin Staffing</div>
 
