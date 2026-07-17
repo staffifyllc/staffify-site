@@ -261,7 +261,8 @@
         "filipino va rates",
         "outsourcing cost"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-07-17T15:19:19Z"
     },
     {
       "slug": "va-vs-employee-cost",
