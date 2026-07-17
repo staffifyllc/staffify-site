@@ -287,6 +287,60 @@
             align-items: center;
         }
 
+        /* ── Hero photo (split layout) ───────────────────────── */
+        .hero-media {
+            position: absolute;
+            top: 0; right: 0; bottom: 0;
+            width: 55%;
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeUp 1.3s cubic-bezier(.16,1,.3,1) .45s forwards;
+        }
+        .hero-media img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            object-position: 72% center;
+        }
+        /* feather left + bottom edges into the black ground */
+        .hero-media::after {
+            content: '';
+            position: absolute; inset: 0;
+            background:
+                linear-gradient(90deg, var(--black) 0%, rgba(5,5,7,0.55) 24%, transparent 58%),
+                linear-gradient(0deg, var(--black) 0%, transparent 32%),
+                radial-gradient(130% 100% at 100% 45%, transparent 42%, rgba(5,5,7,0.4) 100%);
+        }
+
+        @media (min-width: 900px) {
+            .hero.has-media { text-align: left; }
+            .hero.has-media .hero-inner {
+                align-items: flex-start;
+                text-align: left;
+                width: 100%;
+                max-width: 1320px;
+                margin: 0 auto;
+                padding-left: clamp(24px, 5vw, 96px);
+                padding-right: 50%;
+            }
+            .hero.has-media .hero-rule { margin-left: 0; margin-right: 0; }
+            .hero.has-media .hero-actions { justify-content: flex-start; }
+            .hero.has-media .hero-stats { justify-content: flex-start; }
+            .hero.has-media .hero-line-main { font-size: clamp(46px, 5.4vw, 86px); }
+            .hero.has-media .hero-line-accent { font-size: clamp(44px, 5.1vw, 82px); }
+            .hero.has-media .hero-sub { max-width: 460px; }
+        }
+
+        @media (max-width: 899px) {
+            .hero-media { width: 100%; opacity: 1; }
+            .hero-media img { object-position: 60% 22%; filter: brightness(.62); }
+            .hero-media::after {
+                background:
+                    linear-gradient(180deg, rgba(5,5,7,0.72) 0%, rgba(5,5,7,0.5) 34%, rgba(5,5,7,0.62) 62%, var(--black) 100%),
+                    radial-gradient(125% 72% at 50% 40%, rgba(5,5,7,0) 8%, rgba(5,5,7,0.6) 92%);
+            }
+        }
+
         /* Eyebrow */
         .hero-eyebrow {
             display: inline-flex;
@@ -1683,7 +1737,7 @@
 </div>
 
 <!-- ─── HERO ─── -->
-<section class="hero" id="content">
+<section class="hero has-media" id="content">
     <!-- Background layers -->
     <div class="hero-grid"></div>
     <div class="orb orb-1"></div>
@@ -1692,6 +1746,11 @@
     <div class="aurora"></div>
     <div class="hero-streaks" id="heroStreaks"></div>
     <div class="hero-spotlight" id="heroSpotlight"></div>
+
+    <!-- Hero photo -->
+    <div class="hero-media">
+        <img src="/assets/img/hero-va.jpg" alt="A Staffify placement at work in a premium home office" fetchpriority="high">
+    </div>
 
     <!-- Main content -->
     <div class="hero-inner">
