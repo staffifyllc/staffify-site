@@ -724,6 +724,27 @@
         .service-card:hover { background: #111; }
         .service-card:hover::before { opacity: 1; }
 
+        /* Photo header strip on role cards */
+        .service-photo {
+            margin: -44px -36px 30px;
+            height: 176px;
+            position: relative;
+            overflow: hidden;
+        }
+        .service-photo img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            object-position: center 36%;
+            transition: transform .6s cubic-bezier(.16,1,.3,1);
+        }
+        .service-card:hover .service-photo img { transform: scale(1.06); }
+        .service-photo::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(180deg, rgba(5,5,7,0) 42%, rgba(8,8,10,0.85) 88%, var(--card) 100%);
+            pointer-events: none;
+        }
+
         .service-card-num {
             font-size: 10px;
             font-weight: 700;
@@ -1850,6 +1871,7 @@
 
     <div class="services-grid">
         <a href="/campaigns/" class="service-card reveal">
+            <div class="service-photo"><img src="/assets/img/role-sales.jpg" alt="A Staffify sales specialist working outbound" loading="lazy"></div>
             <div class="service-card-num">01</div>
             <div class="service-icon">
                 <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -1872,6 +1894,7 @@
         </a>
 
         <a href="/admins/" class="service-card reveal reveal-delay-1">
+            <div class="service-photo"><img src="/assets/img/role-admin.jpg" alt="A Staffify executive admin at a multi-monitor desk" loading="lazy"></div>
             <div class="service-card-num">02</div>
             <div class="service-icon">
                 <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1894,6 +1917,7 @@
         </a>
 
         <a href="/csr/" class="service-card reveal reveal-delay-2">
+            <div class="service-photo"><img src="/assets/img/role-csr.jpg" alt="A Staffify customer service rep on a support call" loading="lazy"></div>
             <div class="service-card-num">03</div>
             <div class="service-icon">
                 <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -1916,6 +1940,7 @@
         </a>
 
         <a href="/editors/" class="service-card reveal reveal-delay-2">
+            <div class="service-photo"><img src="/assets/img/role-video.jpg" alt="A Staffify video editor working on a timeline" loading="lazy"></div>
             <div class="service-card-num">04</div>
             <div class="service-icon">
                 <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
