@@ -1,0 +1,34 @@
+<!doctype html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;background:#111;color:#0f0;font:12px monospace;padding:16px">
+<pre id="out">measuring…</pre>
+<canvas id="c" width="864" height="256" style="display:none"></canvas>
+<script>
+const img=new Image();
+img.onload=()=>{
+  const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,864,256); ctx.drawImage(img,0,0,864,256);
+  const d=ctx.getImageData(0,0,864,256).data;
+  const on=(x,y)=> x>=0&&x<864&&y>=0&&y<256 && d[(y*864+x)*4+3]>60;
+  // seed on the teardrop bowl (just above the counter at 326,137)
+  const seeds=[[326,88],[320,95],[335,95]];
+  let seed=seeds.find(s=>on(s[0],s[1]));
+  if(!seed){ document.getElementById('out').innerText='no seed on teardrop; tried '+JSON.stringify(seeds); return; }
+  // BFS flood over "on" pixels
+  const seen=new Uint8Array(864*256); const st=[seed]; seen[seed[1]*864+seed[0]]=1;
+  let minx=864,miny=256,maxx=0,maxy=0,count=0;
+  while(st.length){
+    const [x,y]=st.pop(); count++;
+    if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y;
+    const nb=[[x+1,y],[x-1,y],[x,y+1],[x,y-1]];
+    for(const [nx,ny] of nb){ if(on(nx,ny) && !seen[ny*864+nx]){ seen[ny*864+nx]=1; st.push([nx,ny]); } }
+  }
+  document.getElementById('out').innerText =
+    'seed '+JSON.stringify(seed)+'\nfilled pixels: '+count+
+    '\nA teardrop bbox: x['+minx+' – '+maxx+']  y['+miny+' – '+maxy+']'+
+    '\n  width='+(maxx-minx)+' height='+(maxy-miny)+
+    '\n  (if this spans nearly the whole 864 width, glyphs are touching)';
+};
+img.onerror=()=>document.getElementById('out').innerText='img load error';
+img.src='/assets/brand/logo-white.svg?f='+Date.now();
+</script>
+</body></html>

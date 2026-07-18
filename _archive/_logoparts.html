@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;background:#111;color:#0f0;font:12px monospace;padding:16px">
+<pre id="out">measuring…</pre>
+<div id="host" style="position:absolute;left:-9999px"></div>
+<script>
+fetch('/assets/brand/logo-white.svg?p=1').then(r=>r.text()).then(txt=>{
+  document.getElementById('host').innerHTML=txt;
+  const svg=document.querySelector('#host svg');
+  const paths=[...svg.querySelectorAll('path')];
+  // bbox per path
+  const items=paths.map((p,i)=>{ const b=p.getBBox(); return {i, x0:b.x, x1:b.x+b.width, cx:b.x+b.width/2}; });
+  // sort by cx and find gaps between glyph clusters
+  const sorted=[...items].sort((a,b)=>a.cx-b.cx);
+  // cluster by x-overlap: group paths whose x-ranges chain-overlap
+  const byX=[...items].sort((a,b)=>a.x0-b.x0);
+  let clusters=[], cur=null;
+  for(const it of byX){
+    if(!cur || it.x0 > cur.x1 + 6){ cur={x0:it.x0,x1:it.x1,paths:[it.i]}; clusters.push(cur); }
+    else { cur.x1=Math.max(cur.x1,it.x1); cur.paths.push(it.i); }
+  }
+  const counterCx=326.8;
+  const out=clusters.map((c,k)=>{
+    const has = counterCx>=c.x0 && counterCx<=c.x1;
+    return 'cluster '+k+': x['+c.x0.toFixed(0)+' – '+c.x1.toFixed(0)+']  paths='+c.paths.length+(has?'   <-- contains counter (the a)':'');
+  }).join('\n');
+  document.getElementById('out').innerText='viewBox '+svg.getAttribute('viewBox')+'\nglyph clusters (by x):\n'+out;
+});
+</script>
+</body></html>
