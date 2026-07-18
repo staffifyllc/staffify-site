@@ -1864,5 +1864,32 @@
 <!-- Vercel Web Analytics + Speed Insights (Pro plan, no cookies) -->
 <script defer src="/_vercel/insights/script.js"></script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
+<script>
+/* ops-dash: animate gauge, bars & numbers on scroll-in */
+(function () {
+  var dashes = document.querySelectorAll('.ops-dash');
+  if (!dashes.length) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  function animLoop(dur, cb, to){ var start=performance.now(); (function tick(now){ var p=Math.min((now-start)/dur,1), e=1-Math.pow(1-p,3); cb(e*to); if(p<1) requestAnimationFrame(tick); })(performance.now()); }
+  function countText(str, set, dur){
+    var m=str.match(/^(\D*)(\d+):(\d+)(.*)$/);
+    if(m){ var pre=m[1], total=(+m[2])*60+(+m[3]), post=m[4]; set(pre+'0:00'+post);
+      animLoop(dur, function(v){ var s=Math.round(v), mm=Math.floor(s/60), ss=s%60; set(pre+mm+':'+(ss<10?'0':'')+ss+post); }, total); return; }
+    var p=str.match(/^(\D*)(\d+)(%?)(.*)$/);
+    if(p){ var pr=p[1], to=+p[2], suf=p[3], po=p[4]; set(pr+'0'+suf+po);
+      animLoop(dur, function(v){ set(pr+Math.round(v)+suf+po); }, to); }
+  }
+  function animateDash(dash){
+    var D=1400;
+    dash.querySelectorAll('.odt-ring').forEach(function(r){ var to=parseFloat(r.style.getPropertyValue('--p'))||0, b=r.querySelector('b'); r.style.setProperty('--p','0'); if(b) b.textContent='0%'; animLoop(D, function(v){ r.style.setProperty('--p', v.toFixed(1)); if(b) b.textContent=Math.round(v)+'%'; }, to); });
+    dash.querySelectorAll('.odt-bar i, .odt-apps .track i').forEach(function(bar,i){ var w=bar.style.width; if(!w) return; bar.style.width='0'; setTimeout(function(){ bar.style.transition='width 1.05s cubic-bezier(.16,1,.3,1)'; bar.style.width=w; }, 120+i*80); });
+    dash.querySelectorAll('.odt-big').forEach(function(el){ var n=el.childNodes[0]; if(!n||n.nodeType!==3||!/\d/.test(n.textContent)) return; countText(n.textContent.trim(), function(s){ n.textContent=s; }, D); });
+    dash.querySelectorAll('.odt-apps .row span:last-child').forEach(function(el){ countText(el.textContent.trim(), function(s){ el.textContent=s; }, D); });
+    dash.querySelectorAll('.odt-sub').forEach(function(el){ if(/Activity/i.test(el.textContent)&&/\d+%/.test(el.textContent)) countText(el.textContent.trim(), function(s){ el.textContent=s; }, D); });
+  }
+  var obs=new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting){ animateDash(e.target); obs.unobserve(e.target); } }); }, { threshold: 0.3 });
+  dashes.forEach(function(d){ obs.observe(d); });
+})();
+</script>
 </body>
 </html>
