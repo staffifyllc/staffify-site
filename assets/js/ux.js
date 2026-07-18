@@ -146,7 +146,9 @@
     }
 
     function scan() {
-        document.querySelectorAll(MAGNET_SELECTORS).forEach(attachMagnet);
+        /* Magnetic CTA pull disabled (2026-07-17): it moved the click target
+           toward the cursor, which felt jittery and made buttons hard to click.
+           Buttons now rely on a clean CSS hover-lift + :active press instead. */
     }
 
     if (document.readyState === 'loading') {
