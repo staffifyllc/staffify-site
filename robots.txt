@@ -24,5 +24,5 @@ Disallow: /api/
 # Canonical sitemap
 Sitemap: https://www.gostaffify.com/sitemap.xml
 
-# Block apex (Wix-served) from being seen as a duplicate of www
+# Canonical host is www (apex redirects here)
 Host: https://www.gostaffify.com
