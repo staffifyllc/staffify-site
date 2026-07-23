@@ -1670,6 +1670,51 @@
         }
         @media (prefers-reduced-motion: reduce) { .bg-pulse .cta-orb { animation: none; } }
 
+        /* ─── VA voice video (the people behind the work) ─── */
+        .vavoice-section { padding-top: 0; background: var(--black); }
+        .va-voice {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 56px;
+        }
+        .va-voice-frame {
+            width: 320px;
+            min-width: 320px;
+            flex-shrink: 0;
+            border-radius: 22px;
+            overflow: hidden;
+            border: 1px solid rgba(26,189,225,0.35);
+            box-shadow: 0 0 60px rgba(26,189,225,0.12), 0 24px 60px rgba(0,0,0,0.5);
+            background: #000;
+            line-height: 0;
+        }
+        .va-voice-frame video {
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            object-fit: cover;
+            display: block;
+        }
+        .va-voice-copy { flex: 1; }
+        .va-voice-copy .vv-eyebrow {
+            font-size: 12px; font-weight: 800; letter-spacing: 0.28em;
+            text-transform: uppercase; color: var(--c); margin-bottom: 16px;
+        }
+        .va-voice-copy .vv-quote {
+            font-size: clamp(22px, 2.6vw, 30px); font-weight: 700;
+            line-height: 1.35; letter-spacing: -0.015em; color: var(--white);
+        }
+        .va-voice-copy .vv-sub {
+            margin-top: 18px; font-size: 16px; color: var(--muted); line-height: 1.65; max-width: 480px;
+        }
+        @media (max-width: 820px) {
+            .va-voice { flex-direction: column; gap: 32px; }
+            .va-voice-frame { flex: none; width: min(320px, 86vw); min-width: 0; }
+            .va-voice-copy { text-align: center; }
+            .va-voice-copy .vv-sub { margin-left: auto; margin-right: auto; }
+        }
+
         </style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
@@ -2373,6 +2418,33 @@
             </div>
         </div>
     </div>
+</section>
+
+<!-- ─── VA VOICE VIDEO ─── -->
+<section class="vavoice-section">
+    <div class="va-voice reveal">
+        <div class="va-voice-frame">
+            <video controls preload="metadata" playsinline src="/assets/video/va-testimonial.mp4#t=0.5"></video>
+        </div>
+        <div class="va-voice-copy">
+            <div class="vv-eyebrow">The People Behind The Work</div>
+            <div class="vv-quote">95% of our placements are still here after a year. This is why.</div>
+            <p class="vv-sub">One of our VAs, unscripted, straight from her phone. We pay a living wage, train, and promote from within. You get someone who actually wants to stay in the role you hired for.</p>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var v = document.querySelector('.va-voice video');
+        if (!v) return;
+        var fired = false;
+        v.addEventListener('play', function () {
+            if (fired) return;
+            fired = true;
+            window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+            window.va('event', { name: 'va_video_play', data: { page: '/' } });
+        });
+    })();
+    </script>
 </section>
 
 <!-- ─── CTA ─── -->
