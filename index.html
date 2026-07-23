@@ -1673,17 +1673,17 @@
         /* ─── VA voice video (the people behind the work) ─── */
         .vavoice-section { padding-top: 0; background: var(--black); }
         .va-voice {
-            max-width: 1000px;
+            max-width: 1120px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             gap: 56px;
         }
         .va-voice-frame {
-            width: 320px;
-            min-width: 320px;
+            width: 560px;
+            min-width: 560px;
             flex-shrink: 0;
-            border-radius: 22px;
+            border-radius: 18px;
             overflow: hidden;
             border: 1px solid rgba(26,189,225,0.35);
             box-shadow: 0 0 60px rgba(26,189,225,0.12), 0 24px 60px rgba(0,0,0,0.5);
@@ -1692,7 +1692,7 @@
         }
         .va-voice-frame video {
             width: 100%;
-            aspect-ratio: 3 / 4;
+            aspect-ratio: 16 / 9;
             object-fit: cover;
             display: block;
         }
@@ -1708,9 +1708,9 @@
         .va-voice-copy .vv-sub {
             margin-top: 18px; font-size: 16px; color: var(--muted); line-height: 1.65; max-width: 480px;
         }
-        @media (max-width: 820px) {
+        @media (max-width: 1080px) {
             .va-voice { flex-direction: column; gap: 32px; }
-            .va-voice-frame { flex: none; width: min(320px, 86vw); min-width: 0; }
+            .va-voice-frame { flex: none; width: 100%; min-width: 0; max-width: 640px; }
             .va-voice-copy { text-align: center; }
             .va-voice-copy .vv-sub { margin-left: auto; margin-right: auto; }
         }
@@ -2424,12 +2424,14 @@
 <section class="vavoice-section">
     <div class="va-voice reveal">
         <div class="va-voice-frame">
-            <video controls preload="metadata" playsinline src="/assets/video/va-testimonial.mp4#t=0.5"></video>
+            <video controls preload="none" playsinline
+                   poster="/assets/img/va-testimonial-poster.jpg"
+                   src="/assets/video/va-testimonial-home.mp4"></video>
         </div>
         <div class="va-voice-copy">
             <div class="vv-eyebrow">The People Behind The Work</div>
-            <div class="vv-quote">95% of our placements are still here after a year. This is why.</div>
-            <p class="vv-sub">One of our VAs, unscripted, straight from her phone. We pay a living wage, train, and promote from within. You get someone who actually wants to stay in the role you hired for.</p>
+            <div class="vv-quote">Don&rsquo;t take our word for it. Hear it from the team.</div>
+            <p class="vv-sub">One of our VAs, in her own words. The people we place are vetted, trained, and paid a living wage, which is why they stay in the role you hired them for.</p>
         </div>
     </div>
     <script>
