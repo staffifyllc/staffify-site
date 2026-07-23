@@ -2059,6 +2059,35 @@
     </div>
 </section>
 
+<!-- ─── VA VOICE VIDEO ─── -->
+<section class="vavoice-section">
+    <div class="va-voice reveal">
+        <div class="va-voice-frame">
+            <video controls preload="none" playsinline
+                   poster="/assets/img/va-testimonial-poster.jpg"
+                   src="/assets/video/va-testimonial-home.mp4"></video>
+        </div>
+        <div class="va-voice-copy">
+            <div class="vv-eyebrow">The People Behind The Work</div>
+            <div class="vv-quote">Don&rsquo;t take our word for it. Hear it from the team.</div>
+            <p class="vv-sub">One of our VAs, in her own words. The people we place are vetted, trained, and paid a living wage, which is why they stay in the role you hired them for.</p>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var v = document.querySelector('.va-voice video');
+        if (!v) return;
+        var fired = false;
+        v.addEventListener('play', function () {
+            if (fired) return;
+            fired = true;
+            window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+            window.va('event', { name: 'va_video_play', data: { page: '/' } });
+        });
+    })();
+    </script>
+</section>
+
 <!-- ─── SERVICES ─── -->
 <section class="services-section" id="services">
     <div class="section-eyebrow reveal">What We Build</div>
@@ -2418,35 +2447,6 @@
             </div>
         </div>
     </div>
-</section>
-
-<!-- ─── VA VOICE VIDEO ─── -->
-<section class="vavoice-section">
-    <div class="va-voice reveal">
-        <div class="va-voice-frame">
-            <video controls preload="none" playsinline
-                   poster="/assets/img/va-testimonial-poster.jpg"
-                   src="/assets/video/va-testimonial-home.mp4"></video>
-        </div>
-        <div class="va-voice-copy">
-            <div class="vv-eyebrow">The People Behind The Work</div>
-            <div class="vv-quote">Don&rsquo;t take our word for it. Hear it from the team.</div>
-            <p class="vv-sub">One of our VAs, in her own words. The people we place are vetted, trained, and paid a living wage, which is why they stay in the role you hired them for.</p>
-        </div>
-    </div>
-    <script>
-    (function () {
-        var v = document.querySelector('.va-voice video');
-        if (!v) return;
-        var fired = false;
-        v.addEventListener('play', function () {
-            if (fired) return;
-            fired = true;
-            window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-            window.va('event', { name: 'va_video_play', data: { page: '/' } });
-        });
-    })();
-    </script>
 </section>
 
 <!-- ─── CTA ─── -->
