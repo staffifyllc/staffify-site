@@ -1,0 +1,48 @@
+// POST /api/hot-lead?s=HOT_WEBHOOK_SECRET
+// Intake for HOT (interested) leads, e.g. from Bland when a prospect says yes.
+// Stores the full lead so a human closer can call it back immediately.
+// Tolerant of Bland / Zapier / manual payload shapes. Auth: ?s=secret or admin token.
+
+import { redis, adminAuthorized, readBody, newToken } from './_auth.js';
+import { slackNotify } from './_slack.js';
+
+function pick(obj, keys) {
+    for (const k of keys) {
+        const v = k.split('.').reduce((o, p) => (o == null ? o : o[p]), obj);
+        if (v != null && String(v).trim() !== '') return String(v).trim();
+    }
+    return '';
+}
+
+export default async function handler(req, res) {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
+    const authed = (req.query.s && req.query.s === process.env.HOT_WEBHOOK_SECRET) || adminAuthorized(req);
+    if (!authed) return res.status(401).json({ error: 'unauthorized' });
+
+    const b = readBody(req);
+    const phone = pick(b, ['phone', 'to', 'number', 'customer_phone', 'customer.phone', 'call.to', 'lead.phone']);
+    if (!phone) return res.status(400).json({ error: 'phone_required' });
+
+    const lead = {
+        id: 'hot:' + Date.now() + ':' + newToken(4),
+        name: pick(b, ['name', 'customer_name', 'customer.name', 'first_name', 'lead.name']),
+        phone,
+        company: pick(b, ['company', 'business', 'company_name', 'metadata.company', 'lead.company']),
+        email: pick(b, ['email', 'customer.email', 'lead.email']),
+        motion: pick(b, ['motion', 'metadata.motion']) || 'websites',
+        summary: pick(b, ['summary', 'analysis', 'disposition', 'note', 'notes', 'ai_summary', 'call.summary']),
+        transcript: pick(b, ['transcript', 'call.transcript']).slice(0, 6000),
+        source: pick(b, ['source']) || 'bland',
+        portalId: pick(b, ['portal_id', 'lead_id', 'id']),
+        status: 'new',
+        created_at: String(Date.now()),
+    };
+
+    await redis.hset(lead.id, lead);
+    await redis.zadd('hotleads', { score: Date.now(), member: lead.id });
+
+    const who = lead.company || lead.name || lead.phone;
+    slackNotify(`:fire: *HOT LEAD* just came in: *${who}* ${lead.phone}${lead.summary ? '\n> ' + lead.summary.slice(0, 200) : ''}\nCall them now in the dialer.`);
+
+    return res.status(200).json({ ok: true, id: lead.id });
+}

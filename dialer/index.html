@@ -26,6 +26,8 @@
         .motions { display:flex; gap:6px; }
         .motions button { font-size:13.5px; font-weight:700; color:var(--muted); background:var(--card); border:1px solid var(--card-border); border-radius:999px; padding:8px 16px; cursor:pointer; }
         .motions button.on { color:#04222b; background:var(--cyan); border-color:var(--cyan); }
+        .motions button.hot { color:#ffb59a; border-color:rgba(226,90,60,0.55); }
+        .motions button.hot.on { color:#3a0f0c; background:#ff8a6b; border-color:#ff8a6b; }
         .stats { display:flex; gap:16px; font-size:12.5px; color:var(--muted); }
         .stats b { color:var(--white); font-weight:800; }
         .card { background:var(--card); border:1px solid var(--card-border); border-radius:18px; padding:26px 26px 22px; }
@@ -81,7 +83,7 @@
 <script>
 (function(){
   var app=document.getElementById('app'), tbRight=document.getElementById('tbRight'), toastEl=document.getElementById('toast');
-  var ME=null, MOTION='websites', QUEUES={websites:[],staffing:[]}, TRAIN={}, SCORE=null, LABEL={websites:'Foundry',staffing:'Staffify'};
+  var ME=null, MOTION='websites', firstLoad=true, QUEUES={websites:[],staffing:[],hot:[]}, TRAIN={}, SCORE=null, LABEL={websites:'Foundry',staffing:'Staffify',hot:'Hot'};
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function toast(m){toastEl.textContent=m; toastEl.classList.add('show'); setTimeout(function(){toastEl.classList.remove('show');},1600);}
@@ -120,13 +122,17 @@
     var results=await Promise.all([
       fetch('/api/call-queue?action=list&n=40',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch('/api/call-queue?action=training',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-      fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+      fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      fetch('/api/hot-leads',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
     ]);
     var list=results[0]||{};
     QUEUES.websites=Array.isArray(list.websites)?list.websites:[];
     QUEUES.staffing=Array.isArray(list.staffing)?list.staffing:[];
+    QUEUES.hot=(results[3]&&results[3].leads)||[];
     (results[1]&&results[1].motions||[]).forEach(function(m){TRAIN[m.key]=m;});
     SCORE=results[2]||null;
+    if(firstLoad && QUEUES.hot.length){ MOTION='hot'; }
+    firstLoad=false;
     render();
   }
 
@@ -136,11 +142,14 @@
     var head=
       '<div class="toprow">'+
         '<div class="motions">'+
+          (QUEUES.hot.length?'<button class="hot '+(MOTION==='hot'?'on':'')+'" data-m="hot">🔥 Hot &middot; '+QUEUES.hot.length+'</button>':'')+
           '<button class="'+(MOTION==='websites'?'on':'')+'" data-m="websites">Foundry &middot; '+(QUEUES.websites.length)+'</button>'+
           '<button class="'+(MOTION==='staffing'?'on':'')+'" data-m="staffing">Staffify &middot; '+(QUEUES.staffing.length)+'</button>'+
         '</div>'+
         '<div class="stats"><span>Dials <b>'+(t.dials||0)+'</b></span><span>Answers <b>'+(t.answers||0)+'</b></span><span>Interested <b>'+(t.interested||0)+'</b></span></div>'+
       '</div>';
+
+    if(MOTION==='hot'){ renderHot(head, QUEUES.hot); return; }
 
     if(!q.length){
       app.innerHTML=head+'<div class="empty"><h2>All caught up on '+esc(LABEL[MOTION])+'.</h2><p>No one left to call in this list right now. Switch motions or check back later.</p></div>';
@@ -179,6 +188,33 @@
     wire();
   }
 
+  function renderHot(head, q){
+    if(!q.length){
+      app.innerHTML=head+'<div class="empty"><h2>No hot leads waiting.</h2><p>When Bland gets someone interested, they land here to close. Keep dialing Foundry or Staffify in the meantime.</p></div>';
+      wire(); return;
+    }
+    var L=q[0];
+    var ctx=L.summary?'<div class="lbl">What Bland learned</div><div class="brief">'+esc(L.summary)+'</div>':'';
+    var trans=L.transcript?'<details><summary>Full call transcript</summary><div class="script"><div class="blk">'+esc(L.transcript)+'</div></div></details>':'';
+    app.innerHTML=head+
+      '<div class="card">'+
+        '<div class="lbl">🔥 Interested &middot; call now while they are hot</div>'+
+        '<div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+
+        '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
+        '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
+        ctx+trans+
+        '<div class="lbl">How did it go?</div>'+
+        '<div class="outcomes">'+
+          '<button class="oc good" data-o="won">Closed / Won</button>'+
+          '<button class="oc warm" data-o="callback">Callback</button>'+
+          '<button class="oc" data-o="no_answer">No answer</button>'+
+          '<button class="oc" data-o="not_interested">Not interested</button>'+
+          '<button class="oc" data-o="bad_number">Bad number</button>'+
+        '</div>'+
+      '</div>';
+    wire();
+  }
+
   function wire(){
     Array.prototype.forEach.call(document.querySelectorAll('.motions button'),function(b){ b.onclick=function(){MOTION=b.getAttribute('data-m'); render();}; });
     Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){ b.onclick=function(){ logOutcome(b.getAttribute('data-o')); }; });
@@ -188,6 +224,11 @@
     var q=QUEUES[MOTION]; if(!q.length) return;
     var lead=q.shift();               // advance immediately (idiotproof: never stall)
     render();
+    if(MOTION==='hot'){
+      toast(outcome==='won'?'Boom. Closed.':'Logged. Next hot lead.');
+      try{ await fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:lead.id,outcome:outcome})}); }catch(e){ toast('Saved, will retry.'); }
+      return;
+    }
     toast(outcome==='interested'?'Nice. Logged as interested.':'Logged. Next up.');
     try{
       await fetch('/api/call-queue?action=log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:lead.id,outcome:outcome,motion:MOTION})});
