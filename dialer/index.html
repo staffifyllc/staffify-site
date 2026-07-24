@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialer — Staffify Sales</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green:#1d9e75; --green-hi:#7ef5c2; }
+        body { font-family:"Inter",-apple-system,sans-serif; background:radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:12px 22px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .topbar img { height:22px; }
+        .nav { display:flex; gap:5px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:7px 13px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        .tb-right { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 15px; cursor:pointer; text-decoration:none; }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .wrap { max-width:720px; margin:0 auto; padding:22px; }
+        .toprow { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+        .motions { display:flex; gap:6px; }
+        .motions button { font-size:13.5px; font-weight:700; color:var(--muted); background:var(--card); border:1px solid var(--card-border); border-radius:999px; padding:8px 16px; cursor:pointer; }
+        .motions button.on { color:#04222b; background:var(--cyan); border-color:var(--cyan); }
+        .stats { display:flex; gap:16px; font-size:12.5px; color:var(--muted); }
+        .stats b { color:var(--white); font-weight:800; }
+        .card { background:var(--card); border:1px solid var(--card-border); border-radius:18px; padding:26px 26px 22px; }
+        .company { font-size:30px; font-weight:900; letter-spacing:-0.02em; line-height:1.1; }
+        .sub { font-size:14px; color:var(--muted); margin-top:4px; }
+        .phone { display:flex; align-items:center; gap:12px; margin:18px 0; }
+        .phone a { font-size:30px; font-weight:900; letter-spacing:-0.01em; color:var(--cyan-hi); text-decoration:none; }
+        .phone .call { font-size:13px; font-weight:800; color:#04222b; background:var(--green-hi); border-radius:999px; padding:8px 16px; text-decoration:none; }
+        .lbl { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:18px 0 8px; }
+        .brief { font-size:15.5px; color:#dfe3e8; background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:12px; padding:14px 16px; }
+        .say { font-size:17px; font-weight:600; color:#eaf6fb; background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:12px; padding:16px 18px; line-height:1.5; }
+        .say .line { margin-bottom:8px; } .say .line:last-child { margin-bottom:0; }
+        details { margin-top:14px; border:1px solid var(--card-border); border-radius:12px; padding:0 16px; background:rgba(255,255,255,0.02); }
+        summary { cursor:pointer; font-size:13.5px; font-weight:700; color:var(--cyan-hi); padding:13px 0; list-style:none; }
+        summary::-webkit-details-marker { display:none; }
+        .script { font-size:14px; color:#cfd4da; padding-bottom:14px; }
+        .script b { color:var(--white); }
+        .script .blk { margin-bottom:12px; white-space:pre-wrap; }
+        .outcomes { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:22px; }
+        @media (max-width:560px){ .outcomes { grid-template-columns:1fr 1fr; } .company,.phone a{font-size:26px;} }
+        .oc { font-size:14.5px; font-weight:800; border:1px solid var(--card-border); border-radius:12px; padding:15px 10px; cursor:pointer; background:var(--card); color:var(--white); }
+        .oc:hover { border-color:var(--cyan); }
+        .oc.good { background:rgba(29,158,117,0.16); border-color:rgba(29,158,117,0.5); color:var(--green-hi); }
+        .oc.warm { background:rgba(26,189,225,0.10); border-color:rgba(26,189,225,0.4); color:var(--cyan-hi); }
+        .gate, .empty { max-width:440px; margin:70px auto; text-align:center; }
+        .gate { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; }
+        .gate h2, .empty h2 { font-size:22px; font-weight:900; margin-bottom:10px; }
+        .gate p, .empty p { color:var(--muted); font-size:14.5px; margin-bottom:18px; }
+        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .gate .btn { width:100%; padding:13px; }
+        .err { color:#ff9a8d; font-size:13px; min-height:18px; }
+        .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#0d1418; border:1px solid var(--card-border); color:#eaf6fb; font-size:13.5px; font-weight:600; padding:11px 18px; border-radius:999px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; }
+        .toast.show { opacity:1; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <nav class="nav">
+        <a href="/hub/">Hub</a>
+        <a href="/dialer/" class="active">Dialer</a>
+        <a href="/pipeline/">Pipeline</a>
+        <a href="/training/sales/">Training</a>
+    </nav>
+    <div class="tb-right" id="tbRight"></div>
+</header>
+
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var app=document.getElementById('app'), tbRight=document.getElementById('tbRight'), toastEl=document.getElementById('toast');
+  var ME=null, MOTION='websites', QUEUES={websites:[],staffing:[]}, TRAIN={}, SCORE=null, LABEL={websites:'Foundry',staffing:'Staffify'};
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function toast(m){toastEl.textContent=m; toastEl.classList.add('show'); setTimeout(function(){toastEl.classList.remove('show');},1600);}
+  function telHref(p){return 'tel:'+String(p||'').replace(/[^0-9+]/g,'');}
+
+  function showSignIn(msg){
+    tbRight.innerHTML='';
+    app.innerHTML='<div class="gate"><h2>Sign in to dial</h2><p>Use your work email. We send a one-time link, no password.</p><input id="em" type="email" placeholder="you@example.com" autocomplete="email"><button class="btn" id="go">Email me a link</button><div class="err" id="err">'+(msg||'')+'</div></div>';
+    document.getElementById('go').onclick=send;
+    document.getElementById('em').addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+  }
+  async function send(){
+    var el=document.getElementById('em'); var email=(el.value||'').trim(); if(!email){el.focus();return;}
+    try{ await fetch('/api/auth-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})}); }catch(e){}
+    app.innerHTML='<div class="gate"><h2>Check your email</h2><p>If '+esc(email)+' is a rep, a sign-in link is on its way.</p></div>';
+  }
+
+  async function boot(){
+    app.innerHTML='<div class="empty"><p>Loading your call list...</p></div>';
+    var me; try{ me=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showSignIn('Network error.'); return; }
+    if(me.status!==200){ showSignIn(''); return; }
+    ME=(await me.json()).rep;
+    tbRight.innerHTML='<span>'+esc(ME.name||ME.email)+'</span><a class="btn btn-ghost" href="/api/auth-logout">Sign out</a>';
+    await refresh();
+  }
+
+  async function refresh(){
+    var results=await Promise.all([
+      fetch('/api/call-queue?action=list&n=40',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      fetch('/api/call-queue?action=training',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+    ]);
+    var list=results[0]||{};
+    QUEUES.websites=Array.isArray(list.websites)?list.websites:[];
+    QUEUES.staffing=Array.isArray(list.staffing)?list.staffing:[];
+    (results[1]&&results[1].motions||[]).forEach(function(m){TRAIN[m.key]=m;});
+    SCORE=results[2]||null;
+    render();
+  }
+
+  function render(){
+    var q=QUEUES[MOTION]||[];
+    var t=SCORE&&SCORE.total||{};
+    var head=
+      '<div class="toprow">'+
+        '<div class="motions">'+
+          '<button class="'+(MOTION==='websites'?'on':'')+'" data-m="websites">Foundry &middot; '+(QUEUES.websites.length)+'</button>'+
+          '<button class="'+(MOTION==='staffing'?'on':'')+'" data-m="staffing">Staffify &middot; '+(QUEUES.staffing.length)+'</button>'+
+        '</div>'+
+        '<div class="stats"><span>Dials <b>'+(t.dials||0)+'</b></span><span>Answers <b>'+(t.answers||0)+'</b></span><span>Interested <b>'+(t.interested||0)+'</b></span></div>'+
+      '</div>';
+
+    if(!q.length){
+      app.innerHTML=head+'<div class="empty"><h2>All caught up on '+esc(LABEL[MOTION])+'.</h2><p>No one left to call in this list right now. Switch motions or check back later.</p></div>';
+      wire();
+      return;
+    }
+    var L=q[0], tr=TRAIN[MOTION]||{};
+    var openerLines=(tr.opener||[]).map(function(x){return '<div class="line">'+esc(x)+'</div>';}).join('') || '<div class="line">'+esc(L.opener||'')+'</div>';
+    var scriptBits='';
+    if(tr.goal) scriptBits+='<div class="blk"><b>Goal:</b> '+esc(tr.goal)+'</div>';
+    if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(tr.theAsk)+'</div>';
+    if(tr.price) scriptBits+='<div class="blk"><b>Price (only if asked):</b> '+esc(tr.price)+'</div>';
+    if(tr.rules&&tr.rules.length) scriptBits+='<div class="blk"><b>Rules:</b>\n- '+tr.rules.map(esc).join('\n- ')+'</div>';
+    if(tr.objections) scriptBits+='<div class="blk"><b>Objections:</b>\n'+esc(tr.objections)+'</div>';
+
+    app.innerHTML=head+
+      '<div class="card">'+
+        '<div class="company">'+esc(L.company||'(no company)')+'</div>'+
+        '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
+        '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
+        '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
+        (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(L.brief)+'</div>':'')+
+        (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
+        '<div class="lbl">How did it go?</div>'+
+        '<div class="outcomes">'+
+          '<button class="oc good" data-o="interested">Interested</button>'+
+          '<button class="oc warm" data-o="callback">Callback</button>'+
+          '<button class="oc" data-o="no_answer">No answer</button>'+
+          '<button class="oc" data-o="voicemail">Voicemail</button>'+
+          '<button class="oc" data-o="gatekeeper">Gatekeeper</button>'+
+          '<button class="oc" data-o="not_interested">Not interested</button>'+
+          '<button class="oc" data-o="bad_number">Bad number</button>'+
+        '</div>'+
+      '</div>';
+    wire();
+  }
+
+  function wire(){
+    Array.prototype.forEach.call(document.querySelectorAll('.motions button'),function(b){ b.onclick=function(){MOTION=b.getAttribute('data-m'); render();}; });
+    Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){ b.onclick=function(){ logOutcome(b.getAttribute('data-o')); }; });
+  }
+
+  async function logOutcome(outcome){
+    var q=QUEUES[MOTION]; if(!q.length) return;
+    var lead=q.shift();               // advance immediately (idiotproof: never stall)
+    render();
+    toast(outcome==='interested'?'Nice. Logged as interested.':'Logged. Next up.');
+    try{
+      await fetch('/api/call-queue?action=log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:lead.id,outcome:outcome,motion:MOTION})});
+      var s=await fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); if(s.ok){SCORE=await s.json(); render();}
+    }catch(e){ toast('Saved locally, sync retry next load.'); }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
