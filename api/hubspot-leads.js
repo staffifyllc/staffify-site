@@ -3,6 +3,8 @@
 // Env: HUBSPOT_TOKEN (private app, scope crm.objects.contacts.read). Auth: ADMIN_TOKEN or CRON_SECRET.
 // If HUBSPOT_TOKEN is absent it returns { configured: false } so the hub can render a connect card.
 
+import { requireAccess } from './_auth.js';
+
 function authorized(req) {
     const validSecrets = [process.env.ADMIN_TOKEN, process.env.CRON_SECRET].filter(Boolean);
     if (!validSecrets.length) return false;
@@ -16,7 +18,7 @@ function authorized(req) {
 const PROPS = ['firstname', 'lastname', 'email', 'phone', 'company', 'lifecyclestage', 'hs_lead_status', 'createdate', 'lastmodifieddate'];
 
 export default async function handler(req, res) {
-    if (!authorized(req)) return res.status(401).json({ error: 'unauthorized' });
+    if (!(await requireAccess(req))) return res.status(401).json({ error: 'unauthorized' });
 
     const token = process.env.HUBSPOT_TOKEN;
     if (!token) {
