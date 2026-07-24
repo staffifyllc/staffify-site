@@ -68,6 +68,7 @@
     <nav class="nav">
         <a href="/hub/">Hub</a>
         <a href="/dialer/" class="active">Dialer</a>
+        <a href="/scoreboard/">Scoreboard</a>
         <a href="/pipeline/">Pipeline</a>
         <a href="/training/sales/">Training</a>
     </nav>
@@ -151,7 +152,8 @@
     var scriptBits='';
     if(tr.goal) scriptBits+='<div class="blk"><b>Goal:</b> '+esc(tr.goal)+'</div>';
     if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(fillTokens(tr.theAsk,L))+'</div>';
-    if(tr.price) scriptBits+='<div class="blk"><b>Price (only if asked):</b> '+esc(tr.price)+'</div>';
+    var priceText=(MOTION==='websites') ? 'Only if THEY ask: normally $4,995, but we are building our roofing portfolio right now so we will rebuild it for $1,499. Half to start, half when it is live.' : tr.price;
+    if(priceText) scriptBits+='<div class="blk"><b>Price (only if asked):</b> '+esc(priceText)+'</div>';
     if(tr.rules&&tr.rules.length) scriptBits+='<div class="blk"><b>Rules:</b>\n- '+tr.rules.map(esc).join('\n- ')+'</div>';
     if(tr.objections) scriptBits+='<div class="blk"><b>Objections:</b>\n'+esc(tr.objections)+'</div>';
 

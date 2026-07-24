@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard — Staffify Sales</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green-hi:#7ef5c2; }
+        body { font-family:"Inter",-apple-system,sans-serif; background:radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:12px 22px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .topbar img { height:22px; }
+        .nav { display:flex; gap:5px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:7px 13px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        .tb-right { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 15px; cursor:pointer; text-decoration:none; }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .wrap { max-width:880px; margin:0 auto; padding:26px 22px; }
+        h1 { font-size:26px; font-weight:900; letter-spacing:-0.02em; margin-bottom:2px; }
+        .sub { font-size:13.5px; color:var(--muted); margin-bottom:22px; }
+        .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+        @media (max-width:640px){ .cards { grid-template-columns:1fr 1fr; } }
+        .metric { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:16px 18px; }
+        .metric .lbl { font-size:11.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+        .metric .n { font-size:32px; font-weight:900; letter-spacing:-0.02em; margin-top:4px; }
+        .metric .x { font-size:12px; color:var(--cyan-hi); margin-top:2px; }
+        .conv { display:flex; gap:22px; margin:6px 0 26px; font-size:13px; color:var(--muted); }
+        .conv b { color:var(--white); font-weight:800; }
+        .lbl2 { font-size:12px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:22px 0 12px; }
+        .lead-row { display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--card-border); border-radius:12px; padding:12px 16px; margin-bottom:9px; }
+        .rank { font-size:14px; font-weight:900; color:var(--cyan); width:22px; }
+        .rname { flex:1; font-size:15px; font-weight:700; }
+        .rstat { font-size:13px; color:var(--muted); } .rstat b { color:var(--white); }
+        .empty { color:var(--muted); font-size:14px; padding:20px 2px; }
+        .comp { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-top:8px; }
+        .comp .cr { display:flex; align-items:baseline; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; }
+        .comp .cr:last-child { border-bottom:none; }
+        .comp .pay { font-size:20px; font-weight:900; color:var(--green-hi); white-space:nowrap; min-width:120px; }
+        .comp .desc { flex:1; min-width:200px; font-size:14px; color:#cfd4da; } .comp .desc b { color:#fff; }
+        .gate { max-width:440px; margin:70px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
+        .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; } .gate p { color:var(--muted); font-size:14px; margin-bottom:18px; }
+        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .gate .btn { width:100%; padding:13px; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <nav class="nav">
+        <a href="/hub/">Hub</a>
+        <a href="/dialer/">Dialer</a>
+        <a href="/scoreboard/" class="active">Scoreboard</a>
+        <a href="/pipeline/">Pipeline</a>
+        <a href="/training/sales/">Training</a>
+    </nav>
+    <div class="tb-right" id="tbRight"></div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<script>
+(function(){
+  var app=document.getElementById('app'), tbRight=document.getElementById('tbRight'), ME=null;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function pct(a,b){b=Number(b)||0; if(!b)return '0%'; return Math.round(100*(Number(a)||0)/b)+'%';}
+
+  function showGate(){
+    tbRight.innerHTML='';
+    app.innerHTML='<div class="gate"><h2>Sign in</h2><p>Use your work email. We send a one-time link.</p><input id="em" type="email" placeholder="you@example.com"><button class="btn" id="go">Email me a link</button></div>';
+    document.getElementById('go').onclick=send;
+    document.getElementById('em').addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+  }
+  async function send(){var el=document.getElementById('em');var email=(el.value||'').trim();if(!email){el.focus();return;}try{await fetch('/api/auth-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});}catch(e){}app.innerHTML='<div class="gate"><h2>Check your email</h2><p>If '+esc(email)+' is a rep, a link is on its way.</p></div>';}
+
+  var COMP=[
+    ['$300','<b>Foundry website</b> for every website you sell. Sells at $1,499 (regular price $4,995). Paid per site.'],
+    ['35%','<b>Staffify placement</b> of the onboarding fee per close (about $875), plus a <b>$1/hr residual</b> for 6 months, the strong-month accelerator, and a $200 retention bonus.']
+  ];
+
+  async function boot(){
+    app.innerHTML='<div class="empty">Loading the scoreboard...</div>';
+    var me; try{ me=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showGate(); return; }
+    if(me.status!==200){ showGate(); return; }
+    ME=(await me.json()).rep;
+    tbRight.innerHTML='<span>'+esc(ME.name||ME.email)+'</span><a class="btn btn-ghost" href="/api/auth-logout">Sign out</a>';
+    var s=null; try{ var r=await fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); if(r.ok) s=await r.json(); }catch(e){}
+    render(s);
+  }
+
+  function render(s){
+    s=s||{}; var t=s.total||{};
+    var target=Number(s.target)||100;
+    var reps=(s.reps||[]).slice().sort(function(a,b){return (Number(b.dials||b.calls||0))-(Number(a.dials||a.calls||0));});
+
+    var cards=
+      '<div class="cards">'+
+        '<div class="metric"><div class="lbl">Dials</div><div class="n">'+(t.dials||0)+'</div><div class="x">'+pct(t.dials,target)+' of '+target+' goal</div></div>'+
+        '<div class="metric"><div class="lbl">Answers</div><div class="n">'+(t.answers||0)+'</div><div class="x">'+pct(t.answers,t.dials)+' pickup</div></div>'+
+        '<div class="metric"><div class="lbl">Interested</div><div class="n">'+(t.interested||0)+'</div><div class="x">'+pct(t.interested,t.answers)+' of answers</div></div>'+
+        '<div class="metric"><div class="lbl">Callbacks</div><div class="n">'+(t.callbacks||0)+'</div><div class="x">set for later</div></div>'+
+      '</div>';
+
+    var board;
+    if(!reps.length){
+      board='<div class="empty">No calls logged yet today. Rep numbers appear here the moment someone starts dialing.</div>';
+    } else {
+      board=reps.map(function(r,i){
+        return '<div class="lead-row"><div class="rank">'+(i+1)+'</div><div class="rname">'+esc(r.rep||r.name||'Rep')+'</div>'+
+          '<div class="rstat">Dials <b>'+(r.dials||r.calls||0)+'</b> &middot; Answers <b>'+(r.answers||0)+'</b> &middot; Interested <b>'+(r.interested||0)+'</b></div></div>';
+      }).join('');
+    }
+
+    var comp='<div class="comp">'+COMP.map(function(c){return '<div class="cr"><div class="pay">'+c[0]+'</div><div class="desc">'+c[1]+'</div></div>';}).join('')+'</div>';
+
+    app.innerHTML=
+      '<h1>Scoreboard</h1><div class="sub">'+esc(s.date||'today')+' &middot; live from the call log</div>'+
+      cards+
+      '<div class="conv"><span>Pickup rate <b>'+pct(t.answers,t.dials)+'</b></span><span>Interest rate <b>'+pct(t.interested,t.answers)+'</b></span></div>'+
+      '<div class="lbl2">Rep leaderboard</div>'+board+
+      '<div class="lbl2">How you get paid</div>'+comp;
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

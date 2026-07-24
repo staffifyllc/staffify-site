@@ -37,11 +37,12 @@ export default async function handler(req, res) {
             events.push(...(data.collection || []));
             url = data.pagination && data.pagination.next_page ? data.pagination.next_page : null;
         }
+        const discEvents = events.filter(ev => /discovery/i.test(ev.name || ''));
         const invLists = await Promise.all(
-            events.map(ev => cget(`${ev.uri}/invitees`, token).catch(() => ({ collection: [] })))
+            discEvents.map(ev => cget(`${ev.uri}/invitees`, token).catch(() => ({ collection: [] })))
         );
         const rows = [];
-        events.forEach((ev, idx) => {
+        discEvents.forEach((ev, idx) => {
             (invLists[idx].collection || []).forEach(i => {
                 rows.push({
                     start: ev.start_time,
