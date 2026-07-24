@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Hub — Staffify</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); }
+        body { font-family:"Inter",-apple-system,sans-serif; background:radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .tb-right { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; }
+        .btn:hover { background:var(--cyan-hi); }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .btn-ghost:hover { color:var(--white); }
+        .nav { display:flex; gap:6px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        .nav a:hover { color:var(--white); }
+        .wrap { max-width:1180px; margin:0 auto; padding:28px; }
+        h1 { font-size:28px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+        .sub { font-size:14.5px; color:var(--muted); margin-bottom:26px; }
+        .cols { display:grid; grid-template-columns:1.15fr 0.85fr; gap:22px; align-items:start; }
+        @media (max-width:900px){ .cols { grid-template-columns:1fr; } }
+        .panel { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-bottom:18px; }
+        .ph { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:14px; }
+        .ph h2 { font-size:13px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:var(--cyan); }
+        .ph .meta { font-size:12.5px; color:var(--muted); }
+        .ph a { font-size:12.5px; color:var(--cyan-hi); text-decoration:none; font-weight:700; }
+        .row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; }
+        .row:last-child { border-bottom:none; }
+        .when { font-size:12.5px; color:var(--muted); width:112px; flex-shrink:0; }
+        .who { flex:1; min-width:150px; }
+        .who .n { font-size:15px; font-weight:700; }
+        .who .e { font-size:12.5px; }
+        .who .e a { color:var(--cyan-hi); text-decoration:none; }
+        .tag { font-size:11px; font-weight:600; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); border-radius:999px; padding:3px 10px; white-space:nowrap; }
+        .join { font-size:12.5px; font-weight:700; color:var(--cyan-hi); text-decoration:none; white-space:nowrap; }
+        .mod { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+        .mod:last-child { border-bottom:none; }
+        .mod .num { font-size:11.5px; font-weight:800; color:var(--cyan); width:22px; flex-shrink:0; }
+        .mod .t { flex:1; font-size:14px; font-weight:600; color:#dfe3e8; }
+        .mod a { color:inherit; text-decoration:none; }
+        .mod a:hover { color:var(--cyan-hi); }
+        .st { font-size:10.5px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+        .st-ready { color:#7ef5c2; background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
+        .st-prog { color:var(--cyan-hi); background:rgba(26,189,225,0.12); border:1px solid rgba(26,189,225,0.35); }
+        .st-soon { color:var(--muted); background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
+        .tools { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .tool { display:block; background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:10px; padding:12px 14px; text-decoration:none; }
+        .tool:hover { border-color:rgba(26,189,225,0.45); }
+        .tool .tt { font-size:13.5px; font-weight:700; color:var(--white); }
+        .tool .td { font-size:11.5px; color:var(--muted); margin-top:2px; }
+        .connect { text-align:center; padding:22px 16px; }
+        .connect p { font-size:13.5px; color:var(--muted); margin-bottom:6px; }
+        .connect .big { font-size:15px; font-weight:700; color:var(--white); margin-bottom:6px; }
+        .gate { max-width:440px; margin:60px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
+        .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; }
+        .gate p { font-size:14px; color:var(--muted); margin-bottom:20px; }
+        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+        .gate input:focus { outline:none; border-color:var(--cyan); }
+        .gate .btn { width:100%; padding:13px; font-size:15px; }
+        .err { color:#ff9a8d; font-size:13px; margin-top:10px; min-height:18px; }
+        .empty { color:var(--muted); font-size:13.5px; padding:16px 0; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <nav class="nav">
+        <a href="/hub/" class="active">Hub</a>
+        <a href="/pipeline/">Pipeline</a>
+        <a href="/training/sales/">Training</a>
+        <a href="/careers/sales/inbox/">Applicants</a>
+    </nav>
+    <div class="tb-right" id="tbRight"></div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<script>
+(function(){
+  var KEY='sfy_applicants_token';
+  var app=document.getElementById('app');
+  var tbRight=document.getElementById('tbRight');
+
+  var MODULES=[
+    ['01','The Offer, Inside Out','ready'],
+    ['02','Who Buys, and Why','soon'],
+    ['03','Building Pipeline','soon'],
+    ['04','The Discovery Call','soon'],
+    ['05','The Presentation & Close','prog'],
+    ['06','Objection Handling','soon'],
+    ['07','Tools & Process','prog'],
+    ['08','Certification','soon']
+  ];
+  var TOOLS=[
+    ['/pitch/','Pitch deck','Walk a prospect through it'],
+    ['/how-it-works/','How it works','Pricing, process, guarantee'],
+    ['/careers/sales/comp/','Comp plan','What you earn'],
+    ['/admins/','Role pages','Send to prospects']
+  ];
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function fmt(ts){var d=new Date(ts); return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})+', '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
+  function ago(ms){var n=Number(ms); if(!n)return ''; var d=Math.floor((Date.now()-n)/864e5); return d<=0?'today':(d===1?'1d ago':d+'d ago');}
+
+  function showGate(msg){
+    tbRight.innerHTML='';
+    app.innerHTML='<div class="gate"><h2>Staffify sales hub</h2><p>Paste your access key once. Same key as the pipeline and inbox. It stays on this device.</p><input id="tok" type="password" placeholder="Access key" autocomplete="off"><button class="btn" id="go">Open hub</button><div class="err" id="err">'+(msg||'')+'</div></div>';
+    document.getElementById('go').onclick=function(){var v=document.getElementById('tok').value.trim(); if(!v)return; localStorage.setItem(KEY,v); load();};
+    document.getElementById('tok').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('go').click();});
+  }
+  function signOut(){localStorage.removeItem(KEY); showGate('');}
+
+  async function load(){
+    var tok=localStorage.getItem(KEY);
+    if(!tok){showGate('');return;}
+    app.innerHTML='<div class="empty">Loading your hub...</div>';
+    tbRight.innerHTML='';
+    var q='?token='+encodeURIComponent(tok);
+    var pipe=fetch('/api/sales-pipeline'+q,{cache:'no-store'}).then(function(r){return r.status===401?'UNAUTH':(r.ok?r.json():null);}).catch(function(){return null;});
+    var leads=fetch('/api/hubspot-leads'+q,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+    var out=await Promise.all([pipe,leads]);
+    if(out[0]==='UNAUTH'){localStorage.removeItem(KEY); showGate('That key was not accepted. Try again.'); return;}
+    render(out[0], out[1]);
+  }
+
+  function callRows(pipeData){
+    if(!pipeData) return '<div class="empty">Could not load calls.</div>';
+    var up=(pipeData.bookings||[]).filter(function(b){return b.when==='upcoming';})
+      .sort(function(a,b){return new Date(a.start)-new Date(b.start);}).slice(0,6);
+    if(!up.length) return '<div class="empty">No upcoming calls booked.</div>';
+    return up.map(function(b){
+      var join=b.join&&/^https?:/.test(b.join)?'<a class="join" href="'+esc(b.join)+'" target="_blank" rel="noopener">Join &#8599;</a>':'';
+      return '<div class="row"><div class="when">'+fmt(b.start)+'</div><div class="who"><div class="n">'+esc(b.name||'(no name)')+'</div>'+
+        (b.email?'<div class="e"><a href="mailto:'+esc(b.email)+'">'+esc(b.email)+'</a></div>':'')+
+        '</div><span class="tag">'+esc(b.type||'Call')+'</span>'+join+'</div>';
+    }).join('');
+  }
+
+  function leadRows(ld){
+    if(!ld) return '<div class="empty">Could not load leads.</div>';
+    if(ld.configured===false){
+      return '<div class="connect"><div class="big">HubSpot not connected yet</div>'+
+        '<p>Add a HubSpot private-app token and every warm lead lands here automatically, newest activity first.</p></div>';
+    }
+    if(ld.error) return '<div class="empty">HubSpot error ('+esc(ld.status||'')+'). Check the token scopes.</div>';
+    if(!(ld.leads||[]).length) return '<div class="empty">No warm leads in the last 30 days.</div>';
+    return ld.leads.slice(0,12).map(function(l){
+      var bits=[l.company,l.stage,l.status].filter(Boolean).map(function(x){return '<span class="tag">'+esc(x)+'</span>';}).join(' ');
+      return '<div class="row"><div class="when">'+esc(ago(l.lastActivity))+'</div><div class="who"><div class="n">'+esc(l.name)+'</div>'+
+        (l.email?'<div class="e"><a href="mailto:'+esc(l.email)+'">'+esc(l.email)+'</a></div>':'')+'</div>'+bits+'</div>';
+    }).join('');
+  }
+
+  function render(pipeData, ld){
+    tbRight.innerHTML='<button class="btn btn-ghost" id="refresh">Refresh</button><button class="btn btn-ghost" id="out">Sign out</button>';
+    document.getElementById('refresh').onclick=load;
+    document.getElementById('out').onclick=signOut;
+
+    var upCount=pipeData?(pipeData.bookings||[]).filter(function(b){return b.when==='upcoming';}).length:0;
+    var leadCount=(ld&&ld.configured!==false&&!ld.error)?(ld.count||0):0;
+
+    var mods=MODULES.map(function(m){
+      var cls=m[2]==='ready'?'st-ready':(m[2]==='prog'?'st-prog':'st-soon');
+      var lbl=m[2]==='ready'?'Ready':(m[2]==='prog'?'In progress':'Soon');
+      return '<div class="mod"><span class="num">'+m[0]+'</span><span class="t"><a href="/training/sales/">'+esc(m[1])+'</a></span><span class="st '+cls+'">'+lbl+'</span></div>';
+    }).join('');
+
+    var tools=TOOLS.map(function(t){
+      return '<a class="tool" href="'+t[0]+'" target="_blank" rel="noopener"><div class="tt">'+esc(t[1])+'</div><div class="td">'+esc(t[2])+'</div></a>';
+    }).join('');
+
+    app.innerHTML=
+      '<h1>Staffify sales hub</h1>'+
+      '<div class="sub">'+upCount+' upcoming call'+(upCount===1?'':'s')+' &middot; '+leadCount+' warm lead'+(leadCount===1?'':'s')+' &middot; your playbook on the right</div>'+
+      '<div class="cols">'+
+        '<div>'+
+          '<div class="panel"><div class="ph"><h2>Your day</h2><a href="/pipeline/">All bookings &#8594;</a></div>'+callRows(pipeData)+'</div>'+
+          '<div class="panel"><div class="ph"><h2>Warm leads</h2><span class="meta">HubSpot &middot; last 30 days</span></div>'+leadRows(ld)+'</div>'+
+        '</div>'+
+        '<div>'+
+          '<div class="panel"><div class="ph"><h2>The playbook</h2><a href="/training/sales/">Open training &#8594;</a></div>'+mods+'</div>'+
+          '<div class="panel"><div class="ph"><h2>Your toolkit</h2></div><div class="tools">'+tools+'</div></div>'+
+        '</div>'+
+      '</div>';
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
