@@ -100,7 +100,7 @@ export async function createSession(email) {
 export async function createMagicLink(email) {
     const t = newToken(24);
     await redis.set(`magic:${t}`, normEmail(email), { ex: MAGIC_TTL });
-    return `${SITE}/api/auth-verify?t=${t}`;
+    return `${SITE}/api/auth-verify/?t=${t}`;
 }
 
 export async function consumeMagic(t) {
