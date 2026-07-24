@@ -38,6 +38,9 @@
         .phone .call { font-size:13px; font-weight:800; color:#04222b; background:var(--green-hi); border-radius:999px; padding:8px 16px; text-decoration:none; }
         .lbl { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:18px 0 8px; }
         .brief { font-size:15.5px; color:#dfe3e8; background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:12px; padding:14px 16px; }
+        .ammorow { display:flex; gap:8px; flex-wrap:wrap; }
+        .ammo { font-size:13px; font-weight:700; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:999px; padding:8px 14px; text-decoration:none; }
+        .ammo:hover { background:rgba(26,189,225,0.16); }
         .say { font-size:17px; font-weight:600; color:#eaf6fb; background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:12px; padding:16px 18px; line-height:1.5; }
         .say .line { margin-bottom:8px; } .say .line:last-child { margin-bottom:0; }
         details { margin-top:14px; border:1px solid var(--card-border); border-radius:12px; padding:0 16px; background:rgba(255,255,255,0.02); }
@@ -88,6 +91,18 @@
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function toast(m){toastEl.textContent=m; toastEl.classList.add('show'); setTimeout(function(){toastEl.classList.remove('show');},1600);}
   function telHref(p){return 'tel:'+String(p||'').replace(/[^0-9+]/g,'');}
+  function ammo(L){
+    var loc=[L.company,L.city].filter(Boolean).join(' ');
+    var qs=encodeURIComponent(loc||L.name||''); if(!qs) return '';
+    var links=[];
+    links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.google.com/search?q='+qs+'">Google them</a>');
+    links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/'+qs+'">Maps &amp; reviews</a>');
+    if(L.website){ links.push('<a class="ammo" target="_blank" rel="noopener" href="'+esc(L.website)+'">Their site</a>'); }
+    else { links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(loc+' official website')+'">Find their site</a>'); }
+    var liq=encodeURIComponent(L.name||L.company||'');
+    links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.linkedin.com/search/results/all/?keywords='+liq+'">LinkedIn</a>');
+    return '<div class="lbl">Arm yourself</div><div class="ammorow">'+links.join('')+'</div>';
+  }
   function firstNameOf(s){return String(s||'').trim().split(/\s+/)[0]||'';}
   function fillTokens(line, lead){
     var first=firstNameOf(lead.name);
@@ -123,11 +138,12 @@
       fetch('/api/call-queue?action=list&n=40',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch('/api/call-queue?action=training',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-      fetch('/api/hot-leads',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+      fetch('/api/hot-leads',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      fetch('/api/winback-leads',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
     ]);
     var list=results[0]||{};
     QUEUES.websites=Array.isArray(list.websites)?list.websites:[];
-    QUEUES.staffing=Array.isArray(list.staffing)?list.staffing:[];
+    QUEUES.staffing=(results[4]&&results[4].leads)||[];
     QUEUES.hot=(results[3]&&results[3].leads)||[];
     (results[1]&&results[1].motions||[]).forEach(function(m){TRAIN[m.key]=m;});
     SCORE=results[2]||null;
@@ -157,7 +173,8 @@
       return;
     }
     var L=q[0], tr=TRAIN[MOTION]||{};
-    var openerLines=(tr.opener||[]).map(function(x){return '<div class="line">'+esc(fillTokens(x,L))+'</div>';}).join('') || '<div class="line">'+esc(fillTokens(L.opener||'',L))+'</div>';
+    var opArr=(tr.opener&&tr.opener.length)?tr.opener:(Array.isArray(L.opener)?L.opener:[L.opener||'']);
+    var openerLines=opArr.filter(Boolean).map(function(x){return '<div class="line">'+esc(fillTokens(x,L))+'</div>';}).join('');
     var scriptBits='';
     if(tr.goal) scriptBits+='<div class="blk"><b>Goal:</b> '+esc(tr.goal)+'</div>';
     if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(fillTokens(tr.theAsk,L))+'</div>';
@@ -173,6 +190,7 @@
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(L.brief)+'</div>':'')+
+        ammo(L)+
         (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
         '<div class="lbl">How did it go?</div>'+
         '<div class="outcomes">'+
