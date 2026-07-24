@@ -85,6 +85,14 @@
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function toast(m){toastEl.textContent=m; toastEl.classList.add('show'); setTimeout(function(){toastEl.classList.remove('show');},1600);}
   function telHref(p){return 'tel:'+String(p||'').replace(/[^0-9+]/g,'');}
+  function firstNameOf(s){return String(s||'').trim().split(/\s+/)[0]||'';}
+  function fillTokens(line, lead){
+    var first=firstNameOf(lead.name);
+    var you=firstNameOf(ME&&ME.name)||'me';
+    var m=line.match(/\(no name:\s*"([^"]+)"\)/i);
+    if(m){ line = first ? line.replace(/\s*\(no name:[^)]*\)/i,'') : m[1]; }
+    return line.replace(/\[first name\]/gi, first||'there').replace(/\[company\]/gi, lead.company||'your company').replace(/\[you\]/gi, you);
+  }
 
   function showSignIn(msg){
     tbRight.innerHTML='';
@@ -139,10 +147,10 @@
       return;
     }
     var L=q[0], tr=TRAIN[MOTION]||{};
-    var openerLines=(tr.opener||[]).map(function(x){return '<div class="line">'+esc(x)+'</div>';}).join('') || '<div class="line">'+esc(L.opener||'')+'</div>';
+    var openerLines=(tr.opener||[]).map(function(x){return '<div class="line">'+esc(fillTokens(x,L))+'</div>';}).join('') || '<div class="line">'+esc(fillTokens(L.opener||'',L))+'</div>';
     var scriptBits='';
     if(tr.goal) scriptBits+='<div class="blk"><b>Goal:</b> '+esc(tr.goal)+'</div>';
-    if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(tr.theAsk)+'</div>';
+    if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(fillTokens(tr.theAsk,L))+'</div>';
     if(tr.price) scriptBits+='<div class="blk"><b>Price (only if asked):</b> '+esc(tr.price)+'</div>';
     if(tr.rules&&tr.rules.length) scriptBits+='<div class="blk"><b>Rules:</b>\n- '+tr.rules.map(esc).join('\n- ')+'</div>';
     if(tr.objections) scriptBits+='<div class="blk"><b>Objections:</b>\n'+esc(tr.objections)+'</div>';
