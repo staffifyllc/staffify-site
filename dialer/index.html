@@ -135,7 +135,7 @@
 
   async function refresh(){
     var results=await Promise.all([
-      fetch('/api/call-queue?action=list&n=40',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      fetch('/api/call-queue?action=list&n=500',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch('/api/call-queue?action=training',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
       fetch('/api/hot-leads',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
