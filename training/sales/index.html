@@ -259,6 +259,105 @@
     <p>Staffify Sales Training · Internal use only · <a href="https://www.gostaffify.com/">gostaffify.com</a></p>
 </footer>
 
+<style>
+  .trainhead { margin: 4px 0 26px; }
+  .progwrap { height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
+  .progbar { height: 100%; background: linear-gradient(90deg, #1abde1, #5fe0fa); border-radius: 999px; transition: width .3s; }
+  .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .pill { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--card-border); background: var(--card); color: var(--muted); font-size: 14px; font-weight: 800; cursor: pointer; }
+  .pill.on { border-color: var(--cyan); color: var(--cyan-hi); background: rgba(26,189,225,0.12); }
+  .pill.done { border-color: rgba(29,158,117,0.5); color: #7ef5c2; background: rgba(29,158,117,0.14); }
+  .progtxt { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .quizbox { background: rgba(26,189,225,0.05); border: 1px solid rgba(26,189,225,0.3); border-radius: 16px; padding: 22px 24px; margin: 18px 0; }
+  .quiztitle { font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan); margin-bottom: 16px; }
+  .qitem { margin-bottom: 18px; }
+  .qq { font-size: 15.5px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .qopt { display: block; width: 100%; text-align: left; font-family: inherit; font-size: 14.5px; color: #cfd4da; background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 10px; padding: 11px 14px; margin-bottom: 8px; cursor: pointer; }
+  .qopt:hover { border-color: rgba(26,189,225,0.4); }
+  .qopt.sel { border-color: var(--cyan); color: #fff; background: rgba(26,189,225,0.1); }
+  .qopt.good { border-color: rgba(29,158,117,0.6); background: rgba(29,158,117,0.16); color: #7ef5c2; }
+  .qopt.bad { border-color: rgba(226,75,72,0.6); background: rgba(226,75,72,0.14); color: #ff9a8d; }
+  .qbtn { font-size: 14px; font-weight: 800; color: #04222b; background: var(--cyan); border: none; border-radius: 999px; padding: 11px 22px; cursor: pointer; margin-top: 4px; }
+  .qbtn:hover { background: var(--cyan-hi); }
+  .qresult { margin-top: 14px; font-size: 14.5px; font-weight: 600; }
+  .qresult.pass { color: #7ef5c2; } .qresult.fail { color: #ff9a8d; }
+  .qresult a { color: var(--cyan-hi); font-weight: 800; }
+  .trainnav { display: flex; justify-content: space-between; margin: 8px 0 20px; }
+  .nbtn { font-size: 14px; font-weight: 700; color: var(--muted); background: transparent; border: 1px solid var(--card-border); border-radius: 999px; padding: 10px 20px; cursor: pointer; }
+  .nbtn:hover { color: #fff; border-color: var(--cyan); }
+</style>
+<script>
+(function(){
+  var mods=[].slice.call(document.querySelectorAll('.module'));
+  if(!mods.length) return;
+  var section=mods[0].parentNode;
+  var KEY='sfy_training_done';
+  function getDone(){ try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];} }
+  var done=getDone();
+  function save(){ localStorage.setItem(KEY, JSON.stringify(done)); }
+  function isDone(i){ return done.indexOf(i)>=0; }
+  function markDone(i){ if(!isDone(i)){ done.push(i); save(); } }
+  var idx=0;
+
+  var QUIZ={ 0:[
+    { q:'What is the standard one-time onboarding fee?', a:['$999','$1,499','$2,099','$2,499'], correct:3 },
+    { q:'The prospect decides right there on the call. What onboarding rate do they get?', a:['$2,499','$2,299','$2,099','$1,799'], correct:2 },
+    { q:'What does the Lifetime Replacement Guarantee actually promise?', a:['We replace the VA at no charge, for the life of the engagement','A 30-day money-back window','One free replacement in the first year only','A refund if they are unhappy'], correct:0 },
+    { q:'What does a typical client pay per hour, all-inclusive?', a:['$8.50/hr','$12.75/hr','$18.00/hr','$25.00/hr'], correct:1 },
+    { q:'A prospect wants in but says they cannot front the onboarding right now. Best move?', a:['Drop the price to $999','Offer Path B: roll the onboarding into the hourly rate, no interest','Tell them to call back when they can pay','Walk away'], correct:1 }
+  ]};
+
+  var top=document.createElement('div'); top.className='trainhead';
+  section.insertBefore(top, mods[0]);
+  var quizc=document.createElement('div'); quizc.className='quizc';
+  var navc=document.createElement('div'); navc.className='trainnav';
+
+  function renderHead(){
+    var pct=Math.round(100*done.length/mods.length);
+    var pills=mods.map(function(m,i){ return '<button class="pill'+(i===idx?' on':'')+(isDone(i)?' done':'')+'" data-i="'+i+'">'+(isDone(i)?'✓':(i+1))+'</button>'; }).join('');
+    top.innerHTML='<div class="progwrap"><div class="progbar" style="width:'+pct+'%"></div></div><div class="pillrow">'+pills+'</div><div class="progtxt">'+done.length+' of '+mods.length+' complete'+(done.length===mods.length?' — you are certified. Go sell.':'')+'</div>';
+    [].slice.call(top.querySelectorAll('.pill')).forEach(function(b){ b.onclick=function(){ go(+b.getAttribute('data-i')); }; });
+  }
+
+  function renderQuiz(){
+    var qs=QUIZ[idx];
+    if(!qs){
+      quizc.innerHTML='<div class="quizbox"><div class="quiztitle">Complete this module</div><p style="color:#cfd4da;font-size:14.5px;margin-bottom:14px;">This module is still being built out. Review what is here, then mark it done to keep moving.</p><button class="qbtn" id="qdone">'+(isDone(idx)?'Completed ✓':'Mark as reviewed')+'</button></div>';
+      document.getElementById('qdone').onclick=function(){ markDone(idx); renderHead(); renderQuiz(); };
+      return;
+    }
+    var chosen={};
+    var h='<div class="quizbox"><div class="quiztitle">Knowledge check</div>';
+    qs.forEach(function(item,qi){ h+='<div class="qitem"><div class="qq">'+(qi+1)+'. '+item.q+'</div>'+item.a.map(function(o,oi){return '<button class="qopt" data-qi="'+qi+'" data-oi="'+oi+'">'+o+'</button>';}).join('')+'</div>'; });
+    h+='<button class="qbtn" id="qcheck">Check answers</button><div class="qresult" id="qres"></div></div>';
+    quizc.innerHTML=h;
+    [].slice.call(quizc.querySelectorAll('.qopt')).forEach(function(b){ b.onclick=function(){ var qi=b.getAttribute('data-qi'); [].slice.call(quizc.querySelectorAll('.qopt[data-qi="'+qi+'"]')).forEach(function(x){x.classList.remove('sel','good','bad');}); b.classList.add('sel'); chosen[qi]=+b.getAttribute('data-oi'); }; });
+    document.getElementById('qcheck').onclick=function(){
+      var correct=0;
+      qs.forEach(function(item,qi){ var pick=chosen[qi]; [].slice.call(quizc.querySelectorAll('.qopt[data-qi="'+qi+'"]')).forEach(function(x,oi){ x.classList.remove('good','bad'); if(oi===item.correct)x.classList.add('good'); else if(oi===pick)x.classList.add('bad'); }); if(pick===item.correct)correct++; });
+      var pass=correct>=Math.ceil(qs.length*0.8);
+      var res=document.getElementById('qres');
+      if(pass){ markDone(idx); renderHead(); res.className='qresult pass'; res.innerHTML='Passed, '+correct+' of '+qs.length+'. Module complete. '+(idx<mods.length-1?'<a href="#" id="qnext">Next module →</a>':'You finished the playbook.'); var nx=document.getElementById('qnext'); if(nx)nx.onclick=function(e){e.preventDefault();go(idx+1);}; }
+      else { res.className='qresult fail'; res.innerHTML='You got '+correct+' of '+qs.length+'. Give the module another read and try again.'; }
+    };
+  }
+
+  function renderNav(){
+    navc.innerHTML=(idx>0?'<button class="nbtn" id="prev">← Previous</button>':'<span></span>')+(idx<mods.length-1?'<button class="nbtn" id="next">Next →</button>':'<span></span>');
+    var p=document.getElementById('prev'); if(p)p.onclick=function(){go(idx-1);};
+    var n=document.getElementById('next'); if(n)n.onclick=function(){go(idx+1);};
+  }
+
+  function show(){
+    mods.forEach(function(m,i){ m.style.display=(i===idx?'block':'none'); });
+    mods[idx].parentNode.insertBefore(quizc, mods[idx].nextSibling);
+    quizc.parentNode.insertBefore(navc, quizc.nextSibling);
+    renderHead(); renderQuiz(); renderNav();
+  }
+  function go(i){ idx=Math.max(0,Math.min(mods.length-1,i)); show(); window.scrollTo({top:0,behavior:'smooth'}); }
+  show();
+})();
+</script>
   <script src="/assets/js/analytics.js?v=1" defer></script>
 <script defer src="/_vercel/insights/script.js"></script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
