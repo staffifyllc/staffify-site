@@ -6,6 +6,7 @@
 // Env vars: ADMIN_TOKEN (or CRON_SECRET), KV_REST_API_URL, KV_REST_API_TOKEN
 
 import { Redis } from '@upstash/redis';
+import { currentRep } from './_auth.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -40,7 +41,8 @@ function toCSV(rows) {
 }
 
 export default async function handler(req, res) {
-    if (!authorized(req)) {
+    const ses = await currentRep(req).catch(() => null);
+    if (!authorized(req) && !(ses && ses.role === 'admin')) {
         return res.status(401).json({ error: 'unauthorized' });
     }
 

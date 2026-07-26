@@ -24,6 +24,7 @@
         .nav { display:flex; gap:6px; }
         .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
         .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        @media (max-width: 880px) { .topbar { flex-wrap: wrap; } .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
         .nav a:hover { color:var(--white); }
         .wrap { max-width:920px; margin:0 auto; padding:28px; }
         h1 { font-size:26px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }

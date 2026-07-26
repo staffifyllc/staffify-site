@@ -24,6 +24,7 @@
         .nav { display:flex; gap:6px; flex-wrap:wrap; }
         .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
         .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        @media (max-width: 880px) { .topbar { flex-wrap: wrap; } .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
         .nav a:hover { color:var(--white); }
         .wrap { max-width:1180px; margin:0 auto; padding:28px; }
         h1 { font-size:28px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
@@ -150,9 +151,10 @@
     }
     ME=(await meRes.json()).rep;
     var pipe=fetch('/api/sales-pipeline',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
-    var leads=fetch('/api/hubspot-leads',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
-    var out=await Promise.all([pipe,leads]);
-    render(out[0],out[1]);
+    var leads=fetch('/api/hot-leads',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+    var apps=(ME&&ME.role==='admin')?fetch('/api/sales-applicants/?format=json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}):Promise.resolve(null);
+    var out=await Promise.all([pipe,leads,apps]);
+    render(out[0],out[1],out[2]);
   }
 
   function callRows(pipeData){
@@ -170,28 +172,34 @@
 
   function leadRows(ld){
     if(!ld) return '<div class="empty">Could not load leads.</div>';
-    if(ld.configured===false){
-      return '<div class="connect"><div class="big">HubSpot not connected yet</div>'+
-        '<p>Add a HubSpot private-app token and every warm lead lands here automatically, newest activity first.</p></div>';
-    }
-    if(ld.error) return '<div class="empty">HubSpot error ('+esc(ld.status||'')+'). Check the token scopes.</div>';
-    if(!(ld.leads||[]).length) return '<div class="empty">No warm leads in the last 30 days.</div>';
+    if(!(ld.leads||[]).length) return '<div class="empty">No warm leads right now. The moment the engine gets someone interested, they land here.</div>';
     return ld.leads.slice(0,12).map(function(l){
-      var bits=[l.company,l.stage,l.status].filter(Boolean).map(function(x){return '<span class="tag">'+esc(x)+'</span>';}).join(' ');
-      return '<div class="row"><div class="when">'+esc(ago(l.lastActivity))+'</div><div class="who"><div class="n">'+esc(l.name)+'</div>'+
-        (l.email?'<div class="e"><a href="mailto:'+esc(l.email)+'">'+esc(l.email)+'</a></div>':'')+'</div>'+bits+'</div>';
+      var grade=l.grade?'<span class="tag">'+esc(l.grade)+'</span>':'';
+      return '<div class="row"><div class="who"><div class="n">'+esc(l.company||l.name||'Lead')+'</div>'+
+        (l.phone?'<div class="e"><a href="tel:'+esc(l.phone)+'">'+esc(l.phone)+'</a></div>':'')+
+        (l.summary?'<div style="font-size:12px;color:#9ba1ab;margin-top:3px;line-height:1.4">'+esc(l.summary)+'</div>':'')+
+        '</div>'+grade+'</div>';
+    }).join('');
+  }
+  function appRows(apps){
+    var al=Array.isArray(apps)?apps:(apps&&(apps.applicants||apps.data)||[]);
+    if(!al.length) return '<div class="empty">No applicants yet.</div>';
+    return al.slice(0,6).map(function(a){
+      return '<div class="row"><div class="who"><div class="n">'+esc(a.name||'(no name)')+'</div>'+
+        (a.email?'<div class="e"><a href="mailto:'+esc(a.email)+'">'+esc(a.email)+'</a></div>':'')+'</div>'+
+        (a.experience?'<span class="tag">'+esc(a.experience)+' yrs</span>':'')+'</div>';
     }).join('');
   }
 
-  function render(pipeData, ld){
-    tbRight.innerHTML='<span style="color:#9ba1ab">'+esc(ME.name||ME.email)+'</span>'+
-      '<button class="btn btn-ghost" id="refresh">Refresh</button>'+
-      '<a class="btn btn-ghost" href="/api/auth-logout" style="text-decoration:none">Sign out</a>';
-    document.getElementById('refresh').onclick=load;
+  function render(pipeData, ld, apps){
+    tbRight.innerHTML='<a class="btn btn-ghost" href="/api/auth-logout" style="text-decoration:none">Sign out</a>';
 
     var upCount=pipeData?(pipeData.bookings||[]).filter(function(b){return b.when==='upcoming';}).length:0;
-    var leadCount=(ld&&ld.configured!==false&&!ld.error)?(ld.count||0):0;
+    var leadCount=ld?(ld.count||0):0;
     var first=(ME.name||'').split(' ')[0]||'there';
+    var isAdmin=(ME.role==='admin');
+    var appList=Array.isArray(apps)?apps:(apps&&(apps.applicants||apps.data)||[]);
+    var appsPanel=isAdmin?('<div class="panel"><div class="ph"><h2>Applicants</h2><a href="/careers/sales/inbox/">Open inbox &#8594;</a></div>'+appRows(apps)+'</div>'):'';
 
     var mods=MODULES.map(function(m){
       var cls=m[2]==='ready'?'st-ready':(m[2]==='prog'?'st-prog':'st-soon');
@@ -205,11 +213,12 @@
 
     app.innerHTML=
       '<h1>Welcome back, '+esc(first)+'</h1>'+
-      '<div class="sub">'+upCount+' upcoming call'+(upCount===1?'':'s')+' &middot; '+leadCount+' warm lead'+(leadCount===1?'':'s')+' &middot; commission rate '+esc(ME.rate||'35')+'%</div>'+
+      '<div class="sub">'+upCount+' upcoming call'+(upCount===1?'':'s')+' &middot; '+leadCount+' warm lead'+(leadCount===1?'':'s')+(isAdmin?' &middot; '+appList.length+' applicant'+(appList.length===1?'':'s'):'')+' &middot; '+esc(ME.rate||'35')+'% commission</div>'+
       '<div class="cols">'+
         '<div>'+
+          '<div class="panel"><div class="ph"><h2>Warm leads</h2><span class="meta">Live &middot; from the engine</span></div>'+leadRows(ld)+'</div>'+
           '<div class="panel"><div class="ph"><h2>Your day</h2><a href="/pipeline/">All bookings &#8594;</a></div>'+callRows(pipeData)+'</div>'+
-          '<div class="panel"><div class="ph"><h2>Warm leads</h2><span class="meta">HubSpot &middot; last 30 days</span></div>'+leadRows(ld)+'</div>'+
+          appsPanel+
         '</div>'+
         '<div>'+
           '<div class="panel"><div class="ph"><h2>The playbook</h2><a href="/training/sales/">Open training &#8594;</a></div>'+mods+'</div>'+
