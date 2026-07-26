@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         const h = (await redis.hgetall('training:' + e)) || {};
         let doneCount = 0, sSum = 0, sN = 0;
         for (let i = 0; i < NMOD; i++) {
-            if (h['m' + i + '_p'] === '1') doneCount++;
+            if (String(h['m' + i + '_p']) === '1') doneCount++;
             const s = h['m' + i];
             if (s && String(s).indexOf('/') >= 0) { const p = String(s).split('/').map(Number); if (p[1]) { sSum += p[0] / p[1]; sN++; } }
         }
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     const mine = {};
     if (who.email && who.email !== 'admin') {
         const h = (await redis.hgetall('training:' + who.email)) || {};
-        for (let i = 0; i < NMOD; i++) mine[i] = h['m' + i + '_p'] === '1';
+        for (let i = 0; i < NMOD; i++) mine[i] = String(h['m' + i + '_p']) === '1';
     }
     return res.status(200).json({ me: { email: who.email, done: mine }, team, isAdmin: who.role === 'admin' });
 }
