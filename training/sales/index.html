@@ -291,6 +291,17 @@
   .trainnav { display: flex; justify-content: space-between; margin: 8px 0 20px; }
   .nbtn { font-size: 14px; font-weight: 700; color: var(--muted); background: transparent; border: 1px solid var(--card-border); border-radius: 999px; padding: 10px 20px; cursor: pointer; }
   .nbtn:hover { color: #fff; border-color: var(--cyan); }
+  .progtxt { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .teamlink { font-size: 12.5px; font-weight: 800; color: var(--cyan-hi); background: transparent; border: none; cursor: pointer; padding: 0; }
+  .teambox { background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px 22px; margin: 14px 0 24px; }
+  .teamhd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+  .trow { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .trow:last-child { border-bottom: none; }
+  .trow.thead { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .trank { width: 26px; font-weight: 800; color: var(--cyan); }
+  .tname { flex: 1; font-size: 15px; font-weight: 700; color: #fff; min-width: 120px; }
+  .tstat { font-size: 13px; color: #cfd4da; width: 120px; }
+  .tscore { font-size: 14px; font-weight: 800; color: #7ef5c2; width: 74px; text-align: right; }
 </style>
 <script>
 (function(){
@@ -303,6 +314,8 @@
   function save(){ localStorage.setItem(KEY, JSON.stringify(done)); }
   function isDone(i){ return done.indexOf(i)>=0; }
   function markDone(i){ if(!isDone(i)){ done.push(i); save(); } }
+  function sync(i, correct, total){ var body={module:i}; if(correct!=null){body.correct=correct;body.total=total;} try{ fetch('/api/training-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }catch(e){} }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   var idx=0;
 
   var QUIZ={ 0:[
@@ -318,19 +331,21 @@
   section.insertBefore(top, mods[0]);
   var quizc=document.createElement('div'); quizc.className='quizc';
   var navc=document.createElement('div'); navc.className='trainnav';
+  var teamc=document.createElement('div'); teamc.className='teamc'; teamc.style.display='none'; section.appendChild(teamc);
 
   function renderHead(){
     var pct=Math.round(100*done.length/mods.length);
     var pills=mods.map(function(m,i){ return '<button class="pill'+(i===idx?' on':'')+(isDone(i)?' done':'')+'" data-i="'+i+'">'+(isDone(i)?'✓':(i+1))+'</button>'; }).join('');
-    top.innerHTML='<div class="progwrap"><div class="progbar" style="width:'+pct+'%"></div></div><div class="pillrow">'+pills+'</div><div class="progtxt">'+done.length+' of '+mods.length+' complete'+(done.length===mods.length?' — you are certified. Go sell.':'')+'</div>';
+    top.innerHTML='<div class="progwrap"><div class="progbar" style="width:'+pct+'%"></div></div><div class="pillrow">'+pills+'</div><div class="progtxt"><span>'+done.length+' of '+mods.length+' complete'+(done.length===mods.length?' &middot; certified':'')+'</span><button class="teamlink" id="teamBtn">Team board &#8594;</button></div>';
     [].slice.call(top.querySelectorAll('.pill')).forEach(function(b){ b.onclick=function(){ go(+b.getAttribute('data-i')); }; });
+    var tb=document.getElementById('teamBtn'); if(tb)tb.onclick=openTeam;
   }
 
   function renderQuiz(){
     var qs=QUIZ[idx];
     if(!qs){
       quizc.innerHTML='<div class="quizbox"><div class="quiztitle">Complete this module</div><p style="color:#cfd4da;font-size:14.5px;margin-bottom:14px;">This module is still being built out. Review what is here, then mark it done to keep moving.</p><button class="qbtn" id="qdone">'+(isDone(idx)?'Completed ✓':'Mark as reviewed')+'</button></div>';
-      document.getElementById('qdone').onclick=function(){ markDone(idx); renderHead(); renderQuiz(); };
+      document.getElementById('qdone').onclick=function(){ markDone(idx); sync(idx); renderHead(); renderQuiz(); };
       return;
     }
     var chosen={};
@@ -344,7 +359,7 @@
       qs.forEach(function(item,qi){ var pick=chosen[qi]; [].slice.call(quizc.querySelectorAll('.qopt[data-qi="'+qi+'"]')).forEach(function(x,oi){ x.classList.remove('good','bad'); if(oi===item.correct)x.classList.add('good'); else if(oi===pick)x.classList.add('bad'); }); if(pick===item.correct)correct++; });
       var pass=correct>=Math.ceil(qs.length*0.8);
       var res=document.getElementById('qres');
-      if(pass){ markDone(idx); renderHead(); res.className='qresult pass'; res.innerHTML='Passed, '+correct+' of '+qs.length+'. Module complete. '+(idx<mods.length-1?'<a href="#" id="qnext">Next module →</a>':'You finished the playbook.'); var nx=document.getElementById('qnext'); if(nx)nx.onclick=function(e){e.preventDefault();go(idx+1);}; }
+      if(pass){ markDone(idx); sync(idx, correct, qs.length); renderHead(); res.className='qresult pass'; res.innerHTML='Passed, '+correct+' of '+qs.length+'. Module complete. '+(idx<mods.length-1?'<a href="#" id="qnext">Next module →</a>':'You finished the playbook.'); var nx=document.getElementById('qnext'); if(nx)nx.onclick=function(e){e.preventDefault();go(idx+1);}; }
       else { res.className='qresult fail'; res.innerHTML='You got '+correct+' of '+qs.length+'. Give the module another read and try again.'; }
     };
   }
@@ -362,6 +377,24 @@
     renderHead(); renderQuiz(); renderNav();
   }
   function go(i){ idx=Math.max(0,Math.min(mods.length-1,i)); show(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+  function openTeam(){
+    mods.forEach(function(m){m.style.display='none';}); quizc.style.display='none'; navc.style.display='none';
+    teamc.style.display='block';
+    teamc.innerHTML='<div class="teambox"><div class="teamhd"><div class="quiztitle" style="margin:0">Team board</div><button class="nbtn" id="teamBack">&#8592; Back to training</button></div><div style="color:#9ba1ab;font-size:14px;padding:12px 0">Loading the team...</div></div>';
+    document.getElementById('teamBack').onclick=closeTeam;
+    fetch('/api/training-progress',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var box=teamc.querySelector('.teambox');
+      var back='<button class="nbtn" id="teamBack2">&#8592; Back to training</button>';
+      if(!d||!d.team||!d.team.length){ box.innerHTML='<div class="teamhd"><div class="quiztitle" style="margin:0">Team board</div>'+back+'</div><div style="color:#9ba1ab;font-size:14px;padding:12px 0">No one has started training yet. As reps work the modules, their progress and scores land here.</div>'; }
+      else { var rows=d.team.map(function(t,i){ return '<div class="trow"><span class="trank">'+(i+1)+'</span><span class="tname">'+esc(t.name)+'</span><span class="tstat">'+t.done+' / '+t.total+' modules</span><span class="tscore">'+(t.avg==null?'&mdash;':t.avg+'%')+'</span></div>'; }).join('');
+        box.innerHTML='<div class="teamhd"><div class="quiztitle" style="margin:0">Team board</div>'+back+'</div><div class="trow thead"><span class="trank">#</span><span class="tname">Rep</span><span class="tstat">Progress</span><span class="tscore">Avg score</span></div>'+rows; }
+      var b2=document.getElementById('teamBack2'); if(b2)b2.onclick=closeTeam;
+    }).catch(function(){});
+  }
+  function closeTeam(){ teamc.style.display='none'; quizc.style.display=''; navc.style.display=''; show(); }
+
+  fetch('/api/training-progress',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){ if(d&&d.me&&d.me.done){ Object.keys(d.me.done).forEach(function(k){ if(d.me.done[k]&&done.indexOf(+k)<0){done.push(+k);} }); save(); if(teamc.style.display==='none')renderHead(); } }).catch(function(){});
   show();
 })();
 </script>
