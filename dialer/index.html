@@ -244,7 +244,7 @@
     render();
     if(MOTION==='hot'){
       toast(outcome==='won'?'Boom. Closed.':'Logged. Next hot lead.');
-      try{ await fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:lead.id,outcome:outcome})}); }catch(e){ toast('Saved, will retry.'); }
+      try{ await fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:lead.id,outcome:outcome,motion:lead.motion,company:lead.company})}); }catch(e){ toast('Saved, will retry.'); }
       return;
     }
     toast(outcome==='interested'?'Nice. Logged as interested.':'Logged. Next up.');
