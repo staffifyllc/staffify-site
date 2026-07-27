@@ -32,6 +32,11 @@
         .topbar { position: sticky; top: 0; z-index: 50; background: rgba(5,5,7,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--card-border); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; }
         .topbar img { height: 26px; display: block; }
         .badge { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--card-border); border-radius: 999px; padding: 6px 13px; }
+        .nav { display: flex; gap: 6px; flex-wrap: wrap; }
+        .nav a { font-size: 13px; font-weight: 700; color: var(--muted); text-decoration: none; padding: 8px 14px; border-radius: 999px; }
+        .nav a.active { color: var(--cyan-hi); background: rgba(26,189,225,0.10); }
+        .nav a:hover { color: var(--white); }
+        @media (max-width: 880px) { .topbar { flex-wrap: wrap; } .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
         .page { max-width: 880px; margin: 0 auto; padding: 0 28px; }
         .hero { padding: 64px 0 30px; }
         .hero h1 { font-size: clamp(34px, 5.5vw, 52px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.06; margin-bottom: 18px; }
@@ -73,7 +78,14 @@
 
 <header class="topbar">
     <img src="/assets/brand/logo-blue.svg" alt="Staffify">
-    <span class="badge">Sales Training · Internal</span>
+    <nav class="nav">
+        <a href="/hub/">Hub</a>
+        <a href="/dialer/">Dialer</a>
+        <a href="/scoreboard/">Scoreboard</a>
+        <a href="/pipeline/">Pipeline</a>
+        <a href="/training/sales/" class="active">Training</a>
+    </nav>
+    <a href="/hub/" class="badge" style="text-decoration:none">&#8592; Hub</a>
 </header>
 
 <main class="page">
