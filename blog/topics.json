@@ -313,7 +313,8 @@
         "freelance video editor pricing",
         "video editing service cost"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-07-27T16:26:19Z"
     },
     {
       "slug": "dtc-customer-service-playbook",
