@@ -352,7 +352,11 @@
   function save(){ localStorage.setItem(KEY, JSON.stringify(done)); }
   function isDone(i){ return done.indexOf(i)>=0; }
   function markDone(i){ if(!isDone(i)){ done.push(i); save(); } }
-  function sync(i, correct, total){ var body={module:i}; if(correct!=null){body.correct=correct;body.total=total;} try{ fetch('/api/training-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }catch(e){} }
+  function repGet(){try{var r=JSON.parse(localStorage.getItem('sfy_rep')||'null');if(r&&r.name)return r;}catch(e){}return null;}
+  function repSet(n){n=(n||'').trim();if(!n)return null;var em=n.toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/(^\.|\.$)/g,'')+'@rep.local';var r={name:n,email:em};try{localStorage.setItem('sfy_rep',JSON.stringify(r));}catch(x){}return r;}
+  function ensureName(){var r=repGet();if(r)return r;var n=prompt('Enter your name so your score shows on the team board:');return n?repSet(n):null;}
+  function repQS(){var r=repGet();return r?'&rep='+encodeURIComponent(r.name)+'&email='+encodeURIComponent(r.email):'';}
+  function sync(i, correct, total){ var r=repGet(); var body={module:i}; if(correct!=null){body.correct=correct;body.total=total;} if(r){body.rep=r.name;body.email=r.email;} try{ fetch('/api/training-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }catch(e){} }
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   var idx=0;
 
@@ -379,16 +383,18 @@
   function renderHead(){
     var pct=Math.round(100*done.length/mods.length);
     var pills=mods.map(function(m,i){ return '<button class="pill'+(i===idx?' on':'')+(isDone(i)?' done':'')+'" data-i="'+i+'">'+(isDone(i)?'✓':(i+1))+'</button>'; }).join('');
-    top.innerHTML='<div class="progwrap"><div class="progbar" style="width:'+pct+'%"></div></div><div class="pillrow">'+pills+'</div><div class="progtxt"><span>'+done.length+' of '+mods.length+' complete'+(done.length===mods.length?' &middot; certified':'')+'</span><button class="teamlink" id="teamBtn">Team board &#8594;</button></div>';
+    var rr=repGet();
+    top.innerHTML='<div class="progwrap"><div class="progbar" style="width:'+pct+'%"></div></div><div class="pillrow">'+pills+'</div><div class="progtxt"><span>'+done.length+' of '+mods.length+' complete'+(done.length===mods.length?' &middot; certified':'')+'</span><span><button class="teamlink" id="nameBtn" style="color:#9ba1ab;margin-right:16px">'+(rr?('You: '+esc(rr.name.split(' ')[0])):'Set your name')+'</button><button class="teamlink" id="teamBtn">Team board &#8594;</button></span></div>';
     [].slice.call(top.querySelectorAll('.pill')).forEach(function(b){ b.onclick=function(){ go(+b.getAttribute('data-i')); }; });
     var tb=document.getElementById('teamBtn'); if(tb)tb.onclick=openTeam;
+    var nb=document.getElementById('nameBtn'); if(nb)nb.onclick=function(){var r=repGet();var n=prompt('Your name (shows on the team board):',r?r.name:'');if(n){repSet(n);renderHead();}};
   }
 
   function renderQuiz(){
     var qs=QUIZ[idx];
     if(!qs){
       quizc.innerHTML='<div class="quizbox"><div class="quiztitle">Complete this module</div><p style="color:#cfd4da;font-size:14.5px;margin-bottom:14px;">This module is still being built out. Review what is here, then mark it done to keep moving.</p><button class="qbtn" id="qdone">'+(isDone(idx)?'Completed ✓':'Mark as reviewed')+'</button></div>';
-      document.getElementById('qdone').onclick=function(){ markDone(idx); sync(idx); renderHead(); renderQuiz(); };
+      document.getElementById('qdone').onclick=function(){ ensureName(); markDone(idx); sync(idx); renderHead(); renderQuiz(); };
       return;
     }
     var chosen={};
@@ -402,7 +408,7 @@
       qs.forEach(function(item,qi){ var pick=chosen[qi]; [].slice.call(quizc.querySelectorAll('.qopt[data-qi="'+qi+'"]')).forEach(function(x,oi){ x.classList.remove('good','bad'); if(oi===item.correct)x.classList.add('good'); else if(oi===pick)x.classList.add('bad'); }); if(pick===item.correct)correct++; });
       var pass=correct>=Math.ceil(qs.length*0.8);
       var res=document.getElementById('qres');
-      if(pass){ markDone(idx); sync(idx, correct, qs.length); renderHead(); res.className='qresult pass'; res.innerHTML='Passed, '+correct+' of '+qs.length+'. Module complete. '+(idx<mods.length-1?'<a href="#" id="qnext">Next module →</a>':'You finished the playbook.'); var nx=document.getElementById('qnext'); if(nx)nx.onclick=function(e){e.preventDefault();go(idx+1);}; }
+      if(pass){ ensureName(); markDone(idx); sync(idx, correct, qs.length); renderHead(); res.className='qresult pass'; res.innerHTML='Passed, '+correct+' of '+qs.length+'. Module complete. '+(idx<mods.length-1?'<a href="#" id="qnext">Next module →</a>':'You finished the playbook.'); var nx=document.getElementById('qnext'); if(nx)nx.onclick=function(e){e.preventDefault();go(idx+1);}; }
       else { res.className='qresult fail'; res.innerHTML='You got '+correct+' of '+qs.length+'. Give the module another read and try again.'; }
     };
   }
@@ -426,7 +432,7 @@
     teamc.style.display='block';
     teamc.innerHTML='<div class="teambox"><div class="teamhd"><div class="quiztitle" style="margin:0">Team board</div><button class="nbtn" id="teamBack">&#8592; Back to training</button></div><div style="color:#9ba1ab;font-size:14px;padding:12px 0">Loading the team...</div></div>';
     document.getElementById('teamBack').onclick=closeTeam;
-    fetch('/api/training-progress',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    fetch('/api/training-progress?ts='+Date.now()+repQS(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
       var box=teamc.querySelector('.teambox');
       var back='<button class="nbtn" id="teamBack2">&#8592; Back to training</button>';
       if(!d||!d.team||!d.team.length){ box.innerHTML='<div class="teamhd"><div class="quiztitle" style="margin:0">Team board</div>'+back+'</div><div style="color:#9ba1ab;font-size:14px;padding:12px 0">No one has started training yet. As reps work the modules, their progress and scores land here.</div>'; }
@@ -437,7 +443,7 @@
   }
   function closeTeam(){ teamc.style.display='none'; quizc.style.display=''; navc.style.display=''; show(); }
 
-  fetch('/api/training-progress',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){ if(d&&d.me&&d.me.done){ Object.keys(d.me.done).forEach(function(k){ if(d.me.done[k]&&done.indexOf(+k)<0){done.push(+k);} }); save(); if(teamc.style.display==='none')renderHead(); } }).catch(function(){});
+  fetch('/api/training-progress?ts='+Date.now()+repQS(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){ if(d&&d.me&&d.me.done){ Object.keys(d.me.done).forEach(function(k){ if(d.me.done[k]&&done.indexOf(+k)<0){done.push(+k);} }); save(); if(teamc.style.display==='none')renderHead(); } }).catch(function(){});
   show();
 })();
 </script>

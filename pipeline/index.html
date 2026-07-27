@@ -69,32 +69,25 @@
 
 <script>
 (function(){
-  var KEY='sfy_applicants_token';
   var app=document.getElementById('app');
   var tbRight=document.getElementById('tbRight');
+  function repGet(){try{var r=JSON.parse(localStorage.getItem('sfy_rep')||'null');if(r&&r.name)return r;}catch(e){}return null;}
+  function repSet(n){n=(n||'').trim();if(!n)return null;var em=n.toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/(^\.|\.$)/g,'')+'@rep.local';var r={name:n,email:em};try{localStorage.setItem('sfy_rep',JSON.stringify(r));}catch(x){}return r;}
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function fmt(ts){var d=new Date(ts); return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})+', '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
 
-  function showGate(msg){
-    tbRight.innerHTML='';
-    app.innerHTML='<div class="gate"><h2>Sales pipeline</h2><p>Paste your access key once. Same key as the applicant inbox. It stays on this device.</p><input id="tok" type="password" placeholder="Access key" autocomplete="off"><button class="btn" id="go">Open pipeline</button><div class="err" id="err">'+(msg||'')+'</div></div>';
-    document.getElementById('go').onclick=function(){var v=document.getElementById('tok').value.trim(); if(!v)return; localStorage.setItem(KEY,v); load();};
-    document.getElementById('tok').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('go').click();});
-  }
-  function signOut(){localStorage.removeItem(KEY); showGate('');}
+  function nameChip(){var r=repGet();return '<button class="btn btn-ghost" id="nm">'+(r?('Hi, '+esc(r.name.split(' ')[0])):'Set your name')+'</button>';}
+  function wireChip(){var b=document.getElementById('nm');if(b)b.onclick=function(){var r=repGet();var n=prompt('Your name (shows on the scoreboard):',r?r.name:'');if(n){repSet(n);load();}};}
 
   async function load(){
-    var tok=localStorage.getItem(KEY);
-    if(!tok){showGate('');return;}
     app.innerHTML='<div class="empty">Loading pipeline from Calendly...</div>';
     tbRight.innerHTML='';
     try{
-      var r=await fetch('/api/sales-pipeline?token='+encodeURIComponent(tok),{cache:'no-store'});
-      if(r.status===401||r.status===403){localStorage.removeItem(KEY); showGate('That key was not accepted. Try again.'); return;}
+      var r=await fetch('/api/sales-pipeline',{cache:'no-store'});
       if(!r.ok){app.innerHTML='<div class="empty">Could not load ('+r.status+'). Try refresh.</div>'; return;}
       var j=await r.json();
-      render(j.bookings||[], tok);
+      render(j.bookings||[]);
     }catch(e){app.innerHTML='<div class="empty">Network error. Try refresh.</div>';}
   }
 
@@ -106,10 +99,10 @@
       '<span class="type">'+esc(b.type||'Call')+'</span>'+join+'</div>';
   }
 
-  function render(list, tok){
-    tbRight.innerHTML='<button class="btn btn-ghost" id="refresh">Refresh</button><button class="btn btn-ghost" id="out">Sign out</button>';
+  function render(list){
+    tbRight.innerHTML=nameChip()+'<button class="btn btn-ghost" id="refresh">Refresh</button>';
     document.getElementById('refresh').onclick=load;
-    document.getElementById('out').onclick=signOut;
+    wireChip();
     var up=list.filter(function(b){return b.when==='upcoming';}).sort(function(a,b){return new Date(a.start)-new Date(b.start);});
     var past=list.filter(function(b){return b.when!=='upcoming';}).sort(function(a,b){return new Date(b.start)-new Date(a.start);});
     var n=list.length;

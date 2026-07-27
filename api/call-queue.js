@@ -5,15 +5,14 @@
 // POST /api/call-queue?action=log  { id, outcome, motion }  -> logs + removes the lead (dedup)
 // Auth: logged-in rep (session) or admin token. Env: SALES_PORTAL_BASE, SALES_PORTAL_TOKEN.
 
-import { requireAccess, readBody } from './_auth.js';
+import { openIdentity, readBody } from './_auth.js';
 
 const BASE = process.env.SALES_PORTAL_BASE;
 const TOKEN = process.env.SALES_PORTAL_TOKEN;
 const OUTCOMES = ['interested', 'callback', 'not_interested', 'gatekeeper', 'no_answer', 'voicemail', 'bad_number'];
 
 export default async function handler(req, res) {
-    const who = await requireAccess(req);
-    if (!who) return res.status(401).json({ error: 'unauthorized' });
+    const who = await openIdentity(req); // open-share: identify by name if given, else Guest
     if (!BASE || !TOKEN) return res.status(500).json({ error: 'portal_not_configured' });
     res.setHeader('Cache-Control', 'no-store');
 

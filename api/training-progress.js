@@ -3,7 +3,7 @@
 // GET  /api/training-progress                           -> { me, team:[...sorted], isAdmin }
 // Storage: hash training:{email} (fields m0..m7 = "correct/total", m{n}_p = "1", name, updated); set training:reps
 
-import { currentRep, requireAccess, redis, readBody } from './_auth.js';
+import { openIdentity, redis, readBody } from './_auth.js';
 
 const NMOD = 8;
 
@@ -11,8 +11,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
 
     if (req.method === 'POST') {
-        const rep = await currentRep(req);
-        if (!rep) return res.status(401).json({ error: 'must_be_logged_in' });
+        const rep = await openIdentity(req); // open-share: record under the name the visitor set (else Guest)
         const b = readBody(req);
         const m = Number(b.module);
         if (!(m >= 0 && m < NMOD)) return res.status(400).json({ error: 'bad_module' });
@@ -24,8 +23,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
     }
 
-    const who = await requireAccess(req);
-    if (!who) return res.status(401).json({ error: 'unauthorized' });
+    const who = await openIdentity(req); // open-share: anyone can see the team board
 
     const emails = (await redis.smembers('training:reps')) || [];
     const team = [];

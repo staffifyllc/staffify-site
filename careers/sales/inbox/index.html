@@ -58,41 +58,27 @@
 
 <script>
 (function(){
-  var KEY='sfy_applicants_token';
   var app=document.getElementById('app');
   var tbRight=document.getElementById('tbRight');
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function fmtDate(ts){var n=Number(ts); if(!n) return ''; var d=new Date(n); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
 
-  function showGate(msg){
-    tbRight.innerHTML='';
-    app.innerHTML='<div class="gate"><h2>Applicant inbox</h2><p>Paste your access key once. It stays on this device, so next time this page just opens.</p><input id="tok" type="password" placeholder="Access key" autocomplete="off"><button class="btn" id="go">Open inbox</button><div class="err" id="err">'+(msg||'')+'</div></div>';
-    document.getElementById('go').onclick=function(){var v=document.getElementById('tok').value.trim(); if(!v){return;} localStorage.setItem(KEY,v); load();};
-    document.getElementById('tok').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('go').click();});
-  }
-
-  function signOut(){localStorage.removeItem(KEY); showGate('');}
-
   async function load(){
-    var tok=localStorage.getItem(KEY);
-    if(!tok){showGate('');return;}
     app.innerHTML='<div class="empty">Loading applicants...</div>';
     tbRight.innerHTML='';
     try{
-      var r=await fetch('/api/sales-applicants/?format=json&token='+encodeURIComponent(tok),{cache:'no-store'});
-      if(r.status===401||r.status===403){localStorage.removeItem(KEY); showGate('That key was not accepted. Try again.'); return;}
+      var r=await fetch('/api/sales-applicants/?format=json',{cache:'no-store'});
       if(!r.ok){app.innerHTML='<div class="empty">Could not load ('+r.status+'). Try refresh.</div>'; return;}
       var j=await r.json();
       var recs=Array.isArray(j)?j:(j.applicants||j.data||[]);
-      render(recs, tok);
+      render(recs);
     }catch(e){app.innerHTML='<div class="empty">Network error. Try refresh.</div>';}
   }
 
-  function render(recs, tok){
-    tbRight.innerHTML='<a href="/api/sales-applicants/?format=csv&token='+encodeURIComponent(tok)+'">Download CSV</a><button class="btn btn-ghost" id="refresh">Refresh</button><button class="btn btn-ghost" id="out">Sign out</button>';
+  function render(recs){
+    tbRight.innerHTML='<a href="/api/sales-applicants/?format=csv">Download CSV</a><button class="btn btn-ghost" id="refresh">Refresh</button>';
     document.getElementById('refresh').onclick=load;
-    document.getElementById('out').onclick=signOut;
     var n=recs.length;
     var head='<h1>Applicant inbox</h1><div class="count">'+n+' applicant'+(n===1?'':'s')+' &middot; newest first</div>';
     if(!n){app.innerHTML=head+'<div class="empty">No applications yet. When someone applies at gostaffify.com/careers/sales/, they show up here automatically.</div>'; return;}

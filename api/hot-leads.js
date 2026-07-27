@@ -7,7 +7,7 @@
 // POST /api/hot-leads {id, outcome, motion, company}  -> won|callback|not_interested|no_answer|bad_number
 //   For engine leads: marks the phone handled locally and best-effort logs it back to the engine.
 
-import { requireAccess, redis, readBody } from './_auth.js';
+import { openIdentity, redis, readBody } from './_auth.js';
 import { slackNotify } from './_slack.js';
 
 const OUTCOMES = ['won', 'callback', 'not_interested', 'no_answer', 'bad_number'];
@@ -46,8 +46,7 @@ async function fetchEngineWarm() {
 }
 
 export default async function handler(req, res) {
-    const who = await requireAccess(req);
-    if (!who) return res.status(401).json({ error: 'unauthorized' });
+    const who = await openIdentity(req); // open-share: identify by name if given, else Guest
     res.setHeader('Cache-Control', 'no-store');
 
     if (req.method === 'POST') {

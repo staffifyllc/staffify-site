@@ -2,19 +2,7 @@
 // Live Calendly bookings for the sales pipeline: last 30 days + upcoming 45 days.
 // Env: CALENDLY_API_TOKEN, plus ADMIN_TOKEN or CRON_SECRET for auth.
 
-import { requireAccess } from './_auth.js';
-
 const USER_URI = 'https://api.calendly.com/users/7b9e76a9-050c-436f-b226-719606dc462c';
-
-function authorized(req) {
-    const validSecrets = [process.env.ADMIN_TOKEN, process.env.CRON_SECRET].filter(Boolean);
-    if (!validSecrets.length) return false;
-    const provided = (req.query.token || '').toString();
-    if (provided && validSecrets.includes(provided)) return true;
-    const hdr = req.headers['authorization'] || '';
-    const m = /^Bearer\s+(.+)$/i.exec(hdr);
-    return !!m && validSecrets.includes(m[1]);
-}
 
 async function cget(url, token) {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -23,7 +11,7 @@ async function cget(url, token) {
 }
 
 export default async function handler(req, res) {
-    if (!(await requireAccess(req))) return res.status(401).json({ error: 'unauthorized' });
+    // open-share: live Calendly bookings, no login required
     const token = process.env.CALENDLY_API_TOKEN;
     if (!token) return res.status(500).json({ error: 'calendly_not_configured' });
     try {

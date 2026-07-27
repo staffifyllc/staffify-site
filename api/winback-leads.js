@@ -5,7 +5,7 @@
 // GET  /api/winback-leads                 -> { leads:[...] } (rep session or admin)
 // POST /api/winback-leads  {name,company,email,phone,leftReason}  -> add one (admin only, for loading the list)
 
-import { requireAccess, adminAuthorized, redis, readBody, newToken } from './_auth.js';
+import { openIdentity, adminAuthorized, redis, readBody, newToken } from './_auth.js';
 
 const OPENER = [
     'Hi [first name], this is [you] with Staffify. I saw [company] worked with us before and stepped away, and I wanted to personally reach out to make it right.',
@@ -21,12 +21,11 @@ function domainWebsite(email) {
 }
 
 export default async function handler(req, res) {
-    const who = await requireAccess(req);
-    if (!who) return res.status(401).json({ error: 'unauthorized' });
+    const who = await openIdentity(req); // open-share: reading the queue needs no login
     res.setHeader('Cache-Control', 'no-store');
 
     if (req.method === 'POST') {
-        if (!adminAuthorized(req)) return res.status(403).json({ error: 'admin_only' });
+        if (!adminAuthorized(req)) return res.status(403).json({ error: 'admin_only' }); // loading the list stays admin-only
         const b = readBody(req);
         if (!b.phone && !b.email) return res.status(400).json({ error: 'phone_or_email_required' });
         const id = 'winback:' + Date.now() + ':' + newToken(3);

@@ -72,14 +72,10 @@
   var app=document.getElementById('app'), tbRight=document.getElementById('tbRight'), ME=null;
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function pct(a,b){b=Number(b)||0; if(!b)return '0%'; return Math.round(100*(Number(a)||0)/b)+'%';}
-
-  function showGate(){
-    tbRight.innerHTML='';
-    app.innerHTML='<div class="gate"><h2>Sign in</h2><p>Use your work email. We send a one-time link.</p><input id="em" type="email" placeholder="you@example.com"><button class="btn" id="go">Email me a link</button></div>';
-    document.getElementById('go').onclick=send;
-    document.getElementById('em').addEventListener('keydown',function(e){if(e.key==='Enter')send();});
-  }
-  async function send(){var el=document.getElementById('em');var email=(el.value||'').trim();if(!email){el.focus();return;}try{await fetch('/api/auth-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});}catch(e){}app.innerHTML='<div class="gate"><h2>Check your email</h2><p>If '+esc(email)+' is a rep, a link is on its way.</p></div>';}
+  function repGet(){try{var r=JSON.parse(localStorage.getItem('sfy_rep')||'null');if(r&&r.name)return r;}catch(e){}return null;}
+  function repSet(n){n=(n||'').trim();if(!n)return null;var em=n.toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/(^\.|\.$)/g,'')+'@rep.local';var r={name:n,email:em};try{localStorage.setItem('sfy_rep',JSON.stringify(r));}catch(x){}return r;}
+  function nameChip(){var r=repGet();return '<button class="btn btn-ghost" id="nm">'+(r?('Hi, '+esc(r.name.split(' ')[0])):'Set your name')+'</button>';}
+  function wireChip(){var b=document.getElementById('nm');if(b)b.onclick=function(){var r=repGet();var n=prompt('Your name (shows on the scoreboard):',r?r.name:'');if(n){repSet(n);boot();}};}
 
   var COMP=[
     ['$300','<b>Foundry website</b> for every website you sell. Sells at $1,499 (regular price $4,995). Paid per site.'],
@@ -88,10 +84,8 @@
 
   async function boot(){
     app.innerHTML='<div class="empty">Loading the scoreboard...</div>';
-    var me; try{ me=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showGate(); return; }
-    if(me.status!==200){ showGate(); return; }
-    ME=(await me.json()).rep;
-    tbRight.innerHTML='<span>'+esc(ME.name||ME.email)+'</span><a class="btn btn-ghost" href="/api/auth-logout">Sign out</a>';
+    ME=repGet();
+    tbRight.innerHTML=nameChip(); wireChip();
     var s=null; try{ var r=await fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); if(r.ok) s=await r.json(); }catch(e){}
     render(s);
   }

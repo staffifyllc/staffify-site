@@ -53,6 +53,26 @@ export async function requireAccess(req) {
     return null;
 }
 
+// OPEN-SHARE identity. Never blocks. Order of preference:
+//   1) a signed-in rep (session cookie)  2) an admin token  3) a name the visitor typed
+//   (rep/name/email on the query or POST body)  4) a generic "Guest".
+// Use this on read + attribution endpoints so a shared link works with no login, while
+// still crediting calls/quizzes to whatever name the visitor set on the page.
+export async function openIdentity(req) {
+    const rep = await currentRep(req).catch(() => null);
+    if (rep) return rep;
+    if (adminAuthorized(req)) return { email: 'admin', name: 'Admin', role: 'admin' };
+    const q = req.query || {};
+    const b = (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') ? readBody(req) : {};
+    const name = (q.rep || q.name || b.rep || b.name || '').toString().trim().slice(0, 80);
+    const email = (q.email || b.email || '').toString().trim().toLowerCase().slice(0, 120);
+    if (name || email) {
+        const derived = name.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/(^\.|\.$)/g, '') + '@rep.local';
+        return { email: email || derived, name: name || email, role: 'rep' };
+    }
+    return { email: 'guest', name: 'Guest', role: 'rep' };
+}
+
 export function setSessionCookie(res, sid) {
     res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL}`);
 }
