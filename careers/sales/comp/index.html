@@ -81,6 +81,26 @@
         .cta-band { text-align: center; }
         .cta-band p { max-width: 520px; margin: 0 auto 24px; }
 
+        /* career ladder */
+        .promote { background: rgba(26,189,225,0.08); border: 1px solid rgba(26,189,225,0.35); border-radius: 14px; padding: 18px 22px; margin: 22px 0 8px; font-size: 16px; color: #eaf6fb; line-height: 1.55; }
+        .promote b { color: #fff; }
+        .ladder { margin-top: 22px; }
+        .rung { position: relative; background: var(--card); border: 1px solid var(--card-border); border-radius: 18px; padding: 22px 24px; margin-bottom: 14px; }
+        .rung.top { border-color: rgba(26,189,225,0.5); background: rgba(26,189,225,0.05); box-shadow: 0 0 40px rgba(26,189,225,0.08); }
+        .rung-top { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .rung-lvl { font-size: 11.5px; font-weight: 900; letter-spacing: 0.12em; color: var(--cyan); border: 1px solid rgba(26,189,225,0.4); border-radius: 999px; padding: 5px 12px; flex-shrink: 0; }
+        .rung-title { flex: 1; min-width: 150px; }
+        .rt-name { font-size: 21px; font-weight: 900; letter-spacing: -0.01em; }
+        .rt-tag { font-size: 13px; color: var(--muted); margin-top: 2px; }
+        .rung-pay { text-align: right; }
+        .rp-n { font-size: 27px; font-weight: 900; letter-spacing: -0.02em; }
+        .rp-l { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+        .rung-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px; }
+        @media (max-width: 680px) { .rung-grid { grid-template-columns: 1fr; gap: 14px; } .rung-pay { text-align: left; } }
+        .rg-col { font-size: 14.5px; color: #cfd4da; line-height: 1.5; }
+        .rg-h { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); margin-bottom: 5px; }
+        .rg-col b { color: #fff; }
+
         footer { padding: 50px 32px; text-align: center; font-size: 13px; color: var(--muted); border-top: 1px solid var(--card-border); }
         footer a { color: #d7dde2; text-decoration: none; }
     </style>
@@ -144,16 +164,69 @@
     </section>
 
     <section>
-        <div class="eyebrow">Where This Goes</div>
-        <h2>A starting line, <span class="grad">not a ceiling.</span></h2>
-        <p>Closing is where you start, not where you stop. Produce, and there is a real path from running your own pipeline to running the entire revenue engine. Not everyone makes this climb. Every level is earned on results, and the higher you go, the more of the team's output you share in.</p>
-        <ul class="checks">
-            <li><b>Independent Sales Agent.</b> Where you start: your own pipeline, closing placements, commission only and uncapped. Clear $120k in your first year and the Sales Manager track opens up.</li>
-            <li><b>Sales Manager.</b> Lead a team of closers and take the larger, strategic deals yourself. Base salary plus your own commissions, an override on everything your team closes, and team bonuses.</li>
-            <li><b>Sales Director.</b> Own every team, the hiring, and the sales strategy. Six-figure base plus an override on the whole org's output plus revenue bonuses.</li>
-            <li><b>Director of Revenue.</b> Run the entire revenue engine: new sales, account expansion, and retention. Base plus variable tied to total revenue growth.</li>
-        </ul>
-        <p style="margin-top:10px;">The exact numbers at each level are shared privately once you're on the team. The path is opportunistic and earned, but it's real. We would rather promote a proven closer than hire a manager from outside.</p>
+        <div class="eyebrow">The Career Path</div>
+        <h2>From closer to <span class="grad">revenue leader.</span> Earned, never given.</h2>
+        <p>Closing is the starting line, not the ceiling. Every leader on this team started exactly where you would, on the phone, closing their own pipeline. Then they earned the next seat by building the person who takes their old one. Here is the exact ladder, the numbers, and what each rung takes.</p>
+
+        <div class="promote"><b>The one rule that runs the whole ladder:</b> you do not climb by leaving people behind, you climb by building them. Every seat is earned by developing the person who fills the one you are in. Nobody here gets hired in over you from the outside, we promote from within.</div>
+
+        <div class="ladder">
+
+            <div class="rung">
+                <div class="rung-top">
+                    <div class="rung-lvl">LEVEL 1</div>
+                    <div class="rung-title"><div class="rt-name">Independent Sales Agent</div><div class="rt-tag">Where everyone starts</div></div>
+                    <div class="rung-pay"><div class="rp-n grad">Commission</div><div class="rp-l">only, and uncapped</div></div>
+                </div>
+                <div class="rung-grid">
+                    <div class="rg-col"><span class="rg-h">What you run</span>Your own pipeline. Close placements, stack residuals, and grow the accounts you land.</div>
+                    <div class="rg-col"><span class="rg-h">How you earn</span>35% per close, a $1/hr residual for 6 months, the strong-month accelerator, account growth, and retention bonuses. No caps.</div>
+                    <div class="rg-col"><span class="rg-h">How you level up</span>Clear <b>$120,000 in gross commissions</b> and the Sales Manager track opens.</div>
+                </div>
+            </div>
+
+            <div class="rung">
+                <div class="rung-top">
+                    <div class="rung-lvl">LEVEL 2</div>
+                    <div class="rung-title"><div class="rt-name">Sales Manager</div><div class="rt-tag">Build and lead a team of five</div></div>
+                    <div class="rung-pay"><div class="rp-n grad">$65,000</div><div class="rp-l">base + commissions + team override</div></div>
+                </div>
+                <div class="rung-grid">
+                    <div class="rg-col"><span class="rg-h">What you run</span>You hire five strong closers and lead them as a team, while still closing the larger, strategic deals yourself.</div>
+                    <div class="rg-col"><span class="rg-h">How you earn</span>A <b>$65,000 base</b> on top of your own commissions, an override on everything your team closes, and team bonuses.</div>
+                    <div class="rg-col"><span class="rg-h">How you earn the seat</span>Recruit and develop <b>five closers</b> into a team that clears <b>$1,000,000 in combined gross sales a year</b>, and hit the KPIs set with leadership.</div>
+                </div>
+            </div>
+
+            <div class="rung">
+                <div class="rung-top">
+                    <div class="rung-lvl">LEVEL 3</div>
+                    <div class="rung-title"><div class="rt-name">Sales Director</div><div class="rt-tag">Promote and manage a Sales Manager</div></div>
+                    <div class="rung-pay"><div class="rp-n grad">$90,000</div><div class="rp-l">base + 5% OTE on team net</div></div>
+                </div>
+                <div class="rung-grid">
+                    <div class="rg-col"><span class="rg-h">What you run</span>You promote a closer into the Sales Manager seat, then own hiring and sales strategy across the team you built.</div>
+                    <div class="rg-col"><span class="rg-h">How you earn</span>A <b>$90,000 base</b> plus on-target earnings of <b>5% of the net</b> of the entire sales team's performance.</div>
+                    <div class="rg-col"><span class="rg-h">How you earn the seat</span>You do not get this chair until you have developed the Sales Manager who fills yours. Build your replacement, then move up.</div>
+                </div>
+            </div>
+
+            <div class="rung top">
+                <div class="rung-top">
+                    <div class="rung-lvl">LEVEL 4</div>
+                    <div class="rung-title"><div class="rt-name">Director of Revenue</div><div class="rt-tag">Run the entire revenue engine</div></div>
+                    <div class="rung-pay"><div class="rp-n grad">$120,000</div><div class="rp-l">base + share of revenue growth</div></div>
+                </div>
+                <div class="rung-grid">
+                    <div class="rg-col"><span class="rg-h">What you run</span>The whole engine: new sales, account expansion, retention, and the leaders underneath you.</div>
+                    <div class="rg-col"><span class="rg-h">How you earn</span>A <b>$120,000 base</b> plus a share of total revenue growth, set with you on promotion.</div>
+                    <div class="rg-col"><span class="rg-h">How you earn the seat</span>Develop a Sales Director. Same rule at the top as the bottom: you rise by building the leader beneath you.</div>
+                </div>
+            </div>
+
+        </div>
+
+        <p style="margin-top:20px;">Every rung is earned on results and on the people you build, never on tenure. The exact KPI targets and the variable details at each level are locked in with you the moment you are promoted, so you always know the number you are running at. We would rather promote a proven closer than hire a manager from outside.</p>
     </section>
 
     <section class="cta-band">
