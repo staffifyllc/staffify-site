@@ -100,6 +100,10 @@
         table.vol td { padding: 16px 20px; font-family: 'Inter', sans-serif; font-size: 15px; color: var(--ink-soft); border-bottom: 1px solid var(--rule); }
         table.vol td.num { text-align: right; font-family: 'Fraunces', serif; font-weight: 700; font-size: 18px; color: var(--ink); }
         table.vol td.num.save { color: var(--ok); font-size: 14px; }
+        table.vol td.num.act { color: var(--c3); }
+        table.vol th .sub { display: block; font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--ink-mute); margin-top: 3px; }
+        .vol-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 20px; }
+        .vol-wrap table.vol { margin-top: 0; min-width: 520px; }
         table.vol tr.hi td { background: rgba(26,189,225,0.06); }
         table.vol tr:last-child td { border-bottom: none; }
         @media (max-width: 600px) {
@@ -361,11 +365,13 @@
         <p class="lede">Batch hires cost us less to source and onboard. We pass that back to you. Volume pricing kicks in at three hires and scales through ten plus. Same-role batches (multiple VAs for the same job) unlock further discounts inside consultation.</p>
 
         <h3 style="margin-top: 24px;">Per-hire onboarding, by volume</h3>
+        <div class="vol-wrap">
         <table class="vol">
             <thead>
                 <tr>
                     <th>Hires (same engagement)</th>
-                    <th class="num">Per-hire onboarding</th>
+                    <th class="num">Standard onboarding</th>
+                    <th class="num">Action-Taker<span class="sub">decide on the call</span></th>
                     <th class="num">You save per hire</th>
                 </tr>
             </thead>
@@ -373,36 +379,42 @@
                 <tr>
                     <td>1 hire</td>
                     <td class="num">$2,499</td>
+                    <td class="num act">$2,099</td>
                     <td class="num save">-</td>
                 </tr>
                 <tr>
                     <td>2 hires</td>
                     <td class="num">$2,299</td>
+                    <td class="num act">$1,899</td>
                     <td class="num save">$200</td>
                 </tr>
                 <tr class="hi">
                     <td>3-4 hires</td>
                     <td class="num">$2,099</td>
+                    <td class="num act">$1,699</td>
                     <td class="num save">$400</td>
                 </tr>
                 <tr class="hi">
                     <td>5-9 hires</td>
                     <td class="num">$1,799</td>
+                    <td class="num act">$1,599</td>
                     <td class="num save">$700</td>
                 </tr>
                 <tr class="hi">
                     <td>10+ hires</td>
                     <td class="num">$1,499</td>
+                    <td class="num act">$1,299</td>
                     <td class="num save">$1,000</td>
                 </tr>
             </tbody>
         </table>
+        </div>
 
         <h3 style="margin-top: 32px;">Same role bonus</h3>
         <p>When you hire multiple VAs for the same role (a support team, a sales pod, three admins), we run one search, one screening pipeline, and one training track. That gets you an additional 5 to 10% off the per-hire number above. Locked in on your discovery call once we scope the roles.</p>
 
-        <h3>Action Taker still applies</h3>
-        <p>Decide during your discovery call and confirm within 24 hours, and any volume tier drops another $200 per hire.</p>
+        <h3>How the Action-Taker price works</h3>
+        <p>The Action-Taker price in the table is what you pay when you decide on your discovery call and confirm within 24 hours. It takes <strong>$400 off per hire</strong> through the 3-4 hire tier, and <strong>$200 off per hire</strong> at five hires or more. Stack it with the same-role bonus for your best number.</p>
     </section>
 
     <section id="review">
