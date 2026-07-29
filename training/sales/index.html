@@ -19,6 +19,8 @@
             --cyan: #1abde1; --cyan-hi: #5fe0fa; --cyan-dark: #0d82b8;
             --muted: #9ba1ab; --card: rgba(255,255,255,0.035); --card-border: rgba(255,255,255,0.09);
         }
+        .chip { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); border: 1px solid rgba(26,189,225,0.4); background: rgba(26,189,225,0.08); border-radius: 999px; padding: 6px 14px; }
+        .chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
         html { scroll-behavior: smooth; }
         body {
             font-family: "Inter", -apple-system, sans-serif;
@@ -43,7 +45,8 @@
         .hero .sub { font-size: 19px; color: var(--muted); max-width: 660px; }
         .hero .sub b { color: var(--white); }
         section { padding: 34px 0; border-top: 1px solid var(--card-border); }
-        .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 20px; }
+        .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 20px; }
+        .eyebrow::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
         h2 { font-size: 22px; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 14px; }
         p { color: var(--muted); margin-bottom: 12px; font-size: 16px; }
         p b, li b { color: var(--white); }
@@ -92,6 +95,7 @@
 <main class="page">
 
     <section class="hero" style="border-top:none;">
+        <div class="chip-row" style="margin-bottom:22px"><span class="chip">8 Modules</span><span class="chip">CEO-Coached</span><span class="chip">Certification</span></div>
         <h1>The Staffify <span class="grad">sales playbook</span>.</h1>
         <p class="sub">Everything you need to close, in one place. This is the library we train every closer on before live pipeline and keep coming back to. <b>Work it in order.</b> Real recordings, real scripts, real objections, built from calls that actually closed.</p>
     </section>
