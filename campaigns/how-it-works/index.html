@@ -23,13 +23,27 @@
         html { scroll-behavior: smooth; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--black);
+            background: rgba(0,0,0,0.55);
             color: var(--white);
             line-height: 1.6;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             min-height: 100vh;
         }
+
+        /* ─── Full-bleed ambient depth (wide-screen margins) — site pass ─── */
+        html { background: #000; }
+        body { position: relative; }
+        body::after {
+            content:''; position: fixed; inset:0; z-index:-1; pointer-events:none;
+            background:
+                radial-gradient(58rem 46rem at 2% 5%,    rgba(26,189,225,0.11), transparent 55%),
+                radial-gradient(56rem 58rem at 98% 34%,  rgba(20,86,164,0.14),  transparent 55%),
+                radial-gradient(64rem 50rem at 4% 82%,   rgba(20,86,164,0.09),  transparent 58%),
+                radial-gradient(72rem 54rem at 50% 104%, rgba(26,189,225,0.07), transparent 60%);
+            background-attachment: fixed;
+        }
+
 
         /* Nav */
         nav {
@@ -43,7 +57,7 @@
         .nav-logo img { height: 26px; width: auto; }
         .nav-cta {
             background: var(--c); color: #000; padding: 8px 20px;
-            border-radius: 20px; font-size: 13px; font-weight: 600;
+            border-radius: 20px; font-size: 15px; font-weight: 600;
             text-decoration: none; transition: opacity 0.2s;
         }
         .nav-cta:hover { opacity: 0.85; }
@@ -54,7 +68,7 @@
             max-width: 800px; margin: 0 auto;
         }
         .hero h1 {
-            font-size: clamp(36px, 5vw, 56px); font-weight: 900;
+            font-size: clamp(36px, 5vw, 67px); font-weight: 900;
             letter-spacing: -1px; line-height: 1.1; margin-bottom: 16px;
         }
         .hero h1 span { color: var(--c); }
@@ -89,7 +103,7 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 20px; font-weight: 800; z-index: 2;
             border: 2px solid rgba(255,255,255,0.15);
-            background: var(--near-black);
+            background: rgba(8,8,10,0.62);
             transition: transform 0.5s, border-color 0.5s;
         }
         .step.visible .step-dot { transform: scale(1.1); border-color: var(--c); }
@@ -98,7 +112,7 @@
             font-size: 24px; font-weight: 800; margin-bottom: 8px;
             letter-spacing: -0.5px;
         }
-        .step-content p { color: var(--subtle); font-size: 14px; line-height: 1.7; }
+        .step-content p { color: var(--subtle); font-size: 16px; line-height: 1.7; }
 
         /* Visual cards */
         .step-visual {
@@ -124,9 +138,9 @@
 
         .anim-email {
             background: #1a1a1a; border-radius: 8px; padding: 16px;
-            font-size: 12px; color: #999; line-height: 1.8;
+            font-size: 13.5px; color: #999; line-height: 1.8;
         }
-        .anim-email .from { color: var(--c); font-weight: 600; margin-bottom: 4px; font-size: 11px; }
+        .anim-email .from { color: var(--c); font-weight: 600; margin-bottom: 4px; font-size: 12.5px; }
         .anim-email .subject { color: #fff; font-weight: 600; margin-bottom: 8px; }
         .anim-email .body { opacity: 0; animation: typeIn 1s ease forwards; }
         .step.visible .anim-email .body { animation: typeIn 1s ease 0.5s forwards; }
@@ -141,14 +155,14 @@
             transition: all 0.8s ease;
         }
         .step.visible .anim-metric .num { opacity: 1; transform: translateY(0); }
-        .anim-metric .label { color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .anim-metric .label { color: #666; font-size: 13.5px; text-transform: uppercase; letter-spacing: 1px; }
 
         .anim-calendar {
             display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
         }
         .anim-calendar .slot {
             background: #1a1a1a; border-radius: 6px; padding: 8px 4px;
-            text-align: center; font-size: 10px; color: #666;
+            text-align: center; font-size: 11.5px; color: #666;
             transition: all 0.3s ease;
         }
         .anim-calendar .slot.booked {
@@ -184,7 +198,7 @@
         .cta-section p { color: var(--subtle); margin-bottom: 32px; }
         .cta-btn {
             display: inline-block; background: var(--c); color: #000;
-            padding: 16px 40px; border-radius: 30px; font-size: 16px;
+            padding: 16px 40px; border-radius: 30px; font-size: 18px;
             font-weight: 700; text-decoration: none; transition: all 0.2s;
         }
         .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(26,189,225,0.3); }
@@ -203,7 +217,7 @@
         @media (max-width: 768px) {
             .timeline::before { left: 24px; }
             .step { grid-template-columns: 48px 1fr; gap: 16px; }
-            .step-dot { grid-column: 1; grid-row: 1; width: 40px; height: 40px; font-size: 16px; }
+            .step-dot { grid-column: 1; grid-row: 1; width: 40px; height: 40px; font-size: 18px; }
             .step:nth-child(odd) .step-content,
             .step:nth-child(even) .step-content { grid-column: 2; text-align: left; grid-row: 1; }
             .step:nth-child(odd) .step-visual,
@@ -243,20 +257,20 @@
         </div>
         <div class="step-dot">1</div>
         <div class="step-visual">
-            <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Plans</div>
+            <div style="font-size: 12.5px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Plans</div>
             <div style="display:flex;gap:8px;">
                 <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:12px;text-align:center;">
-                    <div style="font-size:10px;color:#666;">Starter</div>
+                    <div style="font-size: 11.5px;color:#666;">Starter</div>
                     <div style="font-size:20px;font-weight:800;color:#fff;">$1K</div>
                     <div style="font-size:9px;color:#666;">/month</div>
                 </div>
                 <div style="flex:1;background:rgba(26,189,225,0.1);border:1px solid rgba(26,189,225,0.3);border-radius:8px;padding:12px;text-align:center;">
-                    <div style="font-size:10px;color:var(--c);">Growth</div>
+                    <div style="font-size: 11.5px;color:var(--c);">Growth</div>
                     <div style="font-size:20px;font-weight:800;color:#fff;">$1.75K</div>
                     <div style="font-size:9px;color:#666;">/month</div>
                 </div>
                 <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:12px;text-align:center;">
-                    <div style="font-size:10px;color:#666;">Scale</div>
+                    <div style="font-size: 11.5px;color:#666;">Scale</div>
                     <div style="font-size:20px;font-weight:800;color:#fff;">$3K</div>
                     <div style="font-size:9px;color:#666;">/month</div>
                 </div>
@@ -267,10 +281,10 @@
     <!-- Step 2: We source leads -->
     <div class="step">
         <div class="step-visual">
-            <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Lead sourcing</div>
+            <div style="font-size: 12.5px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Lead sourcing</div>
             <div class="anim-leads" id="lead-dots"></div>
             <div class="anim-bar"><div class="fill" style="background:linear-gradient(90deg,var(--c),#38bdf8);"></div></div>
-            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:#666;">
+            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size: 11.5px;color:#666;">
                 <span>0</span><span>1,500 verified contacts</span>
             </div>
         </div>
@@ -300,30 +314,30 @@
     <!-- Step 4: Multi-channel outreach -->
     <div class="step">
         <div class="step-visual">
-            <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">7-touch sequence</div>
+            <div style="font-size: 12.5px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">7-touch sequence</div>
             <div style="display:flex;flex-direction:column;gap:6px;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(26,189,225,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;">📧</div>
+                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(26,189,225,0.15);display:flex;align-items:center;justify-content:center;font-size: 11.5px;">📧</div>
                     <div style="flex:1;height:4px;border-radius:2px;background:rgba(26,189,225,0.3);"></div>
-                    <span style="font-size:10px;color:#666;">Day 1</span>
+                    <span style="font-size: 11.5px;color:#666;">Day 1</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(26,189,225,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;">📧</div>
+                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(26,189,225,0.15);display:flex;align-items:center;justify-content:center;font-size: 11.5px;">📧</div>
                     <div style="flex:1;height:4px;border-radius:2px;background:rgba(26,189,225,0.3);"></div>
-                    <span style="font-size:10px;color:#666;">Day 4</span>
+                    <span style="font-size: 11.5px;color:#666;">Day 4</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;">💬</div>
+                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size: 11.5px;">💬</div>
                     <div style="flex:1;height:4px;border-radius:2px;background:rgba(16,185,129,0.3);"></div>
-                    <span style="font-size:10px;color:var(--green);">SMS</span>
+                    <span style="font-size: 11.5px;color:var(--green);">SMS</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(26,189,225,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;">📧</div>
+                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(26,189,225,0.15);display:flex;align-items:center;justify-content:center;font-size: 11.5px;">📧</div>
                     <div style="flex:1;height:4px;border-radius:2px;background:rgba(26,189,225,0.2);"></div>
-                    <span style="font-size:10px;color:#666;">Day 7-27</span>
+                    <span style="font-size: 11.5px;color:#666;">Day 7-27</span>
                 </div>
             </div>
-            <div style="font-size:10px;color:#444;margin-top:12px;text-align:center;">Email + SMS. Automated. Personalized. 30-day cycles.</div>
+            <div style="font-size: 11.5px;color:#444;margin-top:12px;text-align:center;">Email + SMS. Automated. Personalized. 30-day cycles.</div>
         </div>
         <div class="step-dot">4</div>
         <div class="step-content">
@@ -358,7 +372,7 @@
     <!-- Step 6: You close -->
     <div class="step">
         <div class="step-visual">
-            <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Your calendar this week</div>
+            <div style="font-size: 12.5px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Your calendar this week</div>
             <div class="anim-calendar">
                 <div class="slot">Mon<br>9am</div>
                 <div class="slot booked" style="animation-delay:0.3s;">Mon<br><strong>11am</strong></div>
@@ -371,7 +385,7 @@
                 <div class="slot">Fri<br>9am</div>
                 <div class="slot booked" style="animation-delay:1.5s;">Fri<br><strong>11am</strong></div>
             </div>
-            <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--green);font-weight:600;">5 discovery calls booked this week</div>
+            <div style="text-align:center;margin-top:12px;font-size: 13.5px;color:var(--green);font-weight:600;">5 discovery calls booked this week</div>
         </div>
         <div class="step-dot">6</div>
         <div class="step-content">

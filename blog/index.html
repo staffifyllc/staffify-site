@@ -29,10 +29,24 @@
         html { scroll-behavior: smooth; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--black); color: var(--white);
+            background: rgba(0,0,0,0.55); color: var(--white);
             line-height: 1.6; overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
+
+        /* ─── Full-bleed ambient depth (wide-screen margins) — site pass ─── */
+        html { background: #000; }
+        body { position: relative; }
+        body::after {
+            content:''; position: fixed; inset:0; z-index:-1; pointer-events:none;
+            background:
+                radial-gradient(58rem 46rem at 2% 5%,    rgba(26,189,225,0.11), transparent 55%),
+                radial-gradient(56rem 58rem at 98% 34%,  rgba(20,86,164,0.14),  transparent 55%),
+                radial-gradient(64rem 50rem at 4% 82%,   rgba(20,86,164,0.09),  transparent 58%),
+                radial-gradient(72rem 54rem at 50% 104%, rgba(26,189,225,0.07), transparent 60%);
+            background-attachment: fixed;
+        }
+
         .g {
             background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
@@ -49,13 +63,13 @@
         }
         .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
         .nav-links { display: flex; gap: 32px; list-style: none; }
-        .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 400; transition: color .2s; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 400; transition: color .2s; }
         .nav-links a:hover { color: var(--white); }
         .nav-links a.active { color: var(--white); }
         .nav-cta {
             background: var(--c); color: #fff;
             padding: 8px 20px; border-radius: 20px;
-            font-size: 13px; font-weight: 600; text-decoration: none;
+            font-size: 15px; font-weight: 600; text-decoration: none;
             transition: all .2s;
         }
         .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
@@ -68,12 +82,12 @@
             border-bottom: 1px solid var(--divider);
         }
         .blog-eyebrow {
-            font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+            font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em;
             text-transform: uppercase; color: var(--c);
             margin-bottom: 20px;
         }
         .blog-h1 {
-            font-size: clamp(40px, 6vw, 64px);
+            font-size: clamp(40px, 6vw, 77px);
             font-weight: 900; letter-spacing: -0.04em;
             line-height: 1.05; margin-bottom: 24px;
         }
@@ -85,7 +99,7 @@
 
         /* POST GRID */
         .post-grid {
-            max-width: 1100px; margin: 0 auto;
+            max-width: 1320px; margin: 0 auto;
             padding: 72px 24px 100px;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -108,7 +122,7 @@
         }
         .post-card-meta {
             display: flex; gap: 10px; align-items: center;
-            font-size: 12px; color: var(--muted);
+            font-size: 13.5px; color: var(--muted);
             margin-bottom: 18px;
             font-weight: 500;
         }
@@ -119,7 +133,7 @@
             color: var(--white);
         }
         .post-card-dek {
-            font-size: 15px; line-height: 1.6;
+            font-size: 17px; line-height: 1.6;
             color: var(--muted);
             margin-bottom: 22px;
             flex-grow: 1;
@@ -129,14 +143,14 @@
             margin-bottom: 18px;
         }
         .post-tag {
-            font-size: 10px; font-weight: 700;
+            font-size: 11.5px; font-weight: 700;
             letter-spacing: 0.08em; text-transform: uppercase;
             color: var(--c);
             border: 1px solid rgba(26,189,225,0.25);
             border-radius: 4px; padding: 4px 8px;
         }
         .post-card-arrow {
-            font-size: 13px; font-weight: 600;
+            font-size: 15px; font-weight: 600;
             color: var(--c);
             margin-top: auto;
         }
@@ -169,7 +183,7 @@
             margin-bottom: 14px;
         }
         .blog-cta-body {
-            font-size: 16px; color: var(--muted);
+            font-size: 18px; color: var(--muted);
             max-width: 500px; margin: 0 auto 28px;
             line-height: 1.6;
         }
@@ -177,7 +191,7 @@
             display: inline-block;
             background: var(--c); color: #000;
             padding: 14px 30px; border-radius: 980px;
-            font-size: 14px; font-weight: 700; text-decoration: none;
+            font-size: 16px; font-weight: 700; text-decoration: none;
             box-shadow: 0 0 32px rgba(26,189,225,0.2);
             transition: transform .2s, box-shadow .2s;
         }
@@ -188,34 +202,34 @@
 
         /* FOOTER */
         footer {
-            background: var(--black);
+            background: rgba(0,0,0,0.55);
             border-top: 1px solid var(--divider);
             padding: 60px 48px 40px;
         }
         .footer-grid {
-            max-width: 1100px; margin: 0 auto;
+            max-width: 1320px; margin: 0 auto;
             display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
             gap: 48px; margin-bottom: 60px;
         }
         .footer-brand p {
-            font-size: 13px; color: var(--subtle);
+            font-size: 15px; color: var(--subtle);
             line-height: 1.7; margin-top: 12px; max-width: 280px;
         }
         .footer-col h4 {
-            font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+            font-size: 12.5px; font-weight: 700; letter-spacing: 0.12em;
             text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
         }
         .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
         .footer-col a {
-            font-size: 14px; color: var(--subtle); text-decoration: none;
+            font-size: 16px; color: var(--subtle); text-decoration: none;
             transition: color .2s;
         }
         .footer-col a:hover { color: var(--white); }
         .footer-bottom {
-            max-width: 1100px; margin: 0 auto;
+            max-width: 1320px; margin: 0 auto;
             display: flex; align-items: center; justify-content: space-between;
             padding-top: 32px; border-top: 1px solid var(--divider);
-            font-size: 12px; color: var(--subtle);
+            font-size: 13.5px; color: var(--subtle);
         }
 
         @media (max-width: 900px) {
@@ -294,7 +308,7 @@
             padding: 14px 8px;
             color: rgba(255,255,255,0.78);
             text-decoration: none;
-            font-size: 17px;
+            font-size: 19px;
             font-weight: 500;
             letter-spacing: -0.01em;
             border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -310,7 +324,7 @@
             color: #fff;
             text-decoration: none;
             border-radius: 999px;
-            font-size: 15px;
+            font-size: 17px;
             font-weight: 600;
         }
         @media (max-width: 900px) {
