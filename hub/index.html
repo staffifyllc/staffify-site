@@ -123,18 +123,41 @@
   function ago(ms){var n=Number(ms); if(!n)return ''; var d=Math.floor((Date.now()-n)/864e5); return d<=0?'today':(d===1?'1d ago':d+'d ago');}
   function qp(k){return new URLSearchParams(location.search).get(k);}
 
-  function repGet(){try{var r=JSON.parse(localStorage.getItem('sfy_rep')||'null');if(r&&r.name)return r;}catch(e){}return null;}
-  function repSet(n){n=(n||'').trim();if(!n)return null;var em=n.toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/(^\.|\.$)/g,'')+'@rep.local';var r={name:n,email:em};try{localStorage.setItem('sfy_rep',JSON.stringify(r));}catch(x){}return r;}
-  function nameChip(){var r=repGet();return '<button class="btn btn-ghost" id="nm">'+(r?('Hi, '+esc(r.name.split(' ')[0])):'Set your name')+'</button>';}
-  function wireChip(){var b=document.getElementById('nm');if(b)b.onclick=function(){var r=repGet();var n=prompt('Your name (shows on the scoreboard):',r?r.name:'');if(n){repSet(n);load();}};}
+  function showSignIn(msg){
+    tbRight.innerHTML='';
+    app.innerHTML='<div class="gate"><h2>Staffify sales hub</h2><p>Sign in with your work email. We send you a one-time link, no password to remember.</p>'+
+      '<input id="em" type="email" placeholder="you@example.com" autocomplete="email">'+
+      '<button class="btn" id="go">Email me a sign-in link</button>'+
+      '<div class="err" id="err">'+(msg||'')+'</div></div>';
+    document.getElementById('go').onclick=send;
+    document.getElementById('em').addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+  }
+
+  async function send(){
+    var el=document.getElementById('em'), btn=document.getElementById('go');
+    var email=(el.value||'').trim();
+    if(!email){el.focus();return;}
+    btn.disabled=true; btn.textContent='Sending...';
+    try{
+      await fetch('/api/auth-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+    }catch(e){}
+    app.innerHTML='<div class="gate"><h2>Check your email</h2><p>If '+esc(email)+' is set up as a rep, a sign-in link is on its way. It works once and expires in 20 minutes.</p></div>';
+  }
 
   async function load(){
     app.innerHTML='<div class="empty">Loading your hub...</div>';
     tbRight.innerHTML='';
-    var rp=repGet(); ME={ name:(rp&&rp.name)||'', email:(rp&&rp.email)||'', role:'admin', rate:'35' };
+    var meRes;
+    try{ meRes=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showSignIn('Network error.'); return; }
+    if(meRes.status!==200){
+      var m=qp('e');
+      showSignIn(m==='expired'?'That link expired. Request a new one.':(m==='norep'?'That account is not set up as a rep yet.':''));
+      return;
+    }
+    ME=(await meRes.json()).rep;
     var pipe=fetch('/api/sales-pipeline',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
     var leads=fetch('/api/hot-leads',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
-    var apps=fetch('/api/sales-applicants/?format=json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+    var apps=(ME&&ME.role==='admin')?fetch('/api/sales-applicants/?format=json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}):Promise.resolve(null);
     var out=await Promise.all([pipe,leads,apps]);
     render(out[0],out[1],out[2]);
   }
@@ -174,7 +197,7 @@
   }
 
   function render(pipeData, ld, apps){
-    tbRight.innerHTML=nameChip(); wireChip();
+    tbRight.innerHTML='<a class="btn btn-ghost" href="/api/auth-logout" style="text-decoration:none">Sign out</a>';
 
     var upCount=pipeData?(pipeData.bookings||[]).filter(function(b){return b.when==='upcoming';}).length:0;
     var leadCount=ld?(ld.count||0):0;
