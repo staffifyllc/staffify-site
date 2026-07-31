@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The SDR Playbook For Coaches And Consultants Who Hate Prospecting | Staffify Blog</title>
+    <meta name="description" content="You didn't build a coaching practice to send cold emails. Here's how to install an SDR that books qualified meetings without cheapening your brand.">
+    <link rel="canonical" href="https://www.gostaffify.com/blog/sdr-playbook-coaches/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.gostaffify.com/blog/sdr-playbook-coaches/">
+    <meta property="og:title" content="The SDR Playbook For Coaches And Consultants Who Hate Prospecting">
+    <meta property="og:description" content="You didn't build a coaching practice to send cold emails. Here's how to install an SDR that books qualified meetings without cheapening your brand.">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="article:published_time" content="2026-07-31T16:04:29Z">
+    <meta property="article:author" content="Staffify">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="The SDR Playbook For Coaches And Consultants Who Hate Prospecting">
+    <meta name="twitter:description" content="You didn't build a coaching practice to send cold emails. Here's how to install an SDR that books qualified meetings without cheapening your brand.">
+
+    <!-- Schema.org Article -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "The SDR Playbook For Coaches And Consultants Who Hate Prospecting",
+      "description": "You didn't build a coaching practice to send cold emails. Here's how to install an SDR that books qualified meetings without cheapening your brand.",
+      "datePublished": "2026-07-31T16:04:29Z",
+      "author": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "publisher": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://www.gostaffify.com/blog/sdr-playbook-coaches/" }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: rgba(0,0,0,0.55); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── Full-bleed ambient depth (wide-screen margins) — site pass ─── */
+        html { background: #000; }
+        body { position: relative; }
+        body::after {
+            content:''; position: fixed; inset:0; z-index:-1; pointer-events:none;
+            background:
+                radial-gradient(58rem 46rem at 2% 5%,    rgba(26,189,225,0.11), transparent 55%),
+                radial-gradient(56rem 58rem at 98% 34%,  rgba(20,86,164,0.14),  transparent 55%),
+                radial-gradient(64rem 50rem at 4% 82%,   rgba(20,86,164,0.09),  transparent 58%),
+                radial-gradient(72rem 54rem at 50% 104%, rgba(26,189,225,0.07), transparent 60%);
+            background-attachment: fixed;
+        }
+
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 15px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* POST HEADER */
+        .post-header {
+            padding: 140px 24px 60px;
+            max-width: 760px; margin: 0 auto;
+            text-align: left;
+            border-bottom: 1px solid var(--divider);
+        }
+        .post-meta-top {
+            display: flex; gap: 16px; align-items: center;
+            font-size: 13.5px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+            margin-bottom: 32px;
+        }
+        .post-meta-top .crumb { color: var(--c); }
+        .post-meta-top .sep { opacity: 0.4; }
+        .post-title {
+            font-size: clamp(34px, 5vw, 67px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08; margin-bottom: 28px;
+            color: var(--white);
+        }
+        .post-dek {
+            font-size: 19px; line-height: 1.6;
+            color: rgba(255,255,255,0.65);
+            max-width: 640px; font-weight: 400;
+            margin-bottom: 36px;
+        }
+        .post-byline {
+            display: flex; gap: 24px; align-items: center;
+            font-size: 15px; color: var(--muted);
+            padding-top: 24px;
+        }
+        .post-byline strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ARTICLE BODY */
+        article {
+            max-width: 720px; margin: 0 auto;
+            padding: 64px 24px 80px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 19px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article p { margin-bottom: 28px; }
+        article h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(26px, 3.5vw, 41px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 56px 0 20px;
+            line-height: 1.2;
+        }
+        article h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+            color: var(--white);
+            margin: 40px 0 14px; line-height: 1.3;
+        }
+        article ul, article ol { margin: 0 0 28px; padding-left: 28px; }
+        article li { margin-bottom: 10px; }
+        article a { color: var(--c); text-decoration: none; border-bottom: 1px solid rgba(26,189,225,0.3); transition: border-color .2s; }
+        article a:hover { border-bottom-color: var(--c); }
+        article strong { color: var(--white); font-weight: 700; }
+        article em { color: rgba(255,255,255,0.7); }
+        article blockquote {
+            border-left: 3px solid var(--c);
+            padding: 8px 24px;
+            margin: 32px 0;
+            font-style: italic;
+            color: rgba(255,255,255,0.7);
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 8px 8px 0;
+        }
+        article hr {
+            border: none;
+            border-top: 1px solid var(--divider);
+            margin: 56px 0;
+        }
+        article code {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.9em;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--c);
+        }
+
+        /* CTA at end of post */
+        .post-cta {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+        .post-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 44px 40px;
+            text-align: left;
+        }
+        .post-cta-eyebrow {
+            font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--c);
+            margin-bottom: 16px;
+        }
+        .post-cta-title {
+            font-size: 26px; font-weight: 800;
+            letter-spacing: -0.02em; line-height: 1.2;
+            color: var(--white); margin-bottom: 14px;
+        }
+        .post-cta-body {
+            font-size: 17px; line-height: 1.65;
+            color: var(--muted); margin-bottom: 24px;
+            max-width: 540px;
+        }
+        .post-cta-btn {
+            display: inline-block;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 980px;
+            font-size: 16px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .post-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* BACK TO BLOG */
+        .post-foot {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 60px;
+            text-align: center;
+        }
+        .post-foot a {
+            color: var(--muted); text-decoration: none;
+            font-size: 15px; font-weight: 500;
+            transition: color .2s;
+        }
+        .post-foot a:hover { color: var(--white); }
+
+        /* FOOTER */
+        footer {
+            background: rgba(0,0,0,0.55);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1320px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 15px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 12.5px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 16px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1320px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 13.5px; color: var(--subtle);
+        }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .post-header { padding-top: 110px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    
+        /* ─── MOBILE NAV (hamburger + drawer) ────────────────── */
+        .nav-hamburger {
+            display: none;
+            width: 44px; height: 44px;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 8px;
+        }
+        .nav-hamburger span {
+            position: relative;
+            display: block;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, opacity .3s, top .3s;
+        }
+        .nav-hamburger span::before,
+        .nav-hamburger span::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, top .3s, opacity .3s;
+        }
+        .nav-hamburger span::before { top: -7px; }
+        .nav-hamburger span::after  { top: 7px; }
+        .nav-hamburger.open span { background: transparent; }
+        .nav-hamburger.open span::before { top: 0; transform: rotate(45deg); }
+        .nav-hamburger.open span::after  { top: 0; transform: rotate(-45deg); }
+
+        .nav-mobile-menu {
+            position: fixed;
+            top: 56px; left: 0; right: 0;
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 24px 24px 32px;
+            z-index: 199;
+            opacity: 0;
+            transform: translateY(-12px);
+            pointer-events: none;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+        .nav-mobile-menu.open {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+        .nav-mobile-menu ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 0 0 22px;
+            padding: 0;
+        }
+        .nav-mobile-menu li a {
+            display: block;
+            padding: 14px 8px;
+            color: rgba(255,255,255,0.78);
+            text-decoration: none;
+            font-size: 19px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-mobile-menu li a:active { background: rgba(255,255,255,0.04); }
+        .nav-mobile-menu li a.active { color: #fff; }
+        .nav-mobile-menu .nav-mobile-cta {
+            display: block;
+            text-align: center;
+            margin-top: 18px;
+            padding: 14px 24px;
+            background: #1abde1;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 17px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .nav-hamburger { display: inline-flex; }
+            .nav-cta { display: none; }
+        }
+
+        /* ── READING PROGRESS BAR ── */
+        .reading-progress {
+            position: fixed; top: 56px; left: 0; right: 0; z-index: 199;
+            height: 3px; background: transparent;
+            pointer-events: none;
+        }
+        .reading-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1abde1, #0fa3c5);
+            width: 0%;
+            transition: width .08s linear;
+            box-shadow: 0 0 8px rgba(26,189,225,0.5);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .reading-progress-fill { transition: none; }
+        }
+
+        </style>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/icon-32.png">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/brand/icon-192.png">
+
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <link rel="stylesheet" href="/assets/css/ux.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<!-- Reading progress bar — fills as the user scrolls through the article -->
+<div class="reading-progress" aria-hidden="true"><div class="reading-progress-fill"></div></div>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/case-studies/">Case Studies</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="/apply/" class="nav-apply">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
+</nav>
+
+<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
+    <ul>
+            <li><a href="/editors/">Video Editors</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
+            <li><a href="/csr/">CSR</a></li>
+            <li><a href="/campaigns/">Sales</a></li>
+            <li><a href="/case-studies/">Case Studies</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
+</div>
+
+<header class="post-header">
+    <div class="post-meta-top">
+        <a href="/blog/" class="crumb" style="text-decoration:none;color:var(--c);">Blog</a>
+        <span class="sep">/</span>
+        <span>Scaling Service Businesses</span>
+    </div>
+    <h1 class="post-title">The SDR Playbook For Coaches And Consultants Who Hate Prospecting</h1>
+    <p class="post-dek">You didn't build a coaching practice to send cold emails. Here's how to install an SDR that books qualified meetings without cheapening your brand.</p>
+    <div class="post-byline">
+        <span><strong>Staffify Team</strong></span>
+        <span>·</span>
+        <span>July 31, 2026</span>
+        <span>·</span>
+        <span>8 min read</span>
+    </div>
+</header>
+
+<article>
+<p>Most coaches and consultants I talk to have the same quiet problem. They're excellent at the work. They convert well when a real conversation happens. But their pipeline lives and dies by referrals, and referrals are lumpy. So they end up in feast or famine, taking clients they shouldn't, or discounting when a slow month hits.</p><p>The fix is not another course on personal branding. It's not posting more on LinkedIn. It's a person. One dedicated SDR whose job is to put five to ten qualified conversations on your calendar every week, in a voice that sounds like you, targeting people who actually belong in your practice.</p><p>The catch is that most SDRs are trained for SaaS. They spray, they pitch features, they use language that would make your ideal client wince. If you drop a typical SDR into a high-trust coaching or consulting practice, you'll burn goodwill faster than they can book meetings. This is the playbook for doing it right.</p><h2>Why Coaches And Consultants Resist Outbound (And Why That's Costing Them)</h2><p>There are three objections I hear constantly, and all three are half true.</p><p>The first is <strong>"cold outreach cheapens my positioning."</strong> It can. Bad outreach absolutely does. But bad outreach is a craft problem, not an outbound problem. A well-researched, specific message from a real human to a real executive is not cheap. It's just direct.</p><p>The second is <strong>"my clients come from referrals, so outbound won't work for me."</strong> Referrals are wonderful and unpredictable. If you want to grow past a certain point, or you want to choose your clients instead of taking who shows up, you need a second engine. Outbound is that engine. It doesn't replace referrals. It stabilizes the months when referrals go quiet.</p><p>The third is <strong>"I don't want to do it myself."</strong> Good. You shouldn't. Your hourly value is too high, and honestly, most experts are bad at their own outreach because they overthink every word. This is the whole reason SDRs exist.</p><h2>What An SDR For Coaches Actually Does</h2><p>Let's define the role clearly, because "SDR" means different things in different worlds. For a coaching or consulting practice doing $300K to $5M, an SDR is one full-time person doing four things:</p><ul><li><strong>Building the target list.</strong> Not buying lists. Actually researching companies and people who fit your ideal client profile, one by one.</li><li><strong>Writing and sending personalized outreach.</strong> Usually a mix of email and LinkedIn, sometimes phone. Almost never automated blasts.</li><li><strong>Handling the top-of-funnel conversation.</strong> Replying to responses, qualifying interest, answering basic questions, and getting the meeting on the calendar.</li><li><strong>Feeding the CRM.</strong> Tracking every touch, every reply, every meeting booked, so you can see what's working.</li></ul><p>What they do not do: pitch your methodology, quote pricing, close deals, or make promises about outcomes. Those are your job. The SDR opens the door. You walk through it.</p><h2>The Positioning Problem Nobody Talks About</h2><p>Here's what makes consultant outbound different from SaaS outbound. In SaaS, the buyer is evaluating a tool. In coaching or consulting, the buyer is evaluating <em>you</em>. Every touchpoint before the first call is forming an opinion of who you are and whether you're worth their time.</p><p>This means your SDR's writing has to sound like an extension of you, not like a sales rep. If your brand voice is calm and senior, and your SDR writes like a caffeinated 22-year-old asking for "just 15 minutes," you've already lost.</p><p>Before you hire anyone, write down three things:</p><ol><li>The five phrases you use constantly with clients. Your SDR should use these.</li><li>The five phrases that make you cringe when other coaches use them. Your SDR should never use these. "Circle back" and "quick chat" belong on this list.</li><li>Your actual client outcomes, described in specifics. "Helped a CFO restructure her leadership team over six months" beats "transformed a client's business."</li></ol><p>Give this document to your SDR on day one. Update it monthly based on what's landing.</p><h2>The Ideal Client Profile, Written For Humans</h2><p>Most ICP documents are useless. They say things like "B2B SaaS companies with 50 to 500 employees." That's a filter, not a profile. Your SDR needs to know how to spot a good target on LinkedIn in under 60 seconds.</p><p>A better ICP looks like this:</p><blockquote>"Second-time founders running services businesses between $2M and $10M in revenue, usually 15 to 40 employees. They've hired a leadership team but are still the bottleneck for major decisions. They post on LinkedIn about hiring, org design, or being stretched thin. They've probably worked with a coach before and were disappointed by someone too generic."</blockquote><p>See the difference? A real human can read that and go find ten of those people this afternoon. That's what you want. Specific enough to filter, human enough to search for.</p><p>For executive coach prospecting specifically, the signal often lives in the person's recent posts, promotions, or public statements about growth. Your SDR should be reading, not just filtering.</p><h2>The Cadence That Doesn't Burn The Brand</h2><p>Here's a cadence I've seen work well for high-trust practices. Nothing fancy. It respects the reader's time.</p><p><strong>Touch 1 (Day 1, email):</strong> A short, specific note referencing something real about the person or their company. One sentence about what you help with. One clear ask. No calendar link on the first message.</p><p><strong>Touch 2 (Day 4, LinkedIn):</strong> Connection request with a brief note, or a comment on their recent post. Not a pitch. Just presence.</p><p><strong>Touch 3 (Day 8, email):</strong> A follow-up that adds value. A specific observation, a relevant question, or a resource that actually helps. Not "just bumping this to the top of your inbox."</p><p><strong>Touch 4 (Day 15, email):</strong> The polite close. "I don't want to keep showing up in your inbox. If the timing isn't right, no worries. Here's how to reach me if it changes."</p><p>Four touches. Two weeks. Then stop. If they engaged but didn't book, move them to a nurture list. If they didn't engage at all, they weren't ready. Move on.</p><p>Volume matters less than you think. An SDR sending 30 to 50 highly personalized emails a day, five days a week, will outperform someone blasting 500 templated messages. The math works when the reply rate goes from 1% to 8%.</p><h2>What Good Looks Like In The First 90 Days</h2><p>If you install an SDR correctly, here's roughly what to expect. Numbers vary based on your niche, price point, and how well-known you are, but the shape is consistent.</p><p><strong>Days 1 to 30:</strong> Ramp. Your SDR is learning your voice, your ICP, your objection patterns. Expect low output. Two or three meetings booked in the whole month is normal. Do not panic. Do not fire anyone. This is the investment period.</p><p><strong>Days 31 to 60:</strong> Traction. Cadence is dialed in, list is refined, replies are coming. Expect five to eight qualified meetings in the month. You should start seeing your first proposals from these conversations.</p><p><strong>Days 61 to 90:</strong> Rhythm. If everything is working, you're looking at 8 to 15 qualified meetings a month. Your coaching pipeline finally has predictable input. You know your cost per meeting and can decide whether to add a second SDR or double down on channels that are working.</p><p>If you're not seeing these numbers by day 90, the problem is usually one of three things: the ICP is too vague, the messaging sounds like a sales rep, or the SDR isn't senior enough for the work. All three are fixable.</p><h2>Hiring The Right Person (This Is Where Most People Fail)</h2><p>The typical mistake is hiring a domestic SDR at $70K plus commission, giving them a laptop and a Salesloft license, and hoping. Six months later, they've burned through your list, damaged your brand a little, and you're back to square one.</p><p>What actually works for practices in this size range is hiring vetted full-time offshore talent who have already done this work for other services businesses. The cost is a fraction, the quality is often higher because the person is career-focused rather than treating SDR as a stepping stone to AE, and you can afford to keep them long enough to actually get good at your specific niche.</p><p>The traits that matter, in order:</p><ol><li><strong>Excellent written English.</strong> Not just correct. Warm, specific, senior. Ask for writing samples before hiring.</li><li><strong>Research instinct.</strong> Can they find the right 50 people, or do they need a list handed to them?</li><li><strong>Resilience.</strong> Outbound involves a lot of silence. You need someone who doesn't crumble at ignored emails.</li><li><strong>Judgment.</strong> Can they tell the difference between a prospect who's interested and one who's being polite?</li></ol><p>This is exactly the profile Staffify places into coaching and consulting practices. Full-time, dedicated, trained on the nuances of high-trust outbound. Not a freelancer, not a call center. One person who wakes up every day thinking about your pipeline.</p><h2>The Metrics That Actually Matter</h2><p>Ignore vanity metrics. Emails sent, opens, clicks. None of it matters if meetings aren't happening. Track four things, weekly:</p><ul><li><strong>Qualified meetings booked.</strong> Not "discovery calls with anyone who replied." Meetings with people who fit your ICP.</li><li><strong>Reply rate.</strong> Positive plus negative replies divided by messages sent. Under 5% means the messaging is off. Above 10% means you're doing it right.</li><li><strong>Meeting-to-proposal rate.</strong> If your SDR is booking meetings but nothing turns into a proposal, the qualification is broken.</li><li><strong>Cost per booked meeting.</strong> All-in cost of the SDR divided by qualified meetings. This is your unit economic. Once you know it, you can decide how much to scale.</li></ul><p>Review these numbers every Friday. Adjust the ICP, the cadence, or the messaging based on what you see. This is not a set-and-forget system. It's a machine you tune weekly for the first six months, then monthly after that.</p><p>The coaches and consultants who build real practices aren't the ones with the most talent. They're the ones who stopped waiting for referrals to arrive and built a system that puts the right conversations on their calendar every single week. You don't have to like prospecting. You just have to make sure it happens.</p>
+</article>
+
+<section class="post-cta">
+    <div class="post-cta-card">
+        <div class="post-cta-eyebrow">Built for service businesses</div>
+        <h3 class="post-cta-title">Want the team behind your growth, not in front of it?</h3>
+        <p class="post-cta-body">Staffify gives service businesses the people, systems, and infrastructure to scale without the chaos. Vetted talent, real accountability, lifetime replacement guarantee.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="post-cta-btn">Book a Discovery Call →</a>
+    </div>
+</section>
+
+<div class="post-foot">
+    <a href="/blog/">← Back to all posts</a>
+</div>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/apply/">Apply</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span class="footer-legal" style="display:flex;gap:18px;"><a href="/privacy/" style="color:inherit;text-decoration:none;">Privacy</a><a href="/terms/" style="color:inherit;text-decoration:none;">Terms</a></span><span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+(function(){
+    var btn = document.getElementById('navHamburger');
+    var menu = document.getElementById('navMobileMenu');
+    if (!btn || !menu) return;
+    function open(){
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+        menu.style.opacity = '1';
+        menu.style.transform = 'translateY(0)';
+        menu.style.pointerEvents = 'auto';
+    }
+    function close(){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+        menu.style.opacity = '0';
+        menu.style.transform = 'translateY(-12px)';
+        menu.style.pointerEvents = 'none';
+    }
+    function toggle(){ menu.classList.contains('open') ? close() : open(); }
+    btn.addEventListener('click', toggle);
+    menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+
+    // Esc closes the mobile menu
+    document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && menu.classList.contains('open')) close();
+    });
+})();
+
+// ── Reading progress bar ──
+(function(){
+    var fill = document.querySelector('.reading-progress-fill');
+    if (!fill) return;
+    var article = document.querySelector('article');
+    if (!article) return;
+    function update(){
+        var rect = article.getBoundingClientRect();
+        var viewportH = window.innerHeight;
+        var articleH = article.offsetHeight;
+        // Progress from when article top hits viewport to when bottom leaves
+        var scrolled = Math.max(0, -rect.top);
+        var total = Math.max(1, articleH - viewportH);
+        var pct = Math.min(100, Math.max(0, (scrolled / total) * 100));
+        fill.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+})();
+</script>
+  <script src="/assets/js/ux.js" defer></script>
+<!-- Vercel Web Analytics + Speed Insights (Pro plan, no cookies) -->
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
