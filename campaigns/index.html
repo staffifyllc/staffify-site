@@ -332,6 +332,21 @@ body{
     <button class="tab" data-view="pipeline" role="tab"><span class="ic">◆</span>Pipeline</button>
   </nav>
 
+  <style>
+    .brandbar{display:flex;align-items:center;gap:8px;margin:0 0 22px;flex-wrap:wrap}
+    .brandbar-lab{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#6b7280;margin-right:4px}
+    .bpill{appearance:none;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.02);color:#9ba1ab;font-family:inherit;font-size:12.5px;font-weight:650;letter-spacing:.02em;padding:8px 15px;border-radius:999px;cursor:pointer;transition:.18s}
+    .bpill:hover{color:#fff;border-color:rgba(26,189,225,.4)}
+    .bpill.on{color:#04222b;background:linear-gradient(180deg,#5fe0fa,#1abde1);border-color:#1abde1;box-shadow:0 6px 18px -6px rgba(26,189,225,.5)}
+  </style>
+  <!-- BRAND SWITCHER: separate Foundry (websites) from VA services (staffing) -->
+  <div class="brandbar" id="brandbar">
+    <span class="brandbar-lab">Campaign</span>
+    <button class="bpill on" data-brand="all">All</button>
+    <button class="bpill" data-brand="foundry">Foundry · Websites</button>
+    <button class="bpill" data-brand="va">VA Services</button>
+  </div>
+
   <!-- ============ OVERVIEW ============ -->
   <section class="view on" id="overview">
     <div class="grid kpis" id="kpis"></div>
@@ -539,6 +554,7 @@ function emptyCalls(){
 const STATE = {
   metrics: emptyMetrics(),
   calls: emptyCalls(),
+  brand: "all",       // "all" | "foundry" | "va" — separates Foundry (websites) from VA services (staffing)
   live: false,        // any real fetch succeeded
   lastData: 0,        // ms of last successful data
   currentView: "overview",
@@ -954,7 +970,7 @@ function updateNote(){
 /* ============================================================ load */
 async function loadData(){
   const results = await Promise.allSettled([
-    fetchJSON("/api/campaign-metrics"),
+    fetchJSON("/api/campaign-metrics?brand="+encodeURIComponent(STATE.brand)),
     fetchJSON("/api/openphone-calls"),
     fetchJSON("/api/hot-leads")
   ]);
@@ -974,7 +990,7 @@ async function loadData(){
   if(results[2].status==="fulfilled"){
     try{
       const hl=results[2].value;
-      if(hl && Array.isArray(hl.leads) && (!STATE.metrics.warm || !STATE.metrics.warm.length)){
+      if(hl && Array.isArray(hl.leads) && STATE.brand==="all" && (!STATE.metrics.warm || !STATE.metrics.warm.length)){
         STATE.metrics.warm = hl.leads.slice(0,12).map(l=>({
           co: l.company || l.name || "Lead",
           src: (l.source&&/call/i.test(l.source))?"Call":(l.source||"Engine"),
@@ -1002,6 +1018,17 @@ document.querySelectorAll(".tab").forEach(t=>{
     $("#"+v).classList.add("on");
     STATE.currentView=v;
     renderView(v);   // re-animate the shown view
+  });
+});
+
+// brand switcher — Foundry vs VA services (re-fetches brand-scoped metrics)
+document.querySelectorAll(".bpill").forEach(b=>{
+  b.addEventListener("click",()=>{
+    if(b.classList.contains("on")) return;
+    document.querySelectorAll(".bpill").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    STATE.brand=b.dataset.brand;
+    loadData();
   });
 });
 

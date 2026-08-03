@@ -103,11 +103,20 @@ function emptyPayload() {
     };
 }
 
+// Which brand/motion to show. foundry -> engine brand "Foundry" (websites); va/staffify -> "Staffify" (staffing).
+function brandFilterFrom(q) {
+    const b = (q || 'all').toString().toLowerCase();
+    if (b === 'foundry' || b === 'websites' || b === 'website') return 'Foundry';
+    if (b === 'va' || b === 'staffify' || b === 'staffing' || b === 'vaservices' || b === 'va-services') return 'Staffify';
+    return null; // all
+}
+
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
 
-    if (!BASE || !TOKEN) return res.status(200).json(emptyPayload());
+    const brand = brandFilterFrom(req.query.brand); // 'Foundry' | 'Staffify' | null
+    if (!BASE || !TOKEN) return res.status(200).json({ ...emptyPayload(), brand: (req.query.brand || 'all').toString() });
 
     const t = encodeURIComponent(TOKEN);
     const [scoreboard, list, hub] = await Promise.all([
@@ -138,8 +147,10 @@ export default async function handler(req, res) {
     const websites = Array.isArray(list?.websites) ? list.websites.length : 0;
     const staffing = Array.isArray(list?.staffing) ? list.staffing.length : 0;
     const queueTotal = num(list?.total, websites + staffing) || (websites + staffing);
-    // Found = everything the engine has surfaced: still-in-queue + already-dialed.
-    const found = queueTotal + dials;
+    // Per-brand queue: Foundry = websites motion, VA = staffing motion.
+    const brandQueue = brand === 'Foundry' ? websites : brand === 'Staffify' ? staffing : (websites + staffing);
+    // Found = everything the engine has surfaced: still-in-queue + already-dialed (brand-scoped when filtered).
+    const found = brand ? brandQueue : (queueTotal + dials);
 
     // ---- Hub: warm leads + optional channel/disposition breakdowns -------
     const hubData = hub || {};
@@ -152,13 +163,26 @@ export default async function handler(req, res) {
         });
     });
 
-    const warm = warmRaw.map(w => {
+    // Brand separation: keep only the selected motion's warm leads when a brand is chosen.
+    const warmFiltered = brand
+        ? warmRaw.filter(w => (w._brand || '').toString().toLowerCase() === brand.toLowerCase())
+        : warmRaw;
+    const brandLabel = (b) => {
+        const s = (b || '').toString().toLowerCase();
+        if (s === 'foundry') return 'Foundry';
+        if (s === 'staffify') return 'VA';
+        return (b || '').toString();
+    };
+
+    const warm = warmFiltered.map(w => {
         const grade = mapGrade(w.grade);
         const su = (w.summary || '').toString()
             || (grade === 'replied' ? 'Replied to our outreach, warm.' : 'Warm lead from the engine.');
         return {
             co: (w.company || w.name || w._brand || 'Unknown').toString(),
             src: (w.source || (w.channel ? String(w.channel) : 'Call')).toString(),
+            brand: brandLabel(w._brand),
+            phone: (w.phone || '').toString(),
             grade,
             su,
             at: relTime(w.at ?? w.time ?? w.ts ?? w.timestamp),
@@ -167,12 +191,13 @@ export default async function handler(req, res) {
 
     const warmCount = warm.length;
     const bookedCount = warm.filter(w => w.grade === 'booked').length;
+    const interestedCount = warm.filter(w => w.grade === 'interested').length;
 
     // ---- KPI tiles -------------------------------------------------------
     const kpis = [
         { lab: 'Dials', val: dials, fmt: '', delta: 0, spark: upSpark(dials), ico: '📞' },
         { lab: 'Answers', val: answers, fmt: '', delta: 0, spark: upSpark(answers), ico: '✅' },
-        { lab: 'Interested', val: interested, fmt: '', delta: 0, spark: upSpark(interested), ico: '🔥', hero: true },
+        { lab: 'Interested', val: interestedCount, fmt: '', delta: 0, spark: upSpark(interestedCount), ico: '🔥', hero: true },
         { lab: 'Booked', val: bookedCount, fmt: '', delta: 0, spark: upSpark(bookedCount), ico: '📅' },
         { lab: 'Warm leads', val: warmCount, fmt: '', delta: 0, spark: upSpark(warmCount), ico: '🌡️' },
         { lab: 'Contact rate', val: pct(answers, dials), fmt: 'pct', delta: 0, spark: upSpark(pct(answers, dials)), ico: '🎯' },
@@ -183,7 +208,7 @@ export default async function handler(req, res) {
         { name: 'Found', n: found },
         { name: 'Contacted', n: dials },
         { name: 'Answered', n: answers },
-        { name: 'Interested', n: interested },
+        { name: 'Interested', n: interestedCount },
     ];
 
     // ---- Channel mix -----------------------------------------------------
@@ -214,7 +239,7 @@ export default async function handler(req, res) {
     const dpick = (k) => dispSrc && typeof dispSrc === 'object' ? num(dispSrc[k]) : null;
     const noAnswerDerived = Math.max(0, dials - answers);
     const dispositions = [
-        { name: 'Interested', n: dpick('interested') ?? interested, color: DISP_COLOR.interested },
+        { name: 'Interested', n: dpick('interested') ?? interestedCount, color: DISP_COLOR.interested },
         { name: 'Callback', n: dpick('callback') ?? callbacks, color: DISP_COLOR.callback },
         { name: 'Not interested', n: dpick('not_interested') ?? 0, color: DISP_COLOR.not_interested },
         { name: 'No answer', n: dpick('no_answer') ?? noAnswerDerived, color: DISP_COLOR.no_answer },
@@ -225,6 +250,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
         updatedAt: Date.now(),
+        brand: (req.query.brand || 'all').toString(),
         kpis,
         funnel,
         channelMix,
