@@ -749,6 +749,7 @@ function renderPositiveCalls(el){
       dur: Number(c.durationSec)||0,
       at: relTime(c.at),
       rec: c.recordingUrl||"",
+      tr: c.transcript||"",
       su: c.summary||"Positive conversation — worth a follow-up."
     }));
   } else {
@@ -758,7 +759,8 @@ function renderPositiveCalls(el){
     });
     items = warm.map(w=>({
       co: w.co||"Unknown", name:"", phone:"", dir:"", dur:0,
-      at: w.at||"", rec:"", su: w.su||"Interested — call to move it forward."
+      at: w.at||"", rec: w.recordingUrl||"", tr: w.transcript||"",
+      su: w.su||"Interested — call to move it forward."
     }));
   }
   if(!items.length){
@@ -773,7 +775,9 @@ function renderPositiveCalls(el){
     const dir = c.dir? `<span class="pc-dir">${esc(c.dir)}</span>` : "";
     const dur = c.dur? `<span class="mi">◷ ${durFmt(c.dur)}</span>` : "";
     const at = c.at? `<span class="mi">${esc(c.at)}${/^[0-9]/.test(c.at)?" ago":""}</span>` : "";
-    const play = c.rec? `<a class="pc-play" href="${esc(c.rec)}" target="_blank" rel="noopener">▶ Play recording</a>` : "";
+    const audio = c.rec? `<audio controls preload="none" style="width:100%;margin-top:10px;height:34px" src="${esc(c.rec)}"></audio>` : "";
+    const transcript = c.tr? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--cyan-hi);font-size:12px;font-weight:600">Transcript</summary><div style="max-height:220px;overflow:auto;margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.55;color:var(--muted);white-space:pre-wrap">${esc(c.tr)}</div></details>` : "";
+    const noRec = (!c.rec && !c.tr)? `<div style="margin-top:10px;font-size:11.5px;color:var(--muted);opacity:.7">Recording not attached yet</div>` : "";
     card.innerHTML=`
       <div class="pc-top">
         <div>
@@ -783,7 +787,8 @@ function renderPositiveCalls(el){
         <span class="posbadge">● Positive</span>
       </div>
       <div class="pc-su">${esc(c.su)}</div>
-      <div class="pc-foot">${dir}${dur}${at}${play}</div>`;
+      ${audio}${transcript}${noRec}
+      <div class="pc-foot">${dir}${dur}${at}</div>`;
     el.appendChild(card);
   });
 }

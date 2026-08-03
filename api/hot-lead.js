@@ -31,7 +31,9 @@ export default async function handler(req, res) {
         email: pick(b, ['email', 'customer.email', 'lead.email']),
         motion: pick(b, ['motion', 'metadata.motion']) || 'websites',
         summary: pick(b, ['summary', 'analysis', 'disposition', 'note', 'notes', 'ai_summary', 'call.summary']),
-        transcript: pick(b, ['transcript', 'call.transcript']).slice(0, 6000),
+        transcript: pick(b, ['transcript', 'concatenated_transcript', 'call.transcript', 'call.concatenated_transcript']).slice(0, 6000),
+        recordingUrl: pick(b, ['recording_url', 'recordingUrl', 'recording', 'call.recording_url', 'call.recording', 'audio_url', 'concatenated_recording_url', 'recording.url']),
+        callId: pick(b, ['call_id', 'callId', 'c_id', 'call.id', 'callID']),
         source: pick(b, ['source']) || 'bland',
         portalId: pick(b, ['portal_id', 'lead_id', 'id']),
         status: 'new',
@@ -41,8 +43,13 @@ export default async function handler(req, res) {
     await redis.hset(lead.id, lead);
     await redis.zadd('hotleads', { score: Date.now(), member: lead.id });
 
-    const who = lead.company || lead.name || lead.phone;
-    slackNotify(`:fire: *HOT LEAD* just came in: *${who}* ${lead.phone}${lead.summary ? '\n> ' + lead.summary.slice(0, 200) : ''}\nCall them now in the dialer.`);
+    const slackText =
+        `:fire: *New Bland lead* — *${lead.company || lead.name || lead.phone}*` + (lead.motion ? ` · _${lead.motion}_` : '')
+        + `\n:telephone_receiver: ${lead.phone}`
+        + (lead.summary ? `\n> ${lead.summary.slice(0, 400)}` : '')
+        + (lead.recordingUrl ? `\n:headphones: Recording: ${lead.recordingUrl}` : '')
+        + `\n:mag: Review & listen in the hub: https://www.gostaffify.com/campaigns/  (Calls tab)`;
+    slackNotify(slackText);
 
     return res.status(200).json({ ok: true, id: lead.id });
 }

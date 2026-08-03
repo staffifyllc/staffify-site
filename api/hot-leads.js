@@ -38,7 +38,7 @@ async function fetchEngineWarm() {
                 const summary = w.summary || (w.grade === 'replied'
                     ? 'Replied to our outreach, warm. Call to qualify and set the hook.'
                     : 'Warm lead from the engine. Call to move it forward.');
-                out.push({ id: 'engine:' + w.phone, name: w.name || '', company: w.company || '', phone: w.phone, email: '', motion, grade: w.grade || '', summary, source: w.source || 'engine' });
+                out.push({ id: 'engine:' + w.phone, name: w.name || '', company: w.company || '', phone: w.phone, email: '', motion, grade: w.grade || '', summary, source: w.source || 'engine', recordingUrl: (w.recording_url || w.recordingUrl || ''), transcript: (w.transcript || w.concatenated_transcript || '') });
             });
         });
         return out;
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
         if (!h || !h.phone || h.status === 'done') continue;
         if (handled.has(h.phone) || seen.has(h.phone)) continue;
         seen.add(h.phone);
-        leads.push({ id, name: h.name || '', company: h.company || '', phone: h.phone, email: h.email || '', motion: h.motion || 'websites', grade: '', summary: h.summary || '', source: h.source || '' });
+        leads.push({ id, name: h.name || '', company: h.company || '', phone: h.phone, email: h.email || '', motion: h.motion || 'websites', grade: '', summary: h.summary || '', source: h.source || '', recordingUrl: (h.recordingUrl || ''), transcript: (h.transcript || '') });
     }
 
     return res.status(200).json({ count: leads.length, leads });

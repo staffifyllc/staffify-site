@@ -189,6 +189,8 @@ export default async function handler(req, res) {
             grade,
             su,
             at: relTime(w.at ?? w.time ?? w.ts ?? w.timestamp),
+            recordingUrl: (w.recording_url || w.recordingUrl || ''),
+            transcript: (w.transcript || w.concatenated_transcript || ''),
         };
     });
 
