@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Own Photo Editor — Staffify</title>
+    <meta name="description" content="A dedicated, top-1% photo-editing virtual assistant placed inside your business. Sourced, vetted, and backed by a lifetime replacement guarantee.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
+    <meta property="og:title" content="Your Own Photo Editor — Staffify">
+    <meta property="og:description" content="A dedicated, top-1% photo-editing VA inside your business. You shoot, they edit. Ready in about two weeks.">
+    <meta property="og:type" content="website">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green-hi:#7ef5c2; }
+        html { scroll-behavior:smooth; }
+        body { font-family:"Inter",-apple-system,sans-serif; background:radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.65; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .grad { background:linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .topbar .prep { font-size:12px; color:var(--muted); }
+        .topbar .cta { font-size:13px; font-weight:800; color:#04222b; background:var(--cyan); padding:9px 18px; border-radius:999px; text-decoration:none; }
+        .topbar .cta:hover { background:var(--cyan-hi); }
+        .page { max-width:820px; margin:0 auto; padding:0 28px; }
+        .hero { padding:66px 0 32px; }
+        .chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+        .chip { font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cyan); border:1px solid rgba(26,189,225,0.4); background:rgba(26,189,225,0.08); border-radius:999px; padding:6px 14px; }
+        h1 { font-size:clamp(36px,6vw,56px); font-weight:900; letter-spacing:-0.03em; line-height:1.05; margin-bottom:20px; }
+        .sub { font-size:19px; color:var(--muted); max-width:640px; margin-bottom:28px; }
+        .sub b { color:var(--white); }
+        .cta-btn { display:inline-block; background:var(--cyan); color:#04222b; font-weight:800; font-size:16px; padding:15px 30px; border-radius:999px; text-decoration:none; box-shadow:0 0 40px rgba(26,189,225,0.3); }
+        .cta-btn:hover { background:var(--cyan-hi); }
+        section { padding:40px 0; border-top:1px solid var(--card-border); }
+        .eyebrow { display:flex; align-items:center; gap:12px; font-size:12px; font-weight:800; letter-spacing:0.3em; color:var(--cyan); text-transform:uppercase; margin-bottom:14px; }
+        .eyebrow::before { content:''; width:30px; height:2px; background:linear-gradient(90deg, var(--cyan), transparent); }
+        h2 { font-size:clamp(24px,4vw,33px); font-weight:900; letter-spacing:-0.02em; line-height:1.15; margin-bottom:14px; }
+        p { color:var(--muted); font-size:16.5px; margin-bottom:14px; }
+        p b { color:var(--white); }
+        ul.checks { list-style:none; margin:16px 0; }
+        ul.checks li { position:relative; padding:7px 0 7px 34px; color:#d7dde2; font-size:16.5px; }
+        ul.checks li::before { content:'\2713'; position:absolute; left:0; top:7px; width:22px; height:22px; border-radius:50%; background:rgba(26,189,225,0.12); border:1px solid rgba(26,189,225,0.45); color:var(--cyan-hi); font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+        ul.checks li b { color:#fff; }
+        .cards3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:22px; }
+        @media (max-width:680px){ .cards3 { grid-template-columns:1fr; } }
+        .kcard { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:22px; }
+        .kcard .n { font-size:26px; font-weight:900; letter-spacing:-0.02em; }
+        .kcard .l { font-size:14px; color:var(--muted); margin-top:6px; line-height:1.5; }
+        .steps { counter-reset:s; margin-top:18px; }
+        .step { display:flex; gap:16px; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+        .step:last-child { border-bottom:none; }
+        .step .sn { flex:0 0 auto; width:30px; height:30px; border-radius:9px; background:rgba(26,189,225,0.12); border:1px solid rgba(26,189,225,0.35); color:var(--cyan-hi); font-weight:800; font-size:14px; display:grid; place-items:center; }
+        .step .sc b { color:#fff; }
+        .step .sc { font-size:15.5px; color:#cfd4da; }
+        .pill { display:inline-block; font-size:11px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--green-hi); background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); border-radius:999px; padding:3px 11px; margin-bottom:14px; }
+        .cta-band { text-align:center; }
+        .cta-band p { max-width:520px; margin:0 auto 22px; }
+        footer { padding:44px 32px; text-align:center; font-size:13px; color:var(--muted); border-top:1px solid var(--card-border); }
+        footer a { color:#d7dde2; text-decoration:none; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <a href="mailto:hello@gostaffify.com?subject=Photo%20editor%20VA%20—%20let's%20talk" class="cta">Book a call</a>
+</header>
+
+<main class="page">
+
+    <section class="hero" style="border-top:none;">
+        <div class="chips">
+            <span class="chip">Dedicated to you</span>
+            <span class="chip">Top 1% talent</span>
+            <span class="chip">Live in ~2 weeks</span>
+        </div>
+        <h1>Your own <span class="grad">photo editor</span>, minus the hiring.</h1>
+        <p class="sub">Staffify places a dedicated, vetted photo-editing virtual assistant inside your business. <b>You shoot, they edit.</b> We handle the sourcing, screening, payroll, and a lifetime replacement guarantee. You just get your evenings back.</p>
+        <a href="mailto:hello@gostaffify.com?subject=Photo%20editor%20VA%20—%20let's%20talk" class="cta-btn">Book a 20-minute call &#8594;</a>
+    </section>
+
+    <section>
+        <div class="eyebrow">What They Handle</div>
+        <h2>The editing off your plate, <span class="grad">done right.</span></h2>
+        <p>One dedicated editor who learns your style and your tools, then owns the grind so you do not have to.</p>
+        <ul class="checks">
+            <li><b>Retouching &amp; color:</b> exposure, white balance, HDR blends, skin and surface retouching, consistent looks across a set.</li>
+            <li><b>Cleanup:</b> background removal, object and blemish removal, sky replacement, straightening and cropping.</li>
+            <li><b>Volume work:</b> culling, batch edits, presets, cataloging and file delivery, fast turnarounds on big shoots.</li>
+            <li><b>Your niche:</b> real estate, products and ecommerce, portraits, social content, whatever your workflow needs.</li>
+            <li><b>Your tools:</b> Lightroom, Photoshop, Capture One, Canva, and whatever else you already run on.</li>
+        </ul>
+    </section>
+
+    <section>
+        <div class="eyebrow">Why Staffify</div>
+        <h2>Not a marketplace. <span class="grad">A hire we run for you.</span></h2>
+        <ul class="checks">
+            <li><b>Dedicated, not shared.</b> Your editor works with you, learns your standards, and grows with your business.</li>
+            <li><b>Top 1%, vetted hard.</b> We review 150 to 250 applicants per role and you meet only the finalists. If you do not love them, we source more at no charge.</li>
+            <li><b>We run the back office.</b> Payroll, benefits, HR, monitoring, and check-ins are all handled. You just direct the work.</li>
+            <li><b>Lifetime replacement guarantee.</b> If your editor ever is not the right fit, we replace them at no cost, no questions asked, for the life of the engagement.</li>
+            <li><b>No lock-in.</b> Month to month, no long contract. The only commitment is the weekly hours you both agree on.</li>
+        </ul>
+    </section>
+
+    <section>
+        <div class="eyebrow">The Onboarding</div>
+        <h2>We do the expensive, risky part of hiring. <span class="grad">Once.</span></h2>
+        <p>Finding and vetting a great editor is the hard part, and it is where most hires quietly go wrong. That is exactly what the one-time onboarding covers, so you skip the gamble and start with a proven person. Here is what it actually buys you:</p>
+        <ul class="checks">
+            <li><b>Paid sourcing at scale.</b> We pull 500 to 800 applicants for your role across the job platforms. Paid posts reach the top talent, free posts pull the bottom of the market.</li>
+            <li><b>Real screening, not a resume shuffle.</b> Written tests, video interviews, <b>paid skills tests on actual edits</b>, and reference checks. You meet only the finalists we would hire ourselves.</li>
+            <li><b>A strategy session.</b> We map your workflow, your style, and your tools so the person we place fits your world, not a generic template.</li>
+            <li><b>Trained and set up before day one.</b> Your editor learns your exact stack, we build the SOPs, and stand up time tracking, HR, and your check-in cadence. They are productive from the first week.</li>
+        </ul>
+        <p style="margin-top:6px;"><b>The honest version:</b> you could piece this together yourself. Most people spend weeks doing it badly and hand it to us anyway. The onboarding is a one-time investment, and you can pay it up front or roll it into your hourly rate with no interest, so it never has to be a barrier to getting started.</p>
+    </section>
+
+    <section>
+        <div class="eyebrow">The Math</div>
+        <h2>A full-time editor for <span class="grad">part-time money.</span></h2>
+        <p>One all-inclusive hourly rate covers their time, payroll, benefits, and the guarantee. No per-image fees, no surprises.</p>
+        <div class="cards3">
+            <div class="kcard"><div class="n grad">~$11<span style="font-size:15px;color:var(--muted);font-weight:700">/hr</span></div><div class="l">All-inclusive average. About <b style="color:#fff">$1,900/month</b> for a full-time, dedicated editor.</div></div>
+            <div class="kcard"><div class="n grad">$25&#8211;$40<span style="font-size:15px;color:var(--muted);font-weight:700">/hr</span></div><div class="l">What a US editor costs fully loaded, before you even factor the hiring headache.</div></div>
+            <div class="kcard"><div class="n grad">$0<span style="font-size:15px;color:var(--muted);font-weight:700">/image</span></div><div class="l">No per-image fees and no rush charges. One flat hourly rate, however much you shoot.</div></div>
+        </div>
+        <p style="margin-top:20px;font-size:14px;">Part-time or full-time, scale up or down as your shoot volume moves. We will put exact numbers to your workflow on the call.</p>
+    </section>
+
+    <section>
+        <div class="eyebrow">How It Works</div>
+        <h2>From call to <span class="grad">first edits in about two weeks.</span></h2>
+        <div class="steps">
+            <div class="step"><div class="sn">1</div><div class="sc"><b>Discovery call.</b> 20 minutes to scope your editing workflow, your style, and your volume.</div></div>
+            <div class="step"><div class="sn">2</div><div class="sc"><b>We source and vet.</b> You meet three finalists in 7 to 10 days, already tested on real edits.</div></div>
+            <div class="step"><div class="sn">3</div><div class="sc"><b>First edits.</b> Your editor is trained on your tools and delivering inside about two weeks.</div></div>
+            <div class="step"><div class="sn">4</div><div class="sc"><b>Ongoing.</b> We keep them supported and backed by the replacement guarantee. You keep shooting.</div></div>
+        </div>
+    </section>
+
+    <section class="cta-band">
+        <span class="pill">First edits in ~2 weeks</span>
+        <h2>Ready to hand off <span class="grad">the editing?</span></h2>
+        <p>Grab 20 minutes and we will scope the exact editor for your workflow, with real numbers.</p>
+        <a href="mailto:hello@gostaffify.com?subject=Photo%20editor%20VA%20—%20let's%20talk" class="cta-btn">Book a call &#8594;</a>
+    </section>
+
+</main>
+
+<footer>
+    <p><a href="https://www.gostaffify.com/">gostaffify.com</a> &middot; Dedicated virtual assistants, done right.</p>
+</footer>
+
+</body>
+</html>
