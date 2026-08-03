@@ -31,12 +31,15 @@ const DISP_COLOR = {
 const num = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n : d; };
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
 
-async function getJson(url) {
-    try {
-        const r = await fetch(url);
-        if (!r.ok) return null;
-        return await r.json();
-    } catch (e) { return null; }
+async function getJson(url, tries = 2) {
+    for (let i = 0; i < tries; i++) {
+        try {
+            const r = await fetch(url);
+            if (r.ok) return await r.json();
+        } catch (e) { /* fall through to retry */ }
+        if (i < tries - 1) await new Promise(res => setTimeout(res, 250));
+    }
+    return null;
 }
 
 // Map an engine warm-lead grade to the CONTRACT grade set.

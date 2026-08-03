@@ -969,37 +969,25 @@ function updateNote(){
 
 /* ============================================================ load */
 async function loadData(){
+  // Single source of truth = campaign-metrics (keeps KPIs and the warm table consistent).
   const results = await Promise.allSettled([
     fetchJSON("/api/campaign-metrics?brand="+encodeURIComponent(STATE.brand)),
-    fetchJSON("/api/openphone-calls"),
-    fetchJSON("/api/hot-leads")
+    fetchJSON("/api/openphone-calls")
   ]);
   let anyOk=false;
 
-  // campaign-metrics
-  if(results[0].status==="fulfilled"){
-    STATE.metrics = normalizeMetrics(results[0].value);
+  // campaign-metrics — only overwrite state when the payload actually has data,
+  // so a transient engine hiccup doesn't blank a good screen (the 30s refresh recovers).
+  if(results[0].status==="fulfilled" && results[0].value){
+    const nm = normalizeMetrics(results[0].value);
+    const hasData = (nm.warm && nm.warm.length) || (nm.kpis && nm.kpis.some(k=>Number(k.val)>0));
+    if(hasData || !STATE.live){ STATE.metrics = nm; }
     anyOk=true;
   }
   // openphone-calls
-  if(results[1].status==="fulfilled"){
+  if(results[1].status==="fulfilled" && results[1].value){
     STATE.calls = normalizeCalls(results[1].value);
     anyOk=true;
-  }
-  // hot-leads (optional) — if campaign-metrics gave no warm leads, backfill from hot queue
-  if(results[2].status==="fulfilled"){
-    try{
-      const hl=results[2].value;
-      if(hl && Array.isArray(hl.leads) && STATE.brand==="all" && (!STATE.metrics.warm || !STATE.metrics.warm.length)){
-        STATE.metrics.warm = hl.leads.slice(0,12).map(l=>({
-          co: l.company || l.name || "Lead",
-          src: (l.source&&/call/i.test(l.source))?"Call":(l.source||"Engine"),
-          grade: (l.grade&&/interested|booked|callback|replied/i.test(l.grade))?l.grade.toLowerCase():"replied",
-          su: l.summary || "Warm lead from the engine — call to move it forward.",
-          at: "recent"
-        }));
-      }
-    }catch(e){}
   }
 
   STATE.live = anyOk;
