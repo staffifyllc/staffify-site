@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Onboarding — Staffify</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green-hi:#7ef5c2; }
+        body { font-family:"Inter",-apple-system,sans-serif; background:radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.6; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .grad { background:linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .nav { display:flex; gap:6px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
+        .nav a:hover { color:var(--white); }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        @media (max-width:880px){ .topbar { flex-wrap:wrap; } .nav { order:3; flex-basis:100%; justify-content:center; margin-top:6px; } }
+        .tb-right { display:flex; align-items:center; gap:10px; }
+        .btn-ghost { font-size:13px; font-weight:700; color:var(--muted); background:transparent; border:1px solid var(--card-border); border-radius:999px; padding:8px 15px; cursor:pointer; }
+        .btn-ghost:hover { color:var(--white); }
+        .wrap { max-width:860px; margin:0 auto; padding:34px 28px 90px; }
+        .eyebrow { display:flex; align-items:center; gap:12px; font-size:12px; font-weight:800; letter-spacing:0.3em; color:var(--cyan); text-transform:uppercase; margin-bottom:14px; }
+        .eyebrow::before { content:''; width:30px; height:2px; background:linear-gradient(90deg, var(--cyan), transparent); }
+        h1 { font-size:clamp(30px,5vw,44px); font-weight:900; letter-spacing:-0.03em; line-height:1.06; margin-bottom:14px; }
+        .sub { font-size:17px; color:var(--muted); max-width:620px; margin-bottom:26px; }
+        .sub b { color:var(--white); }
+        .progwrap { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-bottom:30px; }
+        .progtop { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+        .progtop .n { font-size:22px; font-weight:900; letter-spacing:-0.02em; }
+        .progtop .n b { color:var(--cyan-hi); }
+        .progtop .pctxt { font-size:13px; color:var(--muted); font-weight:600; }
+        .bar { height:10px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden; }
+        .fill { height:100%; width:0; background:linear-gradient(90deg, var(--cyan), var(--cyan-hi)); border-radius:999px; transition:width .4s cubic-bezier(.22,1,.36,1); }
+        .done-banner { display:none; margin-top:14px; font-size:14.5px; font-weight:700; color:var(--green-hi); }
+        .done-banner.show { display:block; }
+        section.grp { margin-bottom:20px; }
+        .grp-h { display:flex; align-items:center; gap:12px; margin:30px 2px 12px; }
+        .grp-h .num { font-size:12px; font-weight:900; letter-spacing:0.1em; color:#04222b; background:var(--cyan); border-radius:8px; padding:4px 9px; flex-shrink:0; }
+        .grp-h .gt { font-size:18px; font-weight:800; letter-spacing:-0.01em; }
+        .grp-h .gs { margin-left:auto; font-size:12px; color:var(--muted); font-weight:600; }
+        .tasks { background:var(--card); border:1px solid var(--card-border); border-radius:16px; overflow:hidden; }
+        .task { display:flex; gap:14px; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; align-items:flex-start; transition:background .15s; }
+        .task:last-child { border-bottom:none; }
+        .task:hover { background:rgba(255,255,255,0.02); }
+        .task input { position:absolute; opacity:0; width:0; height:0; }
+        .box { flex:0 0 auto; width:22px; height:22px; border-radius:7px; border:1.5px solid var(--card-border); margin-top:1px; display:grid; place-items:center; transition:.15s; }
+        .box svg { width:13px; height:13px; opacity:0; transform:scale(.6); transition:.15s; }
+        .task input:checked ~ .box { background:linear-gradient(180deg,var(--cyan-hi),var(--cyan)); border-color:var(--cyan); }
+        .task input:checked ~ .box svg { opacity:1; transform:scale(1); }
+        .t { min-width:0; }
+        .tt { font-size:15.5px; font-weight:700; color:var(--white); }
+        .tt a { color:var(--cyan-hi); text-decoration:none; font-weight:700; font-size:13px; margin-left:8px; white-space:nowrap; }
+        .tt a:hover { text-decoration:underline; }
+        .task input:checked ~ .t .tt { color:var(--muted); text-decoration:line-through; text-decoration-color:rgba(255,255,255,0.25); }
+        .td { font-size:13.5px; color:var(--muted); margin-top:3px; line-height:1.5; }
+        .star { display:inline-block; font-size:10px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--cyan-hi); background:rgba(26,189,225,0.10); border:1px solid rgba(26,189,225,0.3); border-radius:999px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+        footer { text-align:center; font-size:13px; color:var(--muted); padding:30px 0 0; }
+        footer a { color:#d7dde2; text-decoration:none; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <nav class="nav">
+        <a href="/hub/">Hub</a>
+        <a href="/dialer/">Dialer</a>
+        <a href="/scoreboard/">Scoreboard</a>
+        <a href="/pipeline/">Pipeline</a>
+        <a href="/training/sales/">Training</a>
+        <a href="/onboarding/" class="active">Onboarding</a>
+    </nav>
+    <div class="tb-right" id="tbRight"></div>
+</header>
+
+<div class="wrap">
+    <div class="eyebrow">Sales Onboarding</div>
+    <h1>Welcome to the team. <span class="grad">Here's your first week.</span></h1>
+    <p class="sub">Work this top to bottom. It gets you set up, gets the offer into your head, and gets you certified to take live pipeline. Check things off as you go, your progress saves on this device. <b>Anything you can't access, ping Paul.</b></p>
+
+    <div class="progwrap">
+        <div class="progtop">
+            <div class="n"><b id="doneN">0</b> of <span id="totalN">0</span> done</div>
+            <div class="pctxt" id="pctxt">Let's get you selling.</div>
+        </div>
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="done-banner" id="doneBanner">You're fully onboarded. Go close. 🔥</div>
+    </div>
+
+    <div id="list"></div>
+
+    <footer>Staffify Sales Onboarding · Internal · <a href="https://www.gostaffify.com/">gostaffify.com</a></footer>
+</div>
+
+<script>
+(function(){
+  var GROUPS = [
+    { n:"01", title:"Get set up", sub:"Day one", tasks:[
+      { id:"hub", tt:"Sign in to your Sales Hub", link:["/hub/","Open"], td:"We email a one-time link to your work email, no password. If it doesn't arrive, tell Paul, you may need to be added as a rep first." },
+      { id:"name", tt:"Set your name on the scoreboard", td:"Open any rep page and hit “Set your name” so your calls and training show up under you." },
+      { id:"calendly", tt:"Set up your Calendly", link:["https://calendly.com","calendly.com"], td:"So prospects can book discovery calls with you. Create your booking link, then send it to Paul so he can wire it into the pipeline.", star:"Do this first" },
+      { id:"slack", tt:"Join #sales in Slack", td:"Ask Paul for the invite. This is where hot leads and wins get called out." },
+      { id:"tools", tt:"Get your tool logins", td:"HubSpot (CRM / system of record), Front (shared inbox), Quo, and OpenPhone for calling. Paul sets these up with you." },
+      { id:"toolkit", tt:"Bookmark your toolkit", link:["/how-it-works/","How It Works"], td:"The How It Works page (every number), the Comp Plan, and the pitch deck. Keep them one click away on every call." },
+    ]},
+    { n:"02", title:"Learn the offer", sub:"Before live pipeline", tasks:[
+      { id:"training", tt:"Work the Training playbook in order", link:["/training/sales/","Open training"], td:"Eight modules. Do them in order and take the knowledge checks, they gate you to the next one." },
+      { id:"pricing", tt:"Memorize the pricing cold", link:["/how-it-works/","Pricing"], td:"Onboarding tiers (and the action-taker rate) plus the three hourly lists. You should answer any pricing question without checking notes." },
+      { id:"guarantee", tt:"Nail the guarantees", td:"The Lifetime Replacement Guarantee and “no minimum commitment.” These take the client's risk to zero, lean on them." },
+      { id:"closes", tt:"Watch the live close recordings", link:["/training/sales/","Module 5"], td:"Real deals, start to finish, in Module 5. Watch how the offer gets presented and closed." },
+      { id:"comp", tt:"Read your comp plan", link:["/careers/sales/comp/","Comp & path"], td:"Know exactly how and when you get paid, and the ladder above you." },
+    ]},
+    { n:"03", title:"Prove it", sub:"Get certified", tasks:[
+      { id:"mock-book", tt:"Book your mock discovery call with the CEO", link:["https://calendly.com","Book it"], td:"Use Calendly to grab a slot. You'll sell us Staffify, start to finish.", star:"Calendly" },
+      { id:"mock-pass", tt:"Pass the mock call", td:"Diagnose the bottleneck, handle the price objection, ask for the business. Pass it and you're cleared for live pipeline." },
+    ]},
+    { n:"04", title:"Go live", sub:"Start closing", tasks:[
+      { id:"dialer", tt:"Open the Dialer and work the Hot queue", link:["/dialer/","Open dialer"], td:"Interested leads land in the 🔥 Hot queue. Call them while they're warm." },
+      { id:"first-call", tt:"Run your first discovery call", td:"Rapport first, then diagnose, then present. You've trained for this." },
+      { id:"log", tt:"Log every outcome and watch your Scoreboard", link:["/scoreboard/","Scoreboard"], td:"Every dial and disposition. Your numbers show up live, and so does the leaderboard." },
+      { id:"pipeline", tt:"Start building your own pipeline", td:"Warm leads get you started. Outbound is welcomed and paid exactly the same. The top earners here do both." },
+    ]},
+  ];
+
+  var KEY='sfy_onboarding_done';
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function getDone(){ try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];} }
+  var done = getDone();
+  function save(){ try{localStorage.setItem(KEY, JSON.stringify(done));}catch(e){} }
+  function repGet(){try{var r=JSON.parse(localStorage.getItem('sfy_rep')||'null');if(r&&r.name)return r;}catch(e){}return null;}
+  function repSet(n){n=(n||'').trim();if(!n)return null;var em=n.toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/(^\.|\.$)/g,'')+'@rep.local';var r={name:n,email:em};try{localStorage.setItem('sfy_rep',JSON.stringify(r));}catch(x){}return r;}
+
+  var total=0; GROUPS.forEach(function(g){ total+=g.tasks.length; });
+  document.getElementById('totalN').textContent=total;
+
+  var CHECK='<svg viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-9" stroke="#04222b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function render(){
+    var list=document.getElementById('list'); list.innerHTML='';
+    GROUPS.forEach(function(g){
+      var gdone=g.tasks.filter(function(t){return done.indexOf(t.id)>=0;}).length;
+      var h=document.createElement('div'); h.className='grp-h';
+      h.innerHTML='<span class="num">'+g.n+'</span><span class="gt">'+esc(g.title)+'</span><span class="gs">'+gdone+' / '+g.tasks.length+'</span>';
+      list.appendChild(h);
+      var box=document.createElement('div'); box.className='tasks';
+      g.tasks.forEach(function(t){
+        var checked=done.indexOf(t.id)>=0;
+        var lab=document.createElement('label'); lab.className='task';
+        var link=t.link?' <a href="'+esc(t.link[0])+'"'+(/^https?:/.test(t.link[0])?' target="_blank" rel="noopener"':'')+'>'+esc(t.link[1])+' →</a>':'';
+        var star=t.star?'<span class="star">'+esc(t.star)+'</span>':'';
+        lab.innerHTML='<input type="checkbox" data-id="'+t.id+'"'+(checked?' checked':'')+'>'+
+          '<span class="box">'+CHECK+'</span>'+
+          '<span class="t"><span class="tt">'+esc(t.tt)+star+link+'</span><span class="td">'+esc(t.td)+'</span></span>';
+        box.appendChild(lab);
+      });
+      list.appendChild(box);
+    });
+    wire(); updateProg();
+  }
+
+  function wire(){
+    Array.prototype.forEach.call(document.querySelectorAll('.task input'),function(inp){
+      inp.addEventListener('change',function(){
+        var id=inp.getAttribute('data-id');
+        var i=done.indexOf(id);
+        if(inp.checked){ if(i<0) done.push(id); } else { if(i>=0) done.splice(i,1); }
+        save();
+        // update just the group counters + progress without full re-render (keeps scroll)
+        refreshCounters(); updateProg();
+      });
+    });
+  }
+  function refreshCounters(){
+    var groups=document.querySelectorAll('.grp-h');
+    GROUPS.forEach(function(g,gi){
+      var gdone=g.tasks.filter(function(t){return done.indexOf(t.id)>=0;}).length;
+      var gs=groups[gi]&&groups[gi].querySelector('.gs'); if(gs) gs.textContent=gdone+' / '+g.tasks.length;
+    });
+  }
+  function updateProg(){
+    var n=done.filter(function(id){return GROUPS.some(function(g){return g.tasks.some(function(t){return t.id===id;});});}).length;
+    var pct=total?Math.round(100*n/total):0;
+    document.getElementById('doneN').textContent=n;
+    document.getElementById('fill').style.width=pct+'%';
+    var pc=document.getElementById('pctxt');
+    pc.textContent = n===0?"Let's get you selling." : (n>=total?"Certified. You're ready.":pct+"% of the way there.");
+    document.getElementById('doneBanner').classList.toggle('show', n>=total);
+  }
+
+  function nameChip(){var r=repGet();return '<button class="btn-ghost" id="nm">'+(r?('Hi, '+esc(r.name.split(' ')[0])):'Set your name')+'</button>';}
+  function wireChip(){var b=document.getElementById('nm');if(b)b.onclick=function(){var r=repGet();var n=prompt('Your name:',r?r.name:'');if(n){repSet(n);document.getElementById('tbRight').innerHTML=nameChip();wireChip();}};}
+  document.getElementById('tbRight').innerHTML=nameChip(); wireChip();
+
+  render();
+})();
+</script>
+  <script src="/assets/js/analytics.js?v=1" defer></script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
