@@ -464,6 +464,8 @@ function countUp(el,to,f,from){
     if(p<1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
+  // fallback: guarantee the final value even if rAF is paused (e.g. backgrounded tab)
+  setTimeout(function(){ el.textContent=fmt(to,f); }, dur+150);
 }
 function sparkSVG(vals,color){
   color=rv(color);
