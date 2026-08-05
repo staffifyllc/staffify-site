@@ -28,6 +28,10 @@ const DISP_COLOR = {
     bad_number: '#a15c3a',
 };
 
+// Positive CALL outcomes only. Text replies ('replied') and non-call/empty grades are excluded,
+// so the warm/positive-call feeds show real calls with a good outcome, not text conversations.
+const POSITIVE_CALL = new Set(['interested', 'booked', 'callback', 'transferred', 'meeting', 'won']);
+
 const num = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n : d; };
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
 
@@ -167,9 +171,10 @@ export default async function handler(req, res) {
     });
 
     // Brand separation: keep only the selected motion's warm leads when a brand is chosen.
-    const warmFiltered = brand
+    const warmFiltered = (brand
         ? warmRaw.filter(w => (w._brand || '').toString().toLowerCase() === brand.toLowerCase())
-        : warmRaw;
+        : warmRaw)
+        .filter(w => POSITIVE_CALL.has((w.grade || '').toString().toLowerCase())); // positive calls only, drop text replies
     const brandLabel = (b) => {
         const s = (b || '').toString().toLowerCase();
         if (s === 'foundry') return 'Foundry';

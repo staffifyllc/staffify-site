@@ -15,6 +15,8 @@ const PORTAL_BASE = process.env.SALES_PORTAL_BASE || '';
 const PORTAL_TOKEN = process.env.SALES_PORTAL_TOKEN || '';
 const HUB_URL = PORTAL_BASE ? PORTAL_BASE.replace('/sales-portal', '/hub') : '';
 const BRAND_MOTION = { Foundry: 'websites', Staffify: 'staffing' };
+// Positive CALL outcomes only. Text replies ('replied') and non-call/empty grades are dropped from the engine feed.
+const POSITIVE_CALL = ['interested', 'booked', 'callback', 'transferred', 'meeting', 'won'];
 
 // engine log outcomes: interested|callback|not_interested|gatekeeper|no_answer|voicemail
 function toEngineOutcome(o) {
@@ -35,6 +37,7 @@ async function fetchEngineWarm() {
             const motion = BRAND_MOTION[m.brand] || 'websites';
             (m.warm || []).forEach(w => {
                 if (!w.phone) return;
+                if (POSITIVE_CALL.indexOf((w.grade || '').toString().toLowerCase()) < 0) return; // positive calls only, drop text replies
                 const summary = w.summary || (w.grade === 'replied'
                     ? 'Replied to our outreach, warm. Call to qualify and set the hook.'
                     : 'Warm lead from the engine. Call to move it forward.');
