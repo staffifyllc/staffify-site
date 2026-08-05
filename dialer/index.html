@@ -213,6 +213,7 @@
     }
     var L=q[0];
     var ctx=L.summary?'<div class="lbl">What Bland learned</div><div class="brief">'+esc(L.summary)+'</div>':'';
+    var rec=L.recordingUrl?'<div class="lbl">Listen to the call</div><audio controls preload="none" style="width:100%;height:38px" src="'+esc(L.recordingUrl)+'"></audio>':'';
     var trans=L.transcript?'<details><summary>Full call transcript</summary><div class="script"><div class="blk">'+esc(L.transcript)+'</div></div></details>':'';
     app.innerHTML=head+
       '<div class="card">'+
@@ -220,7 +221,7 @@
         '<div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+
         '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
-        ctx+trans+
+        ctx+rec+trans+
         '<div class="lbl">How did it go?</div>'+
         '<div class="outcomes">'+
           '<button class="oc good" data-o="won">Closed / Won</button>'+
