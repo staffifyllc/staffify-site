@@ -92,6 +92,11 @@ function v(x) {
   return s ? s : 'unknown';
 }
 
+// Staffify copy rule: no em dashes. Strip any the model produced and rejoin with a comma.
+function clean(s) {
+  return String(s == null ? '' : s).replace(/\s*—\s*/g, ', ');
+}
+
 function buildUser({ name, company, phone, grade, transcript, mode }) {
   const instr = mode === 'coach'
     ? `COACH mode: This transcript is the rep's own sales call with ${v(name)} at ${v(company)}. Grade it against the close rubric. Return only the JSON object defined in your system prompt.`
@@ -178,23 +183,23 @@ function normalize(obj, mode) {
     rating = {
       kind: String(o.rating.kind || (mode === 'coach' ? 'score' : 'confidence')),
       value: (val == null || isNaN(Number(val))) ? null : Number(val),
-      label: String(o.rating.label || ''),
+      label: clean(o.rating.label || ''),
     };
   }
   const sections = (Array.isArray(o.sections) ? o.sections : []).map(function (s) {
     const sec = (s && typeof s === 'object') ? s : {};
     const bullets = Array.isArray(sec.bullets)
-      ? sec.bullets.map(function (b) { return String(b); })
-      : (sec.bullets != null ? [String(sec.bullets)] : []);
-    return { title: String(sec.title || ''), bullets: bullets };
+      ? sec.bullets.map(function (b) { return clean(b); })
+      : (sec.bullets != null ? [clean(sec.bullets)] : []);
+    return { title: clean(sec.title || ''), bullets: bullets };
   });
   return {
     mode: o.mode || mode,
-    headline: String(o.headline || 'Close plan'),
+    headline: clean(o.headline || 'Close plan'),
     rating: rating,
-    open_with: String(o.open_with || ''),
+    open_with: clean(o.open_with || ''),
     sections: sections,
-    next_action: String(o.next_action || ''),
+    next_action: clean(o.next_action || ''),
   };
 }
 
@@ -223,7 +228,7 @@ export default async function handler(req, res) {
 
   // Cache by transcript hash so repeat clicks on the same call are free.
   let cacheKey = '';
-  try { cacheKey = 'cr:' + mode + ':' + crypto.createHash('sha1').update(mode + '|' + grade + '|' + transcript).digest('hex'); } catch (e) { cacheKey = ''; }
+  try { cacheKey = 'cr:v2:' + mode + ':' + crypto.createHash('sha1').update(mode + '|' + grade + '|' + transcript).digest('hex'); } catch (e) { cacheKey = ''; }
   if (cacheKey) {
     try {
       const cached = await redis.get(cacheKey);

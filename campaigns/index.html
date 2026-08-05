@@ -738,6 +738,7 @@ function renderSummary(el,metrics){
 }
 
 /* ---------- positive calls ---------- */
+const CP_RESULTS = {};   // AI close-plan results, kept across the 30s live re-render, keyed by call identity
 function renderPositiveCalls(el){
   el.innerHTML="";
   let items = [];
@@ -793,8 +794,11 @@ function renderPositiveCalls(el){
       ${audio}${transcript}${noRec}${closeBtn}
       <div class="pc-foot">${dir}${dur}${at}</div>`;
     el.appendChild(card);
+    const cpKey=(c.co||"")+"|"+(c.phone||"")+"|"+String(c.su||"").slice(0,24);
+    const cpOut=card.querySelector(".cp-out");
+    if(cpOut && CP_RESULTS[cpKey] && window.StaffifyClosePlan){ window.StaffifyClosePlan.showInto(cpOut, CP_RESULTS[cpKey]); }
     const cpb=card.querySelector(".cp-btn");
-    if(cpb){ cpb.addEventListener("click",()=>{ if(!window.StaffifyClosePlan)return; window.StaffifyClosePlan.run({mode:"prep",transcript:c.tr||"",name:c.name||"",company:c.co||"",grade:"",phone:c.phone||""}, card.querySelector(".cp-out"), cpb); }); }
+    if(cpb){ cpb.addEventListener("click",()=>{ if(!window.StaffifyClosePlan)return; window.StaffifyClosePlan.run({mode:"prep",transcript:c.tr||"",name:c.name||"",company:c.co||"",grade:"",phone:c.phone||""}, cpOut, cpb).then(obj=>{ if(obj && !obj.error) CP_RESULTS[cpKey]=obj; }); }); }
   });
 }
 

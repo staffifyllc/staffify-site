@@ -87,13 +87,13 @@
 
   function run(payload, outEl, btnEl) {
     injectStyle();
-    if (!outEl) return;
+    if (!outEl) return Promise.resolve(null);
     var oldTxt = btnEl ? btnEl.textContent : '';
     if (btnEl) { btnEl.disabled = true; btnEl.classList.add('cp-loading'); btnEl.textContent = 'Building plan...'; }
     outEl.style.display = 'block';
     outEl.innerHTML = '<div class="cp-note cp-pulse">Reading the call and building your close plan...</div>';
 
-    fetch('/api/call-review/', {
+    return fetch('/api/call-review/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload || {})
@@ -101,13 +101,22 @@
       .then(function (r) {
         return r.json().catch(function () { return { error: 'bad_json', headline: 'The AI service returned something unexpected.' }; });
       })
-      .then(function (j) { outEl.innerHTML = '<div class="cp-box">' + render(j) + '</div>'; })
-      .catch(function () { outEl.innerHTML = '<div class="cp-note">Network error. Try again.</div>'; })
-      .then(function () {
+      .then(function (j) { outEl.innerHTML = '<div class="cp-box">' + render(j) + '</div>'; return j; })
+      .catch(function () { outEl.innerHTML = '<div class="cp-note">Network error. Try again.</div>'; return null; })
+      .then(function (j) {
         if (btnEl) { btnEl.disabled = false; btnEl.classList.remove('cp-loading'); btnEl.textContent = oldTxt || 'AI close plan'; }
+        return j;
       });
   }
 
+  // Render an already-fetched result object into a container (used to survive dashboard re-renders).
+  function showInto(outEl, obj) {
+    if (!outEl || !obj) return;
+    injectStyle();
+    outEl.style.display = 'block';
+    outEl.innerHTML = '<div class="cp-box">' + render(obj) + '</div>';
+  }
+
   injectStyle();
-  window.StaffifyClosePlan = { run: run, render: render, esc: esc };
+  window.StaffifyClosePlan = { run: run, render: render, showInto: showInto, esc: esc };
 })();
