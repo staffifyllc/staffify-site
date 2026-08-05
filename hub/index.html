@@ -96,11 +96,13 @@
 
 <div class="wrap" id="app"></div>
 
+<script src="/assets/js/close-plan.js"></script>
 <script>
 (function(){
   var app=document.getElementById('app');
   var tbRight=document.getElementById('tbRight');
   var ME=null;
+  var LEADS=[];
 
   var MODULES=[
     ['01','The Offer, Inside Out','ready'],
@@ -179,13 +181,15 @@
   function leadRows(ld){
     if(!ld) return '<div class="empty">Could not load leads.</div>';
     if(!(ld.leads||[]).length) return '<div class="empty">No warm leads right now. The moment the engine gets someone interested, they land here.</div>';
-    return ld.leads.slice(0,12).map(function(l){
+    return ld.leads.slice(0,12).map(function(l,i){
       var grade=l.grade?'<span class="tag">'+esc(l.grade)+'</span>':'';
+      var cp=l.transcript?('<button class="cp-btn" data-cp="'+i+'">AI close plan</button><div class="cp-out" id="cp-'+i+'"></div>'):'';
       return '<div class="row"><div class="who"><div class="n">'+esc(l.company||l.name||'Lead')+'</div>'+
         (l.phone?'<div class="e"><a href="tel:'+esc(l.phone)+'">'+esc(l.phone)+'</a></div>':'')+
         (l.summary?'<div style="font-size:12px;color:#9ba1ab;margin-top:3px;line-height:1.4">'+esc(l.summary)+'</div>':'')+
         (l.recordingUrl?'<audio controls preload="none" style="width:100%;margin-top:8px;height:32px" src="'+esc(l.recordingUrl)+'"></audio>':'')+
         (l.transcript?'<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--cyan-hi);font-size:11.5px;font-weight:700">Transcript</summary><div style="font-size:12px;color:#9ba1ab;margin-top:6px;max-height:170px;overflow:auto;white-space:pre-wrap;line-height:1.5">'+esc(l.transcript)+'</div></details>':'')+
+        cp+
         '</div>'+grade+'</div>';
     }).join('');
   }
@@ -233,6 +237,16 @@
           '<div class="panel"><div class="ph"><h2>Your toolkit</h2></div><div class="tools">'+tools+'</div></div>'+
         '</div>'+
       '</div>';
+
+    LEADS = (ld && ld.leads) ? ld.leads.slice(0,12) : [];
+    Array.prototype.forEach.call(app.querySelectorAll('.cp-btn'), function(b){
+      b.onclick=function(){
+        var l=LEADS[+b.getAttribute('data-cp')]; if(!l||!window.StaffifyClosePlan) return;
+        var mo=l.motion==='staffing'?'Staffify VA':(l.motion==='websites'?'Foundry website':'');
+        var g=[l.grade,mo].filter(Boolean).join(' / ');
+        StaffifyClosePlan.run({mode:'prep',transcript:l.transcript||'',name:l.name||'',company:l.company||'',grade:g,phone:l.phone||''}, document.getElementById('cp-'+b.getAttribute('data-cp')), b);
+      };
+    });
   }
 
   load();

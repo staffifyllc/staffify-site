@@ -107,10 +107,11 @@
 <div class="wrap" id="app"></div>
 <div class="toast" id="toast"></div>
 
+<script src="/assets/js/close-plan.js"></script>
 <script>
 (function(){
   var app=document.getElementById('app'), tbRight=document.getElementById('tbRight'), toastEl=document.getElementById('toast');
-  var ME=null, MOTION='websites', firstLoad=true, QUEUES={websites:[],staffing:[],hot:[]}, TRAIN={}, SCORE=null, LABEL={websites:'Foundry',staffing:'Staffify',hot:'Hot'};
+  var ME=null, MOTION='websites', firstLoad=true, QUEUES={websites:[],staffing:[],hot:[]}, TRAIN={}, SCORE=null, LABEL={websites:'Foundry',staffing:'Staffify',hot:'Hot'}, CURHOT=null;
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function toast(m){toastEl.textContent=m; toastEl.classList.add('show'); setTimeout(function(){toastEl.classList.remove('show');},1600);}
@@ -289,17 +290,18 @@
       app.innerHTML=head+'<div class="empty"><h2>No hot leads waiting.</h2><p>When Bland gets someone interested, they land here to close. Keep dialing Foundry or Staffify in the meantime.</p></div>';
       wire(); return;
     }
-    var L=q[0];
+    var L=q[0]; CURHOT=L;
     var ctx=L.summary?'<div class="lbl">What Bland learned</div><div class="brief">'+esc(L.summary)+'</div>':'';
     var rec=L.recordingUrl?'<div class="lbl">Listen to the call</div><audio controls preload="none" style="width:100%;height:38px" src="'+esc(L.recordingUrl)+'"></audio>':'';
     var trans=L.transcript?'<details><summary>Full call transcript</summary><div class="script"><div class="blk">'+esc(L.transcript)+'</div></div></details>':'';
+    var cp=L.transcript?'<button class="cp-btn" id="cpbtn">AI close plan</button><div class="cp-out" id="cpout"></div>':'';
     app.innerHTML=head+
       '<div class="card">'+
         '<div class="lbl">🔥 Interested &middot; call now while they are hot</div>'+
         '<div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+
         '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
-        ctx+rec+trans+
+        ctx+rec+trans+cp+
         renderQuote()+
         renderObjections()+
         '<div class="lbl">How did it go?</div>'+
@@ -320,6 +322,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(b){ b.onclick=function(){ var i=+b.getAttribute('data-obj'); var say=document.getElementById('objsay'); var was=b.classList.contains('on'); Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(x){x.classList.remove('on');}); if(was){ if(say)say.classList.remove('show'); } else { b.classList.add('on'); if(say){ say.textContent=OBJECTIONS[i].say; say.classList.add('show'); } } }; });
     Array.prototype.forEach.call(document.querySelectorAll('.qtier'),function(b){ b.onclick=function(){ quoteTier=+b.getAttribute('data-tier'); refreshQuote(); }; });
     var qa=document.getElementById('qaction'); if(qa)qa.onchange=function(){ quoteAction=qa.checked; refreshQuote(); };
+    var cpb=document.getElementById('cpbtn'); if(cpb)cpb.onclick=function(){ if(!CURHOT||!window.StaffifyClosePlan)return; var r=repGet(); var mo=CURHOT.motion==='staffing'?'Staffify VA':(CURHOT.motion==='websites'?'Foundry website':''); StaffifyClosePlan.run({mode:'prep',transcript:CURHOT.transcript||'',name:CURHOT.name||'',company:CURHOT.company||'',grade:mo,phone:CURHOT.phone||'',rep:(r&&r.name)||''}, document.getElementById('cpout'), cpb); };
   }
 
   function logOutcome(outcome){

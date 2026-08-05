@@ -437,6 +437,7 @@ body{
   </div>
 </div>
 
+<script src="/assets/js/close-plan.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -779,6 +780,7 @@ function renderPositiveCalls(el){
     const audio = c.rec? `<audio controls preload="none" style="width:100%;margin-top:10px;height:34px" src="${esc(c.rec)}"></audio>` : "";
     const transcript = c.tr? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--cyan-hi);font-size:12px;font-weight:600">Transcript</summary><div style="max-height:220px;overflow:auto;margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.55;color:var(--muted);white-space:pre-wrap">${esc(c.tr)}</div></details>` : "";
     const noRec = (!c.rec && !c.tr)? `<div style="margin-top:10px;font-size:11.5px;color:var(--muted);opacity:.7">Recording not attached yet</div>` : "";
+    const closeBtn = c.tr? `<button class="cp-btn" data-idx="${i}">AI close plan</button><div class="cp-out" id="cpout-${i}"></div>` : "";
     card.innerHTML=`
       <div class="pc-top">
         <div>
@@ -788,9 +790,11 @@ function renderPositiveCalls(el){
         <span class="posbadge">● Positive</span>
       </div>
       <div class="pc-su">${esc(c.su)}</div>
-      ${audio}${transcript}${noRec}
+      ${audio}${transcript}${noRec}${closeBtn}
       <div class="pc-foot">${dir}${dur}${at}</div>`;
     el.appendChild(card);
+    const cpb=card.querySelector(".cp-btn");
+    if(cpb){ cpb.addEventListener("click",()=>{ if(!window.StaffifyClosePlan)return; window.StaffifyClosePlan.run({mode:"prep",transcript:c.tr||"",name:c.name||"",company:c.co||"",grade:"",phone:c.phone||""}, card.querySelector(".cp-out"), cpb); }); }
   });
 }
 
