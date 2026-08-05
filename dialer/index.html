@@ -70,6 +70,22 @@
         .err { color:#ff9a8d; font-size:13px; min-height:18px; }
         .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#0d1418; border:1px solid var(--card-border); color:#eaf6fb; font-size:13.5px; font-weight:600; padding:11px 18px; border-radius:999px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; }
         .toast.show { opacity:1; }
+        .toast .undo { margin-left:14px; color:var(--cyan-hi); font-weight:800; cursor:pointer; text-decoration:underline; }
+        .objrow { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+        .objchip { font-size:13px; font-weight:700; color:#ffb59a; background:rgba(226,90,60,0.10); border:1px solid rgba(226,90,60,0.4); border-radius:999px; padding:7px 13px; cursor:pointer; }
+        .objchip:hover { color:#fff; }
+        .objchip.on { color:#3a0f0c; background:#ff8a6b; border-color:#ff8a6b; }
+        .objsay { font-size:16px; line-height:1.5; color:#eaf6fb; background:rgba(26,189,225,0.06); border:1px solid rgba(26,189,225,0.3); border-radius:12px; padding:14px 16px; margin-bottom:8px; display:none; }
+        .objsay.show { display:block; }
+        .quote { background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+        .qtiers { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+        .qtier { font-size:13px; font-weight:700; color:var(--muted); background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:999px; padding:7px 13px; cursor:pointer; }
+        .qtier.on { color:#04222b; background:var(--cyan); border-color:var(--cyan); }
+        .qtoggle { display:flex; align-items:center; gap:8px; font-size:13.5px; color:#cfd4da; cursor:pointer; margin-bottom:10px; }
+        .qrow { display:flex; justify-content:space-between; align-items:baseline; font-size:15px; color:#cfd4da; padding:4px 0; }
+        .qrow b { font-size:18px; color:#fff; }
+        .qrow.qfin { font-size:13px; color:var(--muted); } .qrow.qfin b { font-size:13px; color:var(--cyan-hi); }
+        .qguard { font-size:12.5px; color:#ffb59a; margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; line-height:1.5; }
     </style>
 </head>
 <body>
@@ -151,6 +167,66 @@
     render();
   }
 
+  // ============ CLOSING COCKPIT ============
+  var OBJECTIONS=[
+    {label:'“Too expensive”', say:'Compared to what? A US admin runs $4,500 to $6,500 a month fully loaded. Ours is about $2,200 a month all in, payroll, HR and benefits included. Onboarding is a one-time $2,099 if you decide today, and it is financeable at zero interest. What would getting this off your plate be worth to you?'},
+    {label:'“Let me think”', say:'Totally fair. Is it the person or the price you want to think through? The action-taker rate saves you $400 but it is only good for 24 hours, and the lifetime replacement guarantee means your risk here is basically zero. What is the real hesitation?'},
+    {label:'“Offshore quality?”', say:'I hear you. We screen 150 to 250 people per role and you only ever meet the top 3, after a paid skills test on real work and reference checks. Attrition is under 8 percent because we pay well, tenure averages 3 plus years, and if anyone is ever off, we replace them free, for life.'},
+    {label:'“Not right now”', say:'Makes sense. Good news is you do not front anything to start, we roll the onboarding into the hourly rate at zero interest, so there is no cash out of pocket today. What would need to be true for the timing to work?'},
+    {label:'“Send me info”', say:'Happy to, I will text you the pricing page right now while we are on. What is the best cell? Open it up, and while you have it, tell me the first thing a great hire would take off your plate.'},
+    {label:'Gatekeeper', say:'Totally get it, is the owner around by any chance? Quick question only they can answer, two minutes tops. If not, when is the best time to catch them?'}
+  ];
+  function renderObjections(){
+    return '<div class="lbl">Objection? Tap the comeback</div><div class="objrow">'+
+      OBJECTIONS.map(function(o,i){return '<button class="objchip" data-obj="'+i+'">'+esc(o.label)+'</button>';}).join('')+
+      '</div><div class="objsay" id="objsay"></div>';
+  }
+  var QUOTE_TIERS=[{label:'1 hire',onb:2499},{label:'2 hires',onb:2299},{label:'3-4',onb:2099},{label:'5-9',onb:1799},{label:'10+',onb:1499}];
+  var quoteTier=0, quoteAction=true;
+  function quoteOut(){
+    var t=QUOTE_TIERS[quoteTier], onb=t.onb-(quoteAction?400:0), comm=Math.round(onb*0.35), floorComm=Math.round(1699*0.35);
+    return '<div class="qrow"><span>Client onboarding'+(quoteTier?' &middot; '+esc(t.label):'')+'</span><b>$'+onb.toLocaleString()+'</b></div>'+
+      '<div class="qrow"><span>Your 35% commission</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
+      '<div class="qrow qfin"><span>Or roll it into the rate</span><b>+$1/hr &middot; $0 today &middot; 0% interest</b></div>'+
+      '<div class="qguard">Anchor $'+(quoteAction?'2,099':'2,499')+' &middot; floor $1,699 (you make ~$'+floorComm+'). Every $100 you discount is $35 out of YOUR pocket.</div>';
+  }
+  function renderQuote(){
+    return '<div class="lbl">Quick quote &amp; your cut</div><div class="quote">'+
+      '<div class="qtiers">'+QUOTE_TIERS.map(function(t,i){return '<button class="qtier'+(i===quoteTier?' on':'')+'" data-tier="'+i+'">'+esc(t.label)+'</button>';}).join('')+'</div>'+
+      '<label class="qtoggle"><input type="checkbox" id="qaction"'+(quoteAction?' checked':'')+'> Action-taker rate (decide on the call, &minus;$400)</label>'+
+      '<div class="qout" id="qout">'+quoteOut()+'</div>'+
+      '</div>';
+  }
+  function refreshQuote(){ Array.prototype.forEach.call(document.querySelectorAll('.qtier'),function(b){ b.classList.toggle('on', (+b.getAttribute('data-tier'))===quoteTier); }); var qo=document.getElementById('qout'); if(qo)qo.innerHTML=quoteOut(); }
+
+  // Log with a 5-second Undo window so a misclick never burns a warm lead.
+  var pendingLog=null;
+  function commitLog(p){
+    var r=repGet();
+    if(p.motion==='hot'){
+      try{ fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,outcome:p.outcome,motion:p.lead.motion,company:p.lead.company,rep:r&&r.name,email:r&&r.email})}); }catch(e){}
+      return;
+    }
+    try{
+      fetch('/api/call-queue?action=log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,outcome:p.outcome,motion:p.motion,rep:r&&r.name,email:r&&r.email})})
+        .then(function(){ return fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); })
+        .then(function(s){ return s&&s.ok?s.json():null; })
+        .then(function(j){ if(j){ SCORE=j; if(!pendingLog) render(); } }).catch(function(){});
+    }catch(e){}
+  }
+  function flushPending(){ if(pendingLog){ var p=pendingLog; pendingLog=null; clearTimeout(p.timer); commitLog(p); } }
+  function doUndo(){ if(!pendingLog) return; var p=pendingLog; pendingLog=null; clearTimeout(p.timer); (QUEUES[p.motion]||[]).unshift(p.lead); render(); toast('Undone. Lead is back.'); }
+  function toastUndo(msg){ toastEl.innerHTML=esc(msg)+'<span class="undo" id="undoBtn">Undo</span>'; toastEl.classList.add('show'); var b=document.getElementById('undoBtn'); if(b)b.onclick=doUndo; clearTimeout(toastEl._ut); toastEl._ut=setTimeout(function(){toastEl.classList.remove('show');},5000); }
+
+  // Keyboard shortcuts for fast, eyes-on-the-prospect logging.
+  document.addEventListener('keydown', function(e){
+    if(e.metaKey||e.ctrlKey||e.altKey) return;
+    var tag=(e.target&&e.target.tagName||'').toLowerCase(); if(tag==='input'||tag==='textarea') return;
+    if(!document.querySelector('.oc')) return;
+    var map=MOTION==='hot' ? {'1':'won','2':'callback','n':'no_answer','x':'not_interested','b':'bad_number'} : {'1':'interested','2':'callback','n':'no_answer','v':'voicemail','g':'gatekeeper','x':'not_interested','b':'bad_number'};
+    var o=map[(e.key||'').toLowerCase()]; if(o){ e.preventDefault(); logOutcome(o); }
+  });
+
   function render(){
     var q=QUEUES[MOTION]||[];
     var t=SCORE&&SCORE.total||{};
@@ -192,6 +268,8 @@
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(L.brief)+'</div>':'')+
         ammo(L)+
         (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
+        renderQuote()+
+        renderObjections()+
         '<div class="lbl">How did it go?</div>'+
         '<div class="outcomes">'+
           '<button class="oc good" data-o="interested">Interested</button>'+
@@ -222,6 +300,8 @@
         '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         ctx+rec+trans+
+        renderQuote()+
+        renderObjections()+
         '<div class="lbl">How did it go?</div>'+
         '<div class="outcomes">'+
           '<button class="oc good" data-o="won">Closed / Won</button>'+
@@ -237,23 +317,19 @@
   function wire(){
     Array.prototype.forEach.call(document.querySelectorAll('.motions button'),function(b){ b.onclick=function(){MOTION=b.getAttribute('data-m'); render();}; });
     Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){ b.onclick=function(){ logOutcome(b.getAttribute('data-o')); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(b){ b.onclick=function(){ var i=+b.getAttribute('data-obj'); var say=document.getElementById('objsay'); var was=b.classList.contains('on'); Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(x){x.classList.remove('on');}); if(was){ if(say)say.classList.remove('show'); } else { b.classList.add('on'); if(say){ say.textContent=OBJECTIONS[i].say; say.classList.add('show'); } } }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.qtier'),function(b){ b.onclick=function(){ quoteTier=+b.getAttribute('data-tier'); refreshQuote(); }; });
+    var qa=document.getElementById('qaction'); if(qa)qa.onchange=function(){ quoteAction=qa.checked; refreshQuote(); };
   }
 
-  async function logOutcome(outcome){
-    var q=QUEUES[MOTION]; if(!q.length) return;
-    var lead=q.shift();               // advance immediately (idiotproof: never stall)
-    render();
-    if(MOTION==='hot'){
-      toast(outcome==='won'?'Boom. Closed.':'Logged. Next hot lead.');
-      try{ var rh=repGet(); await fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:lead.id,outcome:outcome,motion:lead.motion,company:lead.company,rep:rh&&rh.name,email:rh&&rh.email})}); }catch(e){ toast('Saved, will retry.'); }
-      return;
-    }
-    toast(outcome==='interested'?'Nice. Logged as interested.':'Logged. Next up.');
-    try{
-      var rc=repGet();
-      await fetch('/api/call-queue?action=log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:lead.id,outcome:outcome,motion:MOTION,rep:rc&&rc.name,email:rc&&rc.email})});
-      var s=await fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); if(s.ok){SCORE=await s.json(); render();}
-    }catch(e){ toast('Saved locally, sync retry next load.'); }
+  function logOutcome(outcome){
+    var q=QUEUES[MOTION]; if(!q||!q.length) return;
+    flushPending();                    // commit any prior pending log before starting a new one
+    var lead=q.shift(); render();      // advance immediately (never stall)
+    var p={lead:lead, outcome:outcome, motion:MOTION};
+    pendingLog=p;
+    p.timer=setTimeout(function(){ if(pendingLog===p){ pendingLog=null; commitLog(p); } }, 5000);
+    toastUndo(outcome==='won'?'Boom. Closed.':(outcome==='interested'?'Nice. Logged as interested.':'Logged. Next up.'));
   }
 
   boot();
