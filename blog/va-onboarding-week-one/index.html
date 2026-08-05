@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VA Onboarding: Your First Week Playbook (And Why Week Two Matters More) | Staffify Blog</title>
+    <meta name="description" content="Most founders blow the first week with a new VA by dumping every task at once. Here's the day-by-day plan that actually sticks, and where the real work starts.">
+    <link rel="canonical" href="https://www.gostaffify.com/blog/va-onboarding-week-one/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.gostaffify.com/blog/va-onboarding-week-one/">
+    <meta property="og:title" content="VA Onboarding: Your First Week Playbook (And Why Week Two Matters More)">
+    <meta property="og:description" content="Most founders blow the first week with a new VA by dumping every task at once. Here's the day-by-day plan that actually sticks, and where the real work starts.">
+    <meta property="og:site_name" content="Staffify">
+    <meta property="article:published_time" content="2026-08-05T16:04:24Z">
+    <meta property="article:author" content="Staffify">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="VA Onboarding: Your First Week Playbook (And Why Week Two Matters More)">
+    <meta name="twitter:description" content="Most founders blow the first week with a new VA by dumping every task at once. Here's the day-by-day plan that actually sticks, and where the real work starts.">
+
+    <!-- Schema.org Article -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "VA Onboarding: Your First Week Playbook (And Why Week Two Matters More)",
+      "description": "Most founders blow the first week with a new VA by dumping every task at once. Here's the day-by-day plan that actually sticks, and where the real work starts.",
+      "datePublished": "2026-08-05T16:04:24Z",
+      "author": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "publisher": { "@type": "Organization", "name": "Staffify", "url": "https://www.gostaffify.com/" },
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://www.gostaffify.com/blog/va-onboarding-week-one/" }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+            --black: #000000; --near-black: #0a0a0a; --card: #0d0d0d;
+            --subtle: #6e6e73; --muted: #a1a1a6;
+            --divider: rgba(255,255,255,0.08); --divider2: rgba(255,255,255,0.12);
+            --white: #ffffff; --off-white: #f5f5f7;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: rgba(0,0,0,0.55); color: var(--white);
+            line-height: 1.6; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── Full-bleed ambient depth (wide-screen margins) — site pass ─── */
+        html { background: #000; }
+        body { position: relative; }
+        body::after {
+            content:''; position: fixed; inset:0; z-index:-1; pointer-events:none;
+            background:
+                radial-gradient(58rem 46rem at 2% 5%,    rgba(26,189,225,0.11), transparent 55%),
+                radial-gradient(56rem 58rem at 98% 34%,  rgba(20,86,164,0.14),  transparent 55%),
+                radial-gradient(64rem 50rem at 4% 82%,   rgba(20,86,164,0.09),  transparent 58%),
+                radial-gradient(72rem 54rem at 50% 104%, rgba(26,189,225,0.07), transparent 60%);
+            background-attachment: fixed;
+        }
+
+        .g {
+            background: linear-gradient(90deg, #1abde1 0%, #0fa3c5 30%, #0d82b8 62%, #1456a4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--divider);
+        }
+        .nav-logo { font-size: 22px; font-weight: 900; color: var(--c); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 400; transition: color .2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links a.active { color: var(--white); }
+        .nav-cta {
+            background: var(--c); color: #fff;
+            padding: 8px 20px; border-radius: 20px;
+            font-size: 15px; font-weight: 600; text-decoration: none;
+            transition: all .2s;
+        }
+        .nav-cta:hover { background: var(--c2); transform: scale(1.03); }
+
+        /* POST HEADER */
+        .post-header {
+            padding: 140px 24px 60px;
+            max-width: 760px; margin: 0 auto;
+            text-align: left;
+            border-bottom: 1px solid var(--divider);
+        }
+        .post-meta-top {
+            display: flex; gap: 16px; align-items: center;
+            font-size: 13.5px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+            margin-bottom: 32px;
+        }
+        .post-meta-top .crumb { color: var(--c); }
+        .post-meta-top .sep { opacity: 0.4; }
+        .post-title {
+            font-size: clamp(34px, 5vw, 67px);
+            font-weight: 900; letter-spacing: -0.03em;
+            line-height: 1.08; margin-bottom: 28px;
+            color: var(--white);
+        }
+        .post-dek {
+            font-size: 19px; line-height: 1.6;
+            color: rgba(255,255,255,0.65);
+            max-width: 640px; font-weight: 400;
+            margin-bottom: 36px;
+        }
+        .post-byline {
+            display: flex; gap: 24px; align-items: center;
+            font-size: 15px; color: var(--muted);
+            padding-top: 24px;
+        }
+        .post-byline strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+        /* ARTICLE BODY */
+        article {
+            max-width: 720px; margin: 0 auto;
+            padding: 64px 24px 80px;
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 19px; line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+        }
+        article p { margin-bottom: 28px; }
+        article h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(26px, 3.5vw, 41px);
+            font-weight: 800; letter-spacing: -0.02em;
+            color: var(--white);
+            margin: 56px 0 20px;
+            line-height: 1.2;
+        }
+        article h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+            color: var(--white);
+            margin: 40px 0 14px; line-height: 1.3;
+        }
+        article ul, article ol { margin: 0 0 28px; padding-left: 28px; }
+        article li { margin-bottom: 10px; }
+        article a { color: var(--c); text-decoration: none; border-bottom: 1px solid rgba(26,189,225,0.3); transition: border-color .2s; }
+        article a:hover { border-bottom-color: var(--c); }
+        article strong { color: var(--white); font-weight: 700; }
+        article em { color: rgba(255,255,255,0.7); }
+        article blockquote {
+            border-left: 3px solid var(--c);
+            padding: 8px 24px;
+            margin: 32px 0;
+            font-style: italic;
+            color: rgba(255,255,255,0.7);
+            background: rgba(26,189,225,0.04);
+            border-radius: 0 8px 8px 0;
+        }
+        article hr {
+            border: none;
+            border-top: 1px solid var(--divider);
+            margin: 56px 0;
+        }
+        article code {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.9em;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--c);
+        }
+
+        /* CTA at end of post */
+        .post-cta {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+        .post-cta-card {
+            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.02) 100%);
+            border: 1px solid rgba(26,189,225,0.18);
+            border-radius: 20px;
+            padding: 44px 40px;
+            text-align: left;
+        }
+        .post-cta-eyebrow {
+            font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--c);
+            margin-bottom: 16px;
+        }
+        .post-cta-title {
+            font-size: 26px; font-weight: 800;
+            letter-spacing: -0.02em; line-height: 1.2;
+            color: var(--white); margin-bottom: 14px;
+        }
+        .post-cta-body {
+            font-size: 17px; line-height: 1.65;
+            color: var(--muted); margin-bottom: 24px;
+            max-width: 540px;
+        }
+        .post-cta-btn {
+            display: inline-block;
+            background: var(--c); color: #000;
+            padding: 14px 28px; border-radius: 980px;
+            font-size: 16px; font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 0 32px rgba(26,189,225,0.2);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .post-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 48px rgba(26,189,225,0.4);
+        }
+
+        /* BACK TO BLOG */
+        .post-foot {
+            max-width: 720px; margin: 0 auto;
+            padding: 0 24px 60px;
+            text-align: center;
+        }
+        .post-foot a {
+            color: var(--muted); text-decoration: none;
+            font-size: 15px; font-weight: 500;
+            transition: color .2s;
+        }
+        .post-foot a:hover { color: var(--white); }
+
+        /* FOOTER */
+        footer {
+            background: rgba(0,0,0,0.55);
+            border-top: 1px solid var(--divider);
+            padding: 60px 48px 40px;
+        }
+        .footer-grid {
+            max-width: 1320px; margin: 0 auto;
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px; margin-bottom: 60px;
+        }
+        .footer-brand p {
+            font-size: 15px; color: var(--subtle);
+            line-height: 1.7; margin-top: 12px; max-width: 280px;
+        }
+        .footer-col h4 {
+            font-size: 12.5px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .footer-col a {
+            font-size: 16px; color: var(--subtle); text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-col a:hover { color: var(--white); }
+        .footer-bottom {
+            max-width: 1320px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 32px; border-top: 1px solid var(--divider);
+            font-size: 13.5px; color: var(--subtle);
+        }
+
+        @media (max-width: 900px) {
+            nav { padding: 0 24px; }
+            .nav-links { display: none; }
+            .post-header { padding-top: 110px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+    
+        /* ─── MOBILE NAV (hamburger + drawer) ────────────────── */
+        .nav-hamburger {
+            display: none;
+            width: 44px; height: 44px;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 8px;
+        }
+        .nav-hamburger span {
+            position: relative;
+            display: block;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, opacity .3s, top .3s;
+        }
+        .nav-hamburger span::before,
+        .nav-hamburger span::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 22px; height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform .3s, top .3s, opacity .3s;
+        }
+        .nav-hamburger span::before { top: -7px; }
+        .nav-hamburger span::after  { top: 7px; }
+        .nav-hamburger.open span { background: transparent; }
+        .nav-hamburger.open span::before { top: 0; transform: rotate(45deg); }
+        .nav-hamburger.open span::after  { top: 0; transform: rotate(-45deg); }
+
+        .nav-mobile-menu {
+            position: fixed;
+            top: 56px; left: 0; right: 0;
+            background: rgba(0,0,0,0.96);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 24px 24px 32px;
+            z-index: 199;
+            opacity: 0;
+            transform: translateY(-12px);
+            pointer-events: none;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+        .nav-mobile-menu.open {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+        .nav-mobile-menu ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 0 0 22px;
+            padding: 0;
+        }
+        .nav-mobile-menu li a {
+            display: block;
+            padding: 14px 8px;
+            color: rgba(255,255,255,0.78);
+            text-decoration: none;
+            font-size: 19px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-mobile-menu li a:active { background: rgba(255,255,255,0.04); }
+        .nav-mobile-menu li a.active { color: #fff; }
+        .nav-mobile-menu .nav-mobile-cta {
+            display: block;
+            text-align: center;
+            margin-top: 18px;
+            padding: 14px 24px;
+            background: #1abde1;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 999px;
+            font-size: 17px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .nav-hamburger { display: inline-flex; }
+            .nav-cta { display: none; }
+        }
+
+        /* ── READING PROGRESS BAR ── */
+        .reading-progress {
+            position: fixed; top: 56px; left: 0; right: 0; z-index: 199;
+            height: 3px; background: transparent;
+            pointer-events: none;
+        }
+        .reading-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1abde1, #0fa3c5);
+            width: 0%;
+            transition: width .08s linear;
+            box-shadow: 0 0 8px rgba(26,189,225,0.5);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .reading-progress-fill { transition: none; }
+        }
+
+        </style>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/icon-32.png">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/brand/icon-192.png">
+
+    <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+    <meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+    <link rel="stylesheet" href="/assets/css/ux.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<!-- Reading progress bar — fills as the user scrolls through the article -->
+<div class="reading-progress" aria-hidden="true"><div class="reading-progress-fill"></div></div>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+    <ul class="nav-links">
+        <li><a href="/editors/">Video Editors</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
+        <li><a href="/csr/">CSR</a></li>
+        <li><a href="/campaigns/">Sales</a></li>
+        <li><a href="/case-studies/">Case Studies</a></li>
+        <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="/apply/" class="nav-apply">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
+    <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
+</nav>
+
+<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
+    <ul>
+            <li><a href="/editors/">Video Editors</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
+            <li><a href="/csr/">CSR</a></li>
+            <li><a href="/campaigns/">Sales</a></li>
+            <li><a href="/case-studies/">Case Studies</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/about/">About</a></li>
+    </ul>
+    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
+</div>
+
+<header class="post-header">
+    <div class="post-meta-top">
+        <a href="/blog/" class="crumb" style="text-decoration:none;color:var(--c);">Blog</a>
+        <span class="sep">/</span>
+        <span>Scaling Service Businesses</span>
+    </div>
+    <h1 class="post-title">VA Onboarding: Your First Week Playbook (And Why Week Two Matters More)</h1>
+    <p class="post-dek">Most founders blow the first week with a new VA by dumping every task at once. Here's the day-by-day plan that actually sticks, and where the real work starts.</p>
+    <div class="post-byline">
+        <span><strong>Staffify Team</strong></span>
+        <span>·</span>
+        <span>August 5, 2026</span>
+        <span>·</span>
+        <span>8 min read</span>
+    </div>
+</header>
+
+<article>
+<p>Most founders treat their first week with a virtual assistant like the first day of college. They hand over a syllabus of tasks, a folder of logins, a Loom video that's 47 minutes long, and then wonder why the person is quietly drowning by Thursday. Two weeks later, the VA is gone or the founder is doing the work themselves again, muttering that good help is impossible to find.</p><p>The problem isn't the VA. The problem is the onboarding. When you compress what should be a 30-day ramp into 72 hours, you get shallow understanding, brittle habits, and a person who's afraid to ask questions because they think they should already know. Good VA onboarding is boring on purpose. It's slow at the start so it can be fast for the next two years.</p><p>Here's the day-by-day playbook we use with clients who place their first full-time VA. It works whether you hired through us or somewhere else. And it explains why week two is where the real work actually starts.</p><h2>Before They Start: The 60-Minute Prep</h2><p>Onboarding a virtual assistant fails when you improvise on day one. Block 60 minutes the Friday before they start. Do these four things and nothing else.</p><p>Create their accounts. Email, project management tool, password manager, shared drive. Add them to Slack or whatever you use for chat. Send the calendar invites for week one before Monday morning. If they show up on day one and spend two hours waiting for logins, you've already lost trust.</p><p>Write one document called "How I Work." One page. Your hours, your response expectations, how you like to be interrupted, what you consider urgent, and what you consider a fire drill. This one page prevents more misunderstandings than any training video.</p><p>Pick their first small win. Something they can complete by end of day two that shows visible value. Not a project. A task. Something like cleaning up your inbox rules, or building a simple tracker in a spreadsheet. New hires need proof they belong.</p><p>Finally, tell your team they're starting. Sounds obvious. Half the founders we work with forget. Then the VA emails a client and gets ignored because nobody knew who they were.</p><h2>Day One: Context, Not Tasks</h2><p>Resist the urge to assign work on day one. Your job on Monday is to install context, not output.</p><p>Start with a 45-minute video call. Walk through the business. What you sell, who buys it, how money comes in, what a good week looks like versus a bad week. Show them your calendar. Show them the last three deals you closed. Show them the client you're worried about losing. This is not fluff. A VA who understands your business makes better decisions on autopilot six months from now.</p><p>Then hand over the "How I Work" doc and read it together. Answer questions. Add anything you forgot.</p><p>Give them one task for the afternoon. Something observational. Ask them to spend two hours inside your email, your CRM, or your project tool and come back with five questions. Not fix anything. Just look. This forces them to explore without pressure, and their questions will tell you exactly where your systems are unclear.</p><p>End the day with a 15-minute check-in. Ask what surprised them. Ask what confused them. Write it down.</p><h2>Day Two: One Real Task, End to End</h2><p>Tuesday, they do one thing all the way through. Not five things halfway.</p><p>Pick something with a clear start, middle, and end. For an executive admin, that might be booking a week of meetings from your inbox. For a video editor, cutting one short from a longer recording using your template. For a lead gen VA, sourcing 25 contacts from a defined list and running them through your enrichment tool.</p><p>Record a Loom while you do it once. Then have them do the next one while you watch. Then let them do the third one alone and review it before it goes anywhere. This is the show-one, do-one-together, do-one-alone method. It takes longer on Tuesday. It saves you 40 hours over the next month.</p><p>Do not correct every small thing. Correct the two or three things that matter. New hires who get 15 pieces of feedback in one sitting remember zero of them.</p><h2>Day Three: Introduce Systems, Not Software</h2><p>By Wednesday, they've seen enough to understand why your systems exist. Now walk them through how the pieces connect.</p><p>Draw the flow. Literally. Open a whiteboard tool or grab a piece of paper and sketch how a lead becomes a client, how a project becomes an invoice, how a support ticket becomes a resolved issue. Most founders skip this because it's obvious to them. It's not obvious to a new person, no matter how experienced.</p><p>Then map their role onto the flow. Where do they touch things? Where do they hand off? Who's downstream of them? This is the difference between a VA who executes tasks and a VA who owns outcomes.</p><p>Give them a second task on Wednesday afternoon, ideally something adjacent to Tuesday's task. You want reps, not variety, in week one.</p><h2>Day Four: Let Them Ask The Uncomfortable Questions</h2><p>Thursday is when the honeymoon ends. They've been polite. They've been nodding. They've been writing things down. Now they have real questions, and if you don't create space for them, they'll never surface.</p><p>Block a 30-minute call and open with, "What's confusing? What contradicts something else I told you? What am I doing that seems weird?" Then shut up. The silence is uncomfortable. Wait through it.</p><p>The answers you get on day four are gold. They reveal where your process is broken, where your instructions contradict, and where you assume knowledge that doesn't exist. Fix what you can that day. Add it to the "How I Work" doc so the next hire doesn't hit the same wall.</p><p>Then give them a slightly harder task. Something where they have to make one or two small judgment calls. Watch what they choose. Their choices tell you how they think.</p><h2>Day Five: Their First Solo Deliverable</h2><p>Friday, they own something start to finish without you looking over their shoulder. It should be something you'd be genuinely annoyed to have to do yourself.</p><p>Set the expectation clearly. Here's the input, here's the output, here's when I need it, here's what "done" looks like. Then leave them alone for four hours.</p><p>When they submit it, review it once. Not five times. Give them one piece of positive feedback and one piece of constructive feedback. Then end the week with a 20-minute retro.</p><p>Ask three questions. What went well this week? What was hardest? What do you want to work on next week? Take notes. These notes become your week two plan.</p><h2>Why Week Two Matters More</h2><p>Here's the part nobody talks about. Week one is scripted. You planned it. You prepared. You showed up. That's easy to sustain for five days.</p><p>Week two is when your calendar comes back. The client emergencies return. The prospect who's been ghosting you finally responds. You get busy again, and the natural thing to do is assume the VA is fine because they made it through week one.</p><p>They're not fine. Week two is when everything they learned starts to fade unless you reinforce it. It's when they start to make small mistakes because they're operating on their own for the first time. It's when the good habits either lock in or the bad habits do.</p><p>Do these four things in week two and your retention triples.</p><p><strong>Daily 10-minute check-ins.</strong> Not meetings. Just a quick sync at the start or end of the day. What are you working on? Anything stuck? This is not micromanagement. This is scaffolding. You'll drop to three per week by week four and one per week by month three.</p><p>ND<strong>Written feedback on their first three deliverables.</strong> Not verbal. Written. Verbal feedback disappears. Written feedback becomes a reference document they'll pull up in month two when they're doing the same task and can't remember exactly what you said.</p><p><strong>One new skill introduced.</strong> Just one. Do not pile on. If they nailed calendar management in week one, week two might add inbox triage. Small expansion. Compound growth.</p><p><strong>A frank conversation on Friday.</strong> Not a review. A conversation. Are they enjoying the work? Do they feel set up for success? What would make their job easier? Founders who ask these questions in week two find out about problems while they're still small. Founders who don't ask find out in month three when the VA quits.</p><h2>The 30-Day Arc</h2><p>Zoom out. Here's what good remote employee onboarding looks like across the full first month.</p><p><strong>Week one:</strong> Context and one deliverable. They should end the week understanding your business and having completed one thing you'd have paid someone else to do.</p><p><strong>Week two:</strong> Reinforcement and one new skill. They should end the week doing week one's work faster and having started something new.</p><p><strong>Week three:</strong> Ownership begins. Pick one recurring responsibility and hand it to them fully. They own the outcome, not just the task. Something like "our inbox is at zero by 6pm every day" or "every video we post has a thumbnail by Tuesday."</p><p><strong>Week four:</strong> Independence check. Give them a project with a Monday brief and a Friday deadline. Don't check in unless they ask. See what they produce. This is your data. If it's good, you have a keeper. If it's rough, you have information about where to invest more training.</p><p>By day 30, a good VA should own at least two recurring responsibilities and be capable of one-off projects with light supervision. That's the bar. Anything less means the onboarding was rushed or the hire was wrong.</p><h2>The Mistake That Kills Most VA Relationships</h2><p>The most common failure mode isn't hiring the wrong person. It's founder impatience. You hire someone smart, you rush the first week because you're already behind, you skip the check-ins in week two because you're busy, and by week three you're frustrated that they don't just "get it."</p><p>They didn't get it because you didn't give it. A VA is not a plug-and-play solution. They're a person you're building a working relationship with, and the ROI on the first 30 days is measured in years.</p><p>Slow down for two weeks. Follow the plan. The first week with a VA feels like it's costing you time. It's not. It's buying you back every Tuesday afternoon for the next two years.</p>
+</article>
+
+<section class="post-cta">
+    <div class="post-cta-card">
+        <div class="post-cta-eyebrow">Built for service businesses</div>
+        <h3 class="post-cta-title">Want the team behind your growth, not in front of it?</h3>
+        <p class="post-cta-body">Staffify gives service businesses the people, systems, and infrastructure to scale without the chaos. Vetted talent, real accountability, lifetime replacement guarantee.</p>
+        <a href="https://calendly.com/go-staffify/discovery-call" class="post-cta-btn">Book a Discovery Call →</a>
+    </div>
+</section>
+
+<div class="post-foot">
+    <a href="/blog/">← Back to all posts</a>
+</div>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="/" class="nav-logo" style="display:inline-block;"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
+            <p>Workforce infrastructure for growing businesses. More done. Less stress.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Services</h4>
+            <ul>
+                <li><a href="/editors/">Video Editors</a></li>
+                <li><a href="/admins/">Executive Admins</a></li>
+                <li><a href="/csr/">Customer Service</a></li>
+                <li><a href="/campaigns/">Sales</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/apply/">Apply</a></li>
+                <li><a href="https://calendly.com/go-staffify/discovery-call">Book a Call</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+                <li><a href="tel:3056369210">(305) 636-9210</a></li>
+                <li><a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Staffify LLC. All rights reserved.</span>
+        <span class="footer-legal" style="display:flex;gap:18px;"><a href="/privacy/" style="color:inherit;text-decoration:none;">Privacy</a><a href="/terms/" style="color:inherit;text-decoration:none;">Terms</a></span><span>Miami, FL</span>
+    </div>
+</footer>
+
+<script>
+(function(){
+    var btn = document.getElementById('navHamburger');
+    var menu = document.getElementById('navMobileMenu');
+    if (!btn || !menu) return;
+    function open(){
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded','true');
+        menu.style.opacity = '1';
+        menu.style.transform = 'translateY(0)';
+        menu.style.pointerEvents = 'auto';
+    }
+    function close(){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded','false');
+        menu.style.opacity = '0';
+        menu.style.transform = 'translateY(-12px)';
+        menu.style.pointerEvents = 'none';
+    }
+    function toggle(){ menu.classList.contains('open') ? close() : open(); }
+    btn.addEventListener('click', toggle);
+    menu.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+
+    // Esc closes the mobile menu
+    document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && menu.classList.contains('open')) close();
+    });
+})();
+
+// ── Reading progress bar ──
+(function(){
+    var fill = document.querySelector('.reading-progress-fill');
+    if (!fill) return;
+    var article = document.querySelector('article');
+    if (!article) return;
+    function update(){
+        var rect = article.getBoundingClientRect();
+        var viewportH = window.innerHeight;
+        var articleH = article.offsetHeight;
+        // Progress from when article top hits viewport to when bottom leaves
+        var scrolled = Math.max(0, -rect.top);
+        var total = Math.max(1, articleH - viewportH);
+        var pct = Math.min(100, Math.max(0, (scrolled / total) * 100));
+        fill.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+})();
+</script>
+  <script src="/assets/js/ux.js" defer></script>
+<!-- Vercel Web Analytics + Speed Insights (Pro plan, no cookies) -->
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
