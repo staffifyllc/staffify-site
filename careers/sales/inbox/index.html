@@ -45,6 +45,11 @@
         .qa .q { font-size:11.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
         .qa .a { font-size:14.5px; color:#dfe3e8; margin-bottom:12px; white-space:pre-wrap; }
         .empty { text-align:center; color:var(--muted); padding:60px 20px; font-size:15px; }
+        .cardactions { margin-top:14px; display:flex; justify-content:flex-end; }
+        .act { font-size:12.5px; font-weight:700; border-radius:999px; padding:7px 14px; cursor:pointer; border:1px solid var(--card-border); background:transparent; color:var(--muted); }
+        .act:hover { color:var(--white); border-color:var(--cyan); }
+        .act.unarch { color:var(--cyan-hi); border-color:rgba(26,189,225,0.4); }
+        .act:disabled { opacity:.6; cursor:default; }
     </style>
 </head>
 <body>
@@ -60,6 +65,7 @@
 (function(){
   var app=document.getElementById('app');
   var tbRight=document.getElementById('tbRight');
+  var VIEW='active'; // 'active' | 'archived'
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function fmtDate(ts){var n=Number(ts); if(!n) return ''; var d=new Date(n); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
@@ -68,7 +74,7 @@
     app.innerHTML='<div class="empty">Loading applicants...</div>';
     tbRight.innerHTML='';
     try{
-      var r=await fetch('/api/sales-applicants/?format=json',{cache:'no-store'});
+      var r=await fetch('/api/sales-applicants/?format=json'+(VIEW==='archived'?'&archived=1':''),{cache:'no-store'});
       if(!r.ok){app.innerHTML='<div class="empty">Could not load ('+r.status+'). Try refresh.</div>'; return;}
       var j=await r.json();
       var recs=Array.isArray(j)?j:(j.applicants||j.data||[]);
@@ -77,11 +83,17 @@
   }
 
   function render(recs){
-    tbRight.innerHTML='<a href="/api/sales-applicants/?format=csv">Download CSV</a><button class="btn btn-ghost" id="refresh">Refresh</button>';
+    var toggle=VIEW==='archived'
+      ? '<button class="btn btn-ghost" id="viewToggle">Back to active</button>'
+      : '<button class="btn btn-ghost" id="viewToggle">View archived</button>';
+    tbRight.innerHTML='<a href="/api/sales-applicants/?format=csv">Download CSV</a>'+toggle+'<button class="btn btn-ghost" id="refresh">Refresh</button>';
     document.getElementById('refresh').onclick=load;
+    document.getElementById('viewToggle').onclick=function(){ VIEW=(VIEW==='archived'?'active':'archived'); load(); };
     var n=recs.length;
-    var head='<h1>Applicant inbox</h1><div class="count">'+n+' applicant'+(n===1?'':'s')+' &middot; newest first</div>';
-    if(!n){app.innerHTML=head+'<div class="empty">No applications yet. When someone applies at gostaffify.com/careers/sales/, they show up here automatically.</div>'; return;}
+    var title=VIEW==='archived'?'Archived applicants':'Applicant inbox';
+    var note=VIEW==='archived'?'archived &middot; restore any time':'newest first';
+    var head='<h1>'+title+'</h1><div class="count">'+n+' applicant'+(n===1?'':'s')+' &middot; '+note+'</div>';
+    if(!n){app.innerHTML=head+'<div class="empty">'+(VIEW==='archived'?'Nothing archived.':'No applications yet. When someone applies at gostaffify.com/careers/sales/, they show up here automatically.')+'</div>'; return;}
     var html=head;
     recs.forEach(function(x){
       var chips=[];
@@ -93,14 +105,31 @@
       if(x.phone) links.push('<a href="tel:'+esc(x.phone)+'">'+esc(x.phone)+'</a>');
       if(x.linkedin) links.push('<a href="'+esc(x.linkedin)+'" target="_blank" rel="noopener">LinkedIn</a>');
       if(x.video) links.push('<a href="'+esc(x.video)+'" target="_blank" rel="noopener">Video intro</a>');
+      var actBtn=VIEW==='archived'
+        ? '<button class="act unarch" data-id="'+esc(x._id)+'">Restore</button>'
+        : '<button class="act arch" data-id="'+esc(x._id)+'">Archive</button>';
       html+='<div class="card"><div class="card-top"><div class="name">'+esc(x.name||'(no name)')+'</div><div class="date">'+fmtDate(x.created_at)+'</div></div>'+
         (chips.length?'<div class="chips">'+chips.map(function(c){return '<span class="chip">'+c+'</span>';}).join('')+'</div>':'')+
         (links.length?'<div class="links">'+links.join('')+'</div>':'')+
         (x.sold?'<div class="qa"><div class="q">What they’ve sold</div><div class="a">'+esc(x.sold)+'</div></div>':'')+
         (x.win?'<div class="qa"><div class="q">Biggest win</div><div class="a">'+esc(x.win)+'</div></div>':'')+
+        '<div class="cardactions">'+actBtn+'</div>'+
         '</div>';
     });
     app.innerHTML=html;
+    Array.prototype.forEach.call(document.querySelectorAll('.act'),function(b){
+      b.onclick=function(){ doArchive(b.getAttribute('data-id'), b.classList.contains('unarch')?'unarchive':'archive', b); };
+    });
+  }
+
+  async function doArchive(id, action, btn){
+    if(!id) return;
+    var old=btn.textContent; btn.disabled=true; btn.textContent=(action==='archive'?'Archiving...':'Restoring...');
+    try{
+      var r=await fetch('/api/sales-applicants/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,action:action})});
+      if(!r.ok){ btn.disabled=false; btn.textContent=old; app.insertAdjacentHTML('afterbegin','<div class="err" style="text-align:center">Could not '+action+' ('+r.status+'). Try again.</div>'); return; }
+      load(); // refresh so counts stay right and the card leaves this view
+    }catch(e){ btn.disabled=false; btn.textContent=old; }
   }
 
   load();

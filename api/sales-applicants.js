@@ -39,25 +39,51 @@ function toCSV(rows) {
     return [header, ...lines].join('\n');
 }
 
+function readBody(req) {
+    let b = req.body;
+    if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = {}; } }
+    return b || {};
+}
+
 export default async function handler(req, res) {
-    // open-share: reading applicants needs no login. Pruning (DELETE) stays admin-only.
+    // open-share: reading + archiving applicants needs no login. Hard delete (DELETE) stays admin-only.
     if (req.method === 'DELETE') {
         if (!authorized(req)) return res.status(401).json({ error: 'unauthorized' });
         const id = (req.query.id || '').toString();
         if (!id.startsWith('salesapp:')) return res.status(400).json({ error: 'bad_id' });
         await redis.del(id);
         await redis.zrem('salesapps:by_date', id);
+        await redis.srem('salesapps:archived', id);
         return res.status(200).json({ ok: true, deleted: id });
     }
 
+    // Soft archive / restore. Reversible and non-destructive (the record is preserved), so it stays open
+    // like the rest of the rep OS. Only the hard DELETE above wipes data, and that stays admin-only.
+    if (req.method === 'POST') {
+        const b = readBody(req);
+        const id = (b.id || '').toString();
+        const action = (b.action || '').toString();
+        if (!id.startsWith('salesapp:')) return res.status(400).json({ error: 'bad_id' });
+        if (action === 'archive') { await redis.sadd('salesapps:archived', id); return res.status(200).json({ ok: true, archived: id }); }
+        if (action === 'unarchive') { await redis.srem('salesapps:archived', id); return res.status(200).json({ ok: true, unarchived: id }); }
+        return res.status(400).json({ error: 'bad_action' });
+    }
+
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+
+    // View filter: '' (default) = active only, '1' = archived only, 'all' = everything.
+    const view = (req.query.archived || '').toString();
+    const archivedSet = new Set((await redis.smembers('salesapps:archived')) || []);
 
     // Newest first
     const ids = await redis.zrange('salesapps:by_date', 0, -1, { rev: true });
     const rows = [];
     for (const id of ids) {
+        const isArch = archivedSet.has(id);
+        if (view === '1') { if (!isArch) continue; }
+        else if (view !== 'all') { if (isArch) continue; }
         const rec = await redis.hgetall(id);
-        if (rec && rec.email) rows.push({ _id: id, ...rec });
+        if (rec && rec.email) rows.push({ _id: id, ...rec, _archived: isArch });
     }
 
     const format = (req.query.format || 'html').toString();
