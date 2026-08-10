@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commissions — Staffify Sales</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green:#1d9e75; --green-hi:#7ef5c2; }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .eyebrow { display:flex; align-items:center; gap:12px; font-size:12px; font-weight:800; letter-spacing:0.3em; color:var(--cyan); text-transform:uppercase; margin-bottom:14px; }
+        .eyebrow::before { content:''; width:30px; height:2px; background:linear-gradient(90deg, var(--cyan), transparent); }
+        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .nav { display:flex; gap:6px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        .nav a:hover { color:var(--white); }
+        @media (max-width: 980px) { .topbar { flex-wrap:wrap; } .nav { order:3; flex-basis:100%; justify-content:center; margin-top:6px; } }
+        .tb-right { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; text-decoration:none; }
+        .btn:hover { background:var(--cyan-hi); }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .btn-ghost:hover { color:var(--white); }
+        .wrap { max-width:1000px; margin:0 auto; padding:28px; }
+        h1 { font-size:28px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+        .sub { font-size:14.5px; color:var(--muted); margin-bottom:24px; }
+        .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+        @media (max-width:720px){ .cards { grid-template-columns:1fr; } }
+        .kcard { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:18px 20px; }
+        .kcard .l { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+        .kcard .n { font-size:30px; font-weight:900; letter-spacing:-0.02em; }
+        .kcard .s { font-size:12.5px; color:var(--muted); margin-top:4px; }
+        .panel { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-bottom:18px; }
+        .ph { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+        .ph h2 { font-size:13px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:var(--cyan); }
+        .ph .meta { font-size:12.5px; color:var(--muted); }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        th { text-align:left; font-size:10.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); padding:0 10px 10px; border-bottom:1px solid var(--card-border); }
+        th.num, td.num { text-align:right; }
+        td { padding:12px 10px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:middle; }
+        tr:last-child td { border-bottom:none; }
+        .cl-name { font-weight:700; }
+        .cl-sub { font-size:12px; color:var(--muted); }
+        .pill { font-size:10.5px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+        .pill.paid { color:var(--green-hi); background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
+        .pill.pending { color:#ffd98a; background:rgba(241,196,15,0.12); border:1px solid rgba(241,196,15,0.3); }
+        .pill.type { color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); }
+        .money { font-weight:800; color:var(--green-hi); }
+        .note { font-size:13px; color:var(--muted); line-height:1.6; }
+        .notice { background:rgba(241,196,15,0.06); border:1px solid rgba(241,196,15,0.25); border-radius:14px; padding:18px 20px; margin-bottom:20px; }
+        .notice h3 { font-size:15px; font-weight:800; color:#ffd98a; margin-bottom:6px; }
+        .notice p { font-size:13.5px; color:#d7dde2; line-height:1.6; }
+        .gate { max-width:440px; margin:60px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
+        .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; }
+        .gate p { font-size:14px; color:var(--muted); margin-bottom:20px; }
+        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+        .gate input:focus { outline:none; border-color:var(--cyan); }
+        .gate .btn { width:100%; padding:13px; font-size:15px; }
+        .err { color:#ff9a8d; font-size:13px; margin-top:10px; min-height:18px; }
+        .empty { color:var(--muted); font-size:14px; padding:24px 4px; text-align:center; }
+        /* admin assign */
+        .adm select, .adm input { font-family:inherit; font-size:13px; color:var(--white); background:rgba(255,255,255,0.05); border:1px solid var(--card-border); border-radius:8px; padding:7px 9px; }
+        .adm input { width:96px; }
+        .adm .save { font-size:12px; font-weight:800; color:#04222b; background:var(--cyan); border:none; border-radius:8px; padding:7px 12px; cursor:pointer; }
+        .adm .save:disabled { opacity:.6; cursor:default; }
+        .adm .sug { font-size:11.5px; color:var(--cyan-hi); }
+        .toggle { font-size:12.5px; color:var(--cyan-hi); cursor:pointer; font-weight:700; background:none; border:none; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <nav class="nav">
+        <a href="/hub/">Hub</a>
+        <a href="/dialer/">Dialer</a>
+        <a href="/scoreboard/">Scoreboard</a>
+        <a href="/pipeline/">Pipeline</a>
+        <a href="/commissions/" class="active">Commissions</a>
+        <a href="/training/sales/">Training</a>
+        <a href="https://recruiting.gostaffify.com/dashboard" target="_blank" rel="noopener" style="border:1px solid var(--card-border); margin-left:8px;">Talent Console &#8599;</a>
+    </nav>
+    <div class="tb-right" id="tbRight"></div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<script>
+(function(){
+  var app=document.getElementById('app');
+  var tbRight=document.getElementById('tbRight');
+  var ME=null, ADMIN_OPEN=false, ADMIN_DATA=null;
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function money(n){ n=Number(n)||0; return '$'+n.toLocaleString(); }
+  function qp(k){return new URLSearchParams(location.search).get(k);}
+  function typeLabel(t){ return t==='website'?'Website':(t==='ai'?'AI automation':'VA placement'); }
+  function niceDate(s){ if(!s) return ''; var d=new Date(s+'T00:00:00'); if(isNaN(d)) return esc(s); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+
+  function showSignIn(msg){
+    tbRight.innerHTML='';
+    app.innerHTML='<div class="gate"><h2>Your commissions</h2><p>Sign in with your work email. We send a one-time link, no password.</p>'+
+      '<input id="em" type="email" placeholder="you@example.com" autocomplete="email">'+
+      '<button class="btn" id="go">Email me a sign-in link</button>'+
+      '<div class="err" id="err">'+(msg||'')+'</div></div>';
+    document.getElementById('go').onclick=send;
+    document.getElementById('em').addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+  }
+  async function send(){
+    var el=document.getElementById('em'), btn=document.getElementById('go');
+    var email=(el.value||'').trim(); if(!email){el.focus();return;}
+    btn.disabled=true; btn.textContent='Sending...';
+    try{ await fetch('/api/auth-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})}); }catch(e){}
+    app.innerHTML='<div class="gate"><h2>Check your email</h2><p>If '+esc(email)+' is set up as a rep, a sign-in link is on its way. It works once and expires in 20 minutes.</p></div>';
+  }
+
+  async function load(){
+    app.innerHTML='<div class="empty">Loading your commissions...</div>';
+    tbRight.innerHTML='';
+    var meRes;
+    try{ meRes=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showSignIn('Network error.'); return; }
+    if(meRes.status!==200){ var m=qp('e'); showSignIn(m==='expired'?'That link expired. Request a new one.':(m==='norep'?'That account is not set up as a rep yet.':'')); return; }
+    ME=(await meRes.json()).rep;
+    loadCommissions();
+  }
+
+  async function loadCommissions(){
+    tbRight.innerHTML='<a class="btn btn-ghost" href="/api/auth-logout" style="text-decoration:none">Sign out</a>';
+    app.innerHTML='<div class="empty">Loading your commissions...</div>';
+    var j;
+    try{ var r=await fetch('/api/commissions/',{cache:'no-store'}); j=await r.json(); }
+    catch(e){ app.innerHTML='<div class="empty">Could not load. Try refresh.</div>'; return; }
+    render(j);
+  }
+
+  function render(j){
+    var first=((ME&&ME.name)||'').split(' ')[0]||'there';
+    var isAdmin=ME&&ME.role==='admin';
+    var head='<div class="eyebrow">The Money</div><h1>Your commissions, <span class="grad">'+esc(first)+'</span></h1>'+
+      '<div class="sub">Real payouts, reconciled from QuickBooks. Paid when the client pays.'+(ME&&ME.rate?' &middot; your rate '+esc(ME.rate)+'%':'')+'</div>';
+
+    if(j && j.connected===false){
+      app.innerHTML=head+
+        '<div class="notice"><h3>QuickBooks is not connected yet</h3><p>The moment the QuickBooks connection is authorized, your closed and paid deals show up here automatically. '+(isAdmin?'You can connect it from the admin steps we set up.':'Hang tight, your admin is wiring it up.')+'</p></div>'+
+        '<div class="note">When it is live you will see, per client: what they paid, your rate, your commission, and whether it is already payable. Residuals, the strong-month accelerator, and the 90-day bonus come next.</div>';
+      return;
+    }
+    if(j && j.error){
+      app.innerHTML=head+'<div class="notice"><h3>QuickBooks hiccup</h3><p>'+esc(j.error)+'</p></div>';
+      return;
+    }
+
+    var t=(j&&j.totals)||{};
+    var deals=(j&&j.deals)||[];
+    var cards='<div class="cards">'+
+      '<div class="kcard"><div class="l">Earned &middot; paid</div><div class="n grad">'+money(t.lifetimeCommission)+'</div><div class="s">'+(t.paidCount||0)+' client'+((t.paidCount===1)?'':'s')+' paid</div></div>'+
+      '<div class="kcard"><div class="l">Pending</div><div class="n">'+money(t.pendingCommission)+'</div><div class="s">'+(t.pendingCount||0)+' not yet paid</div></div>'+
+      '<div class="kcard"><div class="l">Your rate</div><div class="n">'+esc((j.rep&&j.rep.rate)||35)+'%</div><div class="s">VA placements &middot; website 30% &middot; AI 10%</div></div>'+
+      '</div>';
+
+    var rows;
+    if(!deals.length){
+      rows='<div class="empty">No commissions attributed to you yet. As your closed clients pay, they land here.</div>';
+    } else {
+      rows='<div style="overflow-x:auto"><table><thead><tr><th>Client</th><th>Type</th><th class="num">They paid</th><th class="num">Rate</th><th class="num">Your commission</th><th>Status</th></tr></thead><tbody>'+
+        deals.map(function(d){
+          return '<tr><td><div class="cl-name">'+esc(d.client)+'</div>'+(d.paidDate?'<div class="cl-sub">paid '+niceDate(d.paidDate)+'</div>':'')+'</td>'+
+            '<td><span class="pill type">'+esc(typeLabel(d.dealType))+'</span></td>'+
+            '<td class="num">'+money(d.amount)+'</td>'+
+            '<td class="num">'+esc(d.rate)+'%</td>'+
+            '<td class="num"><span class="money">'+money(d.commission)+'</span></td>'+
+            '<td><span class="pill '+(d.paid?'paid':'pending')+'">'+(d.paid?'Payable':'Pending')+'</span></td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+
+    var adminBtn=isAdmin?'<button class="toggle" id="admToggle">'+(ADMIN_OPEN?'Hide client assignment':'Assign clients to reps (admin)')+'</button>':'';
+    var body=head+cards+
+      '<div class="panel"><div class="ph"><h2>Your deals</h2><span class="meta">'+deals.length+' total</span></div>'+rows+'</div>'+
+      '<div class="note">Shown here: the onboarding commission on deals you closed, paid when the client pays. The $1/hr residual, the 40% strong-month accelerator, and the $200 90-day retention bonus are coming next (they need placement hours from the billing side).</div>'+
+      (adminBtn?'<div style="margin-top:20px">'+adminBtn+'</div><div id="admPanel"></div>':'');
+    app.innerHTML=body;
+    if(isAdmin){ document.getElementById('admToggle').onclick=function(){ ADMIN_OPEN=!ADMIN_OPEN; if(ADMIN_OPEN) loadAdmin(); else { ADMIN_DATA=null; render(j); } document.getElementById('admToggle').textContent=ADMIN_OPEN?'Hide client assignment':'Assign clients to reps (admin)'; }; if(ADMIN_OPEN) renderAdmin(); }
+  }
+
+  async function loadAdmin(){
+    var panel=document.getElementById('admPanel'); if(panel) panel.innerHTML='<div class="empty">Loading paying clients...</div>';
+    try{ var r=await fetch('/api/commissions/?view=admin',{cache:'no-store'}); ADMIN_DATA=await r.json(); }
+    catch(e){ if(panel) panel.innerHTML='<div class="empty">Could not load admin view.</div>'; return; }
+    renderAdmin();
+  }
+
+  function renderAdmin(){
+    var panel=document.getElementById('admPanel'); if(!panel||!ADMIN_DATA) return;
+    var d=ADMIN_DATA;
+    if(d.connected===false){ panel.innerHTML='<div class="notice"><h3>Connect QuickBooks first</h3><p>Once authorized, every paying client shows here to assign to a rep.</p></div>'; return; }
+    var reps=d.reps||[]; var clients=d.clients||[];
+    var repOpts=function(sel){ return '<option value="">Unassigned</option>'+reps.map(function(r){return '<option value="'+esc(r.email)+'"'+(sel===r.email?' selected':'')+'>'+esc(r.name)+'</option>';}).join(''); };
+    var typeOpts=function(sel){ return ['va','website','ai'].map(function(tp){return '<option value="'+tp+'"'+(sel===tp?' selected':'')+'>'+typeLabel(tp)+'</option>';}).join(''); };
+    var c=d.counts||{};
+    var rows=clients.map(function(cl,i){
+      var deal=cl.deal||{};
+      var sug=(!cl.deal&&cl.suggestedRep)?'<div class="sug">suggests: '+esc(cl.suggestedRep)+'</div>':'';
+      return '<tr class="adm" data-id="'+esc(cl.id)+'">'+
+        '<td><div class="cl-name">'+esc(cl.name||'(no name)')+'</div><div class="cl-sub">'+esc(cl.email||'')+' &middot; paid '+money(cl.totalPaid)+'</div>'+sug+'</td>'+
+        '<td><select class="a-rep">'+repOpts(deal.rep||cl.suggestedRep||'')+'</select></td>'+
+        '<td><select class="a-type">'+typeOpts(deal.dealType||'va')+'</select></td>'+
+        '<td class="num"><input class="a-amt" type="number" value="'+esc(deal.amount||cl.firstPayment||0)+'"></td>'+
+        '<td class="num"><button class="save">Save</button></td></tr>';
+    }).join('');
+    panel.innerHTML='<div class="panel"><div class="ph"><h2>Assign clients</h2><span class="meta">'+(c.assigned||0)+' of '+(c.clients||0)+' assigned</span></div>'+
+      (clients.length?'<div style="overflow-x:auto"><table><thead><tr><th>Client</th><th>Rep</th><th>Deal type</th><th class="num">Deal amount</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">No paying clients found in QuickBooks yet.</div>')+
+      (d.truncated?'<div class="note" style="margin-top:12px">Showing the first 1000 payments. Tell me if you need more.</div>':'')+'</div>';
+    Array.prototype.forEach.call(panel.querySelectorAll('.save'),function(btn){
+      btn.onclick=function(){
+        var tr=btn.closest('tr'); var id=tr.getAttribute('data-id');
+        var rep=tr.querySelector('.a-rep').value;
+        var dealType=tr.querySelector('.a-type').value;
+        var amount=tr.querySelector('.a-amt').value;
+        saveDeal(id, rep, dealType, amount, btn);
+      };
+    });
+  }
+
+  async function saveDeal(customerId, rep, dealType, amount, btn){
+    var old=btn.textContent; btn.disabled=true; btn.textContent='Saving...';
+    try{
+      var r=await fetch('/api/commissions/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:customerId,rep:rep,dealType:dealType,amount:amount})});
+      if(!r.ok){ btn.textContent='Error'; setTimeout(function(){btn.disabled=false;btn.textContent=old;},1400); return; }
+      btn.textContent='Saved'; setTimeout(function(){btn.disabled=false;btn.textContent=old;},1200);
+    }catch(e){ btn.disabled=false; btn.textContent=old; }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
