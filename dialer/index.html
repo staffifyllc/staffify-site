@@ -44,6 +44,13 @@
         .phone .call { font-size:13px; font-weight:800; color:#04222b; background:var(--green-hi); border-radius:999px; padding:8px 16px; text-decoration:none; }
         .lbl { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:18px 0 8px; }
         .brief { font-size:15.5px; color:#dfe3e8; background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:12px; padding:14px 16px; }
+        .hist { display:flex; flex-direction:column; gap:8px; }
+        .htouch { display:flex; flex-direction:column; gap:3px; max-width:90%; padding:9px 12px; border-radius:12px; }
+        .htouch.out { align-self:flex-start; background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
+        .htouch.in { align-self:flex-end; background:rgba(29,158,117,0.14); border:1px solid rgba(126,245,194,0.35); }
+        .htouch .hwho { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+        .htouch .htext { font-size:14.5px; color:#eaf6fb; line-height:1.45; }
+        .hstat { font-size:11px; color:var(--cyan-hi); background:rgba(26,189,225,0.10); border:1px solid rgba(26,189,225,0.35); border-radius:999px; padding:2px 9px; margin-left:8px; text-transform:none; letter-spacing:0; font-weight:600; }
         .ammorow { display:flex; gap:8px; flex-wrap:wrap; }
         .ammo { font-size:13px; font-weight:700; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:999px; padding:8px 14px; text-decoration:none; }
         .ammo:hover { background:rgba(26,189,225,0.16); }
@@ -229,6 +236,19 @@
   function renderQuote(){ return MOTION==='websites' ? renderFoundryQuote() : renderStaffifyQuote(); }
   function refreshQuote(){ if(MOTION==='websites') refreshFoundryQuote(); else refreshStaffifyQuote(); }
 
+  // Prior conversation: what we already said to this lead (today the "still hiring?" text sequence),
+  // so a rep dials as a warm follow-up and can reference it.
+  function histDate(at){ try{ return new Date(at).toLocaleDateString(undefined,{month:'short',day:'numeric'}); }catch(e){ return ''; } }
+  function histBlock(L){
+    if(!L.history||!L.history.length) return '';
+    var rows=L.history.map(function(h){
+      return '<div class="htouch '+(h.dir==="in"?"in":"out")+'">'+
+        '<span class="hwho">'+esc(h.who)+(h.at?' &middot; '+esc(histDate(h.at)):'')+'</span>'+
+        '<span class="htext">'+esc(h.text)+'</span></div>';
+    }).join('');
+    return '<div class="lbl">Prior conversation'+(L.textStatus?' <span class="hstat">'+esc(L.textStatus)+'</span>':'')+'</div><div class="hist">'+rows+'</div>';
+  }
+
   // Log with a 5-second Undo window so a misclick never burns a warm lead.
   var pendingLog=null;
   function commitLog(p){
@@ -296,6 +316,7 @@
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(L.brief)+'</div>':'')+
+        histBlock(L)+
         ammo(L)+
         (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
         renderQuote()+
