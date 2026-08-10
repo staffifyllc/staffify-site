@@ -182,6 +182,7 @@
       OBJECTIONS.map(function(o,i){return '<button class="objchip" data-obj="'+i+'">'+esc(o.label)+'</button>';}).join('')+
       '</div><div class="objsay" id="objsay"></div>';
   }
+  // Staffify (VA) commission: 35% of the onboarding fee, by hire count.
   var QUOTE_TIERS=[{label:'1 hire',onb:2499},{label:'2 hires',onb:2299},{label:'3-4',onb:2099},{label:'5-9',onb:1799},{label:'10+',onb:1499}];
   var quoteTier=0, quoteAction=true;
   function quoteOut(){
@@ -191,14 +192,41 @@
       '<div class="qrow qfin"><span>Or roll it into the rate</span><b>+$1/hr &middot; $0 today &middot; 0% interest</b></div>'+
       '<div class="qguard">Anchor $'+(quoteAction?'2,099':'2,499')+' &middot; floor $1,699 (you make ~$'+floorComm+'). Every $100 you discount is $35 out of YOUR pocket.</div>';
   }
-  function renderQuote(){
+  function renderStaffifyQuote(){
     return '<div class="lbl">Quick quote &amp; your cut</div><div class="quote">'+
       '<div class="qtiers">'+QUOTE_TIERS.map(function(t,i){return '<button class="qtier'+(i===quoteTier?' on':'')+'" data-tier="'+i+'">'+esc(t.label)+'</button>';}).join('')+'</div>'+
       '<label class="qtoggle"><input type="checkbox" id="qaction"'+(quoteAction?' checked':'')+'> Action-taker rate (decide on the call, &minus;$400)</label>'+
       '<div class="qout" id="qout">'+quoteOut()+'</div>'+
       '</div>';
   }
-  function refreshQuote(){ Array.prototype.forEach.call(document.querySelectorAll('.qtier'),function(b){ b.classList.toggle('on', (+b.getAttribute('data-tier'))===quoteTier); }); var qo=document.getElementById('qout'); if(qo)qo.innerHTML=quoteOut(); }
+  function refreshStaffifyQuote(){ Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.classList.toggle('on', (+b.getAttribute('data-tier'))===quoteTier); }); var qo=document.getElementById('qout'); if(qo)qo.innerHTML=quoteOut(); }
+
+  // Foundry commission: 30% on a website deal, 10% on an AI automation deal. Rep sets the deal
+  // size (websites default to the $1,499 portfolio-build price; standard is $4,995).
+  var FOUNDRY_PRODUCTS=[{key:'website',label:'Website',rate:0.30},{key:'ai',label:'AI automation',rate:0.10}];
+  var fqProd=0, fqAmt=1499;
+  function fqOut(){
+    var p=FOUNDRY_PRODUCTS[fqProd];
+    var el=document.getElementById('fqamt'); if(el){ fqAmt=parseInt(String(el.value).replace(/[^0-9]/g,''),10)||0; }
+    var comm=Math.round(fqAmt*p.rate);
+    return '<div class="qrow"><span>Deal &middot; '+esc(p.label)+'</span><b>$'+fqAmt.toLocaleString()+'</b></div>'+
+      '<div class="qrow"><span>Your '+Math.round(p.rate*100)+'% commission</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
+      '<div class="qguard">'+(p.key==='website'
+        ? 'Website build. Portfolio price $1,499, standard $4,995. You keep 30% of what closes.'
+        : 'AI automation build. You keep 10% of the deal. Set the deal size above.')+'</div>';
+  }
+  function renderFoundryQuote(){
+    return '<div class="lbl">Quick quote &amp; your cut</div><div class="quote">'+
+      '<div class="qtiers">'+FOUNDRY_PRODUCTS.map(function(p,i){return '<button class="qtier fqprod'+(i===fqProd?' on':'')+'" data-fqp="'+i+'">'+esc(p.label)+' &middot; '+Math.round(p.rate*100)+'%</button>';}).join('')+'</div>'+
+      '<label class="qtoggle">Deal size&nbsp; $ <input type="text" id="fqamt" inputmode="numeric" value="'+fqAmt+'" style="width:96px;font:inherit;color:#fff;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:8px;padding:4px 8px"></label>'+
+      '<div class="qout" id="qout">'+fqOut()+'</div>'+
+      '</div>';
+  }
+  function refreshFoundryQuote(){ Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.classList.toggle('on',(+b.getAttribute('data-fqp'))===fqProd); }); var qo=document.getElementById('qout'); if(qo)qo.innerHTML=fqOut(); }
+
+  // The quote block matches the motion: Foundry leads show the website/AI cut, everything else the VA cut.
+  function renderQuote(){ return MOTION==='websites' ? renderFoundryQuote() : renderStaffifyQuote(); }
+  function refreshQuote(){ if(MOTION==='websites') refreshFoundryQuote(); else refreshStaffifyQuote(); }
 
   // Log with a 5-second Undo window so a misclick never burns a warm lead.
   var pendingLog=null;
@@ -320,8 +348,10 @@
     Array.prototype.forEach.call(document.querySelectorAll('.motions button'),function(b){ b.onclick=function(){MOTION=b.getAttribute('data-m'); render();}; });
     Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){ b.onclick=function(){ logOutcome(b.getAttribute('data-o')); }; });
     Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(b){ b.onclick=function(){ var i=+b.getAttribute('data-obj'); var say=document.getElementById('objsay'); var was=b.classList.contains('on'); Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(x){x.classList.remove('on');}); if(was){ if(say)say.classList.remove('show'); } else { b.classList.add('on'); if(say){ say.textContent=OBJECTIONS[i].say; say.classList.add('show'); } } }; });
-    Array.prototype.forEach.call(document.querySelectorAll('.qtier'),function(b){ b.onclick=function(){ quoteTier=+b.getAttribute('data-tier'); refreshQuote(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.onclick=function(){ quoteTier=+b.getAttribute('data-tier'); refreshQuote(); }; });
     var qa=document.getElementById('qaction'); if(qa)qa.onchange=function(){ quoteAction=qa.checked; refreshQuote(); };
+    Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
+    var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
     var cpb=document.getElementById('cpbtn'); if(cpb)cpb.onclick=function(){ if(!CURHOT||!window.StaffifyClosePlan)return; var r=repGet(); var mo=CURHOT.motion==='staffing'?'Staffify VA':(CURHOT.motion==='websites'?'Foundry website':''); StaffifyClosePlan.run({mode:'prep',transcript:CURHOT.transcript||'',name:CURHOT.name||'',company:CURHOT.company||'',grade:mo,phone:CURHOT.phone||'',rep:(r&&r.name)||''}, document.getElementById('cpout'), cpb); };
   }
 
