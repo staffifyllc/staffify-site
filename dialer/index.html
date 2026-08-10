@@ -159,7 +159,8 @@
     ]);
     var list=results[0]||{};
     QUEUES.websites=Array.isArray(list.websites)?list.websites:[];
-    QUEUES.staffing=(results[4]&&results[4].leads)||[];
+    // Staffify tab: real phone-verified VA prospects from the portal first, then win-back former clients.
+    QUEUES.staffing=(Array.isArray(list.staffing)?list.staffing:[]).concat((results[4]&&results[4].leads)||[]);
     QUEUES.hot=(results[3]&&results[3].leads)||[];
     (results[1]&&results[1].motions||[]).forEach(function(m){TRAIN[m.key]=m;});
     SCORE=results[2]||null;
