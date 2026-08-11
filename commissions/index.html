@@ -225,7 +225,9 @@
         '<td><select class="a-type">'+typeOpts(ov.dealType||dl.dealType||'va')+'</select></td>'+
         '<td class="num"><input class="a-amt" type="number" value="'+amtVal+'" placeholder="'+esc(dl.base||0)+'"></td>'+
         '<td><select class="a-cust">'+custOpts(ov.customerId||'')+'</select></td>'+
-        '<td class="num"><label style="font-size:12px;color:var(--muted);white-space:nowrap"><input type="checkbox" class="a-paid"'+(dl.status==='paid_out'?' checked':'')+(dl.status==='pending'?' disabled':'')+'> paid out</label></td>'+
+        '<td class="num">'+(dl.payoutAuto
+          ? '<span class="pill done" title="Matched to a payment in QuickBooks">auto &middot; QB</span>'
+          : '<label style="font-size:12px;color:var(--muted);white-space:nowrap"><input type="checkbox" class="a-paid"'+(dl.status==='paid_out'?' checked':'')+(dl.status==='pending'?' disabled':'')+'> paid out</label>'+(dl.payoutMode==='manual'&&dl.status!=='pending'?'<div class="sug">payroll, mark by hand</div>':''))+'</td>'+
         '<td class="num"><button class="save">Save</button>'+resetBtn+'</td></tr>';
     }).join('');
     panel.innerHTML='<div class="panel"><div class="ph"><h2>Closed Won deals</h2><span class="meta">'+(c.deals||0)+' deals &middot; '+(c.payable||0)+' payable &middot; '+(c.pending||0)+' pending</span></div>'+
@@ -236,7 +238,8 @@
     Array.prototype.forEach.call(panel.querySelectorAll('.save'),function(btn){
       btn.onclick=function(){
         var tr=btn.closest('tr');
-        saveDeal({ dealId:tr.getAttribute('data-id'), rep:tr.querySelector('.a-rep').value, dealType:tr.querySelector('.a-type').value, amount:tr.querySelector('.a-amt').value, customerId:tr.querySelector('.a-cust').value, paidOut:tr.querySelector('.a-paid').checked }, btn);
+        var paidBox=tr.querySelector('.a-paid');
+        saveDeal({ dealId:tr.getAttribute('data-id'), rep:tr.querySelector('.a-rep').value, dealType:tr.querySelector('.a-type').value, amount:tr.querySelector('.a-amt').value, customerId:tr.querySelector('.a-cust').value, paidOut:!!(paidBox&&paidBox.checked) }, btn);
       };
     });
     Array.prototype.forEach.call(panel.querySelectorAll('.reset'),function(btn){

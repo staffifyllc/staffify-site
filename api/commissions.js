@@ -166,6 +166,88 @@ async function loadQboPaid() {
     return { connected: true, byCust, custById, custByName, custByEmail, truncated: invoices.length >= 1000 || payments.length >= 1000 };
 }
 
+// ---- QuickBooks: what we have actually PAID each rep (1099 contractors = Vendors) ----
+// Reps are paid weekly and one payment usually covers several commissions, so we total what each rep
+// has been paid and settle their payable deals oldest-first against it, rather than guessing per deal.
+async function loadRepPayouts(reps) {
+    if (!reps.length) return { connected: true, byRep: {} };
+    let vendors = [];
+    try {
+        const j = await qboQuery("SELECT Id, DisplayName, PrimaryEmailAddr FROM Vendor MAXRESULTS 1000");
+        vendors = (j && j.QueryResponse && j.QueryResponse.Vendor) || [];
+    } catch (e) { return { connected: false, error: String((e && e.message) || e).slice(0, 160), byRep: {} }; }
+
+    // vendor id -> rep email, matched on vendor email first, then normalized name.
+    const repByEmail = {}, repByName = {};
+    reps.forEach(r => {
+        const e = (r.email || '').toLowerCase(); if (e) repByEmail[e] = e;
+        const n = norm(r.name); if (n) repByName[n] = e;
+    });
+    const vendorToRep = {};
+    vendors.forEach(v => {
+        const vEmail = ((v.PrimaryEmailAddr && v.PrimaryEmailAddr.Address) || '').toLowerCase();
+        const vName = norm(v.DisplayName || '');
+        const rep = (vEmail && repByEmail[vEmail]) || (vName && repByName[vName]) || '';
+        if (rep) vendorToRep[v.Id] = rep;
+    });
+
+    const byRep = {};
+    function add(repEmail, amt, date) {
+        if (!repEmail) return;
+        const r = byRep[repEmail] || (byRep[repEmail] = { paid: 0, lastDate: '' });
+        r.paid += Number(amt) || 0;
+        if (date && (!r.lastDate || date > r.lastDate)) r.lastDate = date;
+    }
+    // Bill payments (bill -> pay) and direct checks/expenses both count as paying the rep.
+    try {
+        const j = await qboQuery("SELECT VendorRef, TotalAmt, TxnDate FROM BillPayment ORDERBY TxnDate DESC MAXRESULTS 1000");
+        ((j && j.QueryResponse && j.QueryResponse.BillPayment) || []).forEach(p => {
+            const vid = p.VendorRef && p.VendorRef.value;
+            add(vendorToRep[vid], p.TotalAmt, (p.TxnDate || '').toString());
+        });
+    } catch (e) { /* optional */ }
+    try {
+        const j = await qboQuery("SELECT EntityRef, TotalAmt, TxnDate FROM Purchase ORDERBY TxnDate DESC MAXRESULTS 1000");
+        ((j && j.QueryResponse && j.QueryResponse.Purchase) || []).forEach(p => {
+            const vid = p.EntityRef && p.EntityRef.value;
+            add(vendorToRep[vid], p.TotalAmt, (p.TxnDate || '').toString());
+        });
+    } catch (e) { /* optional */ }
+
+    // Only reps we can find as a QBO Vendor can be auto-settled. A W2 employee (Madison) is paid through
+    // payroll, where the commission is bundled into a paycheck with base pay and taxes, so the books cannot
+    // tell us how much of it was commission. Those reps stay on a manual mark, by design, not by omission.
+    const autoReps = {};
+    Object.keys(vendorToRep).forEach(vid => { autoReps[vendorToRep[vid]] = true; });
+    return { connected: true, byRep, autoReps, vendorsMatched: Object.keys(vendorToRep).length };
+}
+
+// Settle each rep's payable deals against what QuickBooks says we already paid them, oldest first.
+// A manual paidOut override always stands; this only auto-settles what the books can prove.
+function allocatePayouts(lines, payouts) {
+    const budget = {};
+    Object.keys(payouts || {}).forEach(e => { budget[e] = payouts[e].paid; });
+    // Manual paid-out lines consume budget first so they are not double counted.
+    lines.filter(l => l.status === 'paid_out').forEach(l => { if (budget[l.repEmail] != null) budget[l.repEmail] -= l.commission; });
+    const byRep = {};
+    lines.filter(l => l.status === 'payable').forEach(l => { (byRep[l.repEmail] || (byRep[l.repEmail] = [])).push(l); });
+    Object.keys(byRep).forEach(email => {
+        let left = budget[email];
+        if (left == null || left <= 0) return;
+        byRep[email]
+            .sort((a, b) => (a.paidDate || a.closeDate || '').localeCompare(b.paidDate || b.closeDate || ''))
+            .forEach(l => {
+                if (left >= l.commission && l.commission > 0) {
+                    left -= l.commission;
+                    l.status = 'paid_out';
+                    l.payoutAuto = true;
+                    l.payoutDate = (payouts[email] && payouts[email].lastDate) || '';
+                }
+            });
+    });
+    return lines;
+}
+
 async function loadOverrides() {
     const h = (await redis.hgetall(OVERRIDE_KEY)) || {};
     const out = {};
@@ -286,6 +368,13 @@ export default async function handler(req, res) {
     // Lock the closer on any deal we are seeing Closed Won for the first time, then attribute to that.
     const snaps = await snapshotNewOwners(hs.deals || [], ownerSnaps).catch(() => ownerSnaps);
     const lines = (hs.deals || []).map(d => reconcile(d, overrides[d.dealId], qbo, repRateByEmail, snaps[d.dealId]));
+
+    // Auto-settle: flip payable -> paid out for any rep QuickBooks shows we have already paid (1099 vendors).
+    // W2 reps (payroll) have no vendor record, so they stay manual and are labeled as such.
+    let payouts = { byRep: {}, autoReps: {} };
+    if (qbo.connected) payouts = await loadRepPayouts(reps).catch(() => ({ byRep: {}, autoReps: {} }));
+    allocatePayouts(lines, payouts.byRep || {});
+    lines.forEach(l => { l.payoutMode = (payouts.autoReps && payouts.autoReps[l.repEmail]) ? 'auto' : 'manual'; });
 
     // ---- Admin view ----
     if (req.query.view === 'admin') {
