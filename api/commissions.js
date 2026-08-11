@@ -19,9 +19,19 @@ const OWNER_KEY = 'commission:owners'; // dealId -> the owner AT THE TIME IT WAS
 const DEAL_TYPES = ['va', 'website', 'ai'];
 const HS = 'https://api.hubapi.com';
 const MAX_DEAL_PAGES = 10; // 100/page -> up to 1000 Closed Won deals
+const LEAD_SOURCE_PROP = process.env.COMMISSION_LEADSOURCE_PROP || 'deal_source';
 
 function repRate(rep) { const n = Number(rep && rep.rate); return (n > 0 && n < 100) ? n : 35; }
-function rateFor(dealType, rate) { if (dealType === 'website') return 30; if (dealType === 'ai') return 10; return rate; }
+// Rate on leads the company hands the rep. Only set for reps on a split plan (Madison: 20 house / 35 self).
+// Everyone else has no houseRate and earns their single rate on every deal.
+function repHouseRate(rep) { const n = Number(rep && rep.houseRate); return (n > 0 && n < 100) ? n : null; }
+
+// Foundry websites pay a FLAT amount per site, not a percentage (Paul, 2026-08-11). AI stays a percentage.
+const FLAT_COMMISSION = { website: Number(process.env.FOUNDRY_COMMISSION || 300) };
+const ACCEL_AFTER = Number(process.env.ACCEL_AFTER_DEALS || 5);  // 40% starts on the 6th close of a month
+const ACCEL_RATE = Number(process.env.ACCEL_RATE || 40);
+
+function rateFor(dealType, rate) { if (dealType === 'ai') return 10; return rate; }
 function round(n) { return Math.round(Number(n) || 0); }
 function norm(s) { return String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
 
@@ -84,7 +94,7 @@ async function loadHubspotWon() {
             const body = {
                 filterGroups: [{ filters: [{ propertyName: 'hs_is_closed_won', operator: 'EQ', value: 'true' }] }],
                 sorts: [{ propertyName: 'closedate', direction: 'DESCENDING' }],
-                properties: ['dealname', 'amount', 'closedate', 'hubspot_owner_id', 'pipeline'],
+                properties: ['dealname', 'amount', 'closedate', 'hubspot_owner_id', 'pipeline', LEAD_SOURCE_PROP],
                 limit: 100,
             };
             if (after) body.after = after;
@@ -121,6 +131,8 @@ async function loadHubspotWon() {
             ownerName: owner.name,
             clientEmail: (emailByDeal[d.id] || '').toLowerCase(),
             dealType: pipeType[p.pipeline] || '',
+            // Self-sourced only when the deal says so. Anything else is treated as a company lead.
+            leadSource: /self|own|rep.?sourced|prospect/i.test(String(p[LEAD_SOURCE_PROP] || '')) ? 'self' : '',
         };
     });
     return { configured: true, deals, truncated };
@@ -279,6 +291,32 @@ function allocatePayouts(lines, payouts) {
     return lines;
 }
 
+// Strong-month accelerator, MARGINAL (Paul, 2026-08-11): the 6th and later closes in a calendar month
+// pay 40% instead of the rep's normal rate. Deals 1-5 keep their normal rate, so it is not retroactive.
+// Percentage deals only, and only when it beats the rate already applied. Flat-fee deal types are skipped,
+// and reps on a custom split plan are left alone since their offer does not include the accelerator.
+function applyAccelerator(lines) {
+    const groups = {};
+    lines.forEach(l => {
+        if (l.flat != null || !l.repEmail || l.splitPlan) return;
+        const month = (l.closeDate || '').slice(0, 7);
+        if (!month) return;
+        (groups[l.repEmail + '|' + month] || (groups[l.repEmail + '|' + month] = [])).push(l);
+    });
+    Object.keys(groups).forEach(k => {
+        groups[k]
+            .sort((a, b) => (a.closeDate || '').localeCompare(b.closeDate || '') || String(a.dealId).localeCompare(String(b.dealId)))
+            .forEach((l, i) => {
+                if (i < ACCEL_AFTER) return;              // deals 1..5 keep their normal rate
+                if (!(ACCEL_RATE > (l.rate || 0))) return; // never lower an already-higher rate
+                l.rate = ACCEL_RATE;
+                l.accelerated = true;
+                l.commission = round(l.base * ACCEL_RATE / 100);
+            });
+    });
+    return lines;
+}
+
 async function loadOverrides() {
     const h = (await redis.hgetall(OVERRIDE_KEY)) || {};
     const out = {};
@@ -302,9 +340,10 @@ async function snapshotNewOwners(deals, snaps, repRateByEmail) {
         if (snaps[d.dealId]) return;
         if (!d.ownerEmail) return; // nothing to lock yet; try again next load once the owner is set
         // Lock the rate too: a later rate change must not re-price deals already closed (or already paid).
-        const rate = repRateByEmail[d.ownerEmail];
+        const plan = repRateByEmail[d.ownerEmail];
         const rec = { ownerEmail: d.ownerEmail, ownerName: d.ownerName || '', closeDate: d.closeDate || '', at: Date.now() };
-        if (rate != null) rec.rate = rate;
+        if (plan && plan.rate != null) rec.rate = plan.rate;
+        if (plan && plan.houseRate != null) rec.houseRate = plan.houseRate;
         snaps[d.dealId] = rec;
         writes[d.dealId] = JSON.stringify(rec);
     });
@@ -370,11 +409,19 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     // Admin override wins, then the owner locked at win time, then the current owner as a last resort.
     const closerEmail = (snap && snap.ownerEmail) || deal.ownerEmail || '';
     const repEmail = ((ov && ov.rep) || closerEmail || '').toLowerCase();
-    const knownRep = !!repEmail && repRateByEmail[repEmail] != null;
+    const plan = repRateByEmail[repEmail] || null;
+    const knownRep = !!repEmail && !!plan;
     const ownerChanged = !!(snap && snap.ownerEmail && deal.ownerEmail && snap.ownerEmail !== deal.ownerEmail);
-    // Rate locked at win time, so changing a rep's rate never re-prices deals they already closed.
-    const lockedRate = (snap && snap.rate != null) ? Number(snap.rate) : (knownRep ? repRateByEmail[repEmail] : 35);
-    const rate = rateFor(dealType, lockedRate);
+
+    // Lead source decides which rate applies for reps on a split plan. Admin override wins, then the
+    // HubSpot property, then default to a company lead (the conservative side for a handed-over lead).
+    const leadSource = ((ov && ov.leadSource) || deal.leadSource || 'house');
+    const selfSourced = leadSource === 'self';
+    const houseRate = (snap && snap.houseRate != null) ? Number(snap.houseRate) : (plan ? plan.houseRate : null);
+    const ownRate = (snap && snap.rate != null) ? Number(snap.rate) : (plan ? plan.rate : 35);
+    // Rates are locked at win time, so changing a rep's plan never re-prices deals they already closed.
+    const planRate = (!selfSourced && houseRate != null) ? houseRate : ownRate;
+    const rate = rateFor(dealType, planRate);
 
     const customerId = (qbo && qbo.connected) ? ((assignment && assignment.custId) || matchCustomer(deal, ov, qbo)) : '';
     const cust = customerId && qbo.byCust ? qbo.byCust[customerId] : null;
@@ -383,7 +430,8 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     const invoicePaid = !!(inv && inv.paid && cust && cust.received > 0);
 
     const base = round((ov && ov.amount != null) ? ov.amount : (invoicePaid ? (inv.total || deal.amount) : deal.amount));
-    const commission = round(base * rate / 100);
+    const flat = FLAT_COMMISSION[dealType];
+    const commission = (flat != null) ? round(flat) : round(base * rate / 100);
     const paidOut = !!(ov && ov.paidOut);
     const status = paidOut ? 'paid_out' : (invoicePaid ? 'payable' : 'pending');
 
@@ -392,7 +440,9 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
         repEmail, repKnown: knownRep,
         ownerEmail: deal.ownerEmail, ownerName: deal.ownerName,
         closerEmail, closerName: (snap && snap.ownerName) || deal.ownerName, ownerChanged,
-        dealType, dealTypeAuto: !!(deal.dealType && !(ov && ov.dealType)), base, rate, commission,
+        dealType, dealTypeAuto: !!(deal.dealType && !(ov && ov.dealType)),
+        base, rate: (flat != null) ? null : rate, flat: (flat != null) ? round(flat) : null, commission,
+        leadSource, splitPlan: houseRate != null, accelerated: false,
         closeDate: deal.closeDate,
         customerId, customerMatched: !!customerId,
         invoiceId: inv ? inv.id : '', invoiceNo: inv ? inv.docNumber : '', invoiceMatched: !!inv,
@@ -419,6 +469,7 @@ export default async function handler(req, res) {
             amount: (b.amount != null && b.amount !== '') ? Math.max(0, Number(b.amount) || 0) : undefined,
             customerId: (b.customerId || '').toString() || undefined,
             invoiceId: (b.invoiceId || '').toString() || undefined,
+            leadSource: (b.leadSource === 'self' || b.leadSource === 'house') ? b.leadSource : undefined,
             paidOut: (b.paidOut === true || b.paidOut === 'true') ? true : undefined,
             at: Date.now(), by: (who && who.email) || 'admin',
         };
@@ -443,7 +494,7 @@ export default async function handler(req, res) {
         loadOwnerSnapshots().catch(() => ({})),
     ]);
     const repRateByEmail = {};
-    reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e) repRateByEmail[e] = repRate(r); });
+    reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e) repRateByEmail[e] = { rate: repRate(r), houseRate: repHouseRate(r) }; });
 
     if (!hs.configured) return res.status(200).json({ connected: false, source: 'hubspot', message: 'HubSpot is not connected yet, so there are no Closed Won deals to track.' });
     if (hs.error) return res.status(200).json({ connected: true, source: 'hubspot', error: hs.error, hint: hs.hint || '', deals: [] });
@@ -453,6 +504,7 @@ export default async function handler(req, res) {
     // Give each deal its own invoice before pricing anything.
     const assignments = assignInvoices(hs.deals || [], overrides, qbo);
     const lines = (hs.deals || []).map(d => reconcile(d, overrides[d.dealId], qbo, repRateByEmail, snaps[d.dealId], assignments[d.dealId]));
+    applyAccelerator(lines);
 
     // Auto-settle: flip payable -> paid out for any rep QuickBooks shows we have already paid (1099 vendors).
     // W2 reps (payroll) have no vendor record, so they stay manual and are labeled as such.

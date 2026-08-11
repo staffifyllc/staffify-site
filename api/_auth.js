@@ -97,7 +97,9 @@ export async function listReps() {
     return out.sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
 }
 
-export async function createRep({ email, name, rate, role }) {
+// houseRate is optional: the rate a rep earns on leads the company hands them, when their plan splits
+// by lead source (e.g. 20 on house leads, 35 on self-sourced). Omit it and the rep earns `rate` on everything.
+export async function createRep({ email, name, rate, role, houseRate }) {
     const e = normEmail(email);
     const rep = {
         email: e,
@@ -106,6 +108,7 @@ export async function createRep({ email, name, rate, role }) {
         role: role === 'admin' ? 'admin' : 'rep',
         createdAt: String(Date.now()),
     };
+    if (houseRate != null && houseRate !== '') rep.houseRate = String(houseRate);
     await redis.hset(`rep:${e}`, rep);
     await redis.sadd('reps', e);
     return rep;
