@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Hiring Call Script — Staffify Sales</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green:#1d9e75; --green-hi:#7ef5c2; }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 14px; }
+        .eyebrow::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.55; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .nav { display:flex; gap:6px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        .nav a:hover { color:var(--white); }
+        @media (max-width: 880px) { .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
+        .wrap { max-width:840px; margin:0 auto; padding:32px 28px 90px; }
+        h1 { font-size:32px; font-weight:900; letter-spacing:-0.02em; margin-bottom:8px; line-height:1.1; }
+        .sub { font-size:15.5px; color:#cfd4da; margin-bottom:8px; max-width:70ch; }
+        .subnote { font-size:13.5px; color:var(--muted); margin-bottom:26px; }
+
+        .shape { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:8px 0 30px; }
+        @media (max-width:680px){ .shape { grid-template-columns:repeat(2,1fr); } }
+        .beatpill { background:var(--card); border:1px solid var(--card-border); border-radius:12px; padding:12px 12px; }
+        .beatpill .bn { font-size:11px; font-weight:800; color:var(--cyan); letter-spacing:0.08em; }
+        .beatpill .bt { font-size:13px; font-weight:700; color:#e6eaf0; margin-top:3px; line-height:1.3; }
+
+        .beat { border:1px solid var(--card-border); background:var(--card); border-radius:16px; padding:22px 24px; margin-bottom:16px; }
+        .beat-h { display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+        .beat-n { font-size:13px; font-weight:900; color:#04222b; background:var(--cyan); border-radius:8px; padding:3px 9px; letter-spacing:0.02em; }
+        .beat-t { font-size:18px; font-weight:800; letter-spacing:-0.01em; }
+        .beat-note { font-size:13.5px; color:var(--muted); margin:2px 0 12px; }
+        .say { font-size:16.5px; font-weight:600; color:#eaf6fb; background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:12px; padding:15px 18px; line-height:1.5; margin-bottom:12px; }
+        .say .line { margin-bottom:8px; } .say .line:last-child { margin-bottom:0; }
+        .lbl { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:16px 0 8px; }
+        .branch { display:flex; gap:10px; padding:9px 0; border-top:1px solid rgba(255,255,255,0.06); font-size:14.5px; color:#cfd4da; }
+        .branch:first-of-type { border-top:none; }
+        .branch .tag { flex-shrink:0; font-size:11px; font-weight:800; color:var(--cyan-hi); background:rgba(26,189,225,0.10); border:1px solid rgba(26,189,225,0.3); border-radius:999px; padding:3px 10px; height:fit-content; white-space:nowrap; }
+        .branch b { color:#fff; }
+        .why { font-size:13.5px; color:var(--muted); margin-top:12px; padding-left:14px; border-left:2px solid rgba(26,189,225,0.4); }
+        .why b { color:#cfd4da; }
+
+        .obj { border-top:1px solid rgba(255,255,255,0.06); padding:13px 0; }
+        .obj:first-of-type { border-top:none; }
+        .obj .oq { font-size:14.5px; font-weight:700; color:#fff; margin-bottom:5px; }
+        .obj .oa { font-size:14.5px; color:#cfd4da; }
+        .rules li { list-style:none; position:relative; padding:7px 0 7px 26px; font-size:15px; color:#dfe3e8; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .rules li:last-child { border-bottom:none; }
+        .rules li::before { content:'✓'; position:absolute; left:0; top:7px; color:var(--green-hi); font-weight:900; }
+        .callout { background:linear-gradient(135deg, rgba(26,189,225,0.12), rgba(13,86,164,0.08)); border:1px solid rgba(26,189,225,0.3); border-radius:16px; padding:22px 24px; margin-top:8px; }
+        .callout .ct { font-size:16px; font-weight:800; margin-bottom:8px; }
+        .callout p { font-size:14.5px; color:#cfd4da; margin-bottom:8px; }
+        .callout a { color:var(--cyan-hi); text-decoration:none; font-weight:700; }
+        .sec-lbl { font-size:12px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:var(--cyan); margin:34px 0 14px; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <nav class="nav">
+        <a href="/hub/">Hub</a>
+        <a href="/dialer/">Dialer</a>
+        <a href="/scoreboard/">Scoreboard</a>
+        <a href="/pipeline/">Pipeline</a>
+        <a href="/training/sales/" class="active">Training</a>
+        <a href="https://recruiting.gostaffify.com/dashboard" target="_blank" rel="noopener" style="border:1px solid var(--card-border); margin-left:8px;">Talent Console &#8599;</a>
+    </nav>
+</header>
+
+<div class="wrap">
+    <div class="eyebrow">Outbound play</div>
+    <h1>Remote hiring <span class="grad">call script</span></h1>
+    <p class="sub">You are calling companies that posted a remote-friendly role and are still hiring. Your job on this call is simple: confirm the role is open, get to the person who actually owns the hire, and show them we can fill it with vetted talent for a lot less than they have it posted at.</p>
+    <p class="subnote">Say the lines like a person, not a pitch. Get their number before you give yours. Never pitch someone who cannot say yes.</p>
+
+    <div class="shape">
+        <div class="beatpill"><div class="bn">01</div><div class="bt">Confirm the role is real</div></div>
+        <div class="beatpill"><div class="bn">02</div><div class="bt">Get to who hires</div></div>
+        <div class="beatpill"><div class="bn">03</div><div class="bt">Who we are</div></div>
+        <div class="beatpill"><div class="bn">04</div><div class="bt">The number</div></div>
+        <div class="beatpill"><div class="bn">05</div><div class="bt">The ask</div></div>
+    </div>
+
+    <div class="beat">
+        <div class="beat-h"><span class="beat-n">01</span><span class="beat-t">Open and confirm the role is live</span></div>
+        <div class="beat-note">Light and quick, like you are just checking. You are not selling yet.</div>
+        <div class="say"><div class="line">"Hi, this is Madison. Quick question, are you still hiring for the [role] position?"</div></div>
+        <div class="branch"><span class="tag">Still open</span><span>"Great." Go straight to who owns the hire.</span></div>
+        <div class="branch"><span class="tag">Already filled</span><span>"Got it. Do you hire for roles like that pretty often? I may be able to help down the line." Note it, be friendly, move on.</span></div>
+        <div class="branch"><span class="tag">"Who's this?"</span><span>"It's Madison, I came across your [role] posting. Are you still looking to fill it?"</span></div>
+    </div>
+
+    <div class="beat">
+        <div class="beat-h"><span class="beat-n">02</span><span class="beat-t">Get to the person who owns the hire</span></div>
+        <div class="beat-note">Do this before you pitch anything. If they cannot say yes, you are wasting the pitch.</div>
+        <div class="say"><div class="line">"Perfect. Are you the one handling the hiring for that role, or is that someone else?"</div></div>
+        <div class="branch"><span class="tag">It's them</span><span>Keep going to beat 3.</span></div>
+        <div class="branch"><span class="tag">Someone else</span><span>"No problem, who would be the best person to talk to about it?" Get a name. Ask to be put through, or for the best time and number to reach them. Even if you do not get through, you now have a name for the follow-up.</span></div>
+        <div class="branch"><span class="tag">Gatekeeper</span><span>"Totally get it. It is a two minute question only the person doing the hiring can really answer. Is the owner around, or when is a good time to catch them?"</span></div>
+        <div class="why"><b>Why:</b> the whole call bends on this. Pitching the wrong person burns the lead and your time. A name is a win even when the call ends here.</div>
+    </div>
+
+    <div class="beat">
+        <div class="beat-h"><span class="beat-n">03</span><span class="beat-t">Who we are</span></div>
+        <div class="beat-note">Short. You are earning the next 20 seconds, not giving the whole story.</div>
+        <div class="say"><div class="line">"So the reason I'm reaching out, I'm with Staffify. We fill remote roles just like this one with vetted talent, and our people sound like they are right here in the States. We've done it for over a thousand companies."</div></div>
+        <div class="why"><b>Why:</b> the "sounds like they are in the US" line and the thousand-companies proof do the heavy lifting. Say it and stop. Do not monologue.</div>
+    </div>
+
+    <div class="beat">
+        <div class="beat-h"><span class="beat-n">04</span><span class="beat-t">The number</span></div>
+        <div class="beat-note">Get their rate first, then position against it. This should feel like a normal question and it should come up early, not at the end.</div>
+        <div class="say"><div class="line">"What rate are you hiring that role at right now?"</div></div>
+        <div class="lbl">Then, once you have their number</div>
+        <div class="say"><div class="line">"Most of our clients end up filling the exact role they are advertising for 30 to 60 percent less than what they have it posted at. Our average client pays us about $12.90 an hour, all in."</div></div>
+        <div class="branch"><span class="tag">They push on price</span><span>Tie it to the role, not the hour. "For about what one local hire costs you, you could staff the whole function. Same work, different labor market."</span></div>
+        <div class="why"><b>Why:</b> the 30 to 60 percent only lands once you know what they are paying, so ask first. The real cost driver is the labor market, not cutting corners, and that is the honest reason the number works.</div>
+    </div>
+
+    <div class="beat">
+        <div class="beat-h"><span class="beat-n">05</span><span class="beat-t">Name the overseas question, then ask</span></div>
+        <div class="beat-note">Most people are already thinking it. Say it before they do, then go for the next step.</div>
+        <div class="say"><div class="line">"I know hiring overseas makes some people a little nervous. That is exactly why we vet hard, you only meet the top few out of hundreds, and we manage the placement. If someone is ever not the right fit, we replace them free, for life."</div></div>
+        <div class="lbl">The ask</div>
+        <div class="say"><div class="line">"If I lined up someone who could do that role at that rate, would it be worth 15 minutes to meet them?"</div></div>
+        <div class="why"><b>Why:</b> naming the fear first takes the air out of it, and the lifetime replacement guarantee is your strongest proof you stand behind the placement. Leave the call with a booked time and the best email and cell.</div>
+    </div>
+
+    <div class="sec-lbl">Objections, fast</div>
+    <div class="beat">
+        <div class="obj"><div class="oq">"We hire in-house / US only."</div><div class="oa">"Makes sense, a lot of our clients felt the same way until they saw the work. Would you be open to meeting one candidate, no commitment?"</div></div>
+        <div class="obj"><div class="oq">"How's the quality?"</div><div class="oa">"We screen 150 to 250 people per role and you only meet the top 3, after a paid skills test on real work. Attrition is under 8 percent, and if anyone is ever off, we replace them free, for life."</div></div>
+        <div class="obj"><div class="oq">"That sounds too good to be true."</div><div class="oa">"Fair. The reason the number works is the labor market, not corner cutting. Same work, and we back every placement with a lifetime replacement guarantee."</div></div>
+        <div class="obj"><div class="oq">"Just send me info."</div><div class="oa">"Happy to. I'll text you a one-pager right now while we are on, what is the best cell? And while you have it, what is the first thing a great hire would take off your plate?"</div></div>
+        <div class="obj"><div class="oq">"We are not hiring anymore."</div><div class="oa">"No worries at all. When you are, roles like this one are exactly what we fill. Mind if I check back in a few weeks?"</div></div>
+    </div>
+
+    <div class="sec-lbl">Rules, every call</div>
+    <ul class="rules">
+        <li>Confirm the role is actually open before anything else.</li>
+        <li>Find the person who owns the hire before you pitch. Wrong person, get a name and move on.</li>
+        <li>Get their advertised rate before you give a number.</li>
+        <li>Sell the system and the lifetime replacement guarantee, not an hourly seat.</li>
+        <li>Give one honest reason to move now. No pressure, no fake scarcity.</li>
+        <li>End every call with a booked time or a named person to chase.</li>
+    </ul>
+
+    <div class="sec-lbl">How to train on it</div>
+    <div class="callout">
+        <div class="ct">Run it, then listen back</div>
+        <p>Read the five beats out loud until they sound like you, not like a page. Then make live calls and pull your recordings in <a href="/outreach/">Outreach Proof</a> to hear where you rushed, where you pitched too early, and where you forgot to ask who owns the hire.</p>
+        <p>Before every call, get the <a href="/dialer/">Dialer</a> and this script open side by side. The moment a call goes well, log it and book the meeting on the spot.</p>
+    </div>
+</div>
+
+</body>
+</html>
