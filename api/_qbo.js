@@ -53,10 +53,19 @@ export async function getAccessToken() {
     return accessToken;
 }
 
+// Realm (company) id. Prefer the env var, but fall back to what the OAuth callback captured
+// into qb:tokens, so connecting is enough and QB_REALM_ID never has to be set by hand.
+export async function getRealmId() {
+    if (process.env.QB_REALM_ID) return process.env.QB_REALM_ID;
+    const r = await redis.hget('qb:tokens', 'realm_id');
+    return r || '';
+}
+
 // Run a QBO SQL-ish query against the company realm. Returns the parsed JSON body.
 export async function qboQuery(sql) {
     const token = await getAccessToken();
-    const realmId = process.env.QB_REALM_ID;
+    const realmId = await getRealmId();
+    if (!realmId) throw new Error('qb_no_realm');
     const url = `${QB_API_BASE}/v3/company/${realmId}/query?query=${encodeURIComponent(sql)}&minorversion=70`;
     const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
     if (!r.ok) {
