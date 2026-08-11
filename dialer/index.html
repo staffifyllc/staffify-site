@@ -154,6 +154,11 @@
   async function boot(){
     app.innerHTML='<div class="empty"><p>Loading your call list...</p></div>';
     ME=repGet();
+    // If a rep is signed in (hub magic-link session), use that identity so [your name] fills automatically.
+    try{
+      var meRes=await fetch('/api/auth-me',{cache:'no-store'});
+      if(meRes.status===200){ var mj=await meRes.json(); if(mj&&mj.rep&&mj.rep.name){ ME={name:mj.rep.name,email:mj.rep.email||''}; try{localStorage.setItem('sfy_rep',JSON.stringify(ME));}catch(e){} } }
+    }catch(e){}
     tbRight.innerHTML=nameChip(); wireChip();
     await refresh();
   }
@@ -334,6 +339,7 @@
         '<div class="company">'+esc(L.company||'(no company)')+'</div>'+
         '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
+        '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(L.brief)+'</div>':'')+
         histBlock(L)+
@@ -351,7 +357,6 @@
           '<button class="oc" data-o="not_interested">Not interested</button>'+
           '<button class="oc" data-o="bad_number">Bad number</button>'+
         '</div>'+
-        '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
       '</div>';
     wire();
   }
@@ -372,6 +377,7 @@
         '<div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+
         '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
+        '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         ctx+rec+trans+cp+
         renderQuote()+
         renderObjections()+
@@ -383,7 +389,6 @@
           '<button class="oc" data-o="not_interested">Not interested</button>'+
           '<button class="oc" data-o="bad_number">Bad number</button>'+
         '</div>'+
-        '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
       '</div>';
     wire();
   }
