@@ -190,24 +190,41 @@
       OBJECTIONS.map(function(o,i){return '<button class="objchip" data-obj="'+i+'">'+esc(o.label)+'</button>';}).join('')+
       '</div><div class="objsay" id="objsay"></div>';
   }
-  // Staffify (VA) commission: 35% of the onboarding fee, by hire count.
-  var QUOTE_TIERS=[{label:'1 hire',onb:2499},{label:'2 hires',onb:2299},{label:'3-4',onb:2099},{label:'5-9',onb:1799},{label:'10+',onb:1499}];
-  var quoteTier=0, quoteAction=true;
+  // Staffify (VA) commission: 35% of the onboarding fee. The fee is PER HIRE, and the per-hire
+  // price drops by volume. Total onboarding = per-hire price x number of hires.
+  // Action-taker takes $400/hire off through the 3-4 tier, $200/hire off at 5+ (baked into act).
+  var QUOTE_TIERS=[
+    {label:'1 hire',  std:2499, act:2099, min:1,  max:1},
+    {label:'2 hires', std:2299, act:1899, min:2,  max:2},
+    {label:'3-4',     std:2099, act:1699, min:3,  max:4},
+    {label:'5-9',     std:1799, act:1599, min:5,  max:9},
+    {label:'10+',     std:1499, act:1299, min:10, max:999}
+  ];
+  var quoteHires=1, quoteAction=true;
+  function tierIdx(n){ for(var i=0;i<QUOTE_TIERS.length;i++){ if(n>=QUOTE_TIERS[i].min && n<=QUOTE_TIERS[i].max) return i; } return QUOTE_TIERS.length-1; }
   function quoteOut(){
-    var t=QUOTE_TIERS[quoteTier], onb=t.onb-(quoteAction?400:0), comm=Math.round(onb*0.35), floorComm=Math.round(1699*0.35);
-    return '<div class="qrow"><span>Client onboarding'+(quoteTier?' &middot; '+esc(t.label):'')+'</span><b>$'+onb.toLocaleString()+'</b></div>'+
+    var n=Math.max(1, quoteHires|0);
+    var t=QUOTE_TIERS[tierIdx(n)];
+    var per=quoteAction?t.act:t.std, total=per*n, comm=Math.round(total*0.35);
+    var perLbl=n>1?(n+' &times; $'+per.toLocaleString()+' each'):('$'+per.toLocaleString());
+    return '<div class="qrow"><span>Client onboarding &middot; '+perLbl+'</span><b>$'+total.toLocaleString()+'</b></div>'+
       '<div class="qrow"><span>Your 35% commission</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
-      '<div class="qrow qfin"><span>Or roll it into the rate</span><b>+$1/hr &middot; $0 today &middot; 0% interest</b></div>'+
-      '<div class="qguard">Anchor $'+(quoteAction?'2,099':'2,499')+' &middot; floor $1,699 (you make ~$'+floorComm+'). Every $100 you discount is $35 out of YOUR pocket.</div>';
+      '<div class="qrow qfin"><span>Or roll it into the rate</span><b>+$1/hr per hire &middot; $0 today &middot; 0% interest</b></div>'+
+      '<div class="qguard">$'+per.toLocaleString()+' per hire'+(quoteAction?(' (action-taker, standard $'+t.std.toLocaleString()+')'):'')+'. Every $100 you discount is $35 out of YOUR pocket.</div>';
   }
   function renderStaffifyQuote(){
+    var step='width:30px;height:30px;border-radius:8px;border:1px solid var(--card-border);background:var(--card);color:#fff;font-size:18px;font-weight:800;cursor:pointer;line-height:1';
     return '<div class="lbl">Quick quote &amp; your cut</div><div class="quote">'+
-      '<div class="qtiers">'+QUOTE_TIERS.map(function(t,i){return '<button class="qtier'+(i===quoteTier?' on':'')+'" data-tier="'+i+'">'+esc(t.label)+'</button>';}).join('')+'</div>'+
-      '<label class="qtoggle"><input type="checkbox" id="qaction"'+(quoteAction?' checked':'')+'> Action-taker rate (decide on the call, &minus;$400)</label>'+
+      '<div class="qtiers">'+QUOTE_TIERS.map(function(t,i){return '<button class="qtier'+(i===tierIdx(quoteHires)?' on':'')+'" data-tier="'+i+'">'+esc(t.label)+'</button>';}).join('')+'</div>'+
+      '<div class="qhires" style="display:flex;align-items:center;gap:10px;margin:10px 0 2px;font-size:13.5px;color:var(--muted)"><span>How many hires</span>'+
+        '<button class="qstep" data-step="-1" style="'+step+'">&minus;</button>'+
+        '<b id="qhval" style="min-width:22px;text-align:center;font-size:16px;color:#fff">'+quoteHires+'</b>'+
+        '<button class="qstep" data-step="1" style="'+step+'">+</button></div>'+
+      '<label class="qtoggle"><input type="checkbox" id="qaction"'+(quoteAction?' checked':'')+'> Action-taker rate (decide on the call)</label>'+
       '<div class="qout" id="qout">'+quoteOut()+'</div>'+
       '</div>';
   }
-  function refreshStaffifyQuote(){ Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.classList.toggle('on', (+b.getAttribute('data-tier'))===quoteTier); }); var qo=document.getElementById('qout'); if(qo)qo.innerHTML=quoteOut(); }
+  function refreshStaffifyQuote(){ Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.classList.toggle('on', (+b.getAttribute('data-tier'))===tierIdx(quoteHires)); }); var hv=document.getElementById('qhval'); if(hv)hv.textContent=quoteHires; var qo=document.getElementById('qout'); if(qo)qo.innerHTML=quoteOut(); }
 
   // Foundry commission: 30% on a website deal, 10% on an AI automation deal. Rep sets the deal
   // size (websites default to the $1,499 portfolio-build price; standard is $4,995).
@@ -370,7 +387,8 @@
     Array.prototype.forEach.call(document.querySelectorAll('.motions button'),function(b){ b.onclick=function(){MOTION=b.getAttribute('data-m'); render();}; });
     Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){ b.onclick=function(){ logOutcome(b.getAttribute('data-o')); }; });
     Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(b){ b.onclick=function(){ var i=+b.getAttribute('data-obj'); var say=document.getElementById('objsay'); var was=b.classList.contains('on'); Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(x){x.classList.remove('on');}); if(was){ if(say)say.classList.remove('show'); } else { b.classList.add('on'); if(say){ say.textContent=OBJECTIONS[i].say; say.classList.add('show'); } } }; });
-    Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.onclick=function(){ quoteTier=+b.getAttribute('data-tier'); refreshQuote(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.onclick=function(){ quoteHires=QUOTE_TIERS[+b.getAttribute('data-tier')].min; refreshQuote(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.qstep'),function(b){ b.onclick=function(){ quoteHires=Math.max(1, quoteHires+(+b.getAttribute('data-step'))); refreshQuote(); }; });
     var qa=document.getElementById('qaction'); if(qa)qa.onchange=function(){ quoteAction=qa.checked; refreshQuote(); };
     Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
     var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
