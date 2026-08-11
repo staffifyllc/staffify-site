@@ -230,7 +230,7 @@
     var slot=btn.closest('.t-body').querySelector('.t-slot');
     var cid=btn.getAttribute('data-call');
     if(slot.querySelector('audio')){ slot.innerHTML=''; return; }
-    slot.innerHTML='<div class="t-audio"><audio controls autoplay preload="none" src="/api/outreach-log/?action=audio&call_id='+encodeURIComponent(cid)+'"></audio><div class="t-note">If the player stays empty, the recording stream is not switched on yet.</div></div>';
+    slot.innerHTML='<div class="t-audio"><audio controls autoplay preload="none" src="/api/outreach-log/?action=audio&call_id='+encodeURIComponent(cid)+'"></audio><div class="t-note">Streamed from the call recording. If it will not load, none was saved for this call.</div></div>';
   }
 
   async function showTrans(btn){
