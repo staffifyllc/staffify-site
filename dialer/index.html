@@ -138,10 +138,10 @@
   function firstNameOf(s){return String(s||'').trim().split(/\s+/)[0]||'';}
   function fillTokens(line, lead){
     var first=firstNameOf(lead.name);
-    var you=firstNameOf(ME&&ME.name)||'me';
+    var you=firstNameOf(ME&&ME.name)||'[your name]';
     var m=line.match(/\(no name:\s*"([^"]+)"\)/i);
     if(m){ line = first ? line.replace(/\s*\(no name:[^)]*\)/i,'') : m[1]; }
-    return line.replace(/\[first name\]/gi, first||'there').replace(/\[company\]/gi, lead.company||'your company').replace(/\[you\]/gi, you);
+    return line.replace(/\[first name\]/gi, first||'there').replace(/\[company\]/gi, lead.company||'your company').replace(/\[role\]/gi, lead.role||'that role').replace(/\[you\]/gi, you);
   }
 
   function repGet(){try{var r=JSON.parse(localStorage.getItem('sfy_rep')||'null');if(r&&r.name)return r;}catch(e){}return null;}
