@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<meta property="og:title" content="Commission Dashboard | Staffify">
+<meta property="og:description" content="Every deal a rep closes, what it pays, and exactly when the money is theirs.">
+<title>Commission Dashboard — Staffify</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ground:#07090d; --surface:#0e1319; --surface-2:#141a22; --hair:rgba(255,255,255,.085);
+    --text:#e9eef4; --muted:#8e9aa8; --faint:#5f6b79;
+    --accent:#22c1e8; --accent-hi:#6fe3fb; --accent-dim:rgba(34,193,232,.12);
+    --good:#4fd6a0; --good-bg:rgba(79,214,160,.12); --good-br:rgba(79,214,160,.32);
+    --wait:#eec06a; --wait-bg:rgba(238,192,106,.11); --wait-br:rgba(238,192,106,.3);
+    --done:#7b8797; --done-bg:rgba(255,255,255,.05); --done-br:rgba(255,255,255,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.28);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --ground:#f6f8fa; --surface:#ffffff; --surface-2:#f1f4f7; --hair:rgba(9,20,32,.1);
+      --text:#0d151d; --muted:#5a6775; --faint:#8895a3;
+      --accent:#0d82b8; --accent-hi:#0a6b98; --accent-dim:rgba(13,130,184,.09);
+      --good:#12855c; --good-bg:rgba(18,133,92,.1); --good-br:rgba(18,133,92,.26);
+      --wait:#9a6f12; --wait-bg:rgba(154,111,18,.1); --wait-br:rgba(154,111,18,.24);
+      --done:#6d7987; --done-bg:rgba(9,20,32,.045); --done-br:rgba(9,20,32,.12);
+      --shadow:0 1px 2px rgba(9,20,32,.06), 0 6px 20px rgba(9,20,32,.06);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#07090d; --surface:#0e1319; --surface-2:#141a22; --hair:rgba(255,255,255,.085);
+    --text:#e9eef4; --muted:#8e9aa8; --faint:#5f6b79;
+    --accent:#22c1e8; --accent-hi:#6fe3fb; --accent-dim:rgba(34,193,232,.12);
+    --good:#4fd6a0; --good-bg:rgba(79,214,160,.12); --good-br:rgba(79,214,160,.32);
+    --wait:#eec06a; --wait-bg:rgba(238,192,106,.11); --wait-br:rgba(238,192,106,.3);
+    --done:#7b8797; --done-bg:rgba(255,255,255,.05); --done-br:rgba(255,255,255,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.28);
+  }
+  :root[data-theme="light"] {
+    --ground:#f6f8fa; --surface:#ffffff; --surface-2:#f1f4f7; --hair:rgba(9,20,32,.1);
+    --text:#0d151d; --muted:#5a6775; --faint:#8895a3;
+    --accent:#0d82b8; --accent-hi:#0a6b98; --accent-dim:rgba(13,130,184,.09);
+    --good:#12855c; --good-bg:rgba(18,133,92,.1); --good-br:rgba(18,133,92,.26);
+    --wait:#9a6f12; --wait-bg:rgba(154,111,18,.1); --wait-br:rgba(154,111,18,.24);
+    --done:#6d7987; --done-bg:rgba(9,20,32,.045); --done-br:rgba(9,20,32,.12);
+    --shadow:0 1px 2px rgba(9,20,32,.06), 0 6px 20px rgba(9,20,32,.06);
+  }
+
+  body {
+    background: var(--ground); color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5; -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 28px 22px 72px; }
+
+  /* header */
+  .top { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap;
+         padding-bottom:18px; border-bottom:1px solid var(--hair); margin-bottom:26px; }
+  .brandline { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+  .mark { width:9px; height:9px; border-radius:2px; background:var(--accent); box-shadow:0 0 12px var(--accent); }
+  .brandline span { font-size:11px; font-weight:700; letter-spacing:.19em; text-transform:uppercase; color:var(--accent); }
+  h1 { font-size:clamp(25px,3.4vw,33px); font-weight:800; letter-spacing:-.025em; line-height:1.1; text-wrap:balance; }
+  .sub { color:var(--muted); font-size:14px; margin-top:6px; max-width:60ch; }
+  .who { text-align:right; font-size:13px; color:var(--muted); }
+  .who b { display:block; color:var(--text); font-size:15px; font-weight:700; }
+  .plantag { display:inline-block; margin-top:6px; font-size:11px; font-weight:700; letter-spacing:.05em;
+             color:var(--accent); background:var(--accent-dim); border:1px solid var(--accent);
+             border-radius:999px; padding:3px 10px; }
+
+  /* kpis */
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:12px; }
+  @media (max-width:820px){ .kpis { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:440px){ .kpis { grid-template-columns:1fr; } }
+  .kpi { background:var(--surface); border:1px solid var(--hair); border-radius:12px; padding:16px 17px;
+         box-shadow:var(--shadow); position:relative; overflow:hidden; }
+  .kpi::before { content:''; position:absolute; inset:0 auto 0 0; width:3px; background:var(--done); }
+  .kpi.is-good::before { background:var(--good); }
+  .kpi.is-wait::before { background:var(--wait); }
+  .kpi.is-accent::before { background:var(--accent); }
+  .kpi .lab { font-size:10.5px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); }
+  .kpi .val { font-size:29px; font-weight:800; letter-spacing:-.03em; margin-top:7px; line-height:1; }
+  .kpi.is-good .val { color:var(--good); }
+  .kpi .note { font-size:12px; color:var(--faint); margin-top:7px; }
+
+  .payout { display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+            background:linear-gradient(100deg, var(--accent-dim), transparent 70%);
+            border:1px solid var(--hair); border-left:3px solid var(--accent);
+            border-radius:12px; padding:13px 17px; margin-bottom:26px; font-size:14px; }
+  .payout b { font-weight:800; }
+  .payout .amt { color:var(--accent-hi); font-size:17px; font-weight:800; }
+  :root[data-theme="light"] .payout .amt, @media (prefers-color-scheme: light) { }
+
+  /* layout */
+  .cols { display:grid; grid-template-columns:1.62fr 1fr; gap:22px; align-items:start; }
+  @media (max-width:940px){ .cols { grid-template-columns:1fr; } }
+
+  .card { background:var(--surface); border:1px solid var(--hair); border-radius:13px; box-shadow:var(--shadow); overflow:hidden; }
+  .card + .card { margin-top:18px; }
+  .chead { display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+           padding:15px 18px; border-bottom:1px solid var(--hair); }
+  .chead h2 { font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+  .chead .meta { font-size:12px; color:var(--faint); }
+
+  /* ledger */
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; min-width:600px; }
+  thead th { text-align:left; font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+             color:var(--faint); padding:11px 14px; border-bottom:1px solid var(--hair); white-space:nowrap; }
+  thead th.r, td.r { text-align:right; }
+  tbody td { padding:13px 14px; border-bottom:1px solid var(--hair); vertical-align:top; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr { position:relative; }
+  .cli { font-weight:700; font-size:14px; letter-spacing:-.01em; }
+  .cli-sub { font-size:11.5px; color:var(--faint); margin-top:3px; }
+  .money { font-weight:800; font-size:14.5px; }
+  .money.good { color:var(--good); }
+  .rate { font-size:12.5px; color:var(--muted); white-space:nowrap; }
+  .rate b { color:var(--text); font-weight:700; }
+
+  .pill { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.05em;
+          border-radius:999px; padding:3px 9px; white-space:nowrap; border:1px solid; }
+  .p-good { color:var(--good); background:var(--good-bg); border-color:var(--good-br); }
+  .p-wait { color:var(--wait); background:var(--wait-bg); border-color:var(--wait-br); }
+  .p-done { color:var(--done); background:var(--done-bg); border-color:var(--done-br); }
+  .p-tag  { color:var(--accent); background:var(--accent-dim); border-color:var(--accent); font-weight:700; }
+  .why { font-size:11.5px; color:var(--faint); margin-top:5px; }
+
+  /* right rail */
+  .rows { padding:6px 0; }
+  .row { display:flex; align-items:baseline; justify-content:space-between; gap:14px;
+         padding:11px 18px; border-bottom:1px solid var(--hair); }
+  .row:last-child { border-bottom:none; }
+  .row .k { font-size:13px; color:var(--muted); }
+  .row .k b { display:block; color:var(--text); font-weight:700; font-size:13.5px; margin-bottom:2px; }
+  .row .v { font-size:14px; font-weight:800; white-space:nowrap; }
+  .row .v.mut { color:var(--muted); font-weight:700; font-size:13px; }
+
+  .flow { padding:16px 18px; display:flex; flex-direction:column; gap:0; }
+  .step { display:grid; grid-template-columns:22px 1fr; gap:12px; }
+  .step .dot { display:flex; flex-direction:column; align-items:center; }
+  .step .bead { width:10px; height:10px; border-radius:50%; border:2px solid var(--accent); background:var(--ground); margin-top:5px; }
+  .step.done .bead { background:var(--accent); }
+  .step .line { flex:1; width:2px; background:var(--hair); margin:3px 0; min-height:14px; }
+  .step:last-child .line { display:none; }
+  .step .body { padding-bottom:15px; }
+  .step .t { font-size:13.5px; font-weight:700; }
+  .step .d { font-size:12px; color:var(--muted); margin-top:2px; }
+
+  .foot { margin-top:30px; padding-top:16px; border-top:1px solid var(--hair);
+          font-size:12px; color:var(--faint); display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  .demo { display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:700; letter-spacing:.08em;
+          text-transform:uppercase; color:var(--wait); background:var(--wait-bg);
+          border:1px solid var(--wait-br); border-radius:999px; padding:4px 11px; }
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="brandline"><span class="mark"></span><span>Staffify &middot; Sales</span></div>
+      <h1>Commission dashboard</h1>
+      <p class="sub">Every deal you close, what it pays, and exactly when the money is yours. Figures reconcile straight from the signed deal and the client invoice, so nothing here is hand-entered.</p>
+    </div>
+    <div class="who">
+      <b>Madison Sterling</b>
+      Account Executive
+      <span class="plantag">20% house &middot; 35% self-sourced</span>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="kpi is-good">
+      <div class="lab">Payable now</div>
+      <div class="val">$3,214</div>
+      <div class="note">4 clients have paid their invoice</div>
+    </div>
+    <div class="kpi is-wait">
+      <div class="lab">Pending</div>
+      <div class="val">$1,975</div>
+      <div class="note">Won, waiting on client payment</div>
+    </div>
+    <div class="kpi">
+      <div class="lab">Paid out</div>
+      <div class="val">$6,480</div>
+      <div class="note">Settled across 9 deals</div>
+    </div>
+    <div class="kpi is-accent">
+      <div class="lab">Earned this year</div>
+      <div class="val">$11,669</div>
+      <div class="note">14 closes &middot; up 22% on last quarter</div>
+    </div>
+  </section>
+
+  <div class="payout">
+    <span class="amt">$3,214</span>
+    <span><b>lands Friday, Aug 22</b> on the next bi-weekly run. Commission pays out on the cycle after the client's money clears.</span>
+  </div>
+
+  <div class="cols">
+
+    <div>
+      <div class="card">
+        <div class="chead">
+          <h2>Deal ledger</h2>
+          <span class="meta">Most recent first</span>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Rate</th>
+                <th class="r">Deal</th>
+                <th class="r">Commission</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="cli">Ridgeline Property Group</div>
+                  <div class="cli-sub">VA placement &middot; won Aug 6</div>
+                </td>
+                <td><span class="rate"><b>35%</b><br>self-sourced</span></td>
+                <td class="r num">$2,099</td>
+                <td class="r"><span class="money good">$735</span></td>
+                <td>
+                  <span class="pill p-good">Payable</span>
+                  <div class="why">Invoice paid Aug 12</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cli">Kestrel Roofing &amp; Exteriors</div>
+                  <div class="cli-sub">Foundry website &middot; won Aug 4</div>
+                </td>
+                <td><span class="rate"><b>Flat</b><br>per site</span></td>
+                <td class="r num">$1,499</td>
+                <td class="r"><span class="money good">$300</span></td>
+                <td>
+                  <span class="pill p-good">Payable</span>
+                  <div class="why">Invoice paid Aug 9</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cli">Brightline Realty</div>
+                  <div class="cli-sub">VA placement &middot; 2 hires &middot; won Jul 29</div>
+                </td>
+                <td><span class="rate"><b>20%</b><br>company lead</span></td>
+                <td class="r num">$3,798</td>
+                <td class="r"><span class="money good">$760</span></td>
+                <td>
+                  <span class="pill p-good">Payable</span>
+                  <div class="why">Invoice paid Aug 5</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cli">Hollis &amp; Vance Legal</div>
+                  <div class="cli-sub">VA placement &middot; won Jul 24</div>
+                </td>
+                <td><span class="rate"><b>35%</b><br>self-sourced</span></td>
+                <td class="r num">$2,099</td>
+                <td class="r"><span class="money good">$735</span></td>
+                <td>
+                  <span class="pill p-good">Payable</span>
+                  <div class="why">Invoice paid Aug 1</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cli">Marisol Dental Partners</div>
+                  <div class="cli-sub">VA placement &middot; won Aug 8</div>
+                </td>
+                <td><span class="rate"><b>20%</b><br>company lead</span></td>
+                <td class="r num">$2,499</td>
+                <td class="r"><span class="money">$500</span></td>
+                <td>
+                  <span class="pill p-wait">Pending</span>
+                  <div class="why">Invoice sent, not yet paid</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cli">Coastal Freight Logistics</div>
+                  <div class="cli-sub">VA placement &middot; 3 hires &middot; won Aug 7</div>
+                </td>
+                <td><span class="rate"><b>35%</b><br>self-sourced</span></td>
+                <td class="r num">$5,097</td>
+                <td class="r"><span class="money">$1,784</span></td>
+                <td>
+                  <span class="pill p-wait">Pending</span>
+                  <div class="why">Invoice due Aug 21</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cli">Ashwood Home Services</div>
+                  <div class="cli-sub">VA placement &middot; won Jul 18</div>
+                </td>
+                <td><span class="rate"><b>35%</b><br>self-sourced</span></td>
+                <td class="r num">$2,099</td>
+                <td class="r"><span class="money">$735</span></td>
+                <td>
+                  <span class="pill p-done">Paid out</span>
+                  <div class="why">Settled Aug 8</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cli">Verity Insurance Group</div>
+                  <div class="cli-sub">VA placement &middot; won Jul 15</div>
+                </td>
+                <td><span class="rate"><b>20%</b><br>company lead</span></td>
+                <td class="r num">$2,499</td>
+                <td class="r"><span class="money">$500</span></td>
+                <td>
+                  <span class="pill p-done">Paid out</span>
+                  <div class="why">Settled Aug 8</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="chead">
+          <h2>Residual income</h2>
+          <span class="meta">$1 per billable hour, first 6 months</span>
+        </div>
+        <div class="rows">
+          <div class="row">
+            <span class="k"><b>7 active placements</b>Earning residual right now</span>
+            <span class="v good" style="color:var(--good)">$1,211<span style="font-weight:600;font-size:12px;color:var(--faint)">/mo</span></span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Ridgeline Property Group</b>Started Aug 12 &middot; 5 months left</span>
+            <span class="v mut">$173/mo</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Brightline Realty</b>2 placements &middot; started Aug 5</span>
+            <span class="v mut">$346/mo</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Hollis &amp; Vance Legal</b>Started Aug 1 &middot; 5 months left</span>
+            <span class="v mut">$173/mo</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>3 earlier placements</b>Rolling off Oct through Dec</span>
+            <span class="v mut">$519/mo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="chead"><h2>How a deal pays</h2></div>
+        <div class="flow">
+          <div class="step done">
+            <div class="dot"><div class="bead"></div><div class="line"></div></div>
+            <div class="body">
+              <div class="t">You close it</div>
+              <div class="d">The deal is marked Closed Won and locked to you as the closer. Reassigning it later never moves your commission.</div>
+            </div>
+          </div>
+          <div class="step done">
+            <div class="dot"><div class="bead"></div><div class="line"></div></div>
+            <div class="body">
+              <div class="t">Client pays their invoice</div>
+              <div class="d">Your commission is calculated on what the client actually paid, not the list price.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="dot"><div class="bead"></div><div class="line"></div></div>
+            <div class="body">
+              <div class="t">It becomes payable</div>
+              <div class="d">Money has to land with us before it can land with you. That is the whole rule.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="dot"><div class="bead"></div></div>
+            <div class="body">
+              <div class="t">Paid on the next run</div>
+              <div class="d">Bi-weekly, on the cycle after the client's payment clears.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><h2>Your plan</h2></div>
+        <div class="rows">
+          <div class="row">
+            <span class="k"><b>Self-sourced placement</b>You found the client</span>
+            <span class="v">35%</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Company lead</b>We handed you the lead</span>
+            <span class="v">20%</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Foundry website</b>Flat, any price point</span>
+            <span class="v">$300</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Strong month</b>6th close onward, that month</span>
+            <span class="v">40%</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Placement residual</b>Every billable hour, 6 months</span>
+            <span class="v">$1/hr</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Retention bonus</b>Placement still active at 90 days</span>
+            <span class="v">$200</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="chead"><h2>This month</h2><span class="meta">August</span></div>
+        <div class="rows">
+          <div class="row">
+            <span class="k"><b>4 closes so far</b>2 more to trigger the 40% rate</span>
+            <span class="v"><span class="pill p-tag">2 to go</span></span>
+          </div>
+          <div class="row">
+            <span class="k"><b>New commission written</b>Across all deal types</span>
+            <span class="v">$3,279</span>
+          </div>
+          <div class="row">
+            <span class="k"><b>Best month to date</b>June, 6 closes</span>
+            <span class="v mut">$4,105</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <span class="demo">Sample data for demonstration</span>
+    <span>Staffify &middot; commission figures reconcile from signed deals and client invoices</span>
+  </div>
+
+</div>
+
+</body>
+</html>
