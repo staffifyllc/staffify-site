@@ -206,8 +206,8 @@
     var n=Math.max(1, quoteHires|0);
     var t=QUOTE_TIERS[tierIdx(n)];
     var per=quoteAction?t.act:t.std, total=per*n, comm=Math.round(total*0.35);
-    var perLbl=n>1?(n+' &times; $'+per.toLocaleString()+' each'):('$'+per.toLocaleString());
-    return '<div class="qrow"><span>Client onboarding &middot; '+perLbl+'</span><b>$'+total.toLocaleString()+'</b></div>'+
+    var perLbl=n>1?(' &middot; '+n+' &times; $'+per.toLocaleString()+' each'):'';
+    return '<div class="qrow"><span>Client onboarding'+perLbl+'</span><b>$'+total.toLocaleString()+'</b></div>'+
       '<div class="qrow"><span>Your 35% commission</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
       '<div class="qrow qfin"><span>Or roll it into the rate</span><b>+$1/hr per hire &middot; $0 today &middot; 0% interest</b></div>'+
       '<div class="qguard">$'+per.toLocaleString()+' per hire'+(quoteAction?(' (action-taker, standard $'+t.std.toLocaleString()+')'):'')+'. Every $100 you discount is $35 out of YOUR pocket.</div>';
