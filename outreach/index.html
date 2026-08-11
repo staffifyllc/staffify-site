@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outreach Proof — Staffify Command Center</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --hair:rgba(255,255,255,0.09); --green:#1d9e75; --green-hi:#7ef5c2; }
+        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        a { color:inherit; }
+        .grad { background:linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--hair); padding:12px 22px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .topbar .brand { display:flex; align-items:center; gap:12px; font-weight:800; }
+        .topbar .brand b { color:var(--cyan-hi); }
+        .topbar .brand span { font-size:11px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:var(--muted); }
+        .nav { display:flex; gap:5px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:7px 13px; border-radius:999px; }
+        .nav a:hover { color:var(--white); }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        .wrap { max-width:1080px; margin:0 auto; padding:26px 22px 80px; }
+        .eyebrow { display:flex; align-items:center; gap:12px; font-size:12px; font-weight:800; letter-spacing:0.3em; color:var(--cyan); text-transform:uppercase; margin-bottom:12px; }
+        .eyebrow::before { content:''; width:30px; height:2px; background:linear-gradient(90deg, var(--cyan), transparent); }
+        h1 { font-size:27px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+        .sub { font-size:13.5px; color:var(--muted); margin-bottom:22px; }
+        .stats { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:22px; }
+        @media (max-width:820px){ .stats { grid-template-columns:repeat(3,1fr); } }
+        .stat { background:var(--card); border:1px solid var(--hair); border-radius:12px; padding:14px 15px; }
+        .stat .n { font-size:23px; font-weight:900; letter-spacing:-0.02em; }
+        .stat .l { font-size:10.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-top:3px; }
+        .controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+        .pills { display:flex; gap:6px; flex-wrap:wrap; }
+        .pill { font-size:12.5px; font-weight:700; color:var(--muted); background:var(--card); border:1px solid var(--hair); border-radius:999px; padding:7px 13px; cursor:pointer; }
+        .pill.on { color:#04222b; background:var(--cyan); border-color:var(--cyan); }
+        .search { flex:1; min-width:180px; }
+        .search input { width:100%; font-family:inherit; font-size:13.5px; color:var(--white); background:rgba(255,255,255,0.05); border:1px solid var(--hair); border-radius:10px; padding:9px 13px; }
+        .search input:focus { outline:none; border-color:var(--cyan); }
+        .lead { background:var(--card); border:1px solid var(--hair); border-radius:12px; margin-bottom:9px; overflow:hidden; }
+        .lead-head { display:flex; align-items:center; gap:12px; padding:13px 16px; cursor:pointer; }
+        .lead-head:hover { background:rgba(255,255,255,0.02); }
+        .lead-co { font-weight:700; font-size:14.5px; }
+        .lead-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+        .lead-grow { flex:1; min-width:0; }
+        .tag { font-size:10px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; padding:3px 8px; border-radius:999px; white-space:nowrap; }
+        .tag.website { color:#c9b8ff; background:rgba(150,120,255,0.12); border:1px solid rgba(150,120,255,0.3); }
+        .tag.va { color:var(--cyan-hi); background:rgba(26,189,225,0.10); border:1px solid rgba(26,189,225,0.3); }
+        .tag.interested { color:var(--green-hi); background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
+        .tag.engaged { color:#ffd98a; background:rgba(241,196,15,0.12); border:1px solid rgba(241,196,15,0.3); }
+        .counts { display:flex; gap:12px; font-size:11.5px; color:var(--muted); white-space:nowrap; }
+        .counts b { color:var(--white); }
+        .chev { color:var(--muted); font-size:12px; transition:transform .15s; }
+        .lead.open .chev { transform:rotate(90deg); }
+        .timeline { padding:4px 16px 16px; border-top:1px solid var(--hair); }
+        .touch { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .touch:last-child { border-bottom:none; }
+        .t-ico { width:30px; height:30px; flex-shrink:0; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; background:rgba(255,255,255,0.05); border:1px solid var(--hair); }
+        .touch.inbound .t-ico { background:rgba(29,158,117,0.16); border-color:rgba(29,158,117,0.4); }
+        .t-body { flex:1; min-width:0; }
+        .t-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; }
+        .t-by { font-size:10px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; padding:2px 7px; border-radius:999px; color:var(--muted); border:1px solid var(--hair); }
+        .t-by.ai { color:var(--cyan-hi); border-color:rgba(26,189,225,0.35); }
+        .t-by.rep { color:#c9b8ff; border-color:rgba(150,120,255,0.35); }
+        .t-by.lead { color:var(--green-hi); border-color:rgba(29,158,117,0.4); }
+        .t-when { color:var(--muted); font-size:11.5px; }
+        .t-result { font-size:11px; font-weight:700; color:var(--cyan-hi); }
+        .t-inbound { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--green-hi); }
+        .t-summary { font-size:13px; color:#c9ced7; margin-top:5px; line-height:1.5; }
+        .t-text { font-size:13px; color:#dfe3e8; margin-top:6px; padding:8px 11px; background:rgba(255,255,255,0.03); border-left:2px solid var(--cyan); border-radius:0 8px 8px 0; white-space:pre-wrap; }
+        .t-acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+        .t-btn { font-size:11.5px; font-weight:700; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); border-radius:999px; padding:5px 12px; cursor:pointer; }
+        .t-btn:hover { background:rgba(26,189,225,0.16); }
+        .t-btn:disabled { opacity:.6; cursor:default; }
+        .t-audio { margin-top:8px; }
+        .t-audio audio { width:100%; height:34px; }
+        .t-trans { margin-top:8px; max-height:230px; overflow:auto; padding:9px 11px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid var(--hair); font-family:ui-monospace,Menlo,monospace; font-size:11.5px; line-height:1.55; color:var(--muted); white-space:pre-wrap; }
+        .t-note { font-size:11.5px; color:var(--muted); margin-top:6px; }
+        .empty { text-align:center; color:var(--muted); padding:50px 20px; font-size:14px; }
+        .more { text-align:center; margin-top:14px; }
+        .more button { font-size:13px; font-weight:700; color:var(--cyan-hi); background:transparent; border:1px solid var(--hair); border-radius:999px; padding:9px 18px; cursor:pointer; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="brand"><b>Staffify</b><span>Outreach Proof</span></div>
+    <nav class="nav">
+        <a href="/campaigns/">Command Center</a>
+        <a href="/outreach/" class="active">Proof</a>
+        <a href="/hub/">Hub</a>
+        <a href="/dialer/">Dialer</a>
+    </nav>
+</header>
+
+<div class="wrap" id="app"><div class="empty">Loading the full outreach log...</div></div>
+
+<script>
+(function(){
+  var app=document.getElementById('app');
+  var LEADS=[], COUNTS={}, GEN='', MOTION='', STATUSF='all', SEARCH='', SHOWN=200;
+  var TRANS={}; // call_id -> transcript cache
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function num(n){ n=Number(n)||0; return n.toLocaleString(); }
+  function when(s){ if(!s) return ''; var d=new Date(s); if(isNaN(d)) return esc(s); return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+', '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
+  function dur(sec){ sec=Number(sec)||0; if(sec<1) return ''; var m=Math.floor(sec/60), s=Math.round(sec%60); return m?(m+'m '+s+'s'):(s+'s'); }
+  function ico(t){ if(t.type==='text'||t.channel==='sms') return '&#128172;'; if(t.type==='voicemail') return '&#127908;'; return '&#128222;'; }
+
+  async function loadLog(){
+    app.innerHTML='<div class="empty">Loading the full outreach log...</div>';
+    var url='/api/outreach-log/?withTranscripts=0&limit=2000'+(MOTION?('&motion='+MOTION):'');
+    try{
+      var r=await fetch(url,{cache:'no-store'}); var j=await r.json();
+      if(!j || j.error){ app.innerHTML='<div class="empty">Could not load the outreach log ('+esc((j&&j.error)||r.status)+').</div>'; return; }
+      LEADS=j.leads||[]; COUNTS=j.counts||{}; GEN=j.generatedAt||''; SHOWN=200;
+      render();
+    }catch(e){ app.innerHTML='<div class="empty">Network error loading the outreach log.</div>'; }
+  }
+
+  function filtered(){
+    var q=SEARCH.trim().toLowerCase();
+    return LEADS.filter(function(l){
+      if(STATUSF==='interested' && l.status!=='interested') return false;
+      if(STATUSF==='engaged' && !l.engaged) return false;
+      if(STATUSF==='recorded' && !(l.recordingCount>0)) return false;
+      if(q){ var hay=((l.company||'')+' '+(l.name||'')+' '+(l.phone||'')+' '+(l.email||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+      return true;
+    });
+  }
+
+  function statHead(){
+    var c=COUNTS;
+    return '<div class="eyebrow">Proof of Work</div><h1>Outreach <span class="grad">proof</span></h1>'+
+      '<div class="sub">Every lead, every touch, every result. Recordings and transcripts on each call.'+(GEN?(' &middot; refreshed '+when(GEN)):'')+'</div>'+
+      '<div class="stats">'+
+        '<div class="stat"><div class="n">'+num(c.leads)+'</div><div class="l">Leads</div></div>'+
+        '<div class="stat"><div class="n">'+num(c.touches)+'</div><div class="l">Touches</div></div>'+
+        '<div class="stat"><div class="n">'+num(c.calls)+'</div><div class="l">Calls</div></div>'+
+        '<div class="stat"><div class="n">'+num(c.recordings)+'</div><div class="l">Recordings</div></div>'+
+        '<div class="stat"><div class="n" style="color:#ffd98a">'+num(c.engaged)+'</div><div class="l">Engaged</div></div>'+
+        '<div class="stat"><div class="n grad">'+num(c.interested)+'</div><div class="l">Interested</div></div>'+
+      '</div>';
+  }
+
+  function controls(){
+    var mp=function(v,lbl){ return '<button class="pill'+(MOTION===v?' on':'')+'" data-motion="'+v+'">'+lbl+'</button>'; };
+    var sp=function(v,lbl){ return '<button class="pill'+(STATUSF===v?' on':'')+'" data-status="'+v+'">'+lbl+'</button>'; };
+    return '<div class="controls"><div class="pills">'+mp('','All')+mp('websites','Foundry &middot; Websites')+mp('vas','VA Services')+'</div>'+
+      '<div class="pills">'+sp('all','Everyone')+sp('interested','Interested')+sp('engaged','Engaged')+sp('recorded','Has recording')+'</div>'+
+      '<div class="search"><input id="q" type="search" placeholder="Search company, name, phone, email" value="'+esc(SEARCH)+'"></div></div>';
+  }
+
+  function leadRow(l, idx){
+    var mo=l.motion==='websites'?'<span class="tag website">Foundry</span>':(l.motion==='vas'?'<span class="tag va">VA</span>':'');
+    var st=l.status==='interested'?'<span class="tag interested">Interested</span>':(l.engaged?'<span class="tag engaged">Engaged</span>':'');
+    var counts='<span>'+num(l.touchCount)+' touch'+(l.touchCount===1?'':'es')+'</span>'+
+      (l.callCount?'<span><b>'+num(l.callCount)+'</b> call'+(l.callCount===1?'':'s')+'</span>':'')+
+      (l.recordingCount?'<span style="color:var(--cyan-hi)"><b>'+num(l.recordingCount)+'</b> rec</span>':'');
+    return '<div class="lead" data-idx="'+idx+'">'+
+      '<div class="lead-head"><div class="lead-grow"><div class="lead-co">'+esc(l.company||l.name||'(unknown)')+' '+mo+' '+st+'</div>'+
+        '<div class="lead-meta">'+esc([l.name,l.phone].filter(Boolean).join(' &middot; ')||l.email||'')+(l.lastTouchAt?(' &middot; last '+when(l.lastTouchAt)):'')+'</div></div>'+
+        '<div class="counts">'+counts+'</div><div class="chev">&#9656;</div></div>'+
+      '<div class="tl" style="display:none"></div></div>';
+  }
+
+  function touchRow(t){
+    var inbound=t.direction==='in';
+    var by=(t.by||'').toLowerCase(); var byLbl=by==='ai'?'AI':(by==='rep'?'Rep':(by==='lead'?'Lead':esc(t.by||'')));
+    var top='<div class="t-top">'+(byLbl?'<span class="t-by '+esc(by)+'">'+byLbl+'</span>':'')+
+      '<span class="t-when">'+when(t.at)+'</span>'+
+      (t.result?'<span class="t-result">'+esc(t.result)+'</span>':'')+
+      (t.duration_sec?'<span class="t-when">'+dur(t.duration_sec)+'</span>':'')+
+      (inbound?'<span class="t-inbound">&#8592; they replied</span>':'')+'</div>';
+    var body=top;
+    if(t.summary) body+='<div class="t-summary">'+esc(t.summary)+'</div>';
+    if(t.objection) body+='<div class="t-summary" style="color:#ffd98a">Objection: '+esc(t.objection)+'</div>';
+    if(t.text) body+='<div class="t-text">'+esc(t.text)+'</div>';
+    var isCall=(t.type==='call'||t.channel==='call'||t.type==='voicemail');
+    if(isCall && t.call_id){
+      body+='<div class="t-acts"><button class="t-btn play" data-call="'+esc(t.call_id)+'">&#9654; Recording</button>'+
+        '<button class="t-btn trans" data-call="'+esc(t.call_id)+'">Transcript</button></div><div class="t-slot"></div>';
+    }
+    return '<div class="touch'+(inbound?' inbound':'')+'"><div class="t-ico">'+ico(t)+'</div><div class="t-body">'+body+'</div></div>';
+  }
+
+  function render(){
+    var list=filtered();
+    var slice=list.slice(0, SHOWN);
+    var body=statHead()+controls();
+    if(!list.length){ body+='<div class="empty">No outreach matches this filter.</div>'; }
+    else {
+      body+=slice.map(function(l){ return leadRow(l, LEADS.indexOf(l)); }).join('');
+      if(list.length>SHOWN) body+='<div class="more"><button id="more">Show more ('+num(list.length-SHOWN)+' of '+num(list.length)+' hidden)</button></div>';
+    }
+    app.innerHTML=body;
+    wire();
+  }
+
+  function wire(){
+    var q=document.getElementById('q');
+    if(q) q.oninput=function(){ SEARCH=q.value; SHOWN=200; var pos=q.selectionStart; render(); var nq=document.getElementById('q'); if(nq){ nq.focus(); try{nq.setSelectionRange(pos,pos);}catch(e){} } };
+    Array.prototype.forEach.call(document.querySelectorAll('.pill[data-motion]'),function(b){ b.onclick=function(){ MOTION=b.getAttribute('data-motion'); loadLog(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.pill[data-status]'),function(b){ b.onclick=function(){ STATUSF=b.getAttribute('data-status'); SHOWN=200; render(); }; });
+    var more=document.getElementById('more'); if(more) more.onclick=function(){ SHOWN+=200; render(); };
+    Array.prototype.forEach.call(document.querySelectorAll('.lead-head'),function(h){ h.onclick=function(){ toggleLead(h.parentNode); }; });
+  }
+
+  function toggleLead(el){
+    var tl=el.querySelector('.tl');
+    if(el.classList.contains('open')){ el.classList.remove('open'); tl.style.display='none'; return; }
+    el.classList.add('open'); tl.style.display='block';
+    if(!tl.getAttribute('data-rendered')){
+      var l=LEADS[+el.getAttribute('data-idx')];
+      var touches=(l&&l.touches)||[];
+      tl.innerHTML='<div class="timeline">'+(touches.length?touches.map(touchRow).join(''):'<div class="t-note">No touch detail on this lead.</div>')+'</div>';
+      tl.setAttribute('data-rendered','1');
+      wireTouches(tl);
+    }
+  }
+
+  function wireTouches(tl){
+    Array.prototype.forEach.call(tl.querySelectorAll('.t-btn.play'),function(b){ b.onclick=function(){ playRec(b); }; });
+    Array.prototype.forEach.call(tl.querySelectorAll('.t-btn.trans'),function(b){ b.onclick=function(){ showTrans(b); }; });
+  }
+
+  function playRec(btn){
+    var slot=btn.closest('.t-body').querySelector('.t-slot');
+    var cid=btn.getAttribute('data-call');
+    if(slot.querySelector('audio')){ slot.innerHTML=''; return; }
+    slot.innerHTML='<div class="t-audio"><audio controls autoplay preload="none" src="/api/outreach-log/?action=audio&call_id='+encodeURIComponent(cid)+'"></audio><div class="t-note">If the player stays empty, the recording stream is not switched on yet.</div></div>';
+  }
+
+  async function showTrans(btn){
+    var slot=btn.closest('.t-body').querySelector('.t-slot');
+    var existing=slot.querySelector('.t-trans');
+    if(existing){ existing.remove(); return; }
+    var cid=btn.getAttribute('data-call');
+    var old=btn.textContent; btn.disabled=true; btn.textContent='Loading...';
+    var tx=TRANS[cid];
+    if(tx==null){
+      try{ var r=await fetch('/api/outreach-log/?action=recording&call_id='+encodeURIComponent(cid),{cache:'no-store'}); var j=await r.json(); tx=(j&&j.transcript)||''; TRANS[cid]=tx; }
+      catch(e){ tx=''; }
+    }
+    btn.disabled=false; btn.textContent=old;
+    var div=document.createElement('div'); div.className='t-trans';
+    div.textContent=tx||'No transcript available for this call.';
+    slot.appendChild(div);
+  }
+
+  loadLog();
+})();
+</script>
+</body>
+</html>
