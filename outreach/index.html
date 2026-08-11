@@ -101,7 +101,7 @@
 <script>
 (function(){
   var app=document.getElementById('app');
-  var LEADS=[], COUNTS={}, GEN='', MOTION='', STATUSF='all', SEARCH='', SHOWN=200;
+  var LEADS=[], COUNTS={}, GEN='', MOTION='', SCOPE='engaged', FILTER='engaged-only', SEARCH='', SHOWN=200;
   var TRANS={}; // call_id -> transcript cache
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -112,30 +112,28 @@
 
   async function loadLog(){
     app.innerHTML='<div class="empty">Loading the full outreach log...</div>';
-    var url='/api/outreach-log/?withTranscripts=0&limit=2000'+(MOTION?('&motion='+MOTION):'');
+    var url='/api/outreach-log/?withTranscripts=0&limit=2000'+(SCOPE==='all'?'&all=1':'')+(MOTION?('&motion='+MOTION):'');
     try{
       var r=await fetch(url,{cache:'no-store'}); var j=await r.json();
       if(!j || j.error){ app.innerHTML='<div class="empty">Could not load the outreach log ('+esc((j&&j.error)||r.status)+').</div>'; return; }
-      LEADS=j.leads||[]; COUNTS=j.counts||{}; GEN=j.generatedAt||''; SHOWN=200;
+      LEADS=j.leads||[]; COUNTS=j.counts||{}; GEN=j.generatedAt||''; FILTER=j.filter||''; SHOWN=200;
       render();
     }catch(e){ app.innerHTML='<div class="empty">Network error loading the outreach log.</div>'; }
   }
 
   function filtered(){
     var q=SEARCH.trim().toLowerCase();
+    if(!q) return LEADS;
     return LEADS.filter(function(l){
-      if(STATUSF==='interested' && l.status!=='interested') return false;
-      if(STATUSF==='engaged' && !l.engaged) return false;
-      if(STATUSF==='recorded' && !(l.recordingCount>0)) return false;
-      if(q){ var hay=((l.company||'')+' '+(l.name||'')+' '+(l.phone||'')+' '+(l.email||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
-      return true;
+      var hay=((l.company||'')+' '+(l.name||'')+' '+(l.phone||'')+' '+(l.email||'')).toLowerCase();
+      return hay.indexOf(q)>=0;
     });
   }
 
   function statHead(){
     var c=COUNTS;
     return '<div class="eyebrow">Proof of Work</div><h1>Outreach <span class="grad">proof</span></h1>'+
-      '<div class="sub">Every lead, every touch, every result. Recordings and transcripts on each call.'+(GEN?(' &middot; refreshed '+when(GEN)):'')+'</div>'+
+      '<div class="sub">'+(FILTER==='all-contacted'?'Every lead we contacted, every touch, every result.':'Leads who engaged, every touch, every result.')+' Recordings and transcripts on each call.'+(GEN?(' &middot; refreshed '+when(GEN)):'')+'</div>'+
       '<div class="stats">'+
         '<div class="stat"><div class="n">'+num(c.leads)+'</div><div class="l">Leads</div></div>'+
         '<div class="stat"><div class="n">'+num(c.touches)+'</div><div class="l">Touches</div></div>'+
@@ -148,9 +146,9 @@
 
   function controls(){
     var mp=function(v,lbl){ return '<button class="pill'+(MOTION===v?' on':'')+'" data-motion="'+v+'">'+lbl+'</button>'; };
-    var sp=function(v,lbl){ return '<button class="pill'+(STATUSF===v?' on':'')+'" data-status="'+v+'">'+lbl+'</button>'; };
-    return '<div class="controls"><div class="pills">'+mp('','All')+mp('websites','Foundry &middot; Websites')+mp('vas','VA Services')+'</div>'+
-      '<div class="pills">'+sp('all','Everyone')+sp('interested','Interested')+sp('engaged','Engaged')+sp('recorded','Has recording')+'</div>'+
+    var cp=function(v,lbl){ return '<button class="pill'+(SCOPE===v?' on':'')+'" data-scope="'+v+'">'+lbl+'</button>'; };
+    return '<div class="controls"><div class="pills">'+cp('engaged','Engaged')+cp('all','All contacted')+'</div>'+
+      '<div class="pills">'+mp('','All')+mp('websites','Foundry &middot; Websites')+mp('vas','VA Services')+'</div>'+
       '<div class="search"><input id="q" type="search" placeholder="Search company, name, phone, email" value="'+esc(SEARCH)+'"></div></div>';
   }
 
@@ -174,7 +172,8 @@
       '<span class="t-when">'+when(t.at)+'</span>'+
       (t.result?'<span class="t-result">'+esc(t.result)+'</span>':'')+
       (t.duration_sec?'<span class="t-when">'+dur(t.duration_sec)+'</span>':'')+
-      (inbound?'<span class="t-inbound">&#8592; they replied</span>':'')+'</div>';
+      (inbound?'<span class="t-inbound">&#8592; they replied</span>':'')+
+      (t.verbatim?'<span class="t-when" style="color:var(--green-hi)">verbatim</span>':'')+'</div>';
     var body=top;
     if(t.summary) body+='<div class="t-summary">'+esc(t.summary)+'</div>';
     if(t.objection) body+='<div class="t-summary" style="color:#ffd98a">Objection: '+esc(t.objection)+'</div>';
@@ -204,7 +203,7 @@
     var q=document.getElementById('q');
     if(q) q.oninput=function(){ SEARCH=q.value; SHOWN=200; var pos=q.selectionStart; render(); var nq=document.getElementById('q'); if(nq){ nq.focus(); try{nq.setSelectionRange(pos,pos);}catch(e){} } };
     Array.prototype.forEach.call(document.querySelectorAll('.pill[data-motion]'),function(b){ b.onclick=function(){ MOTION=b.getAttribute('data-motion'); loadLog(); }; });
-    Array.prototype.forEach.call(document.querySelectorAll('.pill[data-status]'),function(b){ b.onclick=function(){ STATUSF=b.getAttribute('data-status'); SHOWN=200; render(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.pill[data-scope]'),function(b){ b.onclick=function(){ SCOPE=b.getAttribute('data-scope'); loadLog(); }; });
     var more=document.getElementById('more'); if(more) more.onclick=function(){ SHOWN+=200; render(); };
     Array.prototype.forEach.call(document.querySelectorAll('.lead-head'),function(h){ h.onclick=function(){ toggleLead(h.parentNode); }; });
   }

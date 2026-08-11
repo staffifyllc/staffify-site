@@ -56,6 +56,7 @@ export default async function handler(req, res) {
     if (req.query.motion) params.motion = req.query.motion.toString();
     if (req.query.limit) params.limit = req.query.limit.toString();
     if (req.query.withTranscripts != null) params.withTranscripts = req.query.withTranscripts.toString();
+    if (req.query.all != null) params.all = req.query.all.toString();
     try {
         const r = await fetch(engineUrl(params));
         const j = await r.json().catch(() => null);
