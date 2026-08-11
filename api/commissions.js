@@ -62,6 +62,21 @@ async function loadHubspotWon() {
         if (r.ok) { const j = await r.json(); (j.results || []).forEach(o => { owners[o.id] = { email: (o.email || '').toLowerCase(), name: [o.firstName, o.lastName].filter(Boolean).join(' ').trim() || o.email || '' }; }); }
     } catch (e) { /* owners optional */ }
 
+    // Pipeline -> deal type, so a Foundry website deal is not silently paid the VA rate.
+    const pipeType = {};
+    try {
+        const r = await fetch(`${HS}/crm/v3/pipelines/deals`, { headers });
+        if (r.ok) {
+            const j = await r.json();
+            (j.results || []).forEach(p => {
+                const l = (p.label || '').toLowerCase();
+                if (/foundry|website|web design|site/.test(l)) pipeType[p.id] = 'website';
+                else if (/\bai\b|automation/.test(l)) pipeType[p.id] = 'ai';
+                else if (/va|staffing|placement|talent/.test(l)) pipeType[p.id] = 'va';
+            });
+        }
+    } catch (e) { /* classification falls back to the admin override */ }
+
     let results = [];
     let after, truncated = false;
     try {
@@ -105,6 +120,7 @@ async function loadHubspotWon() {
             ownerEmail: owner.email,
             ownerName: owner.name,
             clientEmail: (emailByDeal[d.id] || '').toLowerCase(),
+            dealType: pipeType[p.pipeline] || '',
         };
     });
     return { configured: true, deals, truncated };
@@ -115,7 +131,7 @@ async function loadQboPaid() {
     if (!(await qboConnected())) return { connected: false };
     let invoices = [];
     try {
-        const j = await qboQuery("SELECT Id, TotalAmt, Balance, TxnDate, CustomerRef FROM Invoice ORDERBY TxnDate DESC MAXRESULTS 1000");
+        const j = await qboQuery("SELECT Id, DocNumber, TotalAmt, Balance, TxnDate, CustomerRef FROM Invoice ORDERBY TxnDate DESC MAXRESULTS 1000");
         invoices = (j && j.QueryResponse && j.QueryResponse.Invoice) || [];
     } catch (e) { return { connected: true, error: String((e && e.message) || e).slice(0, 200) }; }
     let customers = [];
@@ -134,7 +150,7 @@ async function loadQboPaid() {
     });
 
     const byCust = {};
-    function ensure(id, name) { return byCust[id] || (byCust[id] = { id, name: name || (custById[id] && custById[id].name) || '', paidTotal: 0, paidCount: 0, openTotal: 0, lastPaidDate: '', firstPaidDate: '', firstPaidAmt: 0, received: 0 }); }
+    function ensure(id, name) { return byCust[id] || (byCust[id] = { id, name: name || (custById[id] && custById[id].name) || '', paidTotal: 0, paidCount: 0, openTotal: 0, lastPaidDate: '', received: 0, invoices: [] }); }
     invoices.forEach(inv => {
         const id = inv.CustomerRef && inv.CustomerRef.value;
         if (!id) return;
@@ -143,11 +159,11 @@ async function loadQboPaid() {
         const date = (inv.TxnDate || '').toString();
         const paid = balance <= 0 && total > 0;
         const c = ensure(id, inv.CustomerRef && inv.CustomerRef.name);
+        // Keep every invoice so a deal can be tied to ITS OWN invoice, not to the customer as a whole.
+        c.invoices.push({ id: inv.Id, docNumber: inv.DocNumber || '', total, balance, date, paid });
         if (paid) {
             c.paidCount++; c.paidTotal += total;
             if (date && (!c.lastPaidDate || date > c.lastPaidDate)) c.lastPaidDate = date;
-            if (date && (!c.firstPaidDate || date < c.firstPaidDate)) { c.firstPaidDate = date; c.firstPaidAmt = total; }
-            if (!c.firstPaidAmt) c.firstPaidAmt = total; // fallback when dates are missing
         } else c.openTotal += balance;
     });
 
@@ -198,18 +214,33 @@ async function loadRepPayouts(reps) {
         r.paid += Number(amt) || 0;
         if (date && (!r.lastDate || date > r.lastDate)) r.lastDate = date;
     }
-    // Bill payments (bill -> pay) and direct checks/expenses both count as paying the rep.
+    // Only COMMISSION payments may settle a commission. Summing every payment to the rep's vendor record
+    // would let base pay, an expense reimbursement, or a travel advance silently mark real commissions as
+    // paid out. Payments must carry the tag (default "commission") in their memo. If nothing is tagged,
+    // nothing auto-settles and the deals stay payable, which is the safe direction to be wrong in.
+    const TAG = (process.env.COMMISSION_MEMO_TAG || 'commission').toLowerCase();
+    const matchAll = String(process.env.COMMISSION_PAYOUT_MATCH_ALL || '') === 'true';
+    const isCommission = (memo) => matchAll || String(memo || '').toLowerCase().includes(TAG);
+    let scanned = 0, tagged = 0;
     try {
-        const j = await qboQuery("SELECT VendorRef, TotalAmt, TxnDate FROM BillPayment ORDERBY TxnDate DESC MAXRESULTS 1000");
+        const j = await qboQuery("SELECT VendorRef, TotalAmt, TxnDate, PrivateNote FROM BillPayment ORDERBY TxnDate DESC MAXRESULTS 1000");
         ((j && j.QueryResponse && j.QueryResponse.BillPayment) || []).forEach(p => {
             const vid = p.VendorRef && p.VendorRef.value;
+            if (!vendorToRep[vid]) return;
+            scanned++;
+            if (!isCommission(p.PrivateNote)) return;
+            tagged++;
             add(vendorToRep[vid], p.TotalAmt, (p.TxnDate || '').toString());
         });
     } catch (e) { /* optional */ }
     try {
-        const j = await qboQuery("SELECT EntityRef, TotalAmt, TxnDate FROM Purchase ORDERBY TxnDate DESC MAXRESULTS 1000");
+        const j = await qboQuery("SELECT EntityRef, TotalAmt, TxnDate, PrivateNote FROM Purchase ORDERBY TxnDate DESC MAXRESULTS 1000");
         ((j && j.QueryResponse && j.QueryResponse.Purchase) || []).forEach(p => {
             const vid = p.EntityRef && p.EntityRef.value;
+            if (!vendorToRep[vid]) return;
+            scanned++;
+            if (!isCommission(p.PrivateNote)) return;
+            tagged++;
             add(vendorToRep[vid], p.TotalAmt, (p.TxnDate || '').toString());
         });
     } catch (e) { /* optional */ }
@@ -219,7 +250,7 @@ async function loadRepPayouts(reps) {
     // tell us how much of it was commission. Those reps stay on a manual mark, by design, not by omission.
     const autoReps = {};
     Object.keys(vendorToRep).forEach(vid => { autoReps[vendorToRep[vid]] = true; });
-    return { connected: true, byRep, autoReps, vendorsMatched: Object.keys(vendorToRep).length };
+    return { connected: true, byRep, autoReps, vendorsMatched: Object.keys(vendorToRep).length, scanned, tagged, tag: TAG };
 }
 
 // Settle each rep's payable deals against what QuickBooks says we already paid them, oldest first.
@@ -265,12 +296,15 @@ async function loadOwnerSnapshots() {
     return out;
 }
 
-async function snapshotNewOwners(deals, snaps) {
+async function snapshotNewOwners(deals, snaps, repRateByEmail) {
     const writes = {};
     deals.forEach(d => {
         if (snaps[d.dealId]) return;
         if (!d.ownerEmail) return; // nothing to lock yet; try again next load once the owner is set
+        // Lock the rate too: a later rate change must not re-price deals already closed (or already paid).
+        const rate = repRateByEmail[d.ownerEmail];
         const rec = { ownerEmail: d.ownerEmail, ownerName: d.ownerName || '', closeDate: d.closeDate || '', at: Date.now() };
+        if (rate != null) rec.rate = rate;
         snaps[d.dealId] = rec;
         writes[d.dealId] = JSON.stringify(rec);
     });
@@ -288,21 +322,67 @@ function matchCustomer(deal, ov, qbo) {
     return '';
 }
 
-function reconcile(deal, ov, qbo, repRateByEmail, snap) {
-    const dealType = (ov && DEAL_TYPES.includes(ov.dealType)) ? ov.dealType : 'va';
+// Tie each deal to ONE specific invoice. Matching at the customer level is wrong: a repeat client already
+// has paid invoices, so a brand-new deal would read as "already paid" the second it is marked Closed Won,
+// and would be priced off the client's FIRST-ever invoice. Each deal gets the invoice raised nearest its
+// close date (preferring on/after the close), and an invoice is only ever claimed by one deal.
+function assignInvoices(deals, overrides, qbo) {
+    const assigned = {};
+    if (!qbo || !qbo.connected) return assigned;
+    const claimed = {};
+
+    // Honour explicit admin pins first so they always win the invoice they name.
+    deals.forEach(d => {
+        const ov = overrides[d.dealId];
+        if (!ov || !ov.invoiceId) return;
+        const custId = matchCustomer(d, ov, qbo);
+        const cust = custId && qbo.byCust[custId];
+        const inv = cust && (cust.invoices || []).find(i => String(i.id) === String(ov.invoiceId));
+        if (inv) { assigned[d.dealId] = { custId, inv }; claimed[inv.id] = true; }
+    });
+
+    // Then auto-assign, oldest close first, so early deals take the early invoices.
+    deals.slice().sort((a, b) => (a.closeDate || '').localeCompare(b.closeDate || '')).forEach(d => {
+        if (assigned[d.dealId]) return;
+        const ov = overrides[d.dealId] || {};
+        const custId = matchCustomer(d, ov, qbo);
+        const cust = custId && qbo.byCust[custId];
+        if (!cust) return;
+        const pool = (cust.invoices || []).filter(i => !claimed[i.id]);
+        if (!pool.length) { assigned[d.dealId] = { custId, inv: null }; return; }
+        const close = d.closeDate || '';
+        let best = null, bestScore = null;
+        pool.forEach(i => {
+            const days = (close && i.date) ? Math.abs((new Date(i.date) - new Date(close)) / 864e5) : 9999;
+            // Prefer an invoice raised on/after the close date; a pre-close invoice is likely a different sale.
+            const after = (close && i.date && i.date >= close) ? 0 : 1;
+            const score = after * 10000 + days;
+            if (bestScore === null || score < bestScore) { bestScore = score; best = i; }
+        });
+        if (best) { assigned[d.dealId] = { custId, inv: best }; claimed[best.id] = true; }
+        else assigned[d.dealId] = { custId, inv: null };
+    });
+    return assigned;
+}
+
+function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
+    const dealType = (ov && DEAL_TYPES.includes(ov.dealType)) ? ov.dealType : (deal.dealType || 'va');
     // Admin override wins, then the owner locked at win time, then the current owner as a last resort.
     const closerEmail = (snap && snap.ownerEmail) || deal.ownerEmail || '';
     const repEmail = ((ov && ov.rep) || closerEmail || '').toLowerCase();
     const knownRep = !!repEmail && repRateByEmail[repEmail] != null;
     const ownerChanged = !!(snap && snap.ownerEmail && deal.ownerEmail && snap.ownerEmail !== deal.ownerEmail);
-    const rate = rateFor(dealType, knownRep ? repRateByEmail[repEmail] : 35);
+    // Rate locked at win time, so changing a rep's rate never re-prices deals they already closed.
+    const lockedRate = (snap && snap.rate != null) ? Number(snap.rate) : (knownRep ? repRateByEmail[repEmail] : 35);
+    const rate = rateFor(dealType, lockedRate);
 
-    const customerId = (qbo && qbo.connected) ? matchCustomer(deal, ov, qbo) : '';
+    const customerId = (qbo && qbo.connected) ? ((assignment && assignment.custId) || matchCustomer(deal, ov, qbo)) : '';
     const cust = customerId && qbo.byCust ? qbo.byCust[customerId] : null;
-    const invoicePaid = !!(cust && cust.paidCount > 0 && cust.received > 0); // paid AND money received to us
-    const paidAmt = cust ? round(cust.firstPaidAmt || cust.paidTotal) : 0;
+    const inv = (assignment && assignment.inv) || null;
+    // Payable requires THIS deal's own invoice to be paid, plus real money received from that client.
+    const invoicePaid = !!(inv && inv.paid && cust && cust.received > 0);
 
-    const base = round((ov && ov.amount != null) ? ov.amount : (invoicePaid ? (paidAmt || deal.amount) : deal.amount));
+    const base = round((ov && ov.amount != null) ? ov.amount : (invoicePaid ? (inv.total || deal.amount) : deal.amount));
     const commission = round(base * rate / 100);
     const paidOut = !!(ov && ov.paidOut);
     const status = paidOut ? 'paid_out' : (invoicePaid ? 'payable' : 'pending');
@@ -312,9 +392,11 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap) {
         repEmail, repKnown: knownRep,
         ownerEmail: deal.ownerEmail, ownerName: deal.ownerName,
         closerEmail, closerName: (snap && snap.ownerName) || deal.ownerName, ownerChanged,
-        dealType, base, rate, commission,
+        dealType, dealTypeAuto: !!(deal.dealType && !(ov && ov.dealType)), base, rate, commission,
         closeDate: deal.closeDate,
-        customerId, customerMatched: !!customerId, invoicePaid, paidDate: cust ? cust.lastPaidDate : '',
+        customerId, customerMatched: !!customerId,
+        invoiceId: inv ? inv.id : '', invoiceNo: inv ? inv.docNumber : '', invoiceMatched: !!inv,
+        invoicePaid, paidDate: (inv && inv.paid) ? inv.date : '',
         status, override: ov || null,
     };
 }
@@ -336,6 +418,7 @@ export default async function handler(req, res) {
             dealType: DEAL_TYPES.includes((b.dealType || '').toString()) ? b.dealType : undefined,
             amount: (b.amount != null && b.amount !== '') ? Math.max(0, Number(b.amount) || 0) : undefined,
             customerId: (b.customerId || '').toString() || undefined,
+            invoiceId: (b.invoiceId || '').toString() || undefined,
             paidOut: (b.paidOut === true || b.paidOut === 'true') ? true : undefined,
             at: Date.now(), by: (who && who.email) || 'admin',
         };
@@ -366,8 +449,10 @@ export default async function handler(req, res) {
     if (hs.error) return res.status(200).json({ connected: true, source: 'hubspot', error: hs.error, hint: hs.hint || '', deals: [] });
 
     // Lock the closer on any deal we are seeing Closed Won for the first time, then attribute to that.
-    const snaps = await snapshotNewOwners(hs.deals || [], ownerSnaps).catch(() => ownerSnaps);
-    const lines = (hs.deals || []).map(d => reconcile(d, overrides[d.dealId], qbo, repRateByEmail, snaps[d.dealId]));
+    const snaps = await snapshotNewOwners(hs.deals || [], ownerSnaps, repRateByEmail).catch(() => ownerSnaps);
+    // Give each deal its own invoice before pricing anything.
+    const assignments = assignInvoices(hs.deals || [], overrides, qbo);
+    const lines = (hs.deals || []).map(d => reconcile(d, overrides[d.dealId], qbo, repRateByEmail, snaps[d.dealId], assignments[d.dealId]));
 
     // Auto-settle: flip payable -> paid out for any rep QuickBooks shows we have already paid (1099 vendors).
     // W2 reps (payroll) have no vendor record, so they stay manual and are labeled as such.
@@ -386,12 +471,14 @@ export default async function handler(req, res) {
             paidOut: lines.filter(l => l.status === 'paid_out').length,
             unmapped: lines.filter(l => !l.repKnown).length,
             unmatched: lines.filter(l => qbo.connected && !l.customerMatched).length,
+            noInvoice: lines.filter(l => qbo.connected && l.customerMatched && !l.invoiceMatched).length,
             ownerChanged: lines.filter(l => l.ownerChanged).length,
         };
         const custList = qbo.connected ? Object.values(qbo.custById || {}).map(c => ({ id: c.id, name: c.name, email: c.email })) : [];
         return res.status(200).json({
             connected: true, view: 'admin', qboConnected: !!qbo.connected, qboError: qbo.error || '',
             truncated: { hubspot: !!hs.truncated, qbo: !!(qbo && qbo.truncated) },
+            payoutScan: { vendorsMatched: payouts.vendorsMatched || 0, scanned: payouts.scanned || 0, tagged: payouts.tagged || 0, tag: payouts.tag || 'commission' },
             reps: reps.map(r => ({ email: (r.email || '').toLowerCase(), name: r.name || r.email })),
             customers: custList, counts, deals: lines,
         });

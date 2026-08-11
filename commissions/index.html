@@ -232,6 +232,7 @@
     }).join('');
     panel.innerHTML='<div class="panel"><div class="ph"><h2>Closed Won deals</h2><span class="meta">'+(c.deals||0)+' deals &middot; '+(c.payable||0)+' payable &middot; '+(c.pending||0)+' pending</span></div>'+
       qNote+
+      ((d.payoutScan&&d.payoutScan.vendorsMatched&&!d.payoutScan.tagged)?'<div class="note" style="margin-bottom:10px">Auto-settle found '+d.payoutScan.scanned+' payment(s) to rep vendors but none tagged as commission, so nothing was settled automatically. Put the word "'+esc(d.payoutScan.tag)+'" in the memo of a commission payment and it settles itself. Base pay and reimbursements are deliberately ignored.</div>':'')+
       ((c.unmapped||c.unmatched)?'<div class="note" style="margin-bottom:10px">'+(c.unmapped?(c.unmapped+' deal(s) have an owner who is not a registered rep. '):'')+(c.unmatched?(c.unmatched+' deal(s) have no QuickBooks customer match. '):'')+'Fix with the dropdowns below.</div>':'')+
       (deals.length?'<div style="overflow-x:auto"><table><thead><tr><th>Deal</th><th>Rep</th><th>Type</th><th class="num">Amount</th><th>QB customer</th><th>Payout</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">No Closed Won deals in HubSpot yet.</div>')+
       ((d.truncated&&(d.truncated.hubspot||d.truncated.qbo))?'<div class="note" style="margin-top:12px">Showing the most recent records only. Tell me if you need the full history paged in.</div>':'')+'</div>';
