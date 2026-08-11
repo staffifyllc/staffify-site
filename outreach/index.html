@@ -162,7 +162,7 @@
       (l.recordingCount?'<span style="color:var(--cyan-hi)"><b>'+num(l.recordingCount)+'</b> rec</span>':'');
     return '<div class="lead" data-idx="'+idx+'">'+
       '<div class="lead-head"><div class="lead-grow"><div class="lead-co">'+esc(l.company||l.name||'(unknown)')+' '+mo+' '+st+'</div>'+
-        '<div class="lead-meta">'+esc([l.name,l.phone].filter(Boolean).join(' &middot; ')||l.email||'')+(l.lastTouchAt?(' &middot; last '+when(l.lastTouchAt)):'')+'</div></div>'+
+        '<div class="lead-meta">'+([esc(l.name),esc(l.phone)].filter(Boolean).join(' &middot; ')||esc(l.email)||'')+(l.lastTouchAt?(' &middot; last '+when(l.lastTouchAt)):'')+'</div></div>'+
         '<div class="counts">'+counts+'</div><div class="chev">&#9656;</div></div>'+
       '<div class="tl" style="display:none"></div></div>';
   }
