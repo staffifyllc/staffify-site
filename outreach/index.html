@@ -135,12 +135,12 @@
     return '<div class="eyebrow">Proof of Work</div><h1>Outreach <span class="grad">proof</span></h1>'+
       '<div class="sub">'+(FILTER==='all-contacted'?'Every lead we contacted, every touch, every result.':'Leads who engaged, every touch, every result.')+' Recordings and transcripts on each call.'+(GEN?(' &middot; refreshed '+when(GEN)):'')+'</div>'+
       '<div class="stats">'+
-        '<div class="stat"><div class="n">'+num(c.leads)+'</div><div class="l">Leads</div></div>'+
+        '<div class="stat"><div class="n">'+num(c.leads)+'</div><div class="l">'+(FILTER==='all-contacted'?'Contacted':'Engaged leads')+'</div></div>'+
         '<div class="stat"><div class="n">'+num(c.touches)+'</div><div class="l">Touches</div></div>'+
         '<div class="stat"><div class="n">'+num(c.calls)+'</div><div class="l">Calls</div></div>'+
         '<div class="stat"><div class="n">'+num(c.recordings)+'</div><div class="l">Recordings</div></div>'+
-        '<div class="stat"><div class="n" style="color:#ffd98a">'+num(c.engaged)+'</div><div class="l">Engaged</div></div>'+
         '<div class="stat"><div class="n grad">'+num(c.interested)+'</div><div class="l">Interested</div></div>'+
+        '<div class="stat"><div class="n">'+num((c.byMotion||{}).websites)+' / '+num((c.byMotion||{}).vas)+'</div><div class="l">Foundry / VA</div></div>'+
       '</div>';
   }
 
