@@ -68,6 +68,8 @@
         .oc:hover { border-color:var(--cyan); }
         .oc.good { background:rgba(29,158,117,0.16); border-color:rgba(29,158,117,0.5); color:var(--green-hi); }
         .oc.warm { background:rgba(26,189,225,0.10); border-color:rgba(26,189,225,0.4); color:var(--cyan-hi); }
+        .nextbtn { width:100%; margin-top:12px; font-size:14.5px; font-weight:800; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:12px; padding:14px; cursor:pointer; }
+        .nextbtn:hover { background:rgba(26,189,225,0.16); }
         .gate, .empty { max-width:440px; margin:70px auto; text-align:center; }
         .gate { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; }
         .gate h2, .empty h2 { font-size:22px; font-weight:900; margin-bottom:10px; }
@@ -317,7 +319,8 @@
     }
     var L=q[0], tr=TRAIN[MOTION]||{};
     var opArr=(tr.opener&&tr.opener.length)?tr.opener:(Array.isArray(L.opener)?L.opener:[L.opener||'']);
-    var openerLines=opArr.filter(Boolean).map(function(x){return '<div class="line">'+esc(fillTokens(x,L))+'</div>';}).join('');
+    var opFirst=firstNameOf(L.name);
+    var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=fillTokens(x,L); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
     var scriptBits='';
     if(tr.goal) scriptBits+='<div class="blk"><b>Goal:</b> '+esc(tr.goal)+'</div>';
     if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(fillTokens(tr.theAsk,L))+'</div>';
@@ -348,6 +351,7 @@
           '<button class="oc" data-o="not_interested">Not interested</button>'+
           '<button class="oc" data-o="bad_number">Bad number</button>'+
         '</div>'+
+        '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
       '</div>';
     wire();
   }
@@ -379,6 +383,7 @@
           '<button class="oc" data-o="not_interested">Not interested</button>'+
           '<button class="oc" data-o="bad_number">Bad number</button>'+
         '</div>'+
+        '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
       '</div>';
     wire();
   }
@@ -393,6 +398,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
     var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
     var cpb=document.getElementById('cpbtn'); if(cpb)cpb.onclick=function(){ if(!CURHOT||!window.StaffifyClosePlan)return; var r=repGet(); var mo=CURHOT.motion==='staffing'?'Staffify VA':(CURHOT.motion==='websites'?'Foundry website':''); StaffifyClosePlan.run({mode:'prep',transcript:CURHOT.transcript||'',name:CURHOT.name||'',company:CURHOT.company||'',grade:mo,phone:CURHOT.phone||'',rep:(r&&r.name)||''}, document.getElementById('cpout'), cpb); };
+    Array.prototype.forEach.call(document.querySelectorAll('.nextbtn'),function(b){ b.onclick=nextCall; });
   }
 
   function logOutcome(outcome){
@@ -403,6 +409,14 @@
     pendingLog=p;
     p.timer=setTimeout(function(){ if(pendingLog===p){ pendingLog=null; commitLog(p); } }, 5000);
     toastUndo(outcome==='won'?'Boom. Closed.':(outcome==='interested'?'Nice. Logged as interested.':'Logged. Next up.'));
+  }
+
+  // Skip to the next call without logging. Rotates the current lead to the back so nothing is lost.
+  function nextCall(){
+    var q=QUEUES[MOTION]; if(!q||!q.length) return;
+    flushPending();
+    if(q.length<2){ toast('That is the only lead left in this list.'); return; }
+    var lead=q.shift(); q.push(lead); render();
   }
 
   boot();
