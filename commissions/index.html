@@ -214,7 +214,8 @@
     var qNote=(d.qboConnected===false)?'<div class="note" style="margin-bottom:10px">QuickBooks is not connected yet, so every deal stays Pending and payouts are locked. Connect it and paid invoices flip deals to Payable automatically.'+(d.qboError?' ('+esc(d.qboError)+')':'')+'</div>':'';
     var rows=deals.map(function(dl){
       var ov=dl.override||{};
-      var warn=(!dl.repKnown)?'<div class="sug">owner not a rep: '+esc(dl.ownerName||dl.ownerEmail||'unknown')+'</div>':((d.qboConnected&&!dl.customerMatched)?'<div class="sug">no QuickBooks match</div>':'');
+      var warn=(!dl.repKnown)?'<div class="sug">owner not a rep: '+esc(dl.closerName||dl.closerEmail||dl.ownerName||dl.ownerEmail||'unknown')+'</div>':((d.qboConnected&&!dl.customerMatched)?'<div class="sug">no QuickBooks match</div>':'');
+      if(dl.ownerChanged) warn+='<div class="sug">credited to the closer '+esc(dl.closerName||dl.closerEmail)+' (HubSpot owner is now '+esc(dl.ownerName||dl.ownerEmail)+')</div>';
       var statusPill=dl.status==='payable'?'<span class="pill paid">Payable</span>':(dl.status==='paid_out'?'<span class="pill done">Paid out</span>':'<span class="pill pending">Pending</span>');
       var amtVal=(ov.amount!=null)?esc(ov.amount):'';
       var resetBtn=dl.override?'<button class="reset" style="margin-left:6px;font-size:12px;background:transparent;border:1px solid var(--card-border);color:var(--muted);border-radius:8px;padding:6px 10px;cursor:pointer">Reset</button>':'';

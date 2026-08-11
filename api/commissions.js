@@ -15,6 +15,7 @@ import { currentRep, adminAuthorized, listReps, readBody, redis } from './_auth.
 import { qboConnected, qboQuery } from './_qbo.js';
 
 const OVERRIDE_KEY = 'commission:overrides';
+const OWNER_KEY = 'commission:owners'; // dealId -> the owner AT THE TIME IT WAS FIRST SEEN CLOSED WON
 const DEAL_TYPES = ['va', 'website', 'ai'];
 const HS = 'https://api.hubapi.com';
 const MAX_DEAL_PAGES = 10; // 100/page -> up to 1000 Closed Won deals
@@ -172,6 +173,29 @@ async function loadOverrides() {
     return out;
 }
 
+// The closer is whoever owned the deal when it was WON. HubSpot owners get reassigned (handoff to an
+// account manager, territory changes, someone leaving), and that must never move an earned commission.
+// So the first time we see a deal Closed Won we snapshot its owner, and attribute to the snapshot forever.
+async function loadOwnerSnapshots() {
+    const h = (await redis.hgetall(OWNER_KEY)) || {};
+    const out = {};
+    for (const k of Object.keys(h)) { let v = h[k]; if (typeof v === 'string') { try { v = JSON.parse(v); } catch { v = null; } } if (v) out[k] = v; }
+    return out;
+}
+
+async function snapshotNewOwners(deals, snaps) {
+    const writes = {};
+    deals.forEach(d => {
+        if (snaps[d.dealId]) return;
+        if (!d.ownerEmail) return; // nothing to lock yet; try again next load once the owner is set
+        const rec = { ownerEmail: d.ownerEmail, ownerName: d.ownerName || '', closeDate: d.closeDate || '', at: Date.now() };
+        snaps[d.dealId] = rec;
+        writes[d.dealId] = JSON.stringify(rec);
+    });
+    if (Object.keys(writes).length) { try { await redis.hset(OWNER_KEY, writes); } catch (e) { /* non-fatal */ } }
+    return snaps;
+}
+
 // Match a Closed Won deal to a QBO customer id: explicit pin, then contact email, then company name.
 function matchCustomer(deal, ov, qbo) {
     if (ov && ov.customerId) return ov.customerId;
@@ -182,10 +206,13 @@ function matchCustomer(deal, ov, qbo) {
     return '';
 }
 
-function reconcile(deal, ov, qbo, repRateByEmail) {
+function reconcile(deal, ov, qbo, repRateByEmail, snap) {
     const dealType = (ov && DEAL_TYPES.includes(ov.dealType)) ? ov.dealType : 'va';
-    const repEmail = ((ov && ov.rep) || deal.ownerEmail || '').toLowerCase();
+    // Admin override wins, then the owner locked at win time, then the current owner as a last resort.
+    const closerEmail = (snap && snap.ownerEmail) || deal.ownerEmail || '';
+    const repEmail = ((ov && ov.rep) || closerEmail || '').toLowerCase();
     const knownRep = !!repEmail && repRateByEmail[repEmail] != null;
+    const ownerChanged = !!(snap && snap.ownerEmail && deal.ownerEmail && snap.ownerEmail !== deal.ownerEmail);
     const rate = rateFor(dealType, knownRep ? repRateByEmail[repEmail] : 35);
 
     const customerId = (qbo && qbo.connected) ? matchCustomer(deal, ov, qbo) : '';
@@ -200,7 +227,9 @@ function reconcile(deal, ov, qbo, repRateByEmail) {
 
     return {
         dealId: deal.dealId, client: deal.name, company: deal.company,
-        repEmail, repKnown: knownRep, ownerEmail: deal.ownerEmail, ownerName: deal.ownerName,
+        repEmail, repKnown: knownRep,
+        ownerEmail: deal.ownerEmail, ownerName: deal.ownerName,
+        closerEmail, closerName: (snap && snap.ownerName) || deal.ownerName, ownerChanged,
         dealType, base, rate, commission,
         closeDate: deal.closeDate,
         customerId, customerMatched: !!customerId, invoicePaid, paidDate: cust ? cust.lastPaidDate : '',
@@ -241,11 +270,12 @@ export default async function handler(req, res) {
 
     if (!who && !isAdmin) return res.status(401).json({ error: 'login_required' });
 
-    const [hs, qbo, overrides, reps] = await Promise.all([
+    const [hs, qbo, overrides, reps, ownerSnaps] = await Promise.all([
         loadHubspotWon().catch(() => ({ configured: true, error: 'hubspot load failed', deals: [] })),
         loadQboPaid().catch(() => ({ connected: false })),
         loadOverrides().catch(() => ({})),
         listReps().catch(() => []),
+        loadOwnerSnapshots().catch(() => ({})),
     ]);
     const repRateByEmail = {};
     reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e) repRateByEmail[e] = repRate(r); });
@@ -253,7 +283,9 @@ export default async function handler(req, res) {
     if (!hs.configured) return res.status(200).json({ connected: false, source: 'hubspot', message: 'HubSpot is not connected yet, so there are no Closed Won deals to track.' });
     if (hs.error) return res.status(200).json({ connected: true, source: 'hubspot', error: hs.error, hint: hs.hint || '', deals: [] });
 
-    const lines = (hs.deals || []).map(d => reconcile(d, overrides[d.dealId], qbo, repRateByEmail));
+    // Lock the closer on any deal we are seeing Closed Won for the first time, then attribute to that.
+    const snaps = await snapshotNewOwners(hs.deals || [], ownerSnaps).catch(() => ownerSnaps);
+    const lines = (hs.deals || []).map(d => reconcile(d, overrides[d.dealId], qbo, repRateByEmail, snaps[d.dealId]));
 
     // ---- Admin view ----
     if (req.query.view === 'admin') {
@@ -265,6 +297,7 @@ export default async function handler(req, res) {
             paidOut: lines.filter(l => l.status === 'paid_out').length,
             unmapped: lines.filter(l => !l.repKnown).length,
             unmatched: lines.filter(l => qbo.connected && !l.customerMatched).length,
+            ownerChanged: lines.filter(l => l.ownerChanged).length,
         };
         const custList = qbo.connected ? Object.values(qbo.custById || {}).map(c => ({ id: c.id, name: c.name, email: c.email })) : [];
         return res.status(200).json({
