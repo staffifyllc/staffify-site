@@ -52,6 +52,7 @@
         .pill { font-size:10.5px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; white-space:nowrap; }
         .pill.paid { color:var(--green-hi); background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
         .pill.pending { color:#ffd98a; background:rgba(241,196,15,0.12); border:1px solid rgba(241,196,15,0.3); }
+        .pill.done { color:#9ba1ab; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); }
         .pill.type { color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); }
         .money { font-weight:800; color:var(--green-hi); }
         .note { font-size:13px; color:var(--muted); line-height:1.6; }
@@ -145,53 +146,57 @@
     var first=((ME&&ME.name)||'').split(' ')[0]||'there';
     var isAdmin=ME&&ME.role==='admin';
     var head='<div class="eyebrow">The Money</div><h1>Your commissions, <span class="grad">'+esc(first)+'</span></h1>'+
-      '<div class="sub">Real payouts, reconciled from QuickBooks. Paid when the client pays.'+(ME&&ME.rate?' &middot; your rate '+esc(ME.rate)+'%':'')+'</div>';
+      '<div class="sub">A deal is yours the moment it is Closed Won in HubSpot. It becomes payable when the client\'s invoice is marked paid in QuickBooks.'+(ME&&ME.rate?' &middot; your rate '+esc(ME.rate)+'%':'')+'</div>';
 
     if(j && j.connected===false){
       app.innerHTML=head+
-        '<div class="notice"><h3>QuickBooks is not connected yet</h3><p>The moment the QuickBooks connection is authorized, your closed and paid deals show up here automatically. '+(isAdmin?'You can connect it from the admin steps we set up.':'Hang tight, your admin is wiring it up.')+'</p></div>'+
-        '<div class="note">When it is live you will see, per client: what they paid, your rate, your commission, and whether it is already payable. Residuals, the strong-month accelerator, and the 90-day bonus come next.</div>';
+        '<div class="notice"><h3>Not connected yet</h3><p>'+esc(j.message||'Once HubSpot is connected, your Closed Won deals show up here automatically.')+'</p></div>'+
+        '<div class="note">When it is live you will see, per deal: the amount, your rate, your commission, and whether the invoice has been paid yet. Residuals, the strong-month accelerator, and the 90-day bonus come next.</div>';
       return;
     }
     if(j && j.error){
-      app.innerHTML=head+'<div class="notice"><h3>QuickBooks hiccup</h3><p>'+esc(j.error)+'</p></div>';
+      app.innerHTML=head+'<div class="notice"><h3>HubSpot hiccup</h3><p>'+esc(j.error)+'</p>'+(j.hint?'<p class="note">'+esc(j.hint)+'</p>':'')+'</div>';
       return;
     }
 
     var t=(j&&j.totals)||{};
     var deals=(j&&j.deals)||[];
+    var qboOff=(j&&j.qboConnected===false);
     var cards='<div class="cards">'+
-      '<div class="kcard"><div class="l">Earned &middot; paid</div><div class="n grad">'+money(t.lifetimeCommission)+'</div><div class="s">'+(t.paidCount||0)+' client'+((t.paidCount===1)?'':'s')+' paid</div></div>'+
-      '<div class="kcard"><div class="l">Pending</div><div class="n">'+money(t.pendingCommission)+'</div><div class="s">'+(t.pendingCount||0)+' not yet paid</div></div>'+
-      '<div class="kcard"><div class="l">Your rate</div><div class="n">'+esc((j.rep&&j.rep.rate)||35)+'%</div><div class="s">VA placements &middot; website 30% &middot; AI 10%</div></div>'+
+      '<div class="kcard"><div class="l">Payable now</div><div class="n grad">'+money(t.payableCommission)+'</div><div class="s">'+(t.payableCount||0)+' invoice'+((t.payableCount===1)?'':'s')+' paid</div></div>'+
+      '<div class="kcard"><div class="l">Pending</div><div class="n">'+money(t.pendingCommission)+'</div><div class="s">'+(t.pendingCount||0)+' awaiting invoice paid</div></div>'+
+      '<div class="kcard"><div class="l">Paid out</div><div class="n">'+money(t.paidOutCommission)+'</div><div class="s">'+(t.paidOutCount||0)+' settled</div></div>'+
       '</div>';
 
     var rows;
     if(!deals.length){
-      rows='<div class="empty">No commissions attributed to you yet. As your closed clients pay, they land here.</div>';
+      rows='<div class="empty">No Closed Won deals attributed to you yet. When you win one in HubSpot, it lands here.</div>';
     } else {
-      rows='<div style="overflow-x:auto"><table><thead><tr><th>Client</th><th>Type</th><th class="num">They paid</th><th class="num">Rate</th><th class="num">Your commission</th><th>Status</th></tr></thead><tbody>'+
+      rows='<div style="overflow-x:auto"><table><thead><tr><th>Client</th><th>Type</th><th class="num">Deal</th><th class="num">Rate</th><th class="num">Your commission</th><th>Status</th></tr></thead><tbody>'+
         deals.map(function(d){
-          return '<tr><td><div class="cl-name">'+esc(d.client)+'</div>'+(d.paidDate?'<div class="cl-sub">paid '+niceDate(d.paidDate)+'</div>':'')+'</td>'+
+          var pill=d.status==='payable'?'<span class="pill paid">Payable</span>':(d.status==='paid_out'?'<span class="pill done">Paid out</span>':'<span class="pill pending">Pending</span>');
+          var sub=(d.status==='payable'&&d.paidDate)?'<div class="cl-sub">invoice paid '+niceDate(d.paidDate)+'</div>':(d.closeDate?'<div class="cl-sub">won '+niceDate(d.closeDate)+'</div>':'');
+          return '<tr><td><div class="cl-name">'+esc(d.client)+'</div>'+sub+'</td>'+
             '<td><span class="pill type">'+esc(typeLabel(d.dealType))+'</span></td>'+
-            '<td class="num">'+money(d.amount)+'</td>'+
+            '<td class="num">'+money(d.base)+'</td>'+
             '<td class="num">'+esc(d.rate)+'%</td>'+
             '<td class="num"><span class="money">'+money(d.commission)+'</span></td>'+
-            '<td><span class="pill '+(d.paid?'paid':'pending')+'">'+(d.paid?'Payable':'Pending')+'</span></td></tr>';
+            '<td>'+pill+'</td></tr>';
         }).join('')+'</tbody></table></div>';
     }
 
-    var adminBtn=isAdmin?'<button class="toggle" id="admToggle">'+(ADMIN_OPEN?'Hide client assignment':'Assign clients to reps (admin)')+'</button>':'';
+    var qNote=qboOff?'<div class="note" style="margin-top:12px">QuickBooks is not connected yet, so every deal shows as Pending. Once it is authorized, paid invoices flip deals to Payable automatically.</div>':'';
+    var adminBtn=isAdmin?'<button class="toggle" id="admToggle">'+(ADMIN_OPEN?'Hide deal admin':'Deal admin (attribution + payouts)')+'</button>':'';
     var body=head+cards+
-      '<div class="panel"><div class="ph"><h2>Your deals</h2><span class="meta">'+deals.length+' total</span></div>'+rows+'</div>'+
-      '<div class="note">Shown here: the onboarding commission on deals you closed, paid when the client pays. The $1/hr residual, the 40% strong-month accelerator, and the $200 90-day retention bonus are coming next (they need placement hours from the billing side).</div>'+
+      '<div class="panel"><div class="ph"><h2>Your deals</h2><span class="meta">'+deals.length+' total</span></div>'+rows+qNote+'</div>'+
+      '<div class="note">Shown here: the onboarding commission on deals you closed, payable when the client\'s invoice is paid. The $1/hr residual, the 40% strong-month accelerator, and the $200 90-day retention bonus are coming next (they need placement hours from the billing side).</div>'+
       (adminBtn?'<div style="margin-top:20px">'+adminBtn+'</div><div id="admPanel"></div>':'');
     app.innerHTML=body;
-    if(isAdmin){ document.getElementById('admToggle').onclick=function(){ ADMIN_OPEN=!ADMIN_OPEN; if(ADMIN_OPEN) loadAdmin(); else { ADMIN_DATA=null; render(j); } document.getElementById('admToggle').textContent=ADMIN_OPEN?'Hide client assignment':'Assign clients to reps (admin)'; }; if(ADMIN_OPEN) renderAdmin(); }
+    if(isAdmin){ document.getElementById('admToggle').onclick=function(){ ADMIN_OPEN=!ADMIN_OPEN; if(ADMIN_OPEN) loadAdmin(); else { ADMIN_DATA=null; render(j); } document.getElementById('admToggle').textContent=ADMIN_OPEN?'Hide deal admin':'Deal admin (attribution + payouts)'; }; if(ADMIN_OPEN) renderAdmin(); }
   }
 
   async function loadAdmin(){
-    var panel=document.getElementById('admPanel'); if(panel) panel.innerHTML='<div class="empty">Loading paying clients...</div>';
+    var panel=document.getElementById('admPanel'); if(panel) panel.innerHTML='<div class="empty">Loading Closed Won deals...</div>';
     try{ var r=await fetch('/api/commissions/?view=admin',{cache:'no-store'}); ADMIN_DATA=await r.json(); }
     catch(e){ if(panel) panel.innerHTML='<div class="empty">Could not load admin view.</div>'; return; }
     renderAdmin();
@@ -200,41 +205,50 @@
   function renderAdmin(){
     var panel=document.getElementById('admPanel'); if(!panel||!ADMIN_DATA) return;
     var d=ADMIN_DATA;
-    if(d.connected===false){ panel.innerHTML='<div class="notice"><h3>Connect QuickBooks first</h3><p>Once authorized, every paying client shows here to assign to a rep.</p></div>'; return; }
-    var reps=d.reps||[]; var clients=d.clients||[];
-    var repOpts=function(sel){ return '<option value="">Unassigned</option>'+reps.map(function(r){return '<option value="'+esc(r.email)+'"'+(sel===r.email?' selected':'')+'>'+esc(r.name)+'</option>';}).join(''); };
+    if(d.connected===false){ panel.innerHTML='<div class="notice"><h3>Connect HubSpot first</h3><p>'+esc(d.message||'Once HubSpot is connected, Closed Won deals show here to attribute and pay out.')+'</p></div>'; return; }
+    if(d.error){ panel.innerHTML='<div class="notice"><h3>HubSpot hiccup</h3><p>'+esc(d.error)+'</p>'+(d.hint?'<p class="note">'+esc(d.hint)+'</p>':'')+'</div>'; return; }
+    var reps=d.reps||[]; var customers=d.customers||[]; var deals=d.deals||[]; var c=d.counts||{};
+    var repOpts=function(sel){ return '<option value="">Owner (auto)</option>'+reps.map(function(r){return '<option value="'+esc(r.email)+'"'+(sel===r.email?' selected':'')+'>'+esc(r.name)+'</option>';}).join(''); };
     var typeOpts=function(sel){ return ['va','website','ai'].map(function(tp){return '<option value="'+tp+'"'+(sel===tp?' selected':'')+'>'+typeLabel(tp)+'</option>';}).join(''); };
-    var c=d.counts||{};
-    var rows=clients.map(function(cl,i){
-      var deal=cl.deal||{};
-      var sug=(!cl.deal&&cl.suggestedRep)?'<div class="sug">suggests: '+esc(cl.suggestedRep)+'</div>':'';
-      return '<tr class="adm" data-id="'+esc(cl.id)+'">'+
-        '<td><div class="cl-name">'+esc(cl.name||'(no name)')+'</div><div class="cl-sub">'+esc(cl.email||'')+' &middot; paid '+money(cl.totalPaid)+'</div>'+sug+'</td>'+
-        '<td><select class="a-rep">'+repOpts(deal.rep||cl.suggestedRep||'')+'</select></td>'+
-        '<td><select class="a-type">'+typeOpts(deal.dealType||'va')+'</select></td>'+
-        '<td class="num"><input class="a-amt" type="number" value="'+esc(deal.amount||cl.firstPayment||0)+'"></td>'+
-        '<td class="num"><button class="save">Save</button></td></tr>';
+    var custOpts=function(sel){ return '<option value="">Auto-match</option>'+customers.map(function(cu){return '<option value="'+esc(cu.id)+'"'+(sel===cu.id?' selected':'')+'>'+esc(cu.name||cu.email||cu.id)+'</option>';}).join(''); };
+    var qNote=(d.qboConnected===false)?'<div class="note" style="margin-bottom:10px">QuickBooks is not connected yet, so every deal stays Pending and payouts are locked. Connect it and paid invoices flip deals to Payable automatically.'+(d.qboError?' ('+esc(d.qboError)+')':'')+'</div>':'';
+    var rows=deals.map(function(dl){
+      var ov=dl.override||{};
+      var warn=(!dl.repKnown)?'<div class="sug">owner not a rep: '+esc(dl.ownerName||dl.ownerEmail||'unknown')+'</div>':((d.qboConnected&&!dl.customerMatched)?'<div class="sug">no QuickBooks match</div>':'');
+      var statusPill=dl.status==='payable'?'<span class="pill paid">Payable</span>':(dl.status==='paid_out'?'<span class="pill done">Paid out</span>':'<span class="pill pending">Pending</span>');
+      var amtVal=(ov.amount!=null)?esc(ov.amount):'';
+      var resetBtn=dl.override?'<button class="reset" style="margin-left:6px;font-size:12px;background:transparent;border:1px solid var(--card-border);color:var(--muted);border-radius:8px;padding:6px 10px;cursor:pointer">Reset</button>':'';
+      return '<tr class="adm" data-id="'+esc(dl.dealId)+'">'+
+        '<td><div class="cl-name">'+esc(dl.client)+'</div><div class="cl-sub">won '+(dl.closeDate?niceDate(dl.closeDate):'')+' &middot; '+statusPill+'</div>'+warn+'</td>'+
+        '<td><select class="a-rep">'+repOpts(ov.rep||'')+'</select></td>'+
+        '<td><select class="a-type">'+typeOpts(ov.dealType||dl.dealType||'va')+'</select></td>'+
+        '<td class="num"><input class="a-amt" type="number" value="'+amtVal+'" placeholder="'+esc(dl.base||0)+'"></td>'+
+        '<td><select class="a-cust">'+custOpts(ov.customerId||'')+'</select></td>'+
+        '<td class="num"><label style="font-size:12px;color:var(--muted);white-space:nowrap"><input type="checkbox" class="a-paid"'+(dl.status==='paid_out'?' checked':'')+(dl.status==='pending'?' disabled':'')+'> paid out</label></td>'+
+        '<td class="num"><button class="save">Save</button>'+resetBtn+'</td></tr>';
     }).join('');
-    panel.innerHTML='<div class="panel"><div class="ph"><h2>Assign clients</h2><span class="meta">'+(c.assigned||0)+' of '+(c.clients||0)+' assigned</span></div>'+
-      (clients.length?'<div style="overflow-x:auto"><table><thead><tr><th>Client</th><th>Rep</th><th>Deal type</th><th class="num">Deal amount</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">No paying clients found in QuickBooks yet.</div>')+
-      (d.truncated?'<div class="note" style="margin-top:12px">Showing the first 1000 payments. Tell me if you need more.</div>':'')+'</div>';
+    panel.innerHTML='<div class="panel"><div class="ph"><h2>Closed Won deals</h2><span class="meta">'+(c.deals||0)+' deals &middot; '+(c.payable||0)+' payable &middot; '+(c.pending||0)+' pending</span></div>'+
+      qNote+
+      ((c.unmapped||c.unmatched)?'<div class="note" style="margin-bottom:10px">'+(c.unmapped?(c.unmapped+' deal(s) have an owner who is not a registered rep. '):'')+(c.unmatched?(c.unmatched+' deal(s) have no QuickBooks customer match. '):'')+'Fix with the dropdowns below.</div>':'')+
+      (deals.length?'<div style="overflow-x:auto"><table><thead><tr><th>Deal</th><th>Rep</th><th>Type</th><th class="num">Amount</th><th>QB customer</th><th>Payout</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">No Closed Won deals in HubSpot yet.</div>')+
+      ((d.truncated&&(d.truncated.hubspot||d.truncated.qbo))?'<div class="note" style="margin-top:12px">Showing the most recent records only. Tell me if you need the full history paged in.</div>':'')+'</div>';
     Array.prototype.forEach.call(panel.querySelectorAll('.save'),function(btn){
       btn.onclick=function(){
-        var tr=btn.closest('tr'); var id=tr.getAttribute('data-id');
-        var rep=tr.querySelector('.a-rep').value;
-        var dealType=tr.querySelector('.a-type').value;
-        var amount=tr.querySelector('.a-amt').value;
-        saveDeal(id, rep, dealType, amount, btn);
+        var tr=btn.closest('tr');
+        saveDeal({ dealId:tr.getAttribute('data-id'), rep:tr.querySelector('.a-rep').value, dealType:tr.querySelector('.a-type').value, amount:tr.querySelector('.a-amt').value, customerId:tr.querySelector('.a-cust').value, paidOut:tr.querySelector('.a-paid').checked }, btn);
       };
+    });
+    Array.prototype.forEach.call(panel.querySelectorAll('.reset'),function(btn){
+      btn.onclick=function(){ var tr=btn.closest('tr'); saveDeal({ dealId:tr.getAttribute('data-id'), clear:true }, btn); };
     });
   }
 
-  async function saveDeal(customerId, rep, dealType, amount, btn){
+  async function saveDeal(payload, btn){
     var old=btn.textContent; btn.disabled=true; btn.textContent='Saving...';
     try{
-      var r=await fetch('/api/commissions/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:customerId,rep:rep,dealType:dealType,amount:amount})});
+      var r=await fetch('/api/commissions/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       if(!r.ok){ btn.textContent='Error'; setTimeout(function(){btn.disabled=false;btn.textContent=old;},1400); return; }
-      btn.textContent='Saved'; setTimeout(function(){btn.disabled=false;btn.textContent=old;},1200);
+      btn.textContent='Saved'; setTimeout(function(){btn.disabled=false;btn.textContent=old; loadAdmin();},1000);
     }catch(e){ btn.disabled=false; btn.textContent=old; }
   }
 
