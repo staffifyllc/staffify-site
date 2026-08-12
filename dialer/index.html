@@ -77,6 +77,16 @@
         .oc.warm { background:rgba(26,189,225,0.10); border-color:rgba(26,189,225,0.4); color:var(--cyan-hi); }
         .nextbtn { width:100%; margin-top:12px; font-size:14.5px; font-weight:800; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:12px; padding:14px; cursor:pointer; }
         .nextbtn:hover { background:rgba(26,189,225,0.16); }
+        .txtwrap { margin-top:12px; }
+        .txtbtn { width:100%; font-size:14.5px; font-weight:800; color:#04222b; background:var(--green-hi);
+                  border:none; border-radius:12px; padding:14px; cursor:pointer; }
+        .txtbtn:hover { filter:brightness(1.05); }
+        .txtbtn:disabled { opacity:.6; cursor:default; }
+        .txtprev { margin-top:8px; font-size:13px; color:#cfd4da; background:rgba(255,255,255,0.03);
+                   border:1px solid var(--card-border); border-left:2px solid var(--green-hi);
+                   border-radius:10px; padding:10px 12px; line-height:1.45; }
+        .txtprev span { display:block; font-size:10.5px; font-weight:800; letter-spacing:.12em;
+                        text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
         .gate, .empty { max-width:440px; margin:70px auto; text-align:center; }
         .gate { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; }
         .gate h2, .empty h2 { font-size:22px; font-weight:900; margin-bottom:10px; }
@@ -144,6 +154,18 @@
     links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.linkedin.com/search/results/all/?keywords='+liq+'">LinkedIn</a>');
     return '<div class="lbl">Arm yourself</div><div class="ammorow">'+links.join('')+'</div>';
   }
+  // Mirrors the server-side copy in api/send-text.js so the rep sees exactly what will go out.
+  function textPreview(L){
+    var rep=firstNameOf(ME&&ME.name)||'[set your name]';
+    var first=firstNameOf(L.name);
+    return (first?('Hey '+first+', '):'Hey, ')+"it's "+rep+'. Just tried you about the '+(L.role||'')+' role you posted. Still hiring for it?';
+  }
+  function textBlock(L){
+    if(!L.phone||!L.role) return '';
+    return '<div class="txtwrap"><button class="txtbtn" id="txtbtn">Text them</button>'+
+      '<div class="txtprev"><span>What sends</span>'+esc(textPreview(L))+'</div></div>';
+  }
+
   // At-a-glance context so the rep knows who they are calling before they dial.
   function metaTags(L){
     var t=[];
@@ -170,6 +192,11 @@
   async function boot(){
     app.innerHTML='<div class="empty"><p>Loading your call list...</p></div>';
     ME=repGet();
+    // ?rep=Madison in the link fills the name with no sign-in, so a rep can be handed a ready-to-use URL.
+    try{
+      var qRep=new URLSearchParams(location.search).get('rep');
+      if(qRep && qRep.trim()){ repSet(qRep.trim()); ME=repGet(); }
+    }catch(e){}
     // If a rep is signed in (hub magic-link session), use that identity so [your name] fills automatically.
     try{
       var meRes=await fetch('/api/auth-me',{cache:'no-store'});
@@ -376,6 +403,7 @@
         (metaTags(L)?'<div class="metarow">'+metaTags(L)+'</div>':'')+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
+        textBlock(L)+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(L.brief)+'</div>':'')+
         histBlock(L)+
@@ -438,6 +466,22 @@
     var qa=document.getElementById('qaction'); if(qa)qa.onchange=function(){ quoteAction=qa.checked; refreshQuote(); };
     Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
     var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
+    var tb=document.getElementById('txtbtn');
+    if(tb) tb.onclick=function(){
+      var q=QUEUES[MOTION]; var L=q&&q[0]; if(!L) return;
+      var r=repGet();
+      if(!r||!r.name){ toast('Set your name first, it goes in the text.'); return; }
+      tb.disabled=true; tb.textContent='Sending...';
+      fetch('/api/send-text/',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', rep:r.name})})
+        .then(function(x){return x.json();})
+        .then(function(j){
+          if(j&&j.sent){ tb.textContent='Text sent'; toast('Text sent.'); }
+          else if(j&&j.reason==='already_texted'){ tb.textContent='Already texted'; toast('This lead was already texted.'); }
+          else if(j&&j.error==='not_configured'){ tb.disabled=false; tb.textContent='Text them'; toast('OpenPhone is not connected.'); }
+          else { tb.disabled=false; tb.textContent='Text them'; toast('Could not send, try again.'); }
+        }).catch(function(){ tb.disabled=false; tb.textContent='Text them'; toast('Network error.'); });
+    };
     var cpb=document.getElementById('cpbtn'); if(cpb)cpb.onclick=function(){ if(!CURHOT||!window.StaffifyClosePlan)return; var r=repGet(); var mo=CURHOT.motion==='staffing'?'Staffify VA':(CURHOT.motion==='websites'?'Foundry website':''); StaffifyClosePlan.run({mode:'prep',transcript:CURHOT.transcript||'',name:CURHOT.name||'',company:CURHOT.company||'',grade:mo,phone:CURHOT.phone||'',rep:(r&&r.name)||''}, document.getElementById('cpout'), cpb); };
     Array.prototype.forEach.call(document.querySelectorAll('.nextbtn'),function(b){ b.onclick=nextCall; });
   }
