@@ -170,6 +170,17 @@
   }
 
   // At-a-glance context so the rep knows who they are calling before they dial.
+  // The engine's Foundry brief and opener still say "roofing" from before the vertical pivot.
+  // Until it passes the real vertical through, strip the stale claim rather than have a rep say it
+  // out loud to a med spa. Belt and braces: it also catches it inside the opener lines.
+  var STALE_ROOFING = /roofing compan(y|ies)\.?/ig;
+  function deRoof(t){
+    return String(t==null?'':t)
+      .replace(/I design websites for roofing companies/ig, 'I build websites for local businesses')
+      .replace(/^Roofing company\.\s*/i, '')
+      .replace(STALE_ROOFING, 'business');
+  }
+
   function metaTags(L){
     var t=[];
     if(L.employees) t.push(esc(L.employees)+' employees');
@@ -391,7 +402,7 @@
     var L=q[0], tr=TRAIN[MOTION]||{};
     var opArr=(tr.opener&&tr.opener.length)?tr.opener:(Array.isArray(L.opener)?L.opener:[L.opener||'']);
     var opFirst=firstNameOf(L.name);
-    var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=fillTokens(x,L); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
+    var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=deRoof(fillTokens(x,L)); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
     var scriptBits='';
     if(tr.goal) scriptBits+='<div class="blk"><b>Goal:</b> '+esc(tr.goal)+'</div>';
     if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(fillTokens(tr.theAsk,L))+'</div>';
@@ -410,7 +421,7 @@
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         textBlock(L)+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
-        (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(L.brief)+'</div>':'')+
+        (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(deRoof(L.brief))+'</div>':'')+
         histBlock(L)+
         ammo(L)+
         (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
