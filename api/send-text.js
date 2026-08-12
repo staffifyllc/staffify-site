@@ -35,7 +35,9 @@ const cleanRole = (s) => String(s || '').split(/[-–—|(]/)[0].replace(/\s+/g,
 // One template per motion. Both open the same way (name, no company, no pitch) and end on a single
 // question the prospect can answer in a word. Never add a claim, a rate, or a CTA to these.
 function buildMessage({ first, rep, role, company, motion }) {
-    const who = firstName(rep);
+    // Foundry is Paul's brand and its threads already run under his name, so a websites text always
+    // signs as him no matter which rep is on the dialer. Staffing signs as the rep who made the call.
+    const who = (motion === 'websites') ? (process.env.FOUNDRY_SENDER_NAME || 'Paul') : firstName(rep);
     const hey = first ? `Hey ${first}, ` : 'Hey, ';
     if (motion === 'websites') {
         // Foundry has no "open role" hook, so the curiosity is whether they show up in AI search.
@@ -65,7 +67,7 @@ export default async function handler(req, res) {
     } else if (!role) {
         return res.status(200).json({ ok: true, sent: false, reason: 'no_role' });
     }
-    if (!firstName(rep)) return res.status(200).json({ ok: true, sent: false, reason: 'no_rep_name' });
+    if (motion !== 'websites' && !firstName(rep)) return res.status(200).json({ ok: true, sent: false, reason: 'no_rep_name' });
 
     // Never text the same lead twice.
     try {
@@ -85,7 +87,10 @@ export default async function handler(req, res) {
     const fromRaw = (process.env.OPENPHONE_PHONE_NUMBER_ID || '').trim();
     if (!apiKey || !fromRaw) return res.status(200).json({ ok: false, error: 'not_configured', detail: 'OPENPHONE_API_KEY / OPENPHONE_PHONE_NUMBER_ID not set' });
     // Accept a PN id as-is; anything else is treated as a phone number and normalised.
-    const from = /^PN/i.test(fromRaw) ? fromRaw : (e164(fromRaw) || fromRaw);
+    // Foundry can send from its own line if one is configured, otherwise it shares the default number.
+    const foundryRaw = (process.env.OPENPHONE_FOUNDRY_NUMBER_ID || '').trim();
+    const pick = (motion === 'websites' && foundryRaw) ? foundryRaw : fromRaw;
+    const from = /^PN/i.test(pick) ? pick : (e164(pick) || pick);
 
     const content = buildMessage({ first, rep, role, company, motion });
     try {

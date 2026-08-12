@@ -159,7 +159,7 @@
     var rep=firstNameOf(ME&&ME.name)||'[set your name]';
     var first=firstNameOf(L.name);
     var hey=(first?('Hey '+first+', '):'Hey, ');
-    if(MOTION==='websites') return hey+"it's "+rep+'. Just tried you. Random question, do you know if '+(L.company||'')+' comes up when someone asks ChatGPT to find one nearby?';
+    if(MOTION==='websites') return hey+"it's Paul. Just tried you. Random question, do you know if "+(L.company||'')+' comes up when someone asks ChatGPT to find one nearby?';
     return hey+"it's "+rep+'. Just tried you about the '+(L.role||'')+' role you posted. Still hiring for it?';
   }
   function textBlock(L){
@@ -475,10 +475,10 @@
     if(tb) tb.onclick=function(){
       var q=QUEUES[MOTION]; var L=q&&q[0]; if(!L) return;
       var r=repGet();
-      if(!r||!r.name){ toast('Set your name first, it goes in the text.'); return; }
+      if(MOTION!=='websites' && (!r||!r.name)){ toast('Set your name first, it goes in the text.'); return; }
       tb.disabled=true; tb.textContent='Sending...';
       fetch('/api/send-text/',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', motion:MOTION, rep:r.name})})
+        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', motion:MOTION, rep:(r&&r.name)||''})})
         .then(function(x){return x.json();})
         .then(function(j){
           if(j&&j.sent){ tb.textContent='Text sent'; toast('Text sent.'); }
