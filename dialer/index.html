@@ -275,8 +275,26 @@
 
   // Log with a 5-second Undo window so a misclick never burns a warm lead.
   var pendingLog=null;
+  // Fired only from commitLog, i.e. AFTER the 5 second undo window. A misclicked "No answer"
+  // must never send a real text to a real prospect.
+  function sendNoAnswerText(lead, rep){
+    if(!lead || !lead.phone || !lead.role) return;              // no vague "your open role" texts
+    try{
+      fetch('/api/send-text/',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({phone:lead.phone, first:lead.name||'', role:lead.role||'', rep:rep||''})})
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(j){
+          if(!j) return;
+          if(j.sent) toast('Text sent to '+(lead.name?lead.name.split(' ')[0]:'them')+'.');
+          else if(j.error==='not_configured') toast('Text not sent, OpenPhone is not connected yet.');
+          else if(j.error) toast('Text failed to send, follow up by hand.');
+        }).catch(function(){});
+    }catch(e){}
+  }
+
   function commitLog(p){
     var r=repGet();
+    if(p.outcome==='no_answer') sendNoAnswerText(p.lead, r&&r.name);
     if(p.motion==='hot'){
       try{ fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,outcome:p.outcome,motion:p.lead.motion,company:p.lead.company,rep:r&&r.name,email:r&&r.email})}); }catch(e){}
       return;
