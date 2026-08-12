@@ -43,6 +43,20 @@
         .phone a { font-size:30px; font-weight:900; letter-spacing:-0.01em; color:var(--cyan-hi); text-decoration:none; }
         .phone .call { font-size:13px; font-weight:800; color:#04222b; background:var(--green-hi); border-radius:999px; padding:8px 16px; text-decoration:none; }
         .lbl { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:18px 0 8px; }
+        .pctag { display:inline-block; margin-top:8px; background:rgba(255,193,7,0.12); color:#ffc94d; border:1px solid rgba(255,193,7,0.35); border-radius:999px; font-size:11.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:4px 11px; }
+        .step { margin-top:12px; border:1px solid var(--card-border); border-radius:12px; padding:13px 16px; background:rgba(255,255,255,0.03); }
+        .step.win { border-color:rgba(45,190,120,0.45); background:rgba(45,190,120,0.07); }
+        .step > span { display:block; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#9aa3ad; margin-bottom:7px; }
+        .step.win > span { color:#5fd39a; }
+        .step ul { margin:0; padding-left:18px; }
+        .step li { font-size:14.5px; color:#dfe3e8; margin-bottom:6px; line-height:1.5; }
+        .step li:last-child { margin-bottom:0; }
+        .fb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+        .fbb { font:inherit; font-size:13px; font-weight:700; padding:9px 13px; border-radius:10px; border:1px solid var(--card-border); background:rgba(255,255,255,0.04); color:#c8cfd6; cursor:pointer; }
+        .fbb.ok { color:#5fd39a; border-color:rgba(45,190,120,0.4); }
+        .fbb.no { color:#ff8a7a; border-color:rgba(255,110,90,0.4); }
+        .fbb[disabled] { opacity:.4; cursor:default; }
+        .fbmsg { font-size:13px; font-weight:700; color:#5fd39a; }
         .brief { font-size:15.5px; color:#dfe3e8; background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:12px; padding:14px 16px; }
         .rolebox { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:14px 0 2px; padding:12px 16px;
                    background:rgba(26,189,225,0.07); border:1px solid rgba(26,189,225,0.3); border-radius:12px; }
@@ -430,6 +444,30 @@
     return '<div class="lbl">The road track'+(onsite?' &middot; on-site role, pivot to remote':'')+'</div><div class="track">'+html+'</div>';
   }
 
+  // Prior sales calls (Paul 2026-08-12). They booked once and never bought, so the job is to
+  // find out what they decided and why BEFORE any number comes out. The concession is
+  // $1,699 setup up front, or bake setup into the hourly rate, and it belongs only here.
+  function priorBlock(L){
+    if(!L.priorCall) return '';
+    var dig=(L.dig||[]), offer=(L.offer||[]);
+    if(!dig.length && !offer.length) return '';
+    var step=function(cls,label,rows){
+      if(!rows.length) return '';
+      return '<div class="step'+cls+'"><span>'+esc(label)+'</span><ul>'+rows.map(function(r){return '<li>'+esc(r)+'</li>';}).join('')+'</ul></div>';
+    };
+    return step('','1. Find out what they decided, and why',dig)+step(' win','2. Then tell them we can work with them',offer);
+  }
+
+  // Three buttons Paul asked for: the rep is the only one who finds out the data was wrong.
+  function fbBlock(L){
+    return '<div class="lbl">Was this lead any good?</div>'+
+      '<div class="fb" data-id="'+esc(L.id)+'" data-motion="'+esc(MOTION)+'" data-company="'+esc(L.company||'')+'">'+
+        '<button class="fbb ok" data-v="accurate">&#128077; Data was right</button>'+
+        '<button class="fbb no" data-v="inaccurate">Data was wrong</button>'+
+        '<button class="fbb" data-v="archive">Archive this lead</button>'+
+        '<span class="fbmsg"></span></div>';
+  }
+
   function provBlock(L){
     var src=L.sources||[], flags=L.flags||[];
     if(!src.length && !flags.length) return '';
@@ -662,7 +700,11 @@
     }
     var L=q[0], tr=TRAIN[MOTION]||{};
     if(FLOW && FLOW.__id!==L.id){ FLOW=null; }   // new lead, start the guide over
-    var opArr=(tr.opener&&tr.opener.length)?tr.opener:(Array.isArray(L.opener)?L.opener:[L.opener||'']);
+    // A prior sales call carries its own opener naming the date and what they asked for.
+    // The generic training opener ("are you still hiring for the role you posted?") is a cold
+    // line and is flatly wrong on someone we already sat down with, so their own wins.
+    var ownOpener=Array.isArray(L.opener)?L.opener:[L.opener||''];
+    var opArr=(L.priorCall||!(tr.opener&&tr.opener.length))?ownOpener:tr.opener;
     var opFirst=firstNameOf(L.name);
     var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=deRoof(fillTokens(x,L)); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
     var scriptBits='';
@@ -677,6 +719,7 @@
       '<div class="card">'+
         '<div class="company">'+esc(L.company||'(no company)')+'</div>'+
         '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
+        (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
         (L.role?'<div class="rolebox"><span class="rl">Open role</span><span class="rv">'+esc(L.role)+'</span></div>':'')+
         (metaTags(L)?'<div class="metarow">'+metaTags(L)+'</div>':'')+
         (MOTION==='staffing'?preCall(L):'')+
@@ -684,6 +727,7 @@
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         textBlock(L)+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
+        priorBlock(L)+
         (MOTION==='staffing'?renderGuide(L):'')+
         (MOTION==='staffing'?'<details><summary>Full road track</summary><div class="script">'+roadTrack(L)+'</div></details>':'')+
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(deRoof(L.brief))+'</div>':'')+
@@ -693,6 +737,7 @@
         (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
         renderQuote()+
         renderObjections()+
+        fbBlock(L)+
         '<div class="lbl">How did it go?</div>'+
         '<div class="outcomes">'+
           '<button class="oc good" data-o="interested">Interested</button>'+
@@ -739,6 +784,27 @@
     wire();
   }
 
+  // Wrong or archived leads leave the rep's queue for good, so a bad lead is never handed
+  // out twice. Right ones tell us the pipeline that produced them is working.
+  function sendFeedback(btn){
+    var box=btn.parentNode, v=btn.getAttribute('data-v');
+    var q=QUEUES[MOTION], L=q&&q[0]; if(!L) return;
+    Array.prototype.forEach.call(box.querySelectorAll('.fbb'),function(x){ x.disabled=true; });
+    var msg=box.querySelector('.fbmsg'); msg.textContent='Saving...';
+    fetch('/api/call-queue?action=feedback',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:L.id, motion:MOTION, company:L.company||'', verdict:v, source:L.source||'', rep:(repGet()||{}).name||''})})
+      .then(function(r){ if(!r.ok) throw new Error('failed'); return r.json(); })
+      .then(function(){
+        if(v==='accurate'){ msg.textContent='Thanks, logged.'; return; }
+        toast(v==='archive'?'Archived. You will not see it again.':'Flagged as bad data. Pulled from your list.');
+        QUEUES[MOTION]=q.slice(1); render();
+      })
+      .catch(function(){
+        msg.textContent='Did not save, try again.'; msg.style.color='#ff8a7a';
+        Array.prototype.forEach.call(box.querySelectorAll('.fbb'),function(x){ x.disabled=false; });
+      });
+  }
+
   function wire(){
     Array.prototype.forEach.call(document.querySelectorAll('.motions button'),function(b){ b.onclick=function(){MOTION=b.getAttribute('data-m'); render();}; });
     Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){ b.onclick=function(){ logOutcome(b.getAttribute('data-o')); }; });
@@ -748,6 +814,7 @@
     var qa=document.getElementById('qaction'); if(qa)qa.onchange=function(){ quoteAction=qa.checked; refreshQuote(); };
     Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
     var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
+    Array.prototype.forEach.call(document.querySelectorAll('.fbb'),function(b){ b.onclick=function(){ sendFeedback(b); }; });
     wireGuide();
     if(MOTION==='staffing'){ var _q=QUEUES[MOTION]; if(_q&&_q[0]) maybeAutoLog(_q[0]); }
     var tb=document.getElementById('txtbtn');

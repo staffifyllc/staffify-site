@@ -32,6 +32,20 @@ export default async function handler(req, res) {
             return res.status(r.status).json(j);
         }
 
+        // Rep data-quality verdict on the lead in front of them (Paul 2026-08-12).
+        // Passthrough only: the portal owns the archive list, so a lead a rep kills here
+        // is dead on every surface, not just this one.
+        if (req.method === 'POST' && action === 'feedback') {
+            const b = readBody(req);
+            const r = await fetch(`${BASE}?action=feedback&t=${encodeURIComponent(TOKEN)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...b, rep: b.rep || who.name || who.email }),
+            });
+            const j = await r.json().catch(() => ({}));
+            return res.status(r.status).json(j);
+        }
+
         if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
 
         const n = req.query.n ? `&n=${encodeURIComponent(req.query.n)}` : '';
