@@ -113,6 +113,29 @@
         .pre .pl b { flex-shrink:0; min-width:74px; font-size:10.5px; font-weight:800; letter-spacing:.1em;
                      text-transform:uppercase; color:var(--cyan); padding-top:3px; }
         .pre .pl.warn { color:#ffb59a; }
+        .oc.sel { border-color:var(--cyan); background:rgba(26,189,225,0.18); color:#fff; box-shadow:0 0 0 1px var(--cyan) inset; }
+        .oc.sel::after { content:' \2713'; font-weight:900; }
+        .confirmrow { display:flex; justify-content:flex-end; align-items:center; gap:12px; margin-top:14px; }
+        .confirmrow .cnote { font-size:12.5px; color:var(--muted); }
+        .confirmbtn { font-size:15px; font-weight:800; color:#04222b; background:var(--green-hi); border:none;
+                      border-radius:12px; padding:13px 22px; cursor:pointer; }
+        .confirmbtn:hover { filter:brightness(1.06); }
+        .headrow { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+        .backbtn { flex-shrink:0; font-size:12.5px; font-weight:700; color:var(--muted); background:transparent;
+                   border:1px solid var(--card-border); border-radius:999px; padding:7px 13px; cursor:pointer; }
+        .backbtn:hover { color:#fff; border-color:var(--cyan); }
+        .srchwrap { position:relative; margin-bottom:14px; }
+        .srch { width:100%; font-family:inherit; font-size:14.5px; color:#fff; background:rgba(255,255,255,0.05);
+                border:1px solid var(--card-border); border-radius:12px; padding:12px 14px; }
+        .srch:focus { outline:none; border-color:var(--cyan); }
+        .srchres { position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:20; background:#0d1418;
+                   border:1px solid var(--card-border); border-radius:12px; overflow:hidden; max-height:320px; overflow-y:auto; }
+        .srchres button { display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+                          padding:11px 14px; border-bottom:1px solid rgba(255,255,255,0.06); color:#eaf6fb; }
+        .srchres button:hover { background:rgba(26,189,225,0.12); }
+        .srchres .sc { font-size:14px; font-weight:700; }
+        .srchres .sm { font-size:12px; color:var(--muted); margin-top:2px; }
+        .srchres .none { padding:12px 14px; font-size:13.5px; color:var(--muted); }
         .hist { display:flex; flex-direction:column; gap:8px; }
         .htouch { display:flex; flex-direction:column; gap:3px; max-width:90%; padding:9px 12px; border-radius:12px; }
         .htouch.out { align-self:flex-start; background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
@@ -385,7 +408,7 @@
     var n=FLOW[flowAt]; if(!n||!n.outcome) return;
     var k=(L&&L.id)+'|'+flowAt; if(autoLogged[k]) return;
     autoLogged[k]=true;
-    setTimeout(function(){ logOutcome(n.outcome); }, 900);   // let the rep read the step first
+    selOutcome=n.outcome; setTimeout(function(){ render(); }, 250);   // pre-select it, the rep still confirms
   }
 
   function wireGuide(){
@@ -631,6 +654,8 @@
 
   // Log with a 5-second Undo window so a misclick never burns a warm lead.
   var pendingLog=null;
+  var selOutcome=null;      // highlighted but not yet confirmed
+  var WORKED=[];            // committed leads, newest last, so a rep can step back and correct
   // Fired only from commitLog, i.e. AFTER the 5 second undo window. A misclicked "No answer"
   // must never send a real text to a real prospect.
   function sendNoAnswerText(lead, rep, motion){
@@ -654,11 +679,11 @@
     var r=repGet();
     if(p.outcome==='no_answer') sendNoAnswerText(p.lead, r&&r.name, p.motion);
     if(p.motion==='hot'){
-      try{ fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,outcome:p.outcome,motion:p.lead.motion,company:p.lead.company,rep:r&&r.name,email:r&&r.email})}); }catch(e){}
+      try{ fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,outcome:p.outcome,motion:p.lead.motion,company:p.lead.company,rep:r&&r.name,email:r&&r.email,correction:!!p.correction})}); }catch(e){}
       return;
     }
     try{
-      fetch('/api/call-queue?action=log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,outcome:p.outcome,motion:p.motion,rep:r&&r.name,email:r&&r.email})})
+      fetch('/api/call-queue?action=log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,outcome:p.outcome,motion:p.motion,rep:r&&r.name,email:r&&r.email,correction:!!p.correction})})
         .then(function(){ return fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); })
         .then(function(s){ return s&&s.ok?s.json():null; })
         .then(function(j){ if(j){ SCORE=j; if(!pendingLog) render(); } }).catch(function(){});
@@ -689,7 +714,7 @@
           '<button class="'+(MOTION==='staffing'?'on':'')+'" data-m="staffing">Staffify &middot; '+(QUEUES.staffing.length)+'</button>'+
         '</div>'+
         '<div class="stats"><span>Dials <b>'+(t.dials||0)+'</b></span><span>Answers <b>'+(t.answers||0)+'</b></span><span>Interested <b>'+(t.interested||0)+'</b></span></div>'+
-      '</div>';
+      '</div>'+searchBox();
 
     if(MOTION==='hot'){ renderHot(head, QUEUES.hot); return; }
 
@@ -717,7 +742,7 @@
 
     app.innerHTML=head+
       '<div class="card">'+
-        '<div class="company">'+esc(L.company||'(no company)')+'</div>'+
+        '<div class="headrow"><div class="company">'+esc(L.company||'(no company)')+'</div>'+backBtn()+'</div>'+
         '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
         (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
         (L.role?'<div class="rolebox"><span class="rl">Open role</span><span class="rv">'+esc(L.role)+'</span></div>':'')+
@@ -740,14 +765,15 @@
         fbBlock(L)+
         '<div class="lbl">How did it go?</div>'+
         '<div class="outcomes">'+
-          '<button class="oc good" data-o="interested">Interested</button>'+
-          '<button class="oc warm" data-o="callback">Callback</button>'+
-          '<button class="oc" data-o="no_answer">No answer</button>'+
-          '<button class="oc" data-o="voicemail">Voicemail</button>'+
-          '<button class="oc" data-o="gatekeeper">Gatekeeper</button>'+
-          '<button class="oc" data-o="not_interested">Not interested</button>'+
-          '<button class="oc" data-o="bad_number">Bad number</button>'+
+          '<button class="oc good'+(selOutcome==='interested'?' sel':'')+'" data-o="interested">Interested</button>'+
+          '<button class="oc warm'+(selOutcome==='callback'?' sel':'')+'" data-o="callback">Callback</button>'+
+          '<button class="oc'+(selOutcome==='no_answer'?' sel':'')+'" data-o="no_answer">No answer</button>'+
+          '<button class="oc'+(selOutcome==='voicemail'?' sel':'')+'" data-o="voicemail">Voicemail</button>'+
+          '<button class="oc'+(selOutcome==='gatekeeper'?' sel':'')+'" data-o="gatekeeper">Gatekeeper</button>'+
+          '<button class="oc'+(selOutcome==='not_interested'?' sel':'')+'" data-o="not_interested">Not interested</button>'+
+          '<button class="oc'+(selOutcome==='bad_number'?' sel':'')+'" data-o="bad_number">Bad number</button>'+
         '</div>'+
+        confirmRow()+
       '</div>';
     wire();
   }
@@ -765,7 +791,7 @@
     app.innerHTML=head+
       '<div class="card">'+
         '<div class="lbl">🔥 Interested &middot; call now while they are hot</div>'+
-        '<div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+
+        '<div class="headrow"><div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+backBtn()+'</div>'+
         '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
@@ -774,12 +800,13 @@
         renderObjections()+
         '<div class="lbl">How did it go?</div>'+
         '<div class="outcomes">'+
-          '<button class="oc good" data-o="won">Closed / Won</button>'+
-          '<button class="oc warm" data-o="callback">Callback</button>'+
-          '<button class="oc" data-o="no_answer">No answer</button>'+
-          '<button class="oc" data-o="not_interested">Not interested</button>'+
-          '<button class="oc" data-o="bad_number">Bad number</button>'+
+          '<button class="oc good'+(selOutcome==='won'?' sel':'')+'" data-o="won">Closed / Won</button>'+
+          '<button class="oc warm'+(selOutcome==='callback'?' sel':'')+'" data-o="callback">Callback</button>'+
+          '<button class="oc'+(selOutcome==='no_answer'?' sel':'')+'" data-o="no_answer">No answer</button>'+
+          '<button class="oc'+(selOutcome==='not_interested'?' sel':'')+'" data-o="not_interested">Not interested</button>'+
+          '<button class="oc'+(selOutcome==='bad_number'?' sel':'')+'" data-o="bad_number">Bad number</button>'+
         '</div>'+
+        confirmRow()+
       '</div>';
     wire();
   }
@@ -807,7 +834,20 @@
 
   function wire(){
     Array.prototype.forEach.call(document.querySelectorAll('.motions button'),function(b){ b.onclick=function(){MOTION=b.getAttribute('data-m'); render();}; });
-    Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){ b.onclick=function(){ logOutcome(b.getAttribute('data-o')); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){
+      b.onclick=function(){ selOutcome=b.getAttribute('data-o'); render(); };
+    });
+    var si=document.getElementById('srch');
+    if(si){
+      si.oninput=function(){ SEARCH=si.value; var pos=si.selectionStart; render();
+        var ni=document.getElementById('srch'); if(ni){ ni.focus(); try{ni.setSelectionRange(pos,pos);}catch(e){} } };
+      si.onkeydown=function(e){ if(e.key==='Escape'){ SEARCH=''; render(); } };
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.srchres button[data-hit]'),function(b){
+      b.onclick=function(){ jumpToLead(SEARCH_HITS[+b.getAttribute('data-hit')]); };
+    });
+    var cb=document.getElementById('confirmNext'); if(cb) cb.onclick=function(){ confirmOutcome(); };
+    var bb=document.getElementById('backLead'); if(bb) bb.onclick=function(){ goBackLead(); };
     Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(b){ b.onclick=function(){ var i=+b.getAttribute('data-obj'); var say=document.getElementById('objsay'); var was=b.classList.contains('on'); Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(x){x.classList.remove('on');}); if(was){ if(say)say.classList.remove('show'); } else { b.classList.add('on'); if(say){ say.textContent=OBJECTIONS[i].say; say.classList.add('show'); } } }; });
     Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.onclick=function(){ quoteHires=QUOTE_TIERS[+b.getAttribute('data-tier')].min; refreshQuote(); }; });
     Array.prototype.forEach.call(document.querySelectorAll('.qstep'),function(b){ b.onclick=function(){ quoteHires=Math.max(1, quoteHires+(+b.getAttribute('data-step'))); refreshQuote(); }; });
@@ -835,6 +875,98 @@
     };
     var cpb=document.getElementById('cpbtn'); if(cpb)cpb.onclick=function(){ if(!CURHOT||!window.StaffifyClosePlan)return; var r=repGet(); var mo=CURHOT.motion==='staffing'?'Staffify VA':(CURHOT.motion==='websites'?'Foundry website':''); StaffifyClosePlan.run({mode:'prep',transcript:CURHOT.transcript||'',name:CURHOT.name||'',company:CURHOT.company||'',grade:mo,phone:CURHOT.phone||'',rep:(r&&r.name)||''}, document.getElementById('cpout'), cpb); };
     Array.prototype.forEach.call(document.querySelectorAll('.nextbtn'),function(b){ b.onclick=nextCall; });
+  }
+
+  // Renders the confirm row once an outcome is highlighted, so nothing advances until the rep agrees.
+  // Quick search, for when a prospect calls back and the rep needs their card up instantly.
+  var SEARCH='';
+  function searchBox(){
+    var box='<div class="srchwrap"><input class="srch" id="srch" type="search" autocomplete="off" '+
+            'placeholder="Someone calling back? Search name, company, number or role" value="'+esc(SEARCH)+'">';
+    var q=SEARCH.trim().toLowerCase();
+    if(q.length<2) return box+'</div>';
+    var hits=[];
+    ['hot','staffing','websites'].forEach(function(mk){
+      (QUEUES[mk]||[]).forEach(function(l,i){
+        var hay=((l.company||'')+' '+(l.name||'')+' '+(l.phone||'')+' '+(l.role||'')).toLowerCase();
+        var digits=q.replace(/[^0-9]/g,'');
+        if(hay.indexOf(q)>=0 || (digits.length>=4 && String(l.phone||'').replace(/[^0-9]/g,'').indexOf(digits)>=0)){
+          hits.push({m:mk,i:i,l:l});
+        }
+      });
+    });
+    // Anything already worked today is searchable too, so a callback on a logged lead still pulls up.
+    WORKED.forEach(function(w,wi){
+      var l=w.lead, hay=((l.company||'')+' '+(l.name||'')+' '+(l.phone||'')+' '+(l.role||'')).toLowerCase();
+      if(hay.indexOf(q)>=0) hits.push({m:w.motion,i:-1,l:l,worked:wi});
+    });
+    var rows=hits.slice(0,8).map(function(h,n){
+      var sub=[h.l.role, h.l.name, h.l.phone].filter(Boolean).join(' · ');
+      return '<button data-hit="'+n+'"><span class="sc">'+esc(h.l.company||h.l.name||'Lead')+
+             (h.worked!=null?' <span style="color:#9ba1ab;font-weight:600">(already logged)</span>':'')+'</span>'+
+             '<span class="sm">'+esc(sub)+'</span></button>';
+    }).join('');
+    SEARCH_HITS=hits.slice(0,8);
+    return box+'<div class="srchres">'+(rows||'<div class="none">Nothing matches that.</div>')+'</div></div>';
+  }
+  var SEARCH_HITS=[];
+  function jumpToLead(h){
+    if(!h) return;
+    MOTION=h.m;
+    var q=QUEUES[MOTION]||[];
+    if(h.worked!=null){                       // pull a logged lead back out to redo it
+      var w=WORKED.splice(h.worked,1)[0];
+      if(w){ w.lead.__reopened=true; q.unshift(w.lead); selOutcome=w.outcome; }
+    } else {
+      var idx=q.indexOf(h.l);
+      if(idx>0) q.unshift(q.splice(idx,1)[0]);
+      selOutcome=null;
+    }
+    SEARCH=''; SEARCH_HITS=[]; FLOW=null;
+    render();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function confirmRow(){
+    if(!selOutcome) return '';
+    var label=({won:'Closed / Won',interested:'Interested',callback:'Callback',no_answer:'No answer',
+                voicemail:'Voicemail',gatekeeper:'Gatekeeper',not_interested:'Not interested',bad_number:'Bad number'})[selOutcome]||selOutcome;
+    var extra=(selOutcome==='no_answer')?' A follow-up text goes out.':'';
+    return '<div class="confirmrow"><span class="cnote">Logging as <b>'+esc(label)+'</b>.'+extra+'</span>'+
+           '<button class="confirmbtn" id="confirmNext">Next lead &#8594;</button></div>';
+  }
+  function backBtn(){
+    if(!WORKED.length) return '';
+    var prev=WORKED[WORKED.length-1];
+    return '<button class="backbtn" id="backLead" title="Reopen '+esc(prev.lead.company||'the last lead')+'">&#8592; Previous lead</button>';
+  }
+
+  // Commit the highlighted outcome, then move on and put the rep back at the top of the page.
+  function confirmOutcome(){
+    var q=QUEUES[MOTION]; if(!q||!q.length||!selOutcome) return;
+    var lead=q.shift();
+    var entry={lead:lead, outcome:selOutcome, motion:MOTION, correction:!!lead.__reopened};
+    WORKED.push(entry);
+    commitLog(entry);
+    if(selOutcome==='no_answer') sendNoAnswerText(lead, (repGet()||{}).name, MOTION);
+    selOutcome=null; FLOW=null;
+    render();
+    window.scrollTo({top:0, behavior:'smooth'});
+    toast(entry.correction?'Updated. Next lead.':'Logged. Next lead.');
+  }
+
+  // Step back to correct a mistake. The re-logged outcome REPLACES what was captured before.
+  function goBackLead(){
+    if(!WORKED.length) return;
+    var last=WORKED.pop();
+    last.lead.__reopened=true;
+    if(MOTION!==last.motion) MOTION=last.motion;
+    (QUEUES[MOTION]||[]).unshift(last.lead);
+    selOutcome=last.outcome;     // show what was logged so they can change it
+    FLOW=null;
+    render();
+    window.scrollTo({top:0, behavior:'smooth'});
+    toast('Reopened '+((last.lead.company||'lead'))+'. Changing it replaces the old entry.');
   }
 
   function logOutcome(outcome){
