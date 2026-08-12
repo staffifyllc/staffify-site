@@ -93,6 +93,12 @@
         .gopt.dead { color:var(--muted); }
         .gback { margin-top:12px; font-size:12.5px; color:var(--muted); background:none; border:none; cursor:pointer; padding:0; text-decoration:underline; }
         .gwin { font-size:15px; font-weight:700; color:#7ef5c2; }
+        .pre { background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-left:3px solid var(--cyan);
+               border-radius:12px; padding:14px 16px; margin-top:6px; }
+        .pre .pl { display:flex; gap:10px; padding:5px 0; font-size:14px; color:#dfe3e8; line-height:1.45; }
+        .pre .pl b { flex-shrink:0; min-width:74px; font-size:10.5px; font-weight:800; letter-spacing:.1em;
+                     text-transform:uppercase; color:var(--cyan); padding-top:3px; }
+        .pre .pl.warn { color:#ffb59a; }
         .hist { display:flex; flex-direction:column; gap:8px; }
         .htouch { display:flex; flex-direction:column; gap:3px; max-width:90%; padding:9px 12px; border-radius:12px; }
         .htouch.out { align-self:flex-start; background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
@@ -229,6 +235,26 @@
   // EARLY and explicitly, or the prospect rules us out before price ever comes up.
   var ONSITE_ROLE = /front.?desk|reception|patient (care )?(coordinator|advocate)|office (manager|admin)|greeter|scheduler|treatment coordinator|dental assistant|check.?in/i;
 
+  // Everything worth knowing in the five seconds before the phone rings.
+  function preCall(L){
+    var rows=[];
+    var who=[L.name, (L.title||'')].filter(Boolean).join(' · ');
+    if(who) rows.push(['Calling', who]);
+    if(L.role) rows.push(['They posted', L.role + (L.employees? ' · '+L.employees+' employees' : '')]);
+    if(ONSITE_ROLE.test(L.role||'')) rows.push(['Angle', 'Sounds on-site, so get them to picture it remote before anything else. Most of that job is phones, scheduling and insurance follow-up.']);
+    else if(L.role) rows.push(['Angle', 'Already a remote-friendly role, so go straight at what they are paying.']);
+    var hist=(L.history&&L.history.length)?L.history:null;
+    if(hist) rows.push(['Heads up', 'You have already texted this one. Reference it, do not start cold.']);
+    var low=(L.sources||[]).filter(function(x){ return /low/i.test(x.trust||''); }).map(function(x){ return x.field; });
+    if(low.length) rows.push(['Unverified', low.join(', ')+' is a guess, do not quote it as fact.']);
+    (L.flags||[]).slice(0,2).forEach(function(f){ rows.push(['Flag', f]); });
+    if(!rows.length) return '';
+    return '<div class="lbl">Before you dial</div><div class="pre">'+rows.map(function(r){
+      var warn=(r[0]==='Unverified'||r[0]==='Flag')?' warn':'';
+      return '<div class="pl'+warn+'"><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></div>';
+    }).join('')+'</div>';
+  }
+
   // Live guided call. The rep taps what the prospect actually said and is told the next thing to say,
   // so there is no place to get lost and no response without an answer.
   var FLOW=null, flowAt='open', flowHist=[];
@@ -255,15 +281,15 @@
         note:'Get a name, then ask to be put through or for the best time to reach them.',
         opts:[['Got the name','logname'],['They will not say','end']] },
 
-      logname:{ step:'Log it', say:'Write the name and the best time in your notes, then thank them and get off the line.',
-        note:'A named decision maker is a real outcome. Log the call as a callback.', opts:[['Done','end']] },
+      logname:{ step:'Log it', outcome:'callback', say:'Write the name and the best time in your notes, then thank them and get off the line.',
+        note:'A named decision maker is a real outcome, so this logs as a callback automatically.', opts:[] },
 
       filled:{ step:'Role is filled', say:'"Got it. What else are you trying to get covered right now?"',
         note:'The only question that can still produce a deal today.',
         opts:[['They named another need','rate'],['Nothing right now','benchmark']] },
 
-      benchmark:{ step:'Get the number anyway', say:'"All good. What did you end up paying for that one?"',
-        note:'The number is worth having. It opens your next call with them.', opts:[['Got it','end']] },
+      benchmark:{ step:'Get the number anyway', outcome:'not_interested', say:'"All good. What did you end up paying for that one?"',
+        note:'The number is worth having, it opens your next call. Logging this one as closed out.', opts:[] },
 
       pivot:{ step:'THE PIVOT', key:true, say:'"Would you be open to that role being filled remotely, if the right person could do the work?"',
         note:'Ask this early. They are picturing someone at the front desk, so nothing else lands until they can picture it remotely.',
@@ -315,8 +341,8 @@
         note:'One nudge only. If it is still no, take the email and follow up.',
         opts:[['Booked it','won'],['Email only','end']] },
 
-      won:{ step:'Booked', win:true, say:'Meeting booked. Log it as Interested and get the time on the calendar now.',
-        note:'Send the profile before you forget, while you are still on the line if you can.', opts:[] },
+      won:{ step:'Booked', win:true, outcome:'interested', say:'Meeting booked. Logging it as Interested and moving you on.',
+        note:'Send the profile now, while you are still on the line if you can. Undo is in the toast if you mis-tapped.', opts:[] },
 
       end:{ step:'Wrap', say:'Log the outcome below and move to the next call.',
         note:'Every call ends with a logged outcome. That is what feeds your scoreboard and the follow-up text.', opts:[] }
@@ -335,6 +361,17 @@
       '<div class="'+(n.win?'gsay small gwin':'gsay')+'">'+esc(n.say)+'</div>'+
       (n.note?'<div class="gnote">'+esc(n.note)+'</div>':'')+
       (opts?'<div class="gopts">'+opts+'</div>':'')+back+'</div>';
+  }
+
+  // A terminal step logs itself, so the rep never has to remember. It routes through logOutcome,
+  // which keeps the 5 second undo, so a mis-tap is still recoverable.
+  var autoLogged={};
+  function maybeAutoLog(L){
+    if(!FLOW) return;
+    var n=FLOW[flowAt]; if(!n||!n.outcome) return;
+    var k=(L&&L.id)+'|'+flowAt; if(autoLogged[k]) return;
+    autoLogged[k]=true;
+    setTimeout(function(){ logOutcome(n.outcome); }, 900);   // let the rep read the step first
   }
 
   function wireGuide(){
@@ -642,6 +679,7 @@
         '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
         (L.role?'<div class="rolebox"><span class="rl">Open role</span><span class="rv">'+esc(L.role)+'</span></div>':'')+
         (metaTags(L)?'<div class="metarow">'+metaTags(L)+'</div>':'')+
+        (MOTION==='staffing'?preCall(L):'')+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         textBlock(L)+
@@ -711,6 +749,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
     var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
     wireGuide();
+    if(MOTION==='staffing'){ var _q=QUEUES[MOTION]; if(_q&&_q[0]) maybeAutoLog(_q[0]); }
     var tb=document.getElementById('txtbtn');
     if(tb) tb.onclick=function(){
       var q=QUEUES[MOTION]; var L=q&&q[0]; if(!L) return;
