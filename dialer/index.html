@@ -455,7 +455,7 @@
       if(!rows.length) return '';
       return '<div class="step'+cls+'"><span>'+esc(label)+'</span><ul>'+rows.map(function(r){return '<li>'+esc(r)+'</li>';}).join('')+'</ul></div>';
     };
-    return step('','1. Find out what they decided, and why',dig)+step(' win','2. Then tell them we can work with them',offer);
+    return step('','After the ask: listen, and find out where it stands',dig)+step(' win','Then tell them we can work with them',offer);
   }
 
   // Three buttons Paul asked for: the rep is the only one who finds out the data was wrong.
