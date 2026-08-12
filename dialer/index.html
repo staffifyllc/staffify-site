@@ -60,6 +60,24 @@
                       border-radius:999px; padding:2px 8px; white-space:nowrap; }
         .prov .ps i.bad { color:#ffb59a; background:rgba(226,90,60,0.12); border-color:rgba(226,90,60,0.4); }
         .prov .pf { font-size:12.5px; color:#ffb59a; padding:6px 0; }
+        .track { margin-top:6px; }
+        .tstep { display:grid; grid-template-columns:26px 1fr; gap:10px; }
+        .tstep .tdot { display:flex; flex-direction:column; align-items:center; }
+        .tstep .tnum { width:22px; height:22px; border-radius:50%; flex-shrink:0; display:flex; align-items:center;
+                       justify-content:center; font-size:11px; font-weight:900; color:#04222b; background:var(--cyan); }
+        .tstep .tline { flex:1; width:2px; background:var(--card-border); margin:4px 0; min-height:10px; }
+        .tstep:last-child .tline { display:none; }
+        .tstep .tbody { padding-bottom:14px; }
+        .tstep .tsay { font-size:15.5px; font-weight:600; color:#eaf6fb; line-height:1.45; }
+        .tstep .tnote { font-size:12.5px; color:var(--muted); margin-top:3px; }
+        .tstep.key .tnum { background:var(--green-hi); }
+        .tstep.key .tsay { color:#d8fff0; }
+        .keytag { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+                  color:#04222b; background:var(--green-hi); border-radius:999px; padding:2px 8px; margin-bottom:5px; }
+        .tif { display:flex; gap:8px; margin-top:7px; font-size:13px; color:#cfd4da; }
+        .tif b { flex-shrink:0; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+                 color:var(--cyan-hi); background:rgba(26,189,225,0.10); border:1px solid rgba(26,189,225,0.3);
+                 border-radius:999px; padding:2px 9px; height:fit-content; }
         .hist { display:flex; flex-direction:column; gap:8px; }
         .htouch { display:flex; flex-direction:column; gap:3px; max-width:90%; padding:9px 12px; border-radius:12px; }
         .htouch.out { align-self:flex-start; background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
@@ -192,6 +210,58 @@
 
   // Where each fact came from and how much to trust it. Madison should be able to check a lead's
   // provenance before she dials, rather than taking the row on faith.
+  // Roles that sound like they need a body in the building. These need the remote question asked
+  // EARLY and explicitly, or the prospect rules us out before price ever comes up.
+  var ONSITE_ROLE = /front.?desk|reception|patient (care )?(coordinator|advocate)|office (manager|admin)|greeter|scheduler|treatment coordinator|dental assistant|check.?in/i;
+
+  function roadTrack(L){
+    var role = L.role || 'that role';
+    var first = firstNameOf(L.name);
+    var onsite = ONSITE_ROLE.test(role);
+    var steps = [];
+
+    steps.push({ say:'"Hi'+(first?' '+esc(first):'')+', are you still hiring for the '+esc(role)+' role?"',
+                 note:'Light and quick. You are just checking, not selling yet.',
+                 ifs:[['Filled','"Do you hire for that often? I may be able to help next time." Log it, move on.']] });
+
+    steps.push({ say:'"Are you the one handling that hire, or is that someone else?"',
+                 note:'Find this out before you pitch. Wrong person, get a name and move on.',
+                 ifs:[['Not them','"Who would be the best person to ask about it?" Get a name and the best time.']] });
+
+    if (onsite) {
+      steps.push({ key:true, tag:'The pivot',
+        say:'"Would you be open to that role being filled remotely, if the right person could do the work?"',
+        note:'Ask this EARLY. They are picturing a person at the front desk, so nothing else lands until they can picture it remotely.',
+        ifs:[
+          ['If no','"Fair. What does that person actually spend the day on?" Then split it: phones, scheduling, insurance verification, recalls and follow-ups are all remote work. Only the clipboard needs a body.'],
+          ['If maybe','"That is all I am asking. Let me show you what one of ours looks like."']
+        ]});
+    } else {
+      steps.push({ say:'"Is that role open to being filled remotely?"',
+                   note:'Usually a formality for this kind of role, but confirm it before you price anything.' });
+    }
+
+    steps.push({ say:'"What are you paying for it right now?"',
+                 note:'Get THEIR number before you give yours.',
+                 ifs:[['Every time','React: "oh wow, that is quite a bit." Let it sit, then: "most clients fill that for 30 to 60 percent less, our average is about $12.90 an hour all in."']] });
+
+    steps.push({ key:true, tag:'The ask',
+                 say:'"Let me send you a profile of someone we placed in a role like this. What is the best email?"',
+                 note:'The profile earns the email. Do not try to close the placement on this call.' });
+
+    steps.push({ say:'"And let us grab 15 minutes so I can walk you through it. Earlier or later in the week?"',
+                 note:'The meeting is the only goal. Leave with a booked time.' });
+
+    var html = steps.map(function(st,i){
+      var ifs = (st.ifs||[]).map(function(x){ return '<div class="tif"><b>'+esc(x[0])+'</b><span>'+esc(x[1])+'</span></div>'; }).join('');
+      return '<div class="tstep'+(st.key?' key':'')+'"><div class="tdot"><div class="tnum">'+(i+1)+'</div><div class="tline"></div></div>'+
+        '<div class="tbody">'+(st.tag?'<div class="keytag">'+esc(st.tag)+'</div>':'')+
+        '<div class="tsay">'+st.say+'</div><div class="tnote">'+esc(st.note)+'</div>'+ifs+'</div></div>';
+    }).join('');
+
+    return '<div class="lbl">The road track'+(onsite?' &middot; on-site role, pivot to remote':'')+'</div><div class="track">'+html+'</div>';
+  }
+
   function provBlock(L){
     var src=L.sources||[], flags=L.flags||[];
     if(!src.length && !flags.length) return '';
@@ -444,6 +514,7 @@
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         textBlock(L)+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
+        (MOTION==='staffing'?roadTrack(L):'')+
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(deRoof(L.brief))+'</div>':'')+
         provBlock(L)+
         histBlock(L)+
