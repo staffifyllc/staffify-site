@@ -78,6 +78,21 @@
         .tif b { flex-shrink:0; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
                  color:var(--cyan-hi); background:rgba(26,189,225,0.10); border:1px solid rgba(26,189,225,0.3);
                  border-radius:999px; padding:2px 9px; height:fit-content; }
+        /* live guided call */
+        .guide { background:linear-gradient(160deg, rgba(26,189,225,0.10), rgba(13,86,164,0.05)); border:1px solid rgba(26,189,225,0.35);
+                 border-radius:16px; padding:18px 20px 16px; margin-top:6px; }
+        .gstep { font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); }
+        .gsay { font-size:20px; font-weight:700; line-height:1.35; color:#eaf6fb; margin:8px 0 4px; }
+        .gsay.small { font-size:16.5px; font-weight:600; }
+        .gnote { font-size:13px; color:var(--muted); line-height:1.45; }
+        .gopts { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+        .gopt { text-align:left; font-size:14.5px; font-weight:700; color:#eaf6fb; background:rgba(255,255,255,0.05);
+                border:1px solid var(--card-border); border-radius:11px; padding:12px 14px; cursor:pointer; }
+        .gopt:hover { border-color:var(--cyan); background:rgba(26,189,225,0.10); }
+        .gopt.win { color:#04222b; background:var(--green-hi); border-color:var(--green-hi); }
+        .gopt.dead { color:var(--muted); }
+        .gback { margin-top:12px; font-size:12.5px; color:var(--muted); background:none; border:none; cursor:pointer; padding:0; text-decoration:underline; }
+        .gwin { font-size:15px; font-weight:700; color:#7ef5c2; }
         .hist { display:flex; flex-direction:column; gap:8px; }
         .htouch { display:flex; flex-direction:column; gap:3px; max-width:90%; padding:9px 12px; border-radius:12px; }
         .htouch.out { align-self:flex-start; background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
@@ -213,6 +228,122 @@
   // Roles that sound like they need a body in the building. These need the remote question asked
   // EARLY and explicitly, or the prospect rules us out before price ever comes up.
   var ONSITE_ROLE = /front.?desk|reception|patient (care )?(coordinator|advocate)|office (manager|admin)|greeter|scheduler|treatment coordinator|dental assistant|check.?in/i;
+
+  // Live guided call. The rep taps what the prospect actually said and is told the next thing to say,
+  // so there is no place to get lost and no response without an answer.
+  var FLOW=null, flowAt='open', flowHist=[];
+
+  function buildFlow(L){
+    var role=L.role||'that role', first=firstNameOf(L.name)||'', onsite=ONSITE_ROLE.test(role);
+    var afterOwner = onsite ? 'pivot' : 'rate';
+    return {
+      open:{ step:'Open', say:'"Hi'+(first?' '+first:'')+', are you still hiring for the '+role+' role?"',
+        note:'Light and quick. You are just checking, not selling.',
+        opts:[['Yes, still open',afterOwner==='pivot'?'owner':'owner'],['They filled it','filled'],['"Who is this?"','whois'],['Gatekeeper / not them','gate']] },
+
+      whois:{ step:'Who is this', say:'"It is '+(firstNameOf(ME&&ME.name)||'me')+', I came across your '+role+' posting. Are you still looking to fill it?"',
+        note:'Answer plainly and put the question straight back.', opts:[['Yes, still open','owner'],['They filled it','filled']] },
+
+      gate:{ step:'Gatekeeper', say:'"Totally get it. It is a two minute question only the person doing the hiring can answer. Is the owner around, or when is a good time?"',
+        note:'Friendly and brief. A name and a time is a win here.', opts:[['Got a name or a time','logname'],['Hard no','end']] },
+
+      owner:{ step:'Decision maker', say:'"Are you the one handling that hire, or is that someone else?"',
+        note:'Find this out BEFORE you pitch. Wrong person, get a name and move on.',
+        opts:[['It is them',afterOwner],['Someone else','getname']] },
+
+      getname:{ step:'Get the name', say:'"No problem, who would be the best person to ask about it?"',
+        note:'Get a name, then ask to be put through or for the best time to reach them.',
+        opts:[['Got the name','logname'],['They will not say','end']] },
+
+      logname:{ step:'Log it', say:'Write the name and the best time in your notes, then thank them and get off the line.',
+        note:'A named decision maker is a real outcome. Log the call as a callback.', opts:[['Done','end']] },
+
+      filled:{ step:'Role is filled', say:'"Got it. What else are you trying to get covered right now?"',
+        note:'The only question that can still produce a deal today.',
+        opts:[['They named another need','rate'],['Nothing right now','benchmark']] },
+
+      benchmark:{ step:'Get the number anyway', say:'"All good. What did you end up paying for that one?"',
+        note:'The number is worth having. It opens your next call with them.', opts:[['Got it','end']] },
+
+      pivot:{ step:'THE PIVOT', key:true, say:'"Would you be open to that role being filled remotely, if the right person could do the work?"',
+        note:'Ask this early. They are picturing someone at the front desk, so nothing else lands until they can picture it remotely.',
+        opts:[['Open to it / maybe','rate'],['"It has to be in person"','split'],['Hard no on remote','softno']] },
+
+      split:{ step:'Split the job', say:'"Fair. What does that person actually spend the day on?"',
+        note:'Then split it: phones, scheduling, insurance verification, recalls and follow-ups are all remote work. Only the clipboard needs a body. Offer to cover the remote 80 percent.',
+        opts:[['They are listening','rate'],['Still a no','softno']] },
+
+      softno:{ step:'Leave the door open', say:'"Understood. If it ever gets hard to fill, we place these remote for about half. Can I send you one profile so you have it?"',
+        note:'Do not push. The profile is a low-cost yes that keeps you in the game.',
+        opts:[['They will take the profile','email'],['No thanks','end']] },
+
+      rate:{ step:'Their number first', say:'"What are you paying for it right now?"',
+        note:'Always get THEIR number before you give yours.',
+        opts:[['They gave a number','react'],['They will not say','range']] },
+
+      range:{ step:'Give a range instead', say:'"Ballpark, is it closer to twenty an hour or thirty?"',
+        note:'An easy either-or usually gets an answer where an open question did not.',
+        opts:[['Got a number','react'],['Still nothing','value']] },
+
+      react:{ step:'React, every time', key:true, say:'"Oh wow. That is quite a bit."',
+        note:'Whatever they said, react the same way. Let it sit for a beat before you say anything else.',
+        opts:[['Said it','value']] },
+
+      value:{ step:'The frame', say:'"Most of our clients fill that exact role for 30 to 60 percent less. Our average client pays about $12.90 an hour, all in."',
+        note:'Say it and stop talking. Do not stack more on top.',
+        opts:[['They are interested','email'],['"How is that possible?"','why'],['"Overseas? Not sure"','overseas'],['"Too good to be true"','why']] },
+
+      why:{ step:'Why it works', say:'"It is the labor market, not corner cutting. Same work, different cost base. And every placement is backed by a lifetime replacement guarantee."',
+        note:'Honest and short. Then go straight back to the ask.', opts:[['Makes sense','email'],['Still unsure','overseas']] },
+
+      overseas:{ step:'The offshore worry', say:'"That is fair. We screen 150 to 250 people per role and you only meet the top 3, after a paid skills test on real work. If anyone is ever not right, we replace them free, for life."',
+        note:'Name the fear, answer it once, move on.', opts:[['Reassured','email'],['Not for us','softno']] },
+
+      email:{ step:'THE ASK', key:true, say:'"Let me send you a profile of someone we placed in a role like this, so you can see the caliber. What is the best email?"',
+        note:'The profile earns the email. Do not try to close the placement on this call.',
+        opts:[['Got the email','book'],['They hesitated','softask']] },
+
+      softask:{ step:'Lower the bar', say:'"No commitment at all, just so you can see who we are putting in front of people. What is the best email?"',
+        note:'It is one profile, not a proposal. Make it easy to say yes.',
+        opts:[['Got the email','book'],['Still no','end']] },
+
+      book:{ step:'Book the meeting', key:true, say:'"Perfect, sending that over. Let us grab 15 minutes so I can walk you through how we would fill your '+role+'. Earlier or later in the week?"',
+        note:'This is the whole point of the call. Do not hang up without a time.',
+        opts:[['Booked a time','won'],['"Just send it for now"','pushback']] },
+
+      pushback:{ step:'One nudge', say:'"Happy to. Let us still hold 15 minutes so it does not get lost in your inbox, I will walk you through it live."',
+        note:'One nudge only. If it is still no, take the email and follow up.',
+        opts:[['Booked it','won'],['Email only','end']] },
+
+      won:{ step:'Booked', win:true, say:'Meeting booked. Log it as Interested and get the time on the calendar now.',
+        note:'Send the profile before you forget, while you are still on the line if you can.', opts:[] },
+
+      end:{ step:'Wrap', say:'Log the outcome below and move to the next call.',
+        note:'Every call ends with a logged outcome. That is what feeds your scoreboard and the follow-up text.', opts:[] }
+    };
+  }
+
+  function renderGuide(L){
+    if(!FLOW) { FLOW=buildFlow(L); FLOW.__id=L.id; flowAt='open'; flowHist=[]; }
+    var n=FLOW[flowAt]||FLOW.open;
+    var opts=(n.opts||[]).map(function(o,i){
+      return '<button class="gopt'+(o[1]==='won'?' win':'')+'" data-go="'+esc(o[1])+'">'+esc(o[0])+'</button>';
+    }).join('');
+    var back=flowHist.length?'<button class="gback" data-goback="1">Back a step</button>':'';
+    return '<div class="lbl">Guided call'+(n.key?' &middot; do not skip this':'')+'</div><div class="guide">'+
+      '<div class="gstep">'+esc(n.step||'')+'</div>'+
+      '<div class="'+(n.win?'gsay small gwin':'gsay')+'">'+esc(n.say)+'</div>'+
+      (n.note?'<div class="gnote">'+esc(n.note)+'</div>':'')+
+      (opts?'<div class="gopts">'+opts+'</div>':'')+back+'</div>';
+  }
+
+  function wireGuide(){
+    Array.prototype.forEach.call(document.querySelectorAll('.gopt'),function(b){
+      b.onclick=function(){ flowHist.push(flowAt); flowAt=b.getAttribute('data-go'); render(); };
+    });
+    var bk=document.querySelector('[data-goback]');
+    if(bk) bk.onclick=function(){ if(flowHist.length){ flowAt=flowHist.pop(); render(); } };
+  }
 
   function roadTrack(L){
     var role = L.role || 'that role';
@@ -493,6 +624,7 @@
       return;
     }
     var L=q[0], tr=TRAIN[MOTION]||{};
+    if(FLOW && FLOW.__id!==L.id){ FLOW=null; }   // new lead, start the guide over
     var opArr=(tr.opener&&tr.opener.length)?tr.opener:(Array.isArray(L.opener)?L.opener:[L.opener||'']);
     var opFirst=firstNameOf(L.name);
     var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=deRoof(fillTokens(x,L)); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
@@ -514,7 +646,8 @@
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         textBlock(L)+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
-        (MOTION==='staffing'?roadTrack(L):'')+
+        (MOTION==='staffing'?renderGuide(L):'')+
+        (MOTION==='staffing'?'<details><summary>Full road track</summary><div class="script">'+roadTrack(L)+'</div></details>':'')+
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(deRoof(L.brief))+'</div>':'')+
         provBlock(L)+
         histBlock(L)+
@@ -577,6 +710,7 @@
     var qa=document.getElementById('qaction'); if(qa)qa.onchange=function(){ quoteAction=qa.checked; refreshQuote(); };
     Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
     var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
+    wireGuide();
     var tb=document.getElementById('txtbtn');
     if(tb) tb.onclick=function(){
       var q=QUEUES[MOTION]; var L=q&&q[0]; if(!L) return;
