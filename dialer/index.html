@@ -158,10 +158,13 @@
   function textPreview(L){
     var rep=firstNameOf(ME&&ME.name)||'[set your name]';
     var first=firstNameOf(L.name);
-    return (first?('Hey '+first+', '):'Hey, ')+"it's "+rep+'. Just tried you about the '+(L.role||'')+' role you posted. Still hiring for it?';
+    var hey=(first?('Hey '+first+', '):'Hey, ');
+    if(MOTION==='websites') return hey+"it's "+rep+'. Just tried you. Random question, do you know if '+(L.company||'')+' comes up when someone asks ChatGPT to find one nearby?';
+    return hey+"it's "+rep+'. Just tried you about the '+(L.role||'')+' role you posted. Still hiring for it?';
   }
   function textBlock(L){
-    if(!L.phone||!L.role) return '';
+    if(!L.phone) return '';
+    if(MOTION==='websites' ? !L.company : !L.role) return '';
     return '<div class="txtwrap"><button class="txtbtn" id="txtbtn">Text them</button>'+
       '<div class="txtprev"><span>What sends</span>'+esc(textPreview(L))+'</div></div>';
   }
@@ -320,11 +323,13 @@
   var pendingLog=null;
   // Fired only from commitLog, i.e. AFTER the 5 second undo window. A misclicked "No answer"
   // must never send a real text to a real prospect.
-  function sendNoAnswerText(lead, rep){
-    if(!lead || !lead.phone || !lead.role) return;              // no vague "your open role" texts
+  function sendNoAnswerText(lead, rep, motion){
+    if(!lead || !lead.phone) return;
+    // Each motion needs its own hook. Without it the text would be generic, which reads as spam.
+    if(motion==='websites' ? !lead.company : !lead.role) return;
     try{
       fetch('/api/send-text/',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({phone:lead.phone, first:lead.name||'', role:lead.role||'', rep:rep||''})})
+        body:JSON.stringify({phone:lead.phone, first:lead.name||'', role:lead.role||'', company:lead.company||'', motion:motion||'staffing', rep:rep||''})})
         .then(function(r){ return r.ok?r.json():null; })
         .then(function(j){
           if(!j) return;
@@ -337,7 +342,7 @@
 
   function commitLog(p){
     var r=repGet();
-    if(p.outcome==='no_answer') sendNoAnswerText(p.lead, r&&r.name);
+    if(p.outcome==='no_answer') sendNoAnswerText(p.lead, r&&r.name, p.motion);
     if(p.motion==='hot'){
       try{ fetch('/api/hot-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,outcome:p.outcome,motion:p.lead.motion,company:p.lead.company,rep:r&&r.name,email:r&&r.email})}); }catch(e){}
       return;
@@ -473,7 +478,7 @@
       if(!r||!r.name){ toast('Set your name first, it goes in the text.'); return; }
       tb.disabled=true; tb.textContent='Sending...';
       fetch('/api/send-text/',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', rep:r.name})})
+        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', motion:MOTION, rep:r.name})})
         .then(function(x){return x.json();})
         .then(function(j){
           if(j&&j.sent){ tb.textContent='Text sent'; toast('Text sent.'); }

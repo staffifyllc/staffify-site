@@ -32,9 +32,16 @@ const firstName = (s) => String(s || '').trim().split(/\s+/)[0] || '';
 // Trim a posted job title down to something that reads naturally mid-sentence.
 const cleanRole = (s) => String(s || '').split(/[-–—|(]/)[0].replace(/\s+/g, ' ').trim().slice(0, 60);
 
-function buildMessage({ first, rep, role }) {
+// One template per motion. Both open the same way (name, no company, no pitch) and end on a single
+// question the prospect can answer in a word. Never add a claim, a rate, or a CTA to these.
+function buildMessage({ first, rep, role, company, motion }) {
     const who = firstName(rep);
     const hey = first ? `Hey ${first}, ` : 'Hey, ';
+    if (motion === 'websites') {
+        // Foundry has no "open role" hook, so the curiosity is whether they show up in AI search.
+        // Nobody knows the answer to this, which is exactly why it gets a reply.
+        return `${hey}it's ${who}. Just tried you. Random question, do you know if ${company} comes up when someone asks ChatGPT to find one nearby?`;
+    }
     return `${hey}it's ${who}. Just tried you about the ${role} role you posted. Still hiring for it?`;
 }
 
@@ -48,10 +55,16 @@ export default async function handler(req, res) {
     const role = cleanRole(b.role);
     const first = firstName(b.first);
     const rep = (b.rep || (who && who.name) || '').toString();
+    const motion = (b.motion === 'websites') ? 'websites' : 'staffing';
+    const company = String(b.company || '').trim().slice(0, 60);
 
     if (!to) return res.status(200).json({ ok: true, sent: false, reason: 'no_valid_number' });
-    // A vague "about your open role" text is exactly what reads as spam. The specific title is the point.
-    if (!role) return res.status(200).json({ ok: true, sent: false, reason: 'no_role' });
+    // Each motion needs its own specific hook. Without it the text is generic, which is what reads as spam.
+    if (motion === 'websites') {
+        if (!company) return res.status(200).json({ ok: true, sent: false, reason: 'no_company' });
+    } else if (!role) {
+        return res.status(200).json({ ok: true, sent: false, reason: 'no_role' });
+    }
     if (!firstName(rep)) return res.status(200).json({ ok: true, sent: false, reason: 'no_rep_name' });
 
     // Never text the same lead twice.
@@ -74,7 +87,7 @@ export default async function handler(req, res) {
     // Accept a PN id as-is; anything else is treated as a phone number and normalised.
     const from = /^PN/i.test(fromRaw) ? fromRaw : (e164(fromRaw) || fromRaw);
 
-    const content = buildMessage({ first, rep, role });
+    const content = buildMessage({ first, rep, role, company, motion });
     try {
         const r = await fetch(OP_API, {
             method: 'POST',
@@ -87,9 +100,9 @@ export default async function handler(req, res) {
         }
         // Record it so the lead is never texted again, and so it can be audited later.
         try {
-            await redis.hset(SENT_KEY, { [to]: JSON.stringify({ at: Date.now(), rep: firstName(rep), role, by: (who && who.email) || 'guest', content }) });
+            await redis.hset(SENT_KEY, { [to]: JSON.stringify({ at: Date.now(), rep: firstName(rep), role, company, motion, by: (who && who.email) || 'guest', content }) });
         } catch (e) { /* the text went out; logging is best effort */ }
-        slackNotify(':speech_balloon: *' + firstName(rep) + '* texted a no-answer lead about the *' + role + '* role.');
+        slackNotify(':speech_balloon: *' + firstName(rep) + '* texted a no-answer lead: *' + (motion === 'websites' ? company : role) + '*');
         return res.status(200).json({ ok: true, sent: true, content });
     } catch (e) {
         return res.status(200).json({ ok: false, error: 'network', detail: String((e && e.message) || e).slice(0, 160) });
