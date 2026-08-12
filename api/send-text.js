@@ -10,7 +10,9 @@
 //   "Hey {first}, it's {rep}. Just tried you about the {role} role you posted. Still hiring for it?"
 // No company name, no pitch, no CTA beyond the question. Do not add any.
 //
-// Env: OPENPHONE_API_KEY (required), OPENPHONE_PHONE_NUMBER_ID (the number to send from).
+// Env: OPENPHONE_API_KEY (required), OPENPHONE_PHONE_NUMBER_ID (the number to send FROM).
+//   That var accepts either an OpenPhone id ("PNxxxxxxxx") or the plain number ("(561) 617-9973"),
+//   whichever is easier to hand over. A plain number is normalised to E.164 before sending.
 
 import { openIdentity, redis, readBody } from './_auth.js';
 import { slackNotify } from './_slack.js';
@@ -67,8 +69,10 @@ export default async function handler(req, res) {
     } catch (e) { /* do not block on counter failure */ }
 
     const apiKey = process.env.OPENPHONE_API_KEY;
-    const from = process.env.OPENPHONE_PHONE_NUMBER_ID;
-    if (!apiKey || !from) return res.status(200).json({ ok: false, error: 'not_configured', detail: 'OPENPHONE_API_KEY / OPENPHONE_PHONE_NUMBER_ID not set' });
+    const fromRaw = (process.env.OPENPHONE_PHONE_NUMBER_ID || '').trim();
+    if (!apiKey || !fromRaw) return res.status(200).json({ ok: false, error: 'not_configured', detail: 'OPENPHONE_API_KEY / OPENPHONE_PHONE_NUMBER_ID not set' });
+    // Accept a PN id as-is; anything else is treated as a phone number and normalised.
+    const from = /^PN/i.test(fromRaw) ? fromRaw : (e164(fromRaw) || fromRaw);
 
     const content = buildMessage({ first, rep, role });
     try {
