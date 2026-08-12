@@ -51,6 +51,15 @@
         .metarow { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
         .metatag { font-size:11.5px; font-weight:600; color:var(--muted); background:rgba(255,255,255,0.04);
                    border:1px solid var(--card-border); border-radius:999px; padding:3px 10px; }
+        .prov .ps { display:flex; align-items:baseline; gap:10px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; }
+        .prov .ps:last-child { border-bottom:none; }
+        .prov .ps b { min-width:96px; color:#fff; font-weight:700; font-size:12px; }
+        .prov .ps span { flex:1; color:var(--muted); }
+        .prov .ps i { font-style:normal; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+                      color:var(--green-hi); background:rgba(29,158,117,0.14); border:1px solid rgba(29,158,117,0.35);
+                      border-radius:999px; padding:2px 8px; white-space:nowrap; }
+        .prov .ps i.bad { color:#ffb59a; background:rgba(226,90,60,0.12); border-color:rgba(226,90,60,0.4); }
+        .prov .pf { font-size:12.5px; color:#ffb59a; padding:6px 0; }
         .hist { display:flex; flex-direction:column; gap:8px; }
         .htouch { display:flex; flex-direction:column; gap:3px; max-width:90%; padding:9px 12px; border-radius:12px; }
         .htouch.out { align-self:flex-start; background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
@@ -179,6 +188,20 @@
       .replace(/I design websites for roofing companies/ig, 'I build websites for local businesses')
       .replace(/^Roofing company\.\s*/i, '')
       .replace(STALE_ROOFING, 'business');
+  }
+
+  // Where each fact came from and how much to trust it. Madison should be able to check a lead's
+  // provenance before she dials, rather than taking the row on faith.
+  function provBlock(L){
+    var src=L.sources||[], flags=L.flags||[];
+    if(!src.length && !flags.length) return '';
+    var rows=src.map(function(x){
+      var low=/low/i.test(x.trust||'');
+      return '<div class="ps"><b>'+esc(x.field||'')+'</b><span>'+esc(x.from||'')+'</span>'+
+             (x.trust?'<i class="'+(low?'bad':'')+'">'+esc(x.trust)+'</i>':'')+'</div>';
+    }).join('');
+    var fl=flags.map(function(f){return '<div class="pf">'+esc(f)+'</div>';}).join('');
+    return '<details class="prov"><summary>Where this info came from</summary><div style="padding-bottom:12px">'+rows+fl+'</div></details>';
   }
 
   function metaTags(L){
@@ -422,6 +445,7 @@
         textBlock(L)+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(deRoof(L.brief))+'</div>':'')+
+        provBlock(L)+
         histBlock(L)+
         ammo(L)+
         (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
