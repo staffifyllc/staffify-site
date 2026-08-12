@@ -124,6 +124,7 @@
         .backbtn { flex-shrink:0; font-size:12.5px; font-weight:700; color:var(--muted); background:transparent;
                    border:1px solid var(--card-border); border-radius:999px; padding:7px 13px; cursor:pointer; }
         .backbtn:hover { color:#fff; border-color:var(--cyan); }
+        .navbtns { display:flex; gap:8px; flex-shrink:0; }
         .srchwrap { position:relative; margin-bottom:14px; }
         .srch { width:100%; font-family:inherit; font-size:14.5px; color:#fff; background:rgba(255,255,255,0.05);
                 border:1px solid var(--card-border); border-radius:12px; padding:12px 14px; }
@@ -656,6 +657,7 @@
   var pendingLog=null;
   var selOutcome=null;      // highlighted but not yet confirmed
   var WORKED=[];            // committed leads, newest last, so a rep can step back and correct
+  var FORWARD=[];           // leads stepped back past, so she can go forward again without redoing the call
   // Fired only from commitLog, i.e. AFTER the 5 second undo window. A misclicked "No answer"
   // must never send a real text to a real prospect.
   function sendNoAnswerText(lead, rep, motion){
@@ -742,7 +744,7 @@
 
     app.innerHTML=head+
       '<div class="card">'+
-        '<div class="headrow"><div class="company">'+esc(L.company||'(no company)')+'</div>'+backBtn()+'</div>'+
+        '<div class="headrow"><div class="company">'+esc(L.company||'(no company)')+'</div>'+navBtns()+'</div>'+
         '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
         (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
         (L.role?'<div class="rolebox"><span class="rl">Open role</span><span class="rv">'+esc(L.role)+'</span></div>':'')+
@@ -791,7 +793,7 @@
     app.innerHTML=head+
       '<div class="card">'+
         '<div class="lbl">🔥 Interested &middot; call now while they are hot</div>'+
-        '<div class="headrow"><div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+backBtn()+'</div>'+
+        '<div class="headrow"><div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+navBtns()+'</div>'+
         '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
@@ -848,6 +850,7 @@
     });
     var cb=document.getElementById('confirmNext'); if(cb) cb.onclick=function(){ confirmOutcome(); };
     var bb=document.getElementById('backLead'); if(bb) bb.onclick=function(){ goBackLead(); };
+    var fb=document.getElementById('fwdLead'); if(fb) fb.onclick=function(){ goForwardLead(); };
     Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(b){ b.onclick=function(){ var i=+b.getAttribute('data-obj'); var say=document.getElementById('objsay'); var was=b.classList.contains('on'); Array.prototype.forEach.call(document.querySelectorAll('.objchip'),function(x){x.classList.remove('on');}); if(was){ if(say)say.classList.remove('show'); } else { b.classList.add('on'); if(say){ say.textContent=OBJECTIONS[i].say; say.classList.add('show'); } } }; });
     Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.onclick=function(){ quoteHires=QUOTE_TIERS[+b.getAttribute('data-tier')].min; refreshQuote(); }; });
     Array.prototype.forEach.call(document.querySelectorAll('.qstep'),function(b){ b.onclick=function(){ quoteHires=Math.max(1, quoteHires+(+b.getAttribute('data-step'))); refreshQuote(); }; });
@@ -935,30 +938,46 @@
     return '<div class="confirmrow"><span class="cnote">Logging as <b>'+esc(label)+'</b>.'+extra+'</span>'+
            '<button class="confirmbtn" id="confirmNext">Next lead &#8594;</button></div>';
   }
-  function backBtn(){
-    if(!WORKED.length) return '';
-    var prev=WORKED[WORKED.length-1];
-    return '<button class="backbtn" id="backLead" title="Reopen '+esc(prev.lead.company||'the last lead')+'">&#8592; Previous lead</button>';
+  function navBtns(){
+    var out='';
+    if(WORKED.length){
+      var prev=WORKED[WORKED.length-1];
+      out+='<button class="backbtn" id="backLead" title="Reopen '+esc(prev.lead.company||'the last lead')+'">&#8592; Back</button>';
+    }
+    if(FORWARD.length){
+      var nxt=FORWARD[FORWARD.length-1];
+      out+='<button class="backbtn" id="fwdLead" title="Return to '+esc(nxt.lead.company||'where you were')+'">Forward &#8594;</button>';
+    }
+    return out?'<div class="navbtns">'+out+'</div>':'';
   }
 
   // Commit the highlighted outcome, then move on and put the rep back at the top of the page.
   function confirmOutcome(){
     var q=QUEUES[MOTION]; if(!q||!q.length||!selOutcome) return;
     var lead=q.shift();
+    var redo = FORWARD.length && FORWARD[FORWARD.length-1].lead===lead;
+    var prior = redo ? FORWARD.pop() : null;
+    var changed = redo && prior.outcome!==selOutcome;
     var entry={lead:lead, outcome:selOutcome, motion:MOTION, correction:!!lead.__reopened};
     WORKED.push(entry);
-    commitLog(entry);
-    if(selOutcome==='no_answer') sendNoAnswerText(lead, (repGet()||{}).name, MOTION);
-    selOutcome=null; FLOW=null;
+    // Re-log only when it is genuinely new or actually changed, so stepping forward through
+    // untouched leads does not spam the log with duplicates.
+    if(!redo || changed) commitLog(entry);
+    if(selOutcome==='no_answer' && (!redo || changed)) sendNoAnswerText(lead, (repGet()||{}).name, MOTION);
+    if(!redo) FORWARD=[];                     // moving on from a fresh lead abandons the forward path
+    // If more forward history remains, show that lead with what was logged on it.
+    selOutcome = FORWARD.length ? FORWARD[FORWARD.length-1].outcome : null;
+    FLOW=null;
     render();
     window.scrollTo({top:0, behavior:'smooth'});
-    toast(entry.correction?'Updated. Next lead.':'Logged. Next lead.');
+    toast(changed?'Updated. Moving on.':(redo?'Back where you were.':'Logged. Next lead.'));
   }
 
   // Step back to correct a mistake. The re-logged outcome REPLACES what was captured before.
   function goBackLead(){
     if(!WORKED.length) return;
     var last=WORKED.pop();
+    FORWARD.push(last);
     last.lead.__reopened=true;
     if(MOTION!==last.motion) MOTION=last.motion;
     (QUEUES[MOTION]||[]).unshift(last.lead);
@@ -967,6 +986,13 @@
     render();
     window.scrollTo({top:0, behavior:'smooth'});
     toast('Reopened '+((last.lead.company||'lead'))+'. Changing it replaces the old entry.');
+  }
+
+  // Step forward again after going back. Whatever is highlighted now is what gets committed, so a
+  // correction made while back is what sticks.
+  function goForwardLead(){
+    if(!FORWARD.length) return;
+    confirmOutcome();
   }
 
   function logOutcome(outcome){
