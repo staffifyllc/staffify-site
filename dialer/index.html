@@ -222,7 +222,7 @@
 
     steps.push({ say:'"Hi'+(first?' '+esc(first):'')+', are you still hiring for the '+esc(role)+' role?"',
                  note:'Light and quick. You are just checking, not selling yet.',
-                 ifs:[['Filled','"Do you hire for that often? I may be able to help next time." Log it, move on.']] });
+                 ifs:[['Filled','"Got it. What else are you trying to get covered right now?" If nothing: "What did you end up paying for that one?" The number is worth having, and it opens the next call.']] });
 
     steps.push({ say:'"Are you the one handling that hire, or is that someone else?"',
                  note:'Find this out before you pitch. Wrong person, get a name and move on.',
