@@ -34,7 +34,7 @@ const cleanRole = (s) => String(s || '').split(/[-–—|(]/)[0].replace(/\s+/g,
 
 // One template per motion. Both open the same way (name, no company, no pitch) and end on a single
 // question the prospect can answer in a word. Never add a claim, a rate, or a CTA to these.
-function buildMessage({ first, rep, role, company, motion }) {
+function buildMessage({ first, rep, role, company, motion, priorCall, lastCall }) {
     // Foundry is Paul's brand and its threads already run under his name, so a websites text always
     // signs as him no matter which rep is on the dialer. Staffing signs as the rep who made the call.
     const who = (motion === 'websites') ? (process.env.FOUNDRY_SENDER_NAME || 'Paul') : firstName(rep);
@@ -44,7 +44,24 @@ function buildMessage({ first, rep, role, company, motion }) {
         // Nobody knows the answer to this, which is exactly why it gets a reply.
         return `${hey}it's ${who}. Just tried you. Random question, do you know if ${company} comes up when someone asks ChatGPT to find one nearby?`;
     }
+    // A missed sales call NEVER posted a job. They told US what they wanted, on our own
+    // booking form. Sending them the cold "the role you posted" line is a claim we cannot
+    // back, and on 2026-08-12 Jackie Jaramillo replied "where for you see the role posted"
+    // within a minute of getting it. Say the true thing instead: our team talked to them.
+    if (priorCall) {
+        const when = monthOf(lastCall);
+        // "about the X you were looking for" reads right for every role we have on file.
+        // "about a Executive Admin / Assistant" does not, so no bare article.
+        const about = role ? ` about the ${role} you were looking for` : '';
+        return `${hey}it's ${who} at Staffify. Just tried you. Our team spoke with you${when ? ' back in ' + when : ''}${about} and we never closed the loop with you. Did that ever get sorted?`;
+    }
     return `${hey}it's ${who}. Just tried you about the ${role} role you posted. Still hiring for it?`;
+}
+
+// "2026-06-09" -> "June". Blank if we do not have a date, so the text never invents one.
+function monthOf(iso) {
+    const d = new Date(String(iso || '') + 'T12:00:00Z');
+    return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
 }
 
 export default async function handler(req, res) {
@@ -92,7 +109,7 @@ export default async function handler(req, res) {
     const pick = (motion === 'websites' && foundryRaw) ? foundryRaw : fromRaw;
     const from = /^PN/i.test(pick) ? pick : (e164(pick) || pick);
 
-    const content = buildMessage({ first, rep, role, company, motion });
+    const content = buildMessage({ first, rep, role, company, motion, priorCall: !!b.priorCall, lastCall: b.lastCall || '' });
     try {
         const r = await fetch(OP_API, {
             method: 'POST',

@@ -867,7 +867,7 @@
       if(MOTION!=='websites' && (!r||!r.name)){ toast('Set your name first, it goes in the text.'); return; }
       tb.disabled=true; tb.textContent='Sending...';
       fetch('/api/send-text/',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', motion:MOTION, rep:(r&&r.name)||''})})
+        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', motion:MOTION, rep:(r&&r.name)||'', priorCall:!!L.priorCall, lastCall:L.lastCall||''})})
         .then(function(x){return x.json();})
         .then(function(j){
           if(j&&j.sent){ tb.textContent='Text sent'; toast('Text sent.'); }
