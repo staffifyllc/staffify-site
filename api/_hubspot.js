@@ -36,8 +36,11 @@ export async function findOrCreateContact({ phone, email, firstname, lastname, c
     const filters = [];
     const p = e164(phone), d = digits(phone);
     if (d) filters.push({ filterGroups: [
-        { filters: [{ propertyName: 'phone', operator: 'CONTAINS_TOKEN', value: d }] },
-        { filters: [{ propertyName: 'mobilephone', operator: 'CONTAINS_TOKEN', value: d }] },
+        { filters: [{ propertyName: 'phone', operator: 'EQ', value: p }] },
+        { filters: [{ propertyName: 'mobilephone', operator: 'EQ', value: p }] },
+        // Wildcard token catches numbers stored in another format, e.g. (555) 555-0199.
+        { filters: [{ propertyName: 'phone', operator: 'CONTAINS_TOKEN', value: '*' + d }] },
+        { filters: [{ propertyName: 'mobilephone', operator: 'CONTAINS_TOKEN', value: '*' + d }] },
     ] });
     if (email) filters.push({ filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: String(email).toLowerCase() }] }] });
 
@@ -82,7 +85,8 @@ export async function logCall({ contactId, title, body, outcome, repName, at }) 
         hs_call_title: (title || 'Outbound call').slice(0, 250),
         hs_call_body: (body || '').slice(0, 4000),
         hs_call_direction: 'OUTBOUND',
-        hs_activity_type: 'Call',
+        // Deliberately no hs_activity_type: it must match a call type defined in the portal, and an
+        // unknown value fails the whole create with "Activity type name=... does not exist".
     };
     const r = await hs('/crm/v3/objects/calls', { method: 'POST', body: JSON.stringify({ properties: props }) });
     if (!r.ok) return { ok: false, reason: 'call_failed', status: r.status, detail: r.raw };
