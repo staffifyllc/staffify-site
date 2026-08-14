@@ -391,7 +391,8 @@
         "agency kpis",
         "weekly business metrics"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-08-14T14:57:22Z"
     },
     {
       "slug": "customer-service-sops",
