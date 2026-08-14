@@ -27,7 +27,16 @@
         .tb-right { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
         .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 15px; cursor:pointer; text-decoration:none; }
         .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
-        .wrap { max-width:720px; margin:0 auto; padding:22px; }
+        .wrap { max-width:1180px; margin:0 auto; padding:22px; }
+        /* The card splits into what the rep DOES (left) and what the rep SAYS or needs to know (right),
+           so a live call fits on one screen instead of a single long scroll. */
+        .cardgrid { display:grid; grid-template-columns:1.05fr 1fr; gap:24px; align-items:start; }
+        .cardgrid > div { min-width:0; }
+        @media (max-width:1000px){ .cardgrid { grid-template-columns:1fr; gap:8px; } }
+        @media (min-width:1001px){
+          .cardside { max-height:none; }
+          .card { padding:24px 26px 22px; }
+        }
         .toprow { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
         .motions { display:flex; gap:6px; }
         .motions button { font-size:13.5px; font-weight:700; color:var(--muted); background:var(--card); border:1px solid var(--card-border); border-radius:999px; padding:8px 16px; cursor:pointer; }
@@ -820,11 +829,13 @@
         (L.role?'<div class="rolebox"><span class="rl">'+(L.priorCall?'What they asked us for':'Open role')+'</span><span class="rv">'+esc(L.role)+'</span></div>':'')+
         (metaTags(L)?'<div class="metarow">'+metaTags(L)+'</div>':'')+
         (MOTION==='staffing'?preCall(L):'')+
+        '<div class="cardgrid"><div class="cardmain">'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         textBlock(L)+
         bookBlock(L)+
         outcomesBlock(false)+
+        '</div><div class="cardside">'+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
         priorBlock(L)+
         (MOTION==='staffing'?renderGuide(L):'')+
@@ -837,6 +848,7 @@
         renderQuote()+
         renderObjections()+
         fbBlock(L)+
+        '</div></div>'+
       '</div>';
     wire();
   }
@@ -856,12 +868,15 @@
         '<div class="lbl">🔥 Interested &middot; call now while they are hot</div>'+
         '<div class="headrow"><div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+navBtns()+'</div>'+
         '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
+        '<div class="cardgrid"><div class="cardmain">'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
-        ctx+rec+trans+cp+
         outcomesBlock(true)+
+        '</div><div class="cardside">'+
+        ctx+rec+trans+cp+
         renderQuote()+
         renderObjections()+
+        '</div></div>'+
       '</div>';
     wire();
   }
