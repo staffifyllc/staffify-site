@@ -7,7 +7,7 @@
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 <meta property="og:title" content="Commission Dashboard | Staffify">
 <meta property="og:description" content="Every deal a rep closes, what it pays, and exactly when the money is theirs.">
-<title>Commission Dashboard — Staffify</title>
+<title>Commission Dashboard, Staffify</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -158,11 +158,53 @@
   .demo { display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:700; letter-spacing:.08em;
           text-transform:uppercase; color:var(--wait); background:var(--wait-bg);
           border:1px solid var(--wait-br); border-radius:999px; padding:4px 11px; }
+
+  /* demo-only chrome: the shared rep-OS nav, drawn in this page's own tokens */
+  .demoband { background:linear-gradient(100deg, var(--wait-bg), transparent 70%);
+              border-bottom:1px solid var(--wait-br); padding:9px 22px; font-size:12.5px; color:var(--wait);
+              display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+  .demoband b { color:var(--text); }
+
+  .topbar { position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--hair);
+            padding:12px 22px; display:flex; align-items:center; justify-content:space-between;
+            gap:12px; flex-wrap:wrap; }
+  .topbar img { height:22px; display:block; }
+  /* the shared wordmark is drawn for a dark ground, so give it one when the page is light */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .topbar img { background:#0e1319; border-radius:7px; padding:5px 9px; }
+  }
+  :root[data-theme="light"] .topbar img { background:#0e1319; border-radius:7px; padding:5px 9px; }
+  .nav { display:flex; gap:5px; flex-wrap:wrap; }
+  .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:7px 13px; border-radius:999px; }
+  .nav a:hover { color:var(--text); background:var(--surface-2); }
+  .nav a.active { color:var(--accent-hi); background:var(--accent-dim); }
+  .tb-right { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
+  .btn { font-family:inherit; font-size:13px; font-weight:700; color:var(--text); background:var(--surface-2);
+         border:1px solid var(--hair); border-radius:999px; padding:8px 15px; cursor:pointer; }
+  .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--hair); }
+  @media (max-width:880px) { .topbar { flex-wrap:wrap; }
+    .nav { order:3; flex-basis:100%; justify-content:center; margin-top:6px; } }
 </style>
 
 
 </head>
 <body>
+
+<div class="demoband"><span><b>Sample view.</b> Fictional data throughout. This is the live tool our sales team works from.</span></div>
+
+<header class="topbar">
+  <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+  <nav class="nav">
+    <a href="/hub-demo/">Hub</a>
+    <a href="/dialer-demo/">Dialer</a>
+    <a href="/scoreboard-demo/">Scoreboard</a>
+    <a href="/pipeline-demo/">Pipeline</a>
+    <a href="/commission-demo/" class="active">Commissions</a>
+    <a href="/training-demo/">Training</a>
+  </nav>
+  <div class="tb-right"><button class="btn btn-ghost">Hi, Madison</button></div>
+</header>
+
 <div class="wrap">
 
   <header class="top">

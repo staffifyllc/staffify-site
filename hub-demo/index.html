@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Sales Hub | Staffify</title>
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 14px; }
+        .eyebrow::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        .chip { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); border: 1px solid rgba(26,189,225,0.4); background: rgba(26,189,225,0.08); border-radius: 999px; padding: 6px 14px; }
+        .chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .tb-right { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; }
+        .btn:hover { background:var(--cyan-hi); }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .btn-ghost:hover { color:var(--white); }
+        .nav { display:flex; gap:6px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        @media (max-width: 880px) { .topbar { flex-wrap: wrap; } .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
+        .nav a:hover { color:var(--white); }
+        .wrap { max-width:1180px; margin:0 auto; padding:28px; }
+        h1 { font-size:28px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+        .sub { font-size:14.5px; color:var(--muted); margin-bottom:26px; }
+        .cols { display:grid; grid-template-columns:1.15fr 0.85fr; gap:22px; align-items:start; }
+        @media (max-width:900px){ .cols { grid-template-columns:1fr; } }
+        .panel { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-bottom:18px; }
+        .ph { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:14px; }
+        .ph h2 { font-size:13px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:var(--cyan); }
+        .ph .meta { font-size:12.5px; color:var(--muted); }
+        .ph a { font-size:12.5px; color:var(--cyan-hi); text-decoration:none; font-weight:700; }
+        .row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; }
+        .row:last-child { border-bottom:none; }
+        .when { font-size:12.5px; color:var(--muted); width:112px; flex-shrink:0; }
+        .who { flex:1; min-width:150px; }
+        .who .n { font-size:15px; font-weight:700; }
+        .who .e { font-size:12.5px; }
+        .who .e a { color:var(--cyan-hi); text-decoration:none; }
+        .lead-sum { font-size:12px; color:#9ba1ab; margin-top:3px; line-height:1.4; }
+        .tag { font-size:11px; font-weight:600; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); border-radius:999px; padding:3px 10px; white-space:nowrap; }
+        .join { font-size:12.5px; font-weight:700; color:var(--cyan-hi); text-decoration:none; white-space:nowrap; }
+        .mod { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+        .mod:last-child { border-bottom:none; }
+        .mod .num { font-size:11.5px; font-weight:800; color:var(--cyan); width:22px; flex-shrink:0; }
+        .mod .t { flex:1; font-size:14px; font-weight:600; color:#dfe3e8; }
+        .mod a { color:inherit; text-decoration:none; }
+        .mod a:hover { color:var(--cyan-hi); }
+        .st { font-size:10.5px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+        .st-ready { color:#7ef5c2; background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
+        .st-prog { color:var(--cyan-hi); background:rgba(26,189,225,0.12); border:1px solid rgba(26,189,225,0.35); }
+        .st-soon { color:var(--muted); background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
+        .tools { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .tool { display:block; background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:10px; padding:12px 14px; text-decoration:none; }
+        .tool:hover { border-color:rgba(26,189,225,0.45); }
+        .tool .tt { font-size:13.5px; font-weight:700; color:var(--white); }
+        .tool .td { font-size:11.5px; color:var(--muted); margin-top:2px; }
+        .empty { color:var(--muted); font-size:13.5px; padding:16px 0; }
+
+        /* AI close plan widget */
+        .cp-btn { display:inline-flex; align-items:center; gap:6px; margin-top:10px; padding:8px 14px; border-radius:8px; border:1px solid rgba(13,130,184,.5); background:linear-gradient(135deg,#0d82b8,#0d56a4); color:#fff; font-family:inherit; font-weight:700; font-size:12.5px; letter-spacing:.02em; cursor:pointer; box-shadow:0 2px 10px rgba(13,86,164,.25); transition:filter .15s; }
+        .cp-btn:hover { filter:brightness(1.08); }
+        .cp-btn::before { content:"\2726"; font-size:12px; opacity:.9; }
+        .cp-out { margin-top:10px; }
+        .cp-box { border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03); border-radius:12px; padding:14px 15px; font-size:12.5px; color:#c9ced7; line-height:1.5; }
+        .cp-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; }
+        .cp-hl { font-weight:800; font-size:13.5px; color:#fff; line-height:1.35; }
+        .cp-rate { white-space:nowrap; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; border:1px solid transparent; }
+        .cp-rate b { font-size:12.5px; margin-right:2px; }
+        .cp-hi { color:#7ff0c0; background:rgba(46,204,113,.12); border-color:rgba(46,204,113,.30); }
+        .cp-open { margin:8px 0 10px; padding:9px 11px; border-left:3px solid #0d82b8; background:rgba(13,130,184,.08); border-radius:6px; font-style:italic; color:#e6eaf0; }
+        .cp-open-l { display:block; font-style:normal; font-weight:800; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:#5fb2d6; margin-bottom:3px; }
+        .cp-sec { margin-top:10px; }
+        .cp-sec-t { font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#8fa0b3; margin-bottom:5px; }
+        .cp-ul { margin:0; padding-left:16px; }
+        .cp-ul li { margin:3px 0; }
+        .cp-next { margin-top:12px; padding:10px 12px; border-radius:8px; background:linear-gradient(135deg,rgba(13,130,184,.16),rgba(13,86,164,.10)); border:1px solid rgba(13,130,184,.30); font-weight:600; color:#eaf2f8; }
+        .cp-next-l { display:block; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:#5fb2d6; font-weight:800; margin-bottom:3px; }
+
+        /* demo-only chrome */
+        .demoband { background:linear-gradient(100deg, rgba(238,192,106,.14), transparent 70%);
+                    border-bottom:1px solid rgba(238,192,106,.3); padding:9px 22px; font-size:12.5px; color:#eec06a;
+                    display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+        .demoband b { color:#ffd98a; }
+</style>
+</head>
+<body>
+
+<div class="demoband"><span><b>Sample view.</b> Fictional data throughout. This is the live tool our sales team works from.</span></div>
+
+<header class="topbar">
+  <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+  <nav class="nav">
+    <a href="/hub-demo/" class="active">Hub</a>
+    <a href="/dialer-demo/">Dialer</a>
+    <a href="/scoreboard-demo/">Scoreboard</a>
+    <a href="/pipeline-demo/">Pipeline</a>
+    <a href="/commission-demo/">Commissions</a>
+    <a href="/training-demo/">Training</a>
+  </nav>
+  <div class="tb-right"><button class="btn btn-ghost">Hi, Madison</button></div>
+</header>
+
+<div class="wrap">
+
+  <div class="eyebrow">Sales Hub</div>
+  <h1>Welcome back, <span class="grad">Madison</span></h1>
+  <div class="sub">3 upcoming calls &middot; 4 warm leads &middot; 35% commission</div>
+
+  <div class="cols">
+
+    <div>
+
+      <div class="panel">
+        <div class="ph"><h2>Warm leads</h2><span class="meta">Live &middot; from the engine</span></div>
+
+        <div class="row">
+          <div class="who">
+            <div class="n">Harborline Roofing</div>
+            <div class="e"><a href="tel:+15550182240">(555) 018-2240</a></div>
+            <div class="lead-sum">Owner took the call. Six crews, storm season starts next month, and the front desk is missing roughly 30 inbound calls a week. Wants somebody answering by 8am ET. Asked twice how fast a VA can start.</div>
+            <div class="cp-out">
+              <div class="cp-box">
+                <div class="cp-head">
+                  <div class="cp-hl">Ready to buy on speed. Lead with start date, not price.</div>
+                  <span class="cp-rate cp-hi"><b>84</b>Confidence</span>
+                </div>
+                <div class="cp-open"><span class="cp-open-l">Open with</span>&ldquo;You told our team you are losing about 30 calls a week before storm season even hits. I can have someone answering your phone in nine business days. Want me to walk you through what that looks like?&rdquo;</div>
+                <div class="cp-sec">
+                  <div class="cp-sec-t">What he told us</div>
+                  <ul class="cp-ul">
+                    <li>Six crews running, one person covering the phone and dispatch.</li>
+                    <li>Missed calls are the pain, not headcount cost.</li>
+                    <li>Hiring locally already failed once this year.</li>
+                  </ul>
+                </div>
+                <div class="cp-sec">
+                  <div class="cp-sec-t">Where this stalls</div>
+                  <ul class="cp-ul">
+                    <li>He will ask about accents and call quality. Offer the recorded intro call.</li>
+                    <li>He compares to a $19/hr local hire. Reframe on coverage hours, not hourly rate.</li>
+                  </ul>
+                </div>
+                <div class="cp-next"><span class="cp-next-l">Next step</span>Book the strategy call before Friday and bring two candidate profiles with roofing or trades intake experience.</div>
+              </div>
+            </div>
+          </div>
+          <span class="tag">Hot</span>
+        </div>
+
+        <div class="row">
+          <div class="who">
+            <div class="n">Cedar &amp; Vine Interiors</div>
+            <div class="e"><a href="tel:+15550194416">(555) 019-4416</a></div>
+            <div class="lead-sum">Office manager confirmed they are hiring an admin right now. Job posted three weeks ago, about 40 resumes, nobody they wanted to interview twice. Budget already approved. Open to a VA if the vetting is handled for them.</div>
+            <button class="cp-btn">AI close plan</button>
+          </div>
+          <span class="tag">A</span>
+        </div>
+
+        <div class="row">
+          <div class="who">
+            <div class="n">Northgate Dental Group</div>
+            <div class="e"><a href="tel:+15550173085">(555) 017-3085</a></div>
+            <div class="lead-sum">Practice manager is doing recall calls and insurance verification herself, roughly 15 hours a week across two locations. Interested, but wants the owner on the line before anything gets decided.</div>
+            <button class="cp-btn">AI close plan</button>
+          </div>
+          <span class="tag">A</span>
+        </div>
+
+        <div class="row">
+          <div class="who">
+            <div class="n">Sunbelt Property Management</div>
+            <div class="e"><a href="tel:+15550166721">(555) 016-6721</a></div>
+            <div class="lead-sum">Answered on the second attempt. 340 doors, leasing coordinator out on leave in September, and nobody lined up for tenant calls and work orders. Asked for pricing in writing before a meeting.</div>
+            <button class="cp-btn">AI close plan</button>
+          </div>
+          <span class="tag">B</span>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="ph"><h2>Your day</h2><a href="/pipeline-demo/">All bookings &#8594;</a></div>
+
+        <div class="row">
+          <div class="when">Fri, Aug 14, 11:00 AM</div>
+          <div class="who">
+            <div class="n">Dana Whitfield, Harborline Roofing</div>
+            <div class="e"><a href="mailto:dana.whitfield@example.com">dana.whitfield@example.com</a></div>
+          </div>
+          <span class="tag">Discovery</span>
+          <a class="join" href="#">Join &#8599;</a>
+        </div>
+
+        <div class="row">
+          <div class="when">Fri, Aug 14, 3:30 PM</div>
+          <div class="who">
+            <div class="n">Marcus Bell, Sunbelt Property Management</div>
+            <div class="e"><a href="mailto:marcus.bell@example.com">marcus.bell@example.com</a></div>
+          </div>
+          <span class="tag">Strategy call</span>
+          <a class="join" href="#">Join &#8599;</a>
+        </div>
+
+        <div class="row">
+          <div class="when">Mon, Aug 17, 9:30 AM</div>
+          <div class="who">
+            <div class="n">Priya Raman, Northgate Dental Group</div>
+            <div class="e"><a href="mailto:priya.raman@example.com">priya.raman@example.com</a></div>
+          </div>
+          <span class="tag">Discovery</span>
+          <a class="join" href="#">Join &#8599;</a>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div>
+
+      <div class="panel">
+        <div class="ph"><h2>The playbook</h2><a href="/training-demo/">Open training &#8594;</a></div>
+        <div class="mod"><span class="num">01</span><span class="t"><a href="/training-demo/">The Offer, Inside Out</a></span><span class="st st-ready">Ready</span></div>
+        <div class="mod"><span class="num">02</span><span class="t"><a href="/training-demo/">Who Buys, and Why</a></span><span class="st st-ready">Ready</span></div>
+        <div class="mod"><span class="num">03</span><span class="t"><a href="/training-demo/">Building Pipeline</a></span><span class="st st-ready">Ready</span></div>
+        <div class="mod"><span class="num">04</span><span class="t"><a href="/training-demo/">The Discovery Call</a></span><span class="st st-ready">Ready</span></div>
+        <div class="mod"><span class="num">05</span><span class="t"><a href="/training-demo/">The Presentation &amp; Close</a></span><span class="st st-prog">In progress</span></div>
+        <div class="mod"><span class="num">06</span><span class="t"><a href="/training-demo/">Objection Handling</a></span><span class="st st-ready">Ready</span></div>
+        <div class="mod"><span class="num">07</span><span class="t"><a href="/training-demo/">Tools &amp; Process</a></span><span class="st st-prog">In progress</span></div>
+        <div class="mod"><span class="num">08</span><span class="t"><a href="/training-demo/">Certification</a></span><span class="st st-soon">Soon</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><h2>Your toolkit</h2></div>
+        <div class="tools">
+          <a class="tool" href="#"><div class="tt">Remote hiring script</div><div class="td">Call open job postings</div></a>
+          <a class="tool" href="#"><div class="tt">Pitch deck</div><div class="td">Walk a prospect through it</div></a>
+          <a class="tool" href="#"><div class="tt">How it works</div><div class="td">Pricing, process, guarantee</div></a>
+          <a class="tool" href="#"><div class="tt">Objection handling</div><div class="td">Answers that hold up</div></a>
+          <a class="tool" href="#"><div class="tt">Comp plan</div><div class="td">What you earn</div></a>
+          <a class="tool" href="#"><div class="tt">Role pages</div><div class="td">Send to prospects</div></a>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

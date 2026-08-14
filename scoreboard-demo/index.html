@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard | Staffify Sales</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark: #0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green-hi:#7ef5c2; }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 14px; }
+        .eyebrow::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        .chip { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); border: 1px solid rgba(26,189,225,0.4); background: rgba(26,189,225,0.08); border-radius: 999px; padding: 6px 14px; }
+        .chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:12px 22px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .topbar img { height:22px; }
+        .nav { display:flex; gap:5px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:7px 13px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        @media (max-width: 880px) { .topbar { flex-wrap: wrap; } .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
+        .tb-right { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 15px; cursor:pointer; text-decoration:none; }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .wrap { max-width:880px; margin:0 auto; padding:26px 22px; }
+        h1 { font-size:26px; font-weight:900; letter-spacing:-0.02em; margin-bottom:2px; }
+        .sub { font-size:13.5px; color:var(--muted); margin-bottom:22px; }
+        .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+        @media (max-width:640px){ .cards { grid-template-columns:1fr 1fr; } }
+        .metric { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:16px 18px; }
+        .metric .lbl { font-size:11.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+        .metric .n { font-size:32px; font-weight:900; letter-spacing:-0.02em; margin-top:4px; }
+        .metric .x { font-size:12px; color:var(--cyan-hi); margin-top:2px; }
+        .conv { display:flex; gap:22px; margin:6px 0 26px; font-size:13px; color:var(--muted); }
+        .conv b { color:var(--white); font-weight:800; }
+        .lbl2 { font-size:12px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:22px 0 12px; display: flex; align-items: center; gap: 12px; }
+        .lbl2::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        .lead-row { display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--card-border); border-radius:12px; padding:12px 16px; margin-bottom:9px; }
+        .rank { font-size:14px; font-weight:900; color:var(--cyan); width:22px; }
+        .rname { flex:1; font-size:15px; font-weight:700; }
+        .rstat { font-size:13px; color:var(--muted); } .rstat b { color:var(--white); }
+        .empty { color:var(--muted); font-size:14px; padding:20px 2px; }
+        .comp { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-top:8px; }
+        .comp .cr { display:flex; align-items:baseline; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; }
+        .comp .cr:last-child { border-bottom:none; }
+        .comp .pay { font-size:20px; font-weight:900; color:var(--green-hi); white-space:nowrap; min-width:120px; }
+        .comp .desc { flex:1; min-width:200px; font-size:14px; color:#cfd4da; } .comp .desc b { color:#fff; }
+        .gate { max-width:440px; margin:70px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
+        .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; } .gate p { color:var(--muted); font-size:14px; margin-bottom:18px; }
+        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .gate .btn { width:100%; padding:13px; }
+
+        /* demo band */
+        .demoband { background:linear-gradient(100deg, rgba(238,192,106,.14), transparent 70%);
+                    border-bottom:1px solid rgba(238,192,106,.3); padding:9px 22px; font-size:12.5px; color:#eec06a;
+                    display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+        .demoband b { color:#ffd98a; }
+
+        /* leaderboard extensions */
+        .rname .rtag { display:block; font-size:11.5px; font-weight:600; color:var(--muted); letter-spacing:0.01em; margin-top:1px; }
+        .rpay { font-size:15px; font-weight:900; color:var(--green-hi); min-width:80px; text-align:right; white-space:nowrap; }
+        .lead-row.me { border-color:rgba(26,189,225,0.34); background:rgba(26,189,225,0.06); }
+        .lead-row.me .rank { color:var(--cyan-hi); }
+        .youtag { font-size:10.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--cyan-hi); border:1px solid rgba(26,189,225,0.4); border-radius:999px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+        @media (max-width:760px){
+          .lead-row { flex-wrap:wrap; }
+          .rname { flex-basis:calc(100% - 130px); }
+          .rstat { flex-basis:100%; order:3; }
+        }
+        .note { font-size:12.5px; color:var(--muted); margin-top:10px; }
+        @media (max-width:640px){ .metric .n { font-size:26px; } .conv { gap:14px; flex-wrap:wrap; } }
+    </style>
+</head>
+<body>
+
+<div class="demoband"><span><b>Sample view.</b> Fictional data throughout. This is the live tool our sales team works from.</span></div>
+
+<header class="topbar">
+  <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+  <nav class="nav">
+    <a href="/hub-demo/">Hub</a>
+    <a href="/dialer-demo/">Dialer</a>
+    <a href="/scoreboard-demo/" class="active">Scoreboard</a>
+    <a href="/pipeline-demo/">Pipeline</a>
+    <a href="/commission-demo/">Commissions</a>
+    <a href="/training-demo/">Training</a>
+  </nav>
+  <div class="tb-right"><button class="btn btn-ghost">Hi, Madison</button></div>
+</header>
+
+<div class="wrap">
+
+  <div class="eyebrow">Live Numbers</div>
+  <h1><span class="grad">Scoreboard</span></h1>
+  <div class="sub">Week of Mon Aug 10 to Fri Aug 14, 2026 &middot; live from the call log</div>
+
+  <div class="cards">
+    <div class="metric"><div class="lbl">Dials</div><div class="n">2,653</div><div class="x">106% of 2,500 goal</div></div>
+    <div class="metric"><div class="lbl">Answers</div><div class="n">597</div><div class="x">23% pickup</div></div>
+    <div class="metric"><div class="lbl">Interested</div><div class="n">121</div><div class="x">20% of answers</div></div>
+    <div class="metric"><div class="lbl">Callbacks</div><div class="n">96</div><div class="x">set for later</div></div>
+  </div>
+
+  <div class="cards">
+    <div class="metric"><div class="lbl">Meetings set</div><div class="n">54</div><div class="x">45% of interested</div></div>
+    <div class="metric"><div class="lbl">Closes</div><div class="n">20</div><div class="x">37% of meetings held</div></div>
+    <div class="metric"><div class="lbl">Commission earned</div><div class="n">$19,600</div><div class="x">team, this week</div></div>
+    <div class="metric"><div class="lbl">Talk time</div><div class="n">31h 50m</div><div class="x">3.2 min average</div></div>
+  </div>
+
+  <div class="conv">
+    <span>Pickup rate <b>23%</b></span>
+    <span>Interest rate <b>20%</b></span>
+    <span>Dials per close <b>133</b></span>
+  </div>
+
+  <div class="lbl2">Rep leaderboard</div>
+
+  <div class="lead-row">
+    <div class="rank">1</div>
+    <div class="rname">Dominic Vance<span class="rtag">Closer &middot; Team A</span></div>
+    <div class="rstat">Dials <b>612</b> &middot; Answers <b>148</b> &middot; Interested <b>33</b> &middot; Closes <b>6</b></div>
+    <div class="rpay">$5,850</div>
+  </div>
+
+  <div class="lead-row me">
+    <div class="rank">2</div>
+    <div class="rname">Madison Sterling<span class="youtag">You</span><span class="rtag">Closer &middot; Team A</span></div>
+    <div class="rstat">Dials <b>587</b> &middot; Answers <b>141</b> &middot; Interested <b>30</b> &middot; Closes <b>5</b></div>
+    <div class="rpay">$5,275</div>
+  </div>
+
+  <div class="lead-row">
+    <div class="rank">3</div>
+    <div class="rname">Priya Raman<span class="rtag">Closer &middot; Team B</span></div>
+    <div class="rstat">Dials <b>534</b> &middot; Answers <b>118</b> &middot; Interested <b>24</b> &middot; Closes <b>4</b></div>
+    <div class="rpay">$3,800</div>
+  </div>
+
+  <div class="lead-row">
+    <div class="rank">4</div>
+    <div class="rname">Cole Bannister<span class="rtag">Closer &middot; Team B</span></div>
+    <div class="rstat">Dials <b>489</b> &middot; Answers <b>102</b> &middot; Interested <b>19</b> &middot; Closes <b>3</b></div>
+    <div class="rpay">$2,925</div>
+  </div>
+
+  <div class="lead-row">
+    <div class="rank">5</div>
+    <div class="rname">Tessa Okonkwo<span class="rtag">Closer &middot; Team A</span></div>
+    <div class="rstat">Dials <b>431</b> &middot; Answers <b>88</b> &middot; Interested <b>15</b> &middot; Closes <b>2</b></div>
+    <div class="rpay">$1,750</div>
+  </div>
+
+  <div class="note">Commission shown is earned this week: placement commission plus website bonuses. It posts to the rep on the client's first cleared payment.</div>
+
+  <div class="lbl2">Closed this week</div>
+
+  <div class="lead-row">
+    <div class="rank">&#8226;</div>
+    <div class="rname">Harbor Point Dental Group<span class="rtag">2 seats &middot; front desk and billing</span></div>
+    <div class="rstat">Madison Sterling &middot; Mon</div>
+    <div class="rpay">$1,075</div>
+  </div>
+
+  <div class="lead-row">
+    <div class="rank">&#8226;</div>
+    <div class="rname">Cedar and Vine Restaurant Group<span class="rtag">1 seat &middot; scheduling</span></div>
+    <div class="rstat">Dominic Vance &middot; Tue</div>
+    <div class="rpay">$875</div>
+  </div>
+
+  <div class="lead-row">
+    <div class="rank">&#8226;</div>
+    <div class="rname">Northgate Insurance Partners<span class="rtag">3 seats &middot; policy admin</span></div>
+    <div class="rstat">Priya Raman &middot; Wed</div>
+    <div class="rpay">$1,175</div>
+  </div>
+
+  <div class="lead-row">
+    <div class="rank">&#8226;</div>
+    <div class="rname">Blue Ridge HVAC Services<span class="rtag">2 seats &middot; dispatch and intake</span></div>
+    <div class="rstat">Cole Bannister &middot; Thu</div>
+    <div class="rpay">$875</div>
+  </div>
+
+  <div class="lead-row">
+    <div class="rank">&#8226;</div>
+    <div class="rname">Latitude Title Company<span class="rtag">1 seat &middot; file coordination</span></div>
+    <div class="rstat">Madison Sterling &middot; Fri</div>
+    <div class="rpay">$1,175</div>
+  </div>
+
+  <div class="lbl2">How you get paid</div>
+
+  <div class="comp">
+    <div class="cr">
+      <div class="pay">$300</div>
+      <div class="desc"><b>Foundry website</b> for every website you sell. Paid per site.</div>
+    </div>
+    <div class="cr">
+      <div class="pay">35%</div>
+      <div class="desc"><b>Staffify placement</b> of the onboarding fee per close (about $875), plus a <b>$1/hr residual</b> for 6 months, the strong-month accelerator, and a $200 retention bonus.</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

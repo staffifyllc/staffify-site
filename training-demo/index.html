@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Sales Playbook · Staffify Sales</title>
+    <meta name="description" content="Sample view of the Staffify sales training library.">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #050507; --white: #ffffff;
+            --cyan: #1abde1; --cyan-hi: #5fe0fa; --cyan-dark: #0d82b8;
+            --muted: #9ba1ab; --card: rgba(255,255,255,0.035); --card-border: rgba(255,255,255,0.09);
+        }
+        .chip { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); border: 1px solid rgba(26,189,225,0.4); background: rgba(26,189,225,0.08); border-radius: 999px; padding: 6px 14px; }
+        .chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: "Inter", -apple-system, sans-serif;
+            background:
+                radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%),
+                radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%),
+                var(--bg);
+            color: var(--white); line-height: 1.65; -webkit-font-smoothing: antialiased;
+        }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .topbar { position: sticky; top: 0; z-index: 50; background: rgba(5,5,7,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--card-border); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .topbar img { height: 26px; display: block; }
+        .badge { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--card-border); border-radius: 999px; padding: 6px 13px; }
+        .nav { display: flex; gap: 6px; flex-wrap: wrap; }
+        .nav a { font-size: 13px; font-weight: 700; color: var(--muted); text-decoration: none; padding: 8px 14px; border-radius: 999px; }
+        .nav a.active { color: var(--cyan-hi); background: rgba(26,189,225,0.10); }
+        .nav a:hover { color: var(--white); }
+        @media (max-width: 880px) { .topbar { flex-wrap: wrap; } .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
+        .tb-right { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
+        .btn { font-size: 13px; font-weight: 700; color: #04222b; background: var(--cyan); border: none; border-radius: 999px; padding: 8px 15px; cursor: pointer; text-decoration: none; }
+        .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--card-border); }
+        .page { max-width: 880px; margin: 0 auto; padding: 0 28px; }
+        .hero { padding: 64px 0 30px; }
+        .hero h1 { font-size: clamp(34px, 5.5vw, 52px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.06; margin-bottom: 18px; }
+        .hero .sub { font-size: 19px; color: var(--muted); max-width: 660px; }
+        .hero .sub b { color: var(--white); }
+        section { padding: 34px 0; border-top: 1px solid var(--card-border); }
+        .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 20px; }
+        .eyebrow::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        h2 { font-size: 22px; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 14px; }
+        p { color: var(--muted); margin-bottom: 12px; font-size: 16px; }
+        p b, li b { color: var(--white); }
+        .module { background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px 24px; margin-bottom: 16px; }
+        .module.anchor { border-color: rgba(26,189,225,0.45); background: rgba(26,189,225,0.05); }
+        .mhead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+        .mnum { font-size: 13px; font-weight: 800; color: var(--cyan); letter-spacing: 0.1em; }
+        .mtitle { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+        .status { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 11px; border-radius: 999px; }
+        .st-ready { color: #7ef5c2; background: rgba(29,158,117,0.16); border: 1px solid rgba(29,158,117,0.4); }
+        .st-prog { color: var(--cyan-hi); background: rgba(26,189,225,0.12); border: 1px solid rgba(26,189,225,0.4); }
+        .st-soon { color: var(--muted); background: rgba(255,255,255,0.04); border: 1px solid var(--card-border); }
+        .mdesc { font-size: 15px; color: var(--muted); margin: 8px 0 14px; }
+        .lessons { list-style: none; }
+        .lessons li { position: relative; padding: 6px 0 6px 26px; font-size: 14.5px; color: #cfd4da; }
+        .lessons li::before { content: ''; position: absolute; left: 0; top: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); opacity: 0.6; }
+        .lessons li a { color: var(--cyan-hi); text-decoration: none; }
+        .lessons li a:hover { text-decoration: underline; }
+        .lessons li.done::before { background: #1d9e75; opacity: 1; }
+        .video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; margin: 4px 0 14px; border: 1px solid var(--card-border); background: #000; }
+        .video.still { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(135deg, rgba(26,189,225,0.12), rgba(13,86,164,0.06)), #05080b; }
+        .video.still .play { width: 54px; height: 54px; border-radius: 50%; border: 1px solid rgba(26,189,225,0.5); background: rgba(26,189,225,0.12); color: var(--cyan-hi); font-size: 18px; display: flex; align-items: center; justify-content: center; }
+        .video.still .vlabel { font-size: 13px; font-weight: 700; color: #cfd4da; letter-spacing: 0.02em; text-align: center; padding: 0 18px; }
+        .video.still .vmeta { font-size: 11.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+        .lesson { background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px 22px; margin: 10px 0 16px; }
+        .lesson-h { font-size: 15px; font-weight: 800; color: var(--cyan-hi); margin-bottom: 10px; letter-spacing: -0.01em; }
+        .lesson p { font-size: 15px; color: #cfd4da; margin-bottom: 10px; }
+        .lesson p:last-child { margin-bottom: 0; }
+        .principle { background: rgba(26,189,225,0.08); border: 1px solid rgba(26,189,225,0.35); padding: 14px 18px; border-radius: 10px; margin: 14px 0; font-size: 15px; color: #eaf6fb; }
+        footer { padding: 44px 32px; text-align: center; font-size: 13px; color: var(--muted); border-top: 1px solid var(--card-border); }
+        footer a { color: #d7dde2; text-decoration: none; }
+
+        /* progress, knowledge check, team board */
+        .trainhead { margin: 4px 0 26px; }
+        .progwrap { height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
+        .progbar { height: 100%; background: linear-gradient(90deg, #1abde1, #5fe0fa); border-radius: 999px; }
+        .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .pill { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--card-border); background: var(--card); color: var(--muted); font-size: 14px; font-weight: 800; cursor: pointer; }
+        .pill.on { border-color: var(--cyan); color: var(--cyan-hi); background: rgba(26,189,225,0.12); }
+        .pill.done { border-color: rgba(29,158,117,0.5); color: #7ef5c2; background: rgba(29,158,117,0.14); }
+        .progtxt { font-size: 13px; color: var(--muted); font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .quizbox { background: rgba(26,189,225,0.05); border: 1px solid rgba(26,189,225,0.3); border-radius: 16px; padding: 22px 24px; margin: 18px 0; }
+        .quiztitle { font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan); margin-bottom: 16px; }
+        .qitem { margin-bottom: 18px; }
+        .qq { font-size: 15.5px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+        .qopt { display: block; width: 100%; text-align: left; font-family: inherit; font-size: 14.5px; color: #cfd4da; background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 10px; padding: 11px 14px; margin-bottom: 8px; cursor: pointer; }
+        .qopt.sel { border-color: var(--cyan); color: #fff; background: rgba(26,189,225,0.1); }
+        .qopt.good { border-color: rgba(29,158,117,0.6); background: rgba(29,158,117,0.16); color: #7ef5c2; }
+        .qbtn { font-size: 14px; font-weight: 800; color: #04222b; background: var(--cyan); border: none; border-radius: 999px; padding: 11px 22px; cursor: pointer; margin-top: 4px; }
+        .qresult { margin-top: 14px; font-size: 14.5px; font-weight: 600; }
+        .qresult.pass { color: #7ef5c2; }
+        .teamlink { font-size: 12.5px; font-weight: 800; color: var(--cyan-hi); background: transparent; border: none; cursor: pointer; padding: 0; }
+        .teambox { background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px 22px; margin: 14px 0 24px; }
+        .teamhd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+        .trow { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .trow:last-child { border-bottom: none; }
+        .trow.thead { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+        .trank { width: 26px; font-weight: 800; color: var(--cyan); }
+        .tname { flex: 1; font-size: 15px; font-weight: 700; color: #fff; min-width: 120px; }
+        .tstat { font-size: 13px; color: #cfd4da; width: 120px; }
+        .tscore { font-size: 14px; font-weight: 800; color: #7ef5c2; width: 74px; text-align: right; }
+
+        /* demo-only chrome */
+        .demoband { background:linear-gradient(100deg, rgba(238,192,106,.14), transparent 70%);
+                    border-bottom:1px solid rgba(238,192,106,.3); padding:9px 22px; font-size:12.5px; color:#eec06a;
+                    display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+        .demoband b { color:#ffd98a; }
+    </style>
+</head>
+<body>
+
+<div class="demoband"><span><b>Sample view.</b> Fictional data throughout. This is the live tool our sales team works from.</span></div>
+
+<header class="topbar">
+  <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+  <nav class="nav">
+    <a href="/hub-demo/">Hub</a>
+    <a href="/dialer-demo/">Dialer</a>
+    <a href="/scoreboard-demo/">Scoreboard</a>
+    <a href="/pipeline-demo/">Pipeline</a>
+    <a href="/commission-demo/">Commissions</a>
+    <a href="/training-demo/" class="active">Training</a>
+  </nav>
+  <div class="tb-right"><button class="btn btn-ghost">Hi, Madison</button></div>
+</header>
+
+<main class="page">
+
+    <section class="hero" style="border-top:none;">
+        <div class="chip-row" style="margin-bottom:22px"><span class="chip">8 Modules</span><span class="chip">CEO-Coached</span><span class="chip">Certification</span></div>
+        <h1>The Staffify <span class="grad">sales playbook</span>.</h1>
+        <p class="sub">Everything a closer needs, in one place. This is the library we train every rep on before they touch live pipeline, and the one they keep coming back to. <b>Work it in order.</b> Real recordings, real scripts, real objections, built from calls that actually closed.</p>
+    </section>
+
+    <section style="margin-bottom:6px">
+        <div style="display:block;background:linear-gradient(135deg, rgba(26,189,225,0.12), rgba(13,86,164,0.08));border:1px solid rgba(26,189,225,0.4);border-radius:16px;padding:22px 24px;">
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#1abde1;margin-bottom:8px;">New &middot; Outbound play</div>
+            <div style="font-size:20px;font-weight:900;letter-spacing:-0.01em;color:#fff;">Remote hiring call script &#8599;</div>
+            <p style="font-size:14.5px;color:#cfd4da;margin-top:6px;max-width:64ch;">Calling companies with open remote roles: confirm the role is live, get to who owns the hire, then show them we fill it for 30 to 60 percent less. Read it, then train live.</p>
+        </div>
+    </section>
+
+    <section>
+        <div class="eyebrow">The Curriculum</div>
+
+        <div class="trainhead">
+            <div class="progwrap"><div class="progbar" style="width:63%"></div></div>
+            <div class="pillrow">
+                <button class="pill done">&#10003;</button>
+                <button class="pill done">&#10003;</button>
+                <button class="pill done">&#10003;</button>
+                <button class="pill on">4</button>
+                <button class="pill done">&#10003;</button>
+                <button class="pill">6</button>
+                <button class="pill done">&#10003;</button>
+                <button class="pill">8</button>
+            </div>
+            <div class="progtxt">
+                <span>5 of 8 complete &middot; certification pending</span>
+                <span><button class="teamlink" style="color:#9ba1ab;margin-right:16px">You: Madison</button><button class="teamlink">Team board &#8594;</button></span>
+            </div>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">01</span><span class="mtitle">The Offer, Inside Out</span><span class="status st-ready">Ready</span></div>
+            <p class="mdesc">You cannot sell what you do not understand cold. Learn this module until you can answer anything without checking notes.</p>
+
+            <div class="lesson">
+                <div class="lesson-h">The offer in one line</div>
+                <p>We place a <b>dedicated, top 1% virtual assistant</b> inside the client's business. They pay a <b>one-time onboarding fee</b> for us to find, vet, and set up the right person, then an <b>all-inclusive hourly rate</b> for the work. We run sourcing, screening, payroll, HR, and a lifetime replacement guarantee. The client just gets a great hire and directs the work.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">Onboarding, one time (memorize these)</div>
+                <p><b>$2,499 standard.</b> That is the published one-time onboarding fee, and it is the number every other price gets measured against.</p>
+                <p><b>$2,099 action-taker.</b> If they decide right there on the call, it drops to the action-taker rate. Moving now is what earns it, so never lead with it as a discount. It is a reward for a decision.</p>
+                <p><b>Two ways to pay it.</b> Path A is upfront, which starts the search the same day. Path B folds the onboarding into the hourly rate over the first year with no interest and no fees, so nothing comes out of pocket on day one. Path B kills the "I can't front it right now" objection. Always have it ready.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">What the fee actually buys</div>
+                <p>Break the $2,499 down so it never sounds like a random number: about $1,150 in paid talent-acquisition ad spend, $450 in recruiter time, $300 for the strategy call, $400 in platform training, and $199 in infrastructure setup.</p>
+                <p><b>Upfront they get:</b> paid job posts across platforms, hundreds of sourced applicants, video interviews, phone reference checks, a strategy session, custom SOPs, paid skills testing, and training on their exact tools.</p>
+                <p><b>Ongoing they get:</b> payroll, benefits administration, HR support, real-time monitoring, milestone check-ins at Day 1, Week 1, Month 1, Quarter 1 and Year 1, time tracking, a direct HR channel, and the replacement guarantee.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">The Lifetime Replacement Guarantee</div>
+                <p>Say it plainly: <b>we replace the virtual assistant at any time, for any reason, no questions asked, for the life of the engagement.</b></p>
+                <p>No window to beat, no proving anything, no explaining why. Month 2 or month 22, if they want a different person we source and place the replacement at no cost, typically in about 14 days. This takes the client's risk to zero, so lean on it hard.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">No contract, no minimum commitment</div>
+                <p><b>There is no minimum commitment to Staffify.</b> No long-term contract, no lock-in, no term they have to sign up for. It is month to month.</p>
+                <p>The only thing we ask is that they commit to <b>the weekly hours you both agree on</b> for the VA. That is the whole commitment. Put that next to the replacement guarantee and there is very little left to object to.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">The proof: how we find the top 1%, and how fast</div>
+                <p><b>The funnel:</b> we review 150 to 250 applicants per role and the client sees only 3 finalists. Paid sourcing, then a written screen that cuts about 40%, a 15-minute video interview that about 15% pass, a paid skills test, and two phone reference checks. If they do not like the three, we source more at no charge.</p>
+                <p><b>The timeline:</b> finalists in their inbox in 7 to 10 days, first billable hour in 14 to 20 days.</p>
+                <p><b>Stats to quote:</b> 95% client retention, month to month, no contracts. Under 8% annual VA attrition against a 12 to 18 month industry norm. Every VA dedicated to one client. VAs paid well above local market, weekly, with PTO and benefits, average tenure over 3 years.</p>
+            </div>
+
+            <div class="principle">The whole offer in a sentence: we do the expensive, risky part of hiring (finding and vetting a great person, running payroll and HR, and guaranteeing the result for life) so the client just pays an hourly rate and gets their time back.</div>
+
+            <ul class="lessons">
+                <li class="done"><b>Full reference:</b> the live How It Works page carries every number, the volume table, and the cost breakdown.</li>
+                <li>The objection responses on that page are built out in Module 6.</li>
+            </ul>
+        </div>
+
+        <div class="quizbox">
+            <div class="quiztitle">Knowledge check &middot; Module 01</div>
+            <div class="qitem">
+                <div class="qq">1. What is the standard one-time onboarding fee?</div>
+                <button class="qopt">$999</button>
+                <button class="qopt">$1,499</button>
+                <button class="qopt">$2,099</button>
+                <button class="qopt good">$2,499</button>
+            </div>
+            <div class="qitem">
+                <div class="qq">2. The prospect decides right there on the call. What onboarding rate do they get?</div>
+                <button class="qopt">$2,499</button>
+                <button class="qopt">$2,299</button>
+                <button class="qopt good">$2,099</button>
+                <button class="qopt">$1,799</button>
+            </div>
+            <div class="qitem">
+                <div class="qq">3. What does the Lifetime Replacement Guarantee actually promise?</div>
+                <button class="qopt good">We replace the VA at no charge, for the life of the engagement</button>
+                <button class="qopt">A short money-back window</button>
+                <button class="qopt">One free replacement in the first year only</button>
+                <button class="qopt">A refund if they are unhappy</button>
+            </div>
+            <div class="qitem">
+                <div class="qq">4. How long is a client locked into a contract with Staffify?</div>
+                <button class="qopt">A 12-month contract</button>
+                <button class="qopt">A 6-month minimum</button>
+                <button class="qopt good">No minimum, it is month to month</button>
+                <button class="qopt">Until the VA is replaced</button>
+            </div>
+            <button class="qbtn">Check answers</button>
+            <div class="qresult pass">Passed, 4 of 4. Module complete.</div>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">02</span><span class="mtitle">Who Buys, and Why</span><span class="status st-ready">Ready</span></div>
+            <p class="mdesc">The right prospect closes themselves. Know exactly who to look for, and who to ask for on the call.</p>
+
+            <div class="lesson">
+                <div class="lesson-h">Your buyer is always the owner</div>
+                <p>Every deal we do is with <b>the business owner</b>. Not a manager, not an assistant, not whoever picks up. The owner is the one who feels the pain, controls the money, and can say yes right there on the call.</p>
+                <p>So your job on the front end is simple: <b>get the owner on the phone.</b> If you are talking to anyone else, you are not talking to your buyer yet, you are working to get to them.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">Who the ideal client is</div>
+                <p>A real, operating <b>business</b> with an owner who is stretched too thin. Service businesses are the sweet spot: agencies, roofing and home services, real estate, law firms, insurance, ecommerce, studios and media.</p>
+                <p>The common thread is not the industry. It is an owner buried in work they should have handed off a long time ago.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">Why they buy: the bottleneck</div>
+                <p>The owner is drowning. They are the one doing invoicing, follow-ups, scheduling, editing, the inbox, the $15-an-hour tasks eating the day of a person whose time is worth far more.</p>
+                <p>They know they should hire, but hiring is a headache they keep putting off. <b>That gap is the sale.</b> You are not selling a VA, you are selling the owner their time back.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">Getting past the gatekeeper</div>
+                <p>You will hit receptionists and office managers. They are not your buyer and you do not pitch them. Your opener is built for this: <b>"Hey, is the owner around by any chance?"</b></p>
+                <p>Stay friendly, stay brief, and keep steering to the owner. The gatekeeper's job is to filter you out. Your job is to sound like someone the owner would want to talk to.</p>
+            </div>
+
+            <div class="lesson">
+                <div class="lesson-h">Who to disqualify, fast</div>
+                <p>Move on quickly when they are not the owner and cannot connect you to one, when the business has no real work to delegate, or when you are talking to a tire-kicker with no urgency. There are always more owners to call. Do not spend your best energy on the wrong seat.</p>
+            </div>
+
+            <div class="principle">The whole module in a sentence: sell to real businesses, always aim for the owner, and lead with the pain of an owner doing $15-an-hour work when their time is worth ten times that.</div>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">03</span><span class="mtitle">Building Pipeline</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">Warm leads get you started. Your own pipeline is what takes you to the top of the curve.</p>
+            <ul class="lessons">
+                <li>Working the warm inbound from our site, ads, and referrals</li>
+                <li>Outbound that works: cold calls, networking, sharing the opportunity</li>
+                <li>Scripts and templates for the first touch</li>
+                <li>Booking the discovery call</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">04</span><span class="mtitle">The Discovery Call</span><span class="status st-prog">In progress</span></div>
+            <p class="mdesc">The close is won in discovery. Diagnose the real bottleneck, qualify hard, and set up the yes. It all starts with rapport.</p>
+
+            <div class="lesson">
+                <div class="lesson-h">Lesson 1 &middot; Open with rapport, every time</div>
+                <p>People buy from people they like. Before you diagnose anything or pitch anything, you build the relationship. This is not filler, it is the foundation of the entire call.</p>
+                <p><b>Spend the first 3 to 5 minutes on genuine chit-chat.</b> Do not rush to business. Let the call open human. Ask about their day, their business, where they are, what is going on in their world, and actually listen.</p>
+                <p><b>Come in with a profile.</b> Before the call, do your homework so you can be relevant. Their LinkedIn, their company site, recent posts or news, where they are based, what the business actually does. The more you know, the more relevant you can be.</p>
+                <div class="principle"><b>"Show me you know me."</b> Reference something specific about them that proves you did the work. It tells them you see a person, not a lead, and it is the fastest way to earn trust. This is the standard we hold every rep to.</div>
+                <p>By the time you move into discovery, they should already like you and feel seen. That is what makes everything after it easier.</p>
+            </div>
+
+            <ul class="lessons">
+                <li class="done">Open with rapport: the first 3 to 5 minutes</li>
+                <li>The discovery framework, start to finish <i>(building)</i></li>
+                <li>The question bank: what to ask to surface the pain</li>
+                <li>Qualifying: budget, authority, urgency</li>
+                <li>Setting the agenda for the close</li>
+            </ul>
+        </div>
+
+        <div class="module anchor">
+            <div class="mhead"><span class="mnum">05</span><span class="mtitle">The Presentation &amp; Close</span><span class="status st-prog">In progress</span></div>
+            <p class="mdesc">Where it all comes together. Present the offer remotely, handle the moment, and ask for the business.</p>
+
+            <div class="video still">
+                <div class="play">&#9654;</div>
+                <div class="vmeta">Call library &middot; 41 min</div>
+                <div class="vlabel">Live close 1: Harborline Roofing</div>
+            </div>
+            <p style="font-size:13.5px; color:var(--muted); margin:0 0 12px;"><b>Live close 1.</b> A sample recording, start to finish, from first hello to signed. Watch it, then work the breakdown below.</p>
+
+            <div class="video still">
+                <div class="play">&#9654;</div>
+                <div class="vmeta">Call library &middot; 34 min</div>
+                <div class="vlabel">Live close 2: Cedar Row Insurance</div>
+            </div>
+            <p style="font-size:13.5px; color:var(--muted); margin:0 0 12px;"><b>Live close 2.</b> Closed on the call at the $2,099 action-taker onboarding. Short, clean, and a good model for a single-seat deal.</p>
+
+            <div class="video still">
+                <div class="play">&#9654;</div>
+                <div class="vmeta">Call library &middot; 58 min</div>
+                <div class="vlabel">Live close 3: Northlake Studio</div>
+            </div>
+            <p style="font-size:13.5px; color:var(--muted); margin:0 0 12px;"><b>Live close 3.</b> A growing production studio closed on <b style="color:#fff">two hires in a single call</b>, a lead video editor and an operations VA. A masterclass in selling the system, not just the seat.</p>
+
+            <div class="lesson">
+                <div class="lesson-h">The breakdown: sell the system, not the seat</div>
+                <p><b>The setup.</b> Northlake is growing fast and drowning in it. They pay an outside editing vendor every month for four-day turnarounds and no consistency, one operations person runs the entire backend alone, and nothing tracks project status. The pain is not the editing bill, it is the missing system.</p>
+                <p><b>Diagnose the real bottleneck.</b> Do not jump at the obvious "fire your vendor" move. Tell them not to make drastic changes until the math is fully analyzed, and name the missing project management as the actual problem. Lead with the bottleneck, not the price.</p>
+                <p><b>Systems before staff.</b> Dropping more people onto a broken process just multiplies the chaos. We build the accountability system first, a central dashboard tracking queues, turnaround times, and deliverables, then staff it. That one reframe turns you from a staffing agency into an operating partner.</p>
+                <p><b>Structure the hire.</b> Not a pile of editors, but one strong <b>lead editor</b> as the single point of contact who manages and trains lower-cost editors underneath, with staggered day and night schedules for 24-hour turnaround. Structuring the org gives the client leverage and gives you a bigger, stickier deal.</p>
+                <p><b>Close the next step.</b> They committed on the call and took the action-taker rate for deciding now. Then set the next step immediately: a two-hour strategy call to map the workflow before recruiting starts, agreement and invoice to follow same day.</p>
+            </div>
+            <div class="principle">The whole call in a sentence: the buyer thinks the problem is cost, so you show them it is chaos, sell the system that fixes it, and the deal grows from one seat to a whole structure.</div>
+
+            <ul class="lessons">
+                <li>Timestamped breakdown of each call: structure, section by section <i>(building)</i></li>
+                <li>The talk tracks that landed, pulled out to practice</li>
+                <li>The close: the exact words right before the yes</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">06</span><span class="mtitle">Objection Handling</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">Every objection has a proven answer. Learn the bank cold so nothing catches you flat.</p>
+            <ul class="lessons">
+                <li>Price: "it's too expensive" and "I can find cheaper"</li>
+                <li>Stall: "let me think about it" and "send me info"</li>
+                <li>Doubt: quality, offshore concerns, "will it actually work"</li>
+                <li>Timing: "not right now", seeded from real calls</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">07</span><span class="mtitle">Tools &amp; Process</span><span class="status st-prog">In progress</span></div>
+            <p class="mdesc">Run your business like a pro. Know the systems, the comp, and the handoff cold.</p>
+
+            <div class="lesson">
+                <div class="lesson-h">Lesson 1 &middot; Your tool stack</div>
+                <p>This is the stack you run every day. Know where each thing lives so nothing falls through the cracks.</p>
+                <p><b>The CRM.</b> Your system of record. Every lead, contact, deal, and pipeline stage lives there. If it is not in the CRM, it did not happen.</p>
+                <p><b>The shared inbox.</b> Prospect and team communication runs through one place, so every conversation stays together and nothing gets lost.</p>
+                <p><b>The dialer.</b> Your call list, dispositions, and follow-up timers in one screen, so a rep never has to decide who to call next.</p>
+                <p><b>Our proprietary systems.</b> Staffify's own internal tools, part of what makes the offer hard to copy. You get access and training on these once you are on the team.</p>
+            </div>
+
+            <ul class="lessons">
+                <li class="done">Your tool stack: CRM, shared inbox, dialer, and our proprietary systems</li>
+                <li>Lead flow in the CRM: how deals move <i>(building)</i></li>
+                <li>The comp plan: commission, residuals, accelerator, bonuses, payouts</li>
+                <li>The handoff to fulfillment after the close</li>
+                <li>Logins and access</li>
+            </ul>
+        </div>
+
+        <div class="module">
+            <div class="mhead"><span class="mnum">08</span><span class="mtitle">Certification</span><span class="status st-soon">Coming soon</span></div>
+            <p class="mdesc">Prove it before you touch live pipeline. Pass a mock rep with the CEO and you are cleared to sell.</p>
+            <ul class="lessons">
+                <li>The mock-call rubric: what "ready" looks like</li>
+                <li>Your certification checklist</li>
+                <li>Ongoing call reviews once you are live</li>
+            </ul>
+        </div>
+
+        <div class="teambox">
+            <div class="teamhd"><div class="quiztitle" style="margin:0">Team board</div><span style="font-size:12.5px;color:var(--muted)">Updated this morning</span></div>
+            <div class="trow thead"><span class="trank">#</span><span class="tname">Rep</span><span class="tstat">Progress</span><span class="tscore">Avg score</span></div>
+            <div class="trow"><span class="trank">1</span><span class="tname">Dana Whitfield</span><span class="tstat">8 / 8 modules</span><span class="tscore">96%</span></div>
+            <div class="trow"><span class="trank">2</span><span class="tname">Marcus Ellery</span><span class="tstat">7 / 8 modules</span><span class="tscore">93%</span></div>
+            <div class="trow"><span class="trank">3</span><span class="tname">Madison Sterling</span><span class="tstat">5 / 8 modules</span><span class="tscore">91%</span></div>
+            <div class="trow"><span class="trank">4</span><span class="tname">Priya Raman</span><span class="tstat">4 / 8 modules</span><span class="tscore">88%</span></div>
+            <div class="trow"><span class="trank">5</span><span class="tname">Owen Brackett</span><span class="tstat">2 / 8 modules</span><span class="tscore">84%</span></div>
+        </div>
+
+    </section>
+
+</main>
+
+<footer>
+    <p>Staffify Sales Training &middot; Sample view, fictional data &middot; <a href="https://www.gostaffify.com/">gostaffify.com</a></p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Pipeline &middot; Staffify</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark: #0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 14px; }
+        .eyebrow::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        .chip { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); border: 1px solid rgba(26,189,225,0.4); background: rgba(26,189,225,0.08); border-radius: 999px; padding: 6px 14px; }
+        .chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .tb-right { display:flex; align-items:center; gap:14px; font-size:13px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; }
+        .btn:hover { background:var(--cyan-hi); }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .btn-ghost:hover { color:var(--white); }
+        .nav { display:flex; gap:6px; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        @media (max-width: 880px) { .topbar { flex-wrap: wrap; } .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
+        .nav a:hover { color:var(--white); }
+        .wrap { max-width:920px; margin:0 auto; padding:28px; }
+        h1 { font-size:26px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+        .count { font-size:14px; color:var(--muted); margin-bottom:24px; }
+        .group-h { display: flex; align-items: center; gap: 12px; font-size:12px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:var(--cyan); margin:26px 0 12px; }
+        .group-h::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        .row { display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--card-border); border-radius:12px; padding:14px 18px; margin-bottom:10px; flex-wrap:wrap; }
+        .when { font-size:12.5px; color:var(--muted); width:118px; flex-shrink:0; }
+        .who { flex:1; min-width:180px; }
+        .who .n { font-size:16px; font-weight:700; }
+        .who .c { font-size:13px; color:var(--muted); }
+        .who .e { font-size:13px; }
+        .who .e a { color:var(--cyan-hi); text-decoration:none; }
+        .who .e a:hover { text-decoration:underline; }
+        .who .e .ph { color:var(--muted); margin-left:8px; }
+        .type { font-size:11.5px; font-weight:600; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); border-radius:999px; padding:4px 11px; white-space:nowrap; }
+        .join { font-size:13px; font-weight:700; color:var(--cyan-hi); text-decoration:none; white-space:nowrap; }
+        .join:hover { text-decoration:underline; }
+        .done { font-size:11.5px; font-weight:700; color:#7fe0b0; background:rgba(90,220,160,0.08); border:1px solid rgba(90,220,160,0.28); border-radius:999px; padding:4px 11px; white-space:nowrap; }
+        .row.past { opacity:0.72; }
+        .empty { text-align:center; color:var(--muted); padding:60px 20px; font-size:15px; }
+        .demoband { background:linear-gradient(100deg, rgba(238,192,106,.14), transparent 70%);
+                    border-bottom:1px solid rgba(238,192,106,.3); padding:9px 22px; font-size:12.5px; color:#eec06a;
+                    display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+        .demoband b { color:#ffd98a; }
+    </style>
+</head>
+<body>
+
+<div class="demoband"><span><b>Sample view.</b> Fictional data throughout. This is the live tool our sales team works from.</span></div>
+
+<header class="topbar">
+  <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+  <nav class="nav">
+    <a href="/hub-demo/">Hub</a>
+    <a href="/dialer-demo/">Dialer</a>
+    <a href="/scoreboard-demo/">Scoreboard</a>
+    <a href="/pipeline-demo/" class="active">Pipeline</a>
+    <a href="/commission-demo/">Commissions</a>
+    <a href="/training-demo/">Training</a>
+  </nav>
+  <div class="tb-right"><button class="btn btn-ghost">Hi, Madison</button></div>
+</header>
+
+<div class="wrap">
+
+  <div class="eyebrow">Booked Calls</div>
+  <h1>Sales <span class="grad">pipeline</span></h1>
+  <div class="count">8 bookings &middot; last 30 days and upcoming, live from Calendly</div>
+
+  <div class="group-h">Upcoming (6)</div>
+
+  <div class="row">
+    <div class="when">Fri, Aug 14, 3:00 PM</div>
+    <div class="who">
+      <div class="n">Harbor Point Dental</div>
+      <div class="c">Dana Whitfield, Practice Manager</div>
+      <div class="e"><a href="mailto:dana.whitfield@example.com">dana.whitfield@example.com</a><span class="ph">(312) 555-0148</span></div>
+    </div>
+    <span class="type">Staffify Leads Discovery Call, 15 min</span>
+    <a class="join" href="#">Join &#8599;</a>
+  </div>
+
+  <div class="row">
+    <div class="when">Mon, Aug 17, 9:30 AM</div>
+    <div class="who">
+      <div class="n">Kestrel Property Group</div>
+      <div class="c">Marcus Ellery, Director of Operations</div>
+      <div class="e"><a href="mailto:m.ellery@example.com">m.ellery@example.com</a><span class="ph">(704) 555-0192</span></div>
+    </div>
+    <span class="type">Staffify Leads Discovery Call, 15 min</span>
+    <a class="join" href="#">Join &#8599;</a>
+  </div>
+
+  <div class="row">
+    <div class="when">Mon, Aug 17, 2:00 PM</div>
+    <div class="who">
+      <div class="n">Bayline Logistics</div>
+      <div class="c">Priya Raghavan, VP Operations</div>
+      <div class="e"><a href="mailto:praghavan@example.com">praghavan@example.com</a><span class="ph">(602) 555-0117</span></div>
+    </div>
+    <span class="type">Staffify Leads Discovery Call, 15 min</span>
+    <a class="join" href="#">Join &#8599;</a>
+  </div>
+
+  <div class="row">
+    <div class="when">Tue, Aug 18, 11:15 AM</div>
+    <div class="who">
+      <div class="n">Northgate Insurance Group</div>
+      <div class="c">Trevor Nash, Agency Owner</div>
+      <div class="e"><a href="mailto:trevor.nash@example.com">trevor.nash@example.com</a><span class="ph">(216) 555-0163</span></div>
+    </div>
+    <span class="type">Staffify Leads Discovery Call, 15 min</span>
+    <a class="join" href="#">Join &#8599;</a>
+  </div>
+
+  <div class="row">
+    <div class="when">Wed, Aug 19, 10:00 AM</div>
+    <div class="who">
+      <div class="n">Verity Home Services</div>
+      <div class="c">Alicia Moreno, General Manager</div>
+      <div class="e"><a href="mailto:amoreno@example.com">amoreno@example.com</a><span class="ph">(469) 555-0125</span></div>
+    </div>
+    <span class="type">Staffify Leads Discovery Call, 15 min</span>
+    <a class="join" href="#">Join &#8599;</a>
+  </div>
+
+  <div class="row">
+    <div class="when">Thu, Aug 20, 1:30 PM</div>
+    <div class="who">
+      <div class="n">Cedarwood Orthodontics</div>
+      <div class="c">Grant Holloway, Owner</div>
+      <div class="e"><a href="mailto:g.holloway@example.com">g.holloway@example.com</a><span class="ph">(801) 555-0174</span></div>
+    </div>
+    <span class="type">Staffify Leads Discovery Call, 15 min</span>
+    <a class="join" href="#">Join &#8599;</a>
+  </div>
+
+  <div class="group-h">Recent (2)</div>
+
+  <div class="row past">
+    <div class="when">Thu, Aug 13, 4:00 PM</div>
+    <div class="who">
+      <div class="n">Ridgeline Roofing</div>
+      <div class="c">Sam Okonkwo, Co-Founder</div>
+      <div class="e"><a href="mailto:sam@example.com">sam@example.com</a><span class="ph">(720) 555-0136</span></div>
+    </div>
+    <span class="type">Staffify Leads Discovery Call, 15 min</span>
+    <span class="done">Completed</span>
+  </div>
+
+  <div class="row past">
+    <div class="when">Wed, Aug 12, 10:30 AM</div>
+    <div class="who">
+      <div class="n">Atlas Freight Partners</div>
+      <div class="c">Renee Castellano, Controller</div>
+      <div class="e"><a href="mailto:r.castellano@example.com">r.castellano@example.com</a><span class="ph">(913) 555-0159</span></div>
+    </div>
+    <span class="type">Staffify Leads Discovery Call, 15 min</span>
+    <span class="done">Completed</span>
+  </div>
+
+</div>
+
+</body>
+</html>
