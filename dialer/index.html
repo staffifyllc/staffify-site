@@ -271,8 +271,14 @@
           transition:transform .12s ease, filter .12s ease, background .12s ease;
         }
         .nextbtn:active, .txtbtn:active, .calbtn:active, .oc:active, .confirmbtn:active { transform:scale(.985); }
-        .nextbtn { background:var(--s2); color:var(--t1); }
-        .nextbtn:hover { background:rgba(255,255,255,.09); }
+        .nextbtn { background:rgba(26,189,225,.13); color:var(--cyan-hi); font-size:15px; letter-spacing:.01em;
+                   display:flex; align-items:center; justify-content:center; gap:10px; }
+        .nextbtn:hover { background:rgba(26,189,225,.22); color:#eaf9ff; }
+        .nextbtn .kbd { font-size:11px; font-weight:700; color:var(--cyan-hi); opacity:.75;
+                        background:rgba(255,255,255,.10); border-radius:6px; padding:2px 7px; }
+        .posrow { display:flex; align-items:center; justify-content:space-between; gap:12px;
+                  margin-top:14px; font-size:12.5px; color:var(--t3); }
+        .posrow b { color:var(--t2); font-weight:700; }
         .oc { background:var(--s2); color:var(--t1); font-size:14.5px; }
         .oc:hover { background:rgba(255,255,255,.09); }
         .oc.good { background:rgba(126,245,194,.12); color:#8ff5c8; }
@@ -871,6 +877,9 @@
     if(e.metaKey||e.ctrlKey||e.altKey) return;
     var tag=(e.target&&e.target.tagName||'').toLowerCase(); if(tag==='input'||tag==='textarea') return;
     if(!document.querySelector('.oc')) return;
+    // Arrow keys cycle the list without logging anything. N is taken: it means no answer.
+    if(e.key==='ArrowRight'){ e.preventDefault(); nextCall(); return; }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); if(WORKED.length) goBackLead(); return; }
     var map=MOTION==='hot' ? {'1':'won','2':'callback','n':'no_answer','x':'not_interested','b':'bad_number'} : {'1':'interested','2':'callback','n':'no_answer','v':'voicemail','g':'gatekeeper','x':'not_interested','b':'bad_number'};
     var o=map[(e.key||'').toLowerCase()]; if(o){ e.preventDefault(); logOutcome(o); }
   });
@@ -966,7 +975,8 @@
         '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
         '<div class="cardgrid"><div class="cardmain">'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
-        '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
+        '<button class="nextbtn" data-next="1">Skip to next lead <span class="kbd">&#8594;</span></button>'+
+        posRow()+
         outcomesBlock(true)+
         '</div><div class="cardtools">'+
         renderQuote()+
@@ -1123,6 +1133,16 @@
     return '<div class="notesbox"><div class="lbl">Notes from the call</div>'+
       '<textarea id="callnotes" placeholder="What did they actually say? Who owns the hire, what are they paying, when to follow up."></textarea>'+
       '<div class="nhint">Saved onto their <b>HubSpot</b> record when you hit Next lead.</div></div>';
+  }
+
+  // Where the rep is in the list, so cycling does not feel like falling through an endless stack.
+  function posRow(){
+    var q=QUEUES[MOTION]||[];
+    var done=WORKED.filter(function(w){return w.motion===MOTION;}).length;
+    var total=q.length+done;
+    if(!total) return '';
+    return '<div class="posrow"><span>Lead <b>'+(done+1)+'</b> of <b>'+total+'</b> in '+esc(LABEL[MOTION])+'</span>'+
+           '<span>'+q.length+' left to work</span></div>';
   }
 
   function confirmRow(){
