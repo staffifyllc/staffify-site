@@ -1017,13 +1017,11 @@
     });
     var si=document.getElementById('srch');
     if(si){
-      si.oninput=function(){ SEARCH=si.value; var pos=si.selectionStart; render();
-        var ni=document.getElementById('srch'); if(ni){ ni.focus(); try{ni.setSelectionRange(pos,pos);}catch(e){} } };
-      si.onkeydown=function(e){ if(e.key==='Escape'){ SEARCH=''; render(); } };
+      si.value=SEARCH;                                   // survive a re-render without stealing focus
+      si.oninput=function(){ SEARCH=si.value; drawSearch(); };   // no full render while typing
+      si.onkeydown=function(e){ if(e.key==='Escape'){ SEARCH=''; si.value=''; drawSearch(); si.blur(); } };
+      drawSearch();
     }
-    Array.prototype.forEach.call(document.querySelectorAll('.srchres button[data-hit]'),function(b){
-      b.onclick=function(){ jumpToLead(SEARCH_HITS[+b.getAttribute('data-hit')]); };
-    });
     var cb=document.getElementById('confirmNext'); if(cb) cb.onclick=function(){ confirmOutcome(); };
     var bb=document.getElementById('backLead'); if(bb) bb.onclick=function(){ goBackLead(); };
     var fb=document.getElementById('fwdLead'); if(fb) fb.onclick=function(){ goForwardLead(); };
@@ -1073,43 +1071,53 @@
   }
 
   // Renders the confirm row once an outcome is highlighted, so nothing advances until the rep agrees.
-  // Quick search, for when a prospect calls back and the rep needs their card up instantly.
-  var SEARCH='';
+  // Quick search, for when a prospect calls back.
+  // Typing must NEVER trigger a full render: rebuilding the page destroys the input mid-keystroke,
+  // which drops characters and steals focus. Only the results list is redrawn.
+  var SEARCH='', SEARCH_HITS=[];
   function searchBox(){
-    var box='<div class="srchwrap"><input class="srch" id="srch" type="search" autocomplete="off" '+
-            'placeholder="Someone calling back? Search name, company, number or role" value="'+esc(SEARCH)+'">';
-    var q=SEARCH.trim().toLowerCase();
-    if(q.length<2) return box+'</div>';
-    var hits=[];
+    return '<div class="srchwrap"><input class="srch" id="srch" type="search" autocomplete="off" '+
+           'placeholder="Someone calling back? Search name, company, number or role">'+
+           '<div class="srchres" id="srchres" style="display:none"></div></div>';
+  }
+  function searchHits(q){
+    q=String(q||'').trim().toLowerCase();
+    if(q.length<2) return [];
+    var digits=q.replace(/[^0-9]/g,''), hits=[];
     ['hot','staffing','websites'].forEach(function(mk){
       (QUEUES[mk]||[]).forEach(function(l,i){
         var hay=((l.company||'')+' '+(l.name||'')+' '+(l.phone||'')+' '+(l.role||'')).toLowerCase();
-        var digits=q.replace(/[^0-9]/g,'');
-        if(hay.indexOf(q)>=0 || (digits.length>=4 && String(l.phone||'').replace(/[^0-9]/g,'').indexOf(digits)>=0)){
-          hits.push({m:mk,i:i,l:l});
-        }
+        if(hay.indexOf(q)>=0 || (digits.length>=4 && String(l.phone||'').replace(/[^0-9]/g,'').indexOf(digits)>=0)) hits.push({m:mk,l:l});
       });
     });
-    // Anything already worked today is searchable too, so a callback on a logged lead still pulls up.
     WORKED.forEach(function(w,wi){
       var l=w.lead, hay=((l.company||'')+' '+(l.name||'')+' '+(l.phone||'')+' '+(l.role||'')).toLowerCase();
-      if(hay.indexOf(q)>=0) hits.push({m:w.motion,i:-1,l:l,worked:wi});
+      if(hay.indexOf(q)>=0) hits.push({m:w.motion,l:l,worked:wi});
     });
-    var rows=hits.slice(0,8).map(function(h,n){
-      var sub=[h.l.role, h.l.name, h.l.phone].filter(Boolean).join(' · ');
-      return '<button data-hit="'+n+'"><span class="sc">'+esc(h.l.company||h.l.name||'Lead')+
-             (h.worked!=null?' <span style="color:#9ba1ab;font-weight:600">(already logged)</span>':'')+'</span>'+
-             '<span class="sm">'+esc(sub)+'</span></button>';
-    }).join('');
-    SEARCH_HITS=hits.slice(0,8);
-    return box+'<div class="srchres">'+(rows||'<div class="none">Nothing matches that.</div>')+'</div></div>';
+    return hits.slice(0,8);
   }
-  var SEARCH_HITS=[];
+  function drawSearch(){
+    var box=document.getElementById('srchres'); if(!box) return;
+    SEARCH_HITS=searchHits(SEARCH);
+    if(!SEARCH.trim() || SEARCH.trim().length<2){ box.style.display='none'; box.innerHTML=''; return; }
+    box.style.display='block';
+    box.innerHTML = SEARCH_HITS.length
+      ? SEARCH_HITS.map(function(h,n){
+          var sub=[h.l.role,h.l.name,h.l.phone].filter(Boolean).join(' \u00b7 ');
+          return '<button data-hit="'+n+'"><span class="sc">'+esc(h.l.company||h.l.name||'Lead')+
+                 (h.worked!=null?' <span style="color:#9ba1ab;font-weight:600">(already logged)</span>':'')+'</span>'+
+                 '<span class="sm">'+esc(sub)+'</span></button>';
+        }).join('')
+      : '<div class="none">Nothing matches that.</div>';
+    Array.prototype.forEach.call(box.querySelectorAll('button[data-hit]'),function(b){
+      b.onclick=function(){ jumpToLead(SEARCH_HITS[+b.getAttribute('data-hit')]); };
+    });
+  }
   function jumpToLead(h){
     if(!h) return;
     MOTION=h.m;
     var q=QUEUES[MOTION]||[];
-    if(h.worked!=null){                       // pull a logged lead back out to redo it
+    if(h.worked!=null){
       var w=WORKED.splice(h.worked,1)[0];
       if(w){ w.lead.__reopened=true; q.unshift(w.lead); selOutcome=w.outcome; }
     } else {
@@ -1120,30 +1128,6 @@
     SEARCH=''; SEARCH_HITS=[]; FLOW=null;
     render();
     window.scrollTo({top:0, behavior:'smooth'});
-  }
-
-  // Notes are typed mid-call, and every tap (an outcome, a guided-call branch) re-renders the card,
-  // so the textarea is read back into NOTES before anything rebuilds. Losing a rep's notes is the one
-  // thing this box must never do.
-  function stashNotes(){
-    var el=document.getElementById('callnotes');
-    if(el && shownLeadId!=null) NOTES[shownLeadId]=el.value;
-  }
-  function notesFor(L){ return (L && NOTES[L.id]!=null) ? NOTES[L.id] : ''; }
-  function notesBlock(L){
-    return '<div class="notesbox"><div class="lbl">Notes from the call</div>'+
-      '<textarea id="callnotes" placeholder="What did they actually say? Who owns the hire, what are they paying, when to follow up."></textarea>'+
-      '<div class="nhint">Saved onto their <b>HubSpot</b> record when you hit Next lead.</div></div>';
-  }
-
-  // Where the rep is in the list, so cycling does not feel like falling through an endless stack.
-  function posRow(){
-    var q=QUEUES[MOTION]||[];
-    var done=WORKED.filter(function(w){return w.motion===MOTION;}).length;
-    var total=q.length+done;
-    if(!total) return '';
-    return '<div class="posrow"><span>Lead <b>'+(done+1)+'</b> of <b>'+total+'</b> in '+esc(LABEL[MOTION])+'</span>'+
-           '<span>'+q.length+' left to work</span></div>';
   }
 
   function confirmRow(){
