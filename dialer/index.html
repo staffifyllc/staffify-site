@@ -279,6 +279,32 @@
         .posrow { display:flex; align-items:center; justify-content:space-between; gap:12px;
                   margin-top:14px; font-size:12.5px; color:var(--t3); }
         .posrow b { color:var(--t2); font-weight:700; }
+        .lead-panel { background:var(--s2); border-radius:var(--r-lg); padding:20px 22px; margin-top:16px; }
+        .lp-row { display:grid; grid-template-columns:104px 1fr; gap:14px; padding:9px 0; align-items:baseline; }
+        .lp-row + .lp-row { border-top:1px solid var(--hair); }
+        .lp-row .k { font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--cyan); }
+        .lp-row .v { font-size:15px; color:var(--t1); line-height:1.5; }
+        .lp-row .v.big { font-size:19px; font-weight:800; letter-spacing:-.01em; }
+        .lp-row.warn .v { color:#ffb59a; }
+        .lp-row .v a { color:var(--cyan-hi); text-decoration:none; font-weight:600; word-break:break-all; }
+        .lp-row .v a:hover { text-decoration:underline; }
+        .sitebtn { display:inline-flex; align-items:center; gap:8px; margin-top:8px; font-size:13.5px; font-weight:800;
+                   color:#04222b; background:var(--cyan); border-radius:10px; padding:9px 14px; text-decoration:none; }
+        .sitebtn:hover { filter:brightness(1.07); }
+        .cbwrap { margin-top:14px; background:rgba(95,224,250,.08); border-radius:var(--r-md); padding:16px 18px; }
+        .cbwrap .cbhead { font-size:13px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--cyan-hi); }
+        .cbchips { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 10px; }
+        .cbchip { font-size:13px; font-weight:700; color:var(--t1); background:rgba(255,255,255,.07);
+                  border:none; border-radius:999px; padding:8px 14px; cursor:pointer; }
+        .cbchip:hover { background:rgba(26,189,225,.2); }
+        .cbchip.on { background:var(--cyan); color:#04222b; }
+        .cbwrap input[type=datetime-local] { width:100%; font-family:inherit; font-size:15px; color:var(--t1);
+                  background:rgba(255,255,255,.07); border:none; border-radius:11px; padding:12px 14px; color-scheme:dark; }
+        .cbadd { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+        .cbadd a { flex:1; min-width:150px; text-align:center; font-size:13.5px; font-weight:800; text-decoration:none;
+                   border-radius:11px; padding:12px 14px; background:var(--cyan); color:#04222b; }
+        .cbadd a.alt { background:rgba(255,255,255,.08); color:var(--t1); }
+        .cbadd a:hover { filter:brightness(1.07); }
         .oc { background:var(--s2); color:var(--t1); font-size:14.5px; }
         .oc:hover { background:rgba(255,255,255,.09); }
         .oc.good { background:rgba(126,245,194,.12); color:#8ff5c8; }
@@ -390,6 +416,49 @@
   // Roles that sound like they need a body in the building. These need the remote question asked
   // EARLY and explicitly, or the prospect rules us out before price ever comes up.
   var ONSITE_ROLE = /front.?desk|reception|patient (care )?(coordinator|advocate)|office (manager|admin)|greeter|scheduler|treatment coordinator|dental assistant|check.?in/i;
+
+  // Tidy a scraped URL down to something a rep can read out loud.
+  function siteHost(u){
+    try{ return String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').split(/[\/?#]/)[0]; }catch(e){ return u||''; }
+  }
+
+  // ONE panel for everything about the lead. The role, the flags and the context used to appear in
+  // three separate places, which is what made the card feel like it was repeating itself.
+  function leadPanel(L){
+    var rows=[];
+    var who=[L.name, L.title].filter(Boolean).join(' \u00b7 ');
+    if(who) rows.push(['Calling', esc(who), '']);
+
+    if(MOTION==='websites'){
+      if(L.industry) rows.push(['Business', esc(L.industry), '']);
+      if(L.website) rows.push(['Their site',
+        '<a href="'+esc(L.website)+'" target="_blank" rel="noopener">'+esc(siteHost(L.website))+'</a>'+
+        '<a class="sitebtn" href="'+esc(L.website)+'" target="_blank" rel="noopener">Open their site \u2197</a>', '']);
+    } else if(L.role){
+      rows.push([L.priorCall?'They asked for':'Open role', '<span class="v big">'+esc(L.role)+'</span>', 'big']);
+    }
+
+    if(L.priorCall) rows.push(['We spoke', esc(L.priorCall)+', and never followed up properly', '']);
+    if(L.employees) rows.push(['Size', esc(L.employees)+' employees', '']);
+
+    // The single line that tells the rep what to actually do on this call.
+    var angle='';
+    if(MOTION==='websites') angle='Ask if they have checked whether they show up when someone asks AI to find a '+(L.industry||'business like theirs')+'. Nobody knows the answer, which is the opening.';
+    else if(L.priorCall) angle='Do not re-pitch. Ask straight out if there is any way we can earn their business, then stop talking and listen to why it stalled.';
+    else if(ONSITE_ROLE.test(L.role||'')) angle='Sounds on-site, so get them to picture it remote before anything else. Most of that job is phones, scheduling and insurance follow-up.';
+    else if(L.role) angle='Already a remote-friendly role, so go straight at what they are paying.';
+    if(angle) rows.push(['Angle', esc(angle), '']);
+
+    var low=(L.sources||[]).filter(function(x){ return /low/i.test(x.trust||''); }).map(function(x){ return x.field; });
+    if(low.length) rows.push(['Unverified', esc(low.join(', ')+' is a guess, do not quote it as fact.'), 'warn']);
+    (L.flags||[]).slice(0,2).forEach(function(f){ rows.push(['Heads up', esc(f), 'warn']); });
+
+    if(!rows.length) return '';
+    return '<div class="lead-panel">'+rows.map(function(r){
+      return '<div class="lp-row '+(r[2]==='warn'?'warn':'')+'"><span class="k">'+r[0]+'</span>'+
+             (r[2]==='big'? r[1] : '<span class="v">'+r[1]+'</span>')+'</div>';
+    }).join('')+'</div>';
+  }
 
   // Everything worth knowing in the five seconds before the phone rings.
   function preCall(L){
@@ -733,7 +802,7 @@
     return '<div class="lbl">How did it go?</div><div class="outcomes">'+
       opts.map(function(o){
         return '<button class="'+o[2]+(selOutcome===o[0]?' sel':'')+'" data-o="'+o[0]+'">'+o[1]+'</button>';
-      }).join('')+'</div>'+notesBlock()+confirmRow();
+      }).join('')+'</div>'+callbackBlock((QUEUES[MOTION]||[])[0])+notesBlock()+confirmRow();
   }
 
   function renderObjections(){
@@ -928,9 +997,7 @@
         '<div class="headrow"><div class="company">'+esc(L.company||'(no company)')+'</div>'+navBtns()+'</div>'+
         '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
         (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
-        (L.role?'<div class="rolebox"><span class="rl">'+(L.priorCall?'What they asked us for':'Open role')+'</span><span class="rv">'+esc(L.role)+'</span></div>':'')+
-        (metaTags(L)?'<div class="metarow">'+metaTags(L)+'</div>':'')+
-        (MOTION==='staffing'?preCall(L):'')+
+        leadPanel(L)+
         '<div class="cardgrid"><div class="cardmain">'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Skip to next lead <span class="kbd">&#8594;</span></button>'+
@@ -940,8 +1007,8 @@
         outcomesBlock(false)+
         '</div><div class="cardtools">'+
         // The things a rep reaches for mid-call, kept out of the way of the script.
-        (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(deRoof(L.brief))+'</div>':'')+
-        provBlock(L)+
+        ((L.brief||provBlock(L))?'<details><summary>Background and where this came from</summary><div class="script">'+
+          (L.brief?'<div class="blk">'+esc(deRoof(L.brief))+'</div>':'')+provBlock(L)+'</div></details>':'')+
         histBlock(L)+
         ammo(L)+
         renderQuote()+
@@ -1015,6 +1082,13 @@
     Array.prototype.forEach.call(document.querySelectorAll('.oc'),function(b){
       b.onclick=function(){ selOutcome=b.getAttribute('data-o'); render(); };
     });
+    // Callback scheduling: presets, a picker, and the calendar links rebuild live.
+    Array.prototype.forEach.call(document.querySelectorAll('.cbchip'),function(b){
+      b.onclick=function(){ stashNotes(); callbackAt=presetDate(b.getAttribute('data-cb')); render(); };
+    });
+    var cw=document.getElementById('cbwhen');
+    if(cw) cw.onchange=function(){ stashNotes(); callbackAt=cw.value; render(); };
+
     var si=document.getElementById('srch');
     if(si){
       si.value=SEARCH;                                   // survive a re-render without stealing focus
@@ -1153,6 +1227,62 @@
            '<span>'+q.length+' left to work</span></div>';
   }
 
+  // A callback with no reminder is a callback that does not happen. Picking Callback opens a
+  // date and time, and drops it straight onto whichever calendar the rep is signed into.
+  var callbackAt='';
+  function pad(n){ return (n<10?'0':'')+n; }
+  function localValue(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+  function presetDate(kind){
+    var d=new Date();
+    if(kind==='tom'){ d.setDate(d.getDate()+1); d.setHours(9,0,0,0); }
+    else if(kind==='2d'){ d.setDate(d.getDate()+2); d.setHours(9,0,0,0); }
+    else if(kind==='wk'){ d.setDate(d.getDate()+7); d.setHours(9,0,0,0); }
+    else if(kind==='pm'){ d.setHours(d.getHours()+3,0,0,0); }
+    return localValue(d);
+  }
+  function cbUtc(v){
+    var d=new Date(v); if(isNaN(d)) return '';
+    return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+'T'+pad(d.getUTCHours())+pad(d.getUTCMinutes())+'00Z';
+  }
+  function cbTitle(L){ return 'Call back '+((L&&L.company)||'lead')+((L&&L.name)?' ('+L.name+')':''); }
+  function cbDetails(L){
+    return [ (L&&L.role)?('Open role: '+L.role):'', (L&&L.phone)?('Phone: '+L.phone):'',
+             (L&&NOTES[L.id])?('Notes: '+NOTES[L.id]):'' ].filter(Boolean).join('\n');
+  }
+  function gcalUrl(L){
+    var st=cbUtc(callbackAt); if(!st) return '#';
+    var end=new Date(new Date(callbackAt).getTime()+15*60000);
+    var et=end.getUTCFullYear()+pad(end.getUTCMonth()+1)+pad(end.getUTCDate())+'T'+pad(end.getUTCHours())+pad(end.getUTCMinutes())+'00Z';
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE'+
+      '&text='+encodeURIComponent(cbTitle(L))+
+      '&dates='+st+'/'+et+
+      '&details='+encodeURIComponent(cbDetails(L));
+  }
+  function icsHref(L){
+    var st=cbUtc(callbackAt); if(!st) return '#';
+    var end=new Date(new Date(callbackAt).getTime()+15*60000);
+    var et=end.getUTCFullYear()+pad(end.getUTCMonth()+1)+pad(end.getUTCDate())+'T'+pad(end.getUTCHours())+pad(end.getUTCMinutes())+'00Z';
+    var ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Staffify//Dialer//EN','BEGIN:VEVENT',
+      'UID:'+Date.now()+'@gostaffify.com','DTSTAMP:'+cbUtc(new Date().toString()),
+      'DTSTART:'+st,'DTEND:'+et,'SUMMARY:'+cbTitle(L).replace(/[,;]/g,''),
+      'DESCRIPTION:'+cbDetails(L).replace(/\n/g,'\\n').replace(/[,;]/g,''),
+      'BEGIN:VALARM','TRIGGER:PT0M','ACTION:DISPLAY','DESCRIPTION:'+cbTitle(L).replace(/[,;]/g,''),
+      'END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+    return 'data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
+  }
+  function callbackBlock(L){
+    if(selOutcome!=='callback') return '';
+    if(!callbackAt) callbackAt=presetDate('tom');
+    var chip=function(k,lab){ return '<button class="cbchip'+(callbackAt===presetDate(k)?' on':'')+'" data-cb="'+k+'">'+lab+'</button>'; };
+    var ready=!!callbackAt;
+    return '<div class="cbwrap"><div class="cbhead">When should we call back?</div>'+
+      '<div class="cbchips">'+chip('pm','Later today')+chip('tom','Tomorrow 9am')+chip('2d','In 2 days')+chip('wk','Next week')+'</div>'+
+      '<input type="datetime-local" id="cbwhen" value="'+esc(callbackAt)+'">'+
+      (ready?'<div class="cbadd"><a href="'+gcalUrl(L)+'" target="_blank" rel="noopener" id="cbgcal">Add to Google Calendar</a>'+
+             '<a class="alt" href="'+icsHref(L)+'" download="callback.ics">Apple or Outlook</a></div>':'')+
+      '</div>';
+  }
+
   function confirmRow(){
     if(!selOutcome) return '';
     var label=({won:'Closed / Won',interested:'Interested',callback:'Callback',no_answer:'No answer',
@@ -1183,6 +1313,10 @@
     var changed = redo && prior.outcome!==selOutcome;
     stashNotes();
     var notes=(NOTES[lead.id]||'').trim();
+    if(selOutcome==='callback' && callbackAt){
+      var when=new Date(callbackAt);
+      if(!isNaN(when)) notes=('Callback set for '+when.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'.'+(notes?' '+notes:'')).trim();
+    }
     var entry={lead:lead, outcome:selOutcome, motion:MOTION, correction:!!lead.__reopened, notes:notes};
     WORKED.push(entry);
     // Re-log only when it is genuinely new or actually changed, so stepping forward through
@@ -1193,6 +1327,7 @@
     if(!redo) FORWARD=[];                     // moving on from a fresh lead abandons the forward path
     // If more forward history remains, show that lead with what was logged on it.
     selOutcome = FORWARD.length ? FORWARD[FORWARD.length-1].outcome : null;
+    callbackAt='';
     FLOW=null;
     render();
     window.scrollTo({top:0, behavior:'smooth'});
