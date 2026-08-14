@@ -278,9 +278,18 @@
     var rows=[];
     var who=[L.name, (L.title||'')].filter(Boolean).join(' · ');
     if(who) rows.push(['Calling', who]);
-    if(L.role) rows.push(['They posted', L.role + (L.employees? ' · '+L.employees+' employees' : '')]);
-    if(ONSITE_ROLE.test(L.role||'')) rows.push(['Angle', 'Sounds on-site, so get them to picture it remote before anything else. Most of that job is phones, scheduling and insurance follow-up.']);
-    else if(L.role) rows.push(['Angle', 'Already a remote-friendly role, so go straight at what they are paying.']);
+    // A prior sales call is not a job posting we found. They sat with us and told us what they
+    // wanted, then did not buy. Framing that as "they posted" and "go at what they are paying"
+    // is the cold-lead angle and it is wrong on this call.
+    if(L.priorCall){
+      if(L.role) rows.push(['They asked us for', L.role]);
+      if(L.lastCall) rows.push(['We spoke', L.lastCall + ', and never followed up properly']);
+      rows.push(['Angle', 'Do not re-pitch. Ask straight out if there is any way we can earn their business and fill that seat, then stop talking and listen to why it stalled.']);
+    } else {
+      if(L.role) rows.push(['They posted', L.role + (L.employees? ' · '+L.employees+' employees' : '')]);
+      if(ONSITE_ROLE.test(L.role||'')) rows.push(['Angle', 'Sounds on-site, so get them to picture it remote before anything else. Most of that job is phones, scheduling and insurance follow-up.']);
+      else if(L.role) rows.push(['Angle', 'Already a remote-friendly role, so go straight at what they are paying.']);
+    }
     var hist=(L.history&&L.history.length)?L.history:null;
     if(hist) rows.push(['Heads up', 'You have already texted this one. Reference it, do not start cold.']);
     var low=(L.sources||[]).filter(function(x){ return /low/i.test(x.trust||''); }).map(function(x){ return x.field; });
@@ -747,7 +756,7 @@
         '<div class="headrow"><div class="company">'+esc(L.company||'(no company)')+'</div>'+navBtns()+'</div>'+
         '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
         (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
-        (L.role?'<div class="rolebox"><span class="rl">Open role</span><span class="rv">'+esc(L.role)+'</span></div>':'')+
+        (L.role?'<div class="rolebox"><span class="rl">'+(L.priorCall?'What they asked us for':'Open role')+'</span><span class="rv">'+esc(L.role)+'</span></div>':'')+
         (metaTags(L)?'<div class="metarow">'+metaTags(L)+'</div>':'')+
         (MOTION==='staffing'?preCall(L):'')+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
