@@ -342,6 +342,48 @@
         .rolebox .rv { font-size:20px; }
         .notesbox textarea { padding:14px 16px; min-height:90px; }
 
+
+        /* ------------------------------------------------------------------
+           Separation pass. Removing every border made blocks blend into one
+           another. Each block now gets the SAME treatment, a raised surface,
+           one hairline edge and a soft shadow, so they read as distinct panels
+           without going back to seven competing border colours.
+           ------------------------------------------------------------------ */
+        :root { --panel: rgba(255,255,255,0.055); --panel-edge: rgba(255,255,255,0.10); }
+
+        .lead-panel, .brief, .say, .guide, .quote, .txtprev, .hist, .prov,
+        .card details, .notesbox textarea, .cbwrap, .objsay, .outcomes-wrap {
+          background:var(--panel) !important;
+          border:1px solid var(--panel-edge) !important;
+          box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 6px 18px rgba(0,0,0,.22);
+        }
+        /* the two that carry an accent keep it, on top of the shared edge */
+        .say  { border-left:3px solid var(--cyan) !important; }
+        .pre  { background:var(--panel) !important; border:1px solid var(--panel-edge) !important;
+                border-left:3px solid var(--cyan) !important; box-shadow:0 6px 18px rgba(0,0,0,.22); }
+        .guide { background:linear-gradient(168deg, rgba(26,189,225,.11), rgba(26,189,225,.03)) !important;
+                 border:1px solid rgba(26,189,225,.30) !important; }
+        .cbwrap { background:rgba(95,224,250,.09) !important; border:1px solid rgba(95,224,250,.24) !important; }
+
+        /* more air between panels so the edges have room to read */
+        .lbl { margin:32px 0 12px; }
+        .cardmain > *, .cardside > *, .cardtools > * { }
+        .lead-panel { padding:22px 24px; }
+        .card details { padding:4px 18px; }
+        .quote, .notesbox textarea, .cbwrap { padding:18px 20px; }
+        .say { padding:18px 20px; }
+        .guide { padding:22px 24px; }
+        .hist, .prov { padding:14px 16px; }
+
+        /* group the outcome buttons into their own panel so they read as one control cluster */
+        .outcomes { background:var(--panel); border:1px solid var(--panel-edge); border-radius:var(--r-lg);
+                    padding:14px; gap:10px; box-shadow:0 6px 18px rgba(0,0,0,.22); }
+        .oc { background:rgba(255,255,255,.05); }
+        .oc:hover { background:rgba(255,255,255,.10); }
+
+        /* the card itself steps back so the panels inside it come forward */
+        .card { background:rgba(255,255,255,0.016); }
+
     </style>
 </head>
 <body>
