@@ -55,6 +55,22 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
         const b = readBody(req);
         const id = (b.id || '').toString();
+
+        // Dismiss: take a stale lead out of the queue WITHOUT logging an outcome. Marking dead leads
+        // "not interested" just to clear them would put fake losses on the scoreboard. Nothing is
+        // deleted, the record stays and only stops being queued, so it can be brought back.
+        if (b.action === 'dismiss') {
+            if (id.indexOf('engine:') === 0) {
+                await redis.sadd('hot:handled', id.slice(7));
+            } else if (id.indexOf('hot:') === 0) {
+                const h = await redis.hgetall(id);
+                if (h && h.phone) await redis.sadd('hot:handled', h.phone);
+                await redis.hset(id, { status: 'dismissed', dismissedAt: String(Date.now()), dismissedBy: who.name || who.email });
+                await redis.zrem('hotleads', id);
+            } else return res.status(400).json({ error: 'bad_id' });
+            return res.status(200).json({ ok: true, dismissed: id });
+        }
+
         if (OUTCOMES.indexOf(b.outcome) < 0) return res.status(400).json({ error: 'bad_outcome', outcomes: OUTCOMES });
 
         if (id.indexOf('engine:') === 0) {
