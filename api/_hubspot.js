@@ -158,4 +158,13 @@ export async function upsertDeal({ contactId, company, role, ownerId, motion, am
     return { ok: true, id: r.body.id, created: true };
 }
 
+// Bad data: take the contact out of HubSpot. This uses the archive endpoint, which is what the UI's
+// own delete does, so it is recoverable for 90 days rather than being an unrecoverable wipe.
+export async function archiveContact(contactId) {
+    if (!token()) return { ok: false, reason: 'no_token' };
+    if (!contactId) return { ok: false, reason: 'no_contact' };
+    const r = await hs(`/crm/v3/objects/contacts/${contactId}`, { method: 'DELETE' });
+    return { ok: r.ok || r.status === 204, status: r.status, detail: r.raw };
+}
+
 export function configured() { return !!token(); }

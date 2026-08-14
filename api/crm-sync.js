@@ -5,7 +5,7 @@
 // throws back into the dialer, because a CRM hiccup must not interrupt someone mid call.
 
 import { openIdentity, readBody, redis } from './_auth.js';
-import { configured, findOrCreateContact, logCall, logText, logNote, setLeadStatus, upsertDeal } from './_hubspot.js';
+import { configured, findOrCreateContact, logCall, logText, logNote, setLeadStatus, upsertDeal, archiveContact } from './_hubspot.js';
 
 const BUYING = ['interested', 'booked', 'won'];
 const LABEL = { won:'Closed / Won', interested:'Interested', callback:'Callback', no_answer:'No answer',
@@ -33,6 +33,20 @@ export default async function handler(req, res) {
     if (!c.ok) return res.status(200).json({ ok: false, reason: c.reason, detail: c.detail || '' });
 
     const out = { ok: true, contactId: c.id, contactCreated: !!c.created, did: [] };
+
+    // Bad data. Purge it from HubSpot and blacklist the number so it can never re-enter a queue.
+    // The number is kept on a bad list precisely so the engine cannot serve it up again tomorrow.
+    if (b.purge || outcome === 'bad_number') {
+        const digits = String(lead.phone || '').replace(/[^0-9]/g, '').slice(-10);
+        if (digits) {
+            try { await redis.sadd('bad:numbers', digits); } catch (e) { /* non-fatal */ }
+            try { await redis.sadd('hot:handled', lead.phone); } catch (e) { /* non-fatal */ }
+        }
+        const del = await archiveContact(c.id);
+        out.did.push({ purged: del.ok ? 'hubspot contact archived' : (del.reason || 'archive_failed ' + del.status) });
+        out.purged = !!del.ok;
+        return res.status(200).json(out);
+    }
     const who_what = [lead.company, lead.role].filter(Boolean).join(' · ');
 
     if (type === 'call') {

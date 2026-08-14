@@ -1335,7 +1335,8 @@
     if(!selOutcome) return '';
     var label=({won:'Closed / Won',interested:'Interested',callback:'Callback',no_answer:'No answer',
                 voicemail:'Voicemail',gatekeeper:'Gatekeeper',not_interested:'Not interested',bad_number:'Bad number'})[selOutcome]||selOutcome;
-    var extra=(selOutcome==='no_answer')?' A follow-up text goes out.':'';
+    var extra=(selOutcome==='no_answer')?' A follow-up text goes out.'
+             :(selOutcome==='bad_number')?' Bad data, so this lead is removed from the queue and from HubSpot.':'';
     return '<div class="confirmrow"><span class="cnote">Logging as <b>'+esc(label)+'</b>.'+extra+'</span>'+
            '<button class="confirmbtn" id="confirmNext">Next lead &#8594;</button></div>';
   }
@@ -1372,6 +1373,8 @@
     if(!redo || changed) commitLog(entry);
     if(selOutcome==='no_answer' && (!redo || changed)) sendNoAnswerText(lead, (repGet()||{}).name, MOTION);
     if(!redo || changed) crmSync('call', lead, entry.outcome, notes);
+    // Bad data never comes back: blacklisted here and archived in HubSpot by the sync above.
+    if(entry.outcome==='bad_number') toast('Bad data. Removed from the queue and HubSpot.');
     if(!redo) FORWARD=[];                     // moving on from a fresh lead abandons the forward path
     // If more forward history remains, show that lead with what was logged on it.
     selOutcome = FORWARD.length ? FORWARD[FORWARD.length-1].outcome : null;
