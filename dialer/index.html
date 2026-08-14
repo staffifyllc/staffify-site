@@ -168,6 +168,9 @@
                   border:none; border-radius:12px; padding:14px; cursor:pointer; }
         .txtbtn:hover { filter:brightness(1.05); }
         .txtbtn:disabled { opacity:.6; cursor:default; }
+        .calbtn { width:100%; font-size:14.5px; font-weight:800; color:#04222b; background:var(--cyan);
+                  border:none; border-radius:12px; padding:14px; cursor:pointer; }
+        .calbtn:hover { background:var(--cyan-hi); }
         .txtprev { margin-top:8px; font-size:13px; color:#cfd4da; background:rgba(255,255,255,0.03);
                    border:1px solid var(--card-border); border-left:2px solid var(--green-hi);
                    border-radius:10px; padding:10px 12px; line-height:1.45; }
@@ -535,6 +538,27 @@
   function nameChip(){var r=repGet();return '<button class="btn btn-ghost" id="nm">'+(r?('Hi, '+esc(r.name.split(' ')[0])):'Set your name')+'</button>';}
   function wireChip(){var b=document.getElementById('nm');if(b)b.onclick=function(){var r=repGet();var n=prompt('Your name (shows on the scoreboard):',r?r.name:'');if(n){repSet(n);ME=repGet();tbRight.innerHTML=nameChip();wireChip();render();}};}
 
+  var CAL=[];
+  function loadCalendly(){
+    fetch('/api/calendly-link/',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;})
+      .then(function(j){ if(j&&j.ok&&j.events&&j.events.length){ CAL=j.events; render(); } }).catch(function(){});
+  }
+  // Prefill so the prospect is not retyping what the rep already knows.
+  function calUrl(ev,L){
+    var u=ev.url, q=[];
+    if(L.name) q.push('name='+encodeURIComponent(L.name));
+    if(L.email) q.push('email='+encodeURIComponent(L.email));
+    return u+(q.length?((u.indexOf('?')>=0?'&':'?')+q.join('&')):'');
+  }
+  function bookBlock(L){
+    if(!CAL.length||!L) return '';
+    var ev=CAL[0];   // shortest meeting first, which is the one you book off a cold call
+    var more=CAL.length>1?'<select id="calpick" style="margin-top:8px;width:100%;font:inherit;color:#fff;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:10px;padding:9px 11px">'+
+      CAL.map(function(e,i){return '<option value="'+i+'">'+esc(e.name)+(e.duration?' · '+e.duration+' min':'')+'</option>';}).join('')+'</select>':'';
+    return '<div class="txtwrap"><button class="calbtn" id="calbtn">Book the call &#8599;</button>'+more+
+      '<div class="txtprev" style="border-left-color:var(--cyan)"><span>Opens Calendly</span>'+
+      esc(ev.name+(ev.duration?' · '+ev.duration+' min':''))+', prefilled with their name'+(L.email?' and email':'')+'.</div></div>';
+  }
   async function boot(){
     app.innerHTML='<div class="empty"><p>Loading your call list...</p></div>';
     ME=repGet();
@@ -549,6 +573,7 @@
       if(meRes.status===200){ var mj=await meRes.json(); if(mj&&mj.rep&&mj.rep.name){ ME={name:mj.rep.name,email:mj.rep.email||''}; try{localStorage.setItem('sfy_rep',JSON.stringify(ME));}catch(e){} } }
     }catch(e){}
     tbRight.innerHTML=nameChip(); wireChip();
+    loadCalendly();
     await refresh();
   }
 
@@ -686,6 +711,17 @@
     }catch(e){}
   }
 
+  // Mirror hub activity into HubSpot so the CRM is the record of what happened. Fire and forget.
+  function crmSync(type, lead, outcome, body){
+    if(!lead) return;
+    try{
+      fetch('/api/crm-sync/',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({type:type, outcome:outcome||'', body:body||'', rep:(repGet()||{}).name||'',
+          lead:{company:lead.company||'', name:lead.name||'', phone:lead.phone||'', email:lead.email||'',
+                role:lead.role||'', motion:MOTION}})}).catch(function(){});
+    }catch(e){}
+  }
+
   function commitLog(p){
     var r=repGet();
     if(p.outcome==='no_answer') sendNoAnswerText(p.lead, r&&r.name, p.motion);
@@ -762,6 +798,7 @@
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         textBlock(L)+
+        bookBlock(L)+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
         priorBlock(L)+
         (MOTION==='staffing'?renderGuide(L):'')+
@@ -869,6 +906,15 @@
     Array.prototype.forEach.call(document.querySelectorAll('.fbb'),function(b){ b.onclick=function(){ sendFeedback(b); }; });
     wireGuide();
     if(MOTION==='staffing'){ var _q=QUEUES[MOTION]; if(_q&&_q[0]) maybeAutoLog(_q[0]); }
+    var kb=document.getElementById('calbtn');
+    if(kb) kb.onclick=function(){
+      var q=QUEUES[MOTION], L=q&&q[0]; if(!L||!CAL.length) return;
+      var pick=document.getElementById('calpick');
+      var ev=CAL[pick?(+pick.value||0):0];
+      window.open(calUrl(ev,L),'_blank','noopener');
+      crmSync('note', L, '', 'Rep opened '+ev.name+' to book with '+(L.name||L.company||'the prospect')+'.');
+      toast('Calendly opened. Book it while they are on the line.');
+    };
     var tb=document.getElementById('txtbtn');
     if(tb) tb.onclick=function(){
       var q=QUEUES[MOTION]; var L=q&&q[0]; if(!L) return;
@@ -973,6 +1019,7 @@
     // untouched leads does not spam the log with duplicates.
     if(!redo || changed) commitLog(entry);
     if(selOutcome==='no_answer' && (!redo || changed)) sendNoAnswerText(lead, (repGet()||{}).name, MOTION);
+    if(!redo || changed) crmSync('call', lead, entry.outcome);
     if(!redo) FORWARD=[];                     // moving on from a fresh lead abandons the forward path
     // If more forward history remains, show that lead with what was logged on it.
     selOutcome = FORWARD.length ? FORWARD[FORWARD.length-1].outcome : null;

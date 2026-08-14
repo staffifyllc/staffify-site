@@ -16,6 +16,7 @@
 
 import { openIdentity, redis, readBody } from './_auth.js';
 import { slackNotify } from './_slack.js';
+import { configured as hsReady, findOrCreateContact, logText } from './_hubspot.js';
 
 const OP_API = 'https://api.openphone.com/v1/messages';
 const SENT_KEY = 'text:sent';        // hash phone -> when/who, so a lead is never texted twice
@@ -124,6 +125,14 @@ export default async function handler(req, res) {
         try {
             await redis.hset(SENT_KEY, { [to]: JSON.stringify({ at: Date.now(), rep: firstName(rep), role, company, motion, by: (who && who.email) || 'guest', content }) });
         } catch (e) { /* the text went out; logging is best effort */ }
+        // Mirror the text onto the HubSpot contact so the CRM shows the full thread. Never block on it.
+        if (hsReady()) {
+            try {
+                const parts = String(b.first || '').trim().split(/\s+/);
+                const c = await findOrCreateContact({ phone: to, firstname: parts[0] || '', lastname: parts.slice(1).join(' '), company });
+                if (c.ok) await logText({ contactId: c.id, body: content, direction: 'OUTBOUND', at: Date.now() });
+            } catch (e) { /* the text already went out; CRM logging is best effort */ }
+        }
         slackNotify(':speech_balloon: *' + firstName(rep) + '* texted a no-answer lead: *' + (motion === 'websites' ? company : role) + '*');
         return res.status(200).json({ ok: true, sent: true, content });
     } catch (e) {
