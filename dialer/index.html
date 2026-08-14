@@ -933,7 +933,8 @@
         (MOTION==='staffing'?preCall(L):'')+
         '<div class="cardgrid"><div class="cardmain">'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
-        '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
+        '<button class="nextbtn" data-next="1">Skip to next lead <span class="kbd">&#8594;</span></button>'+
+        posRow()+
         textBlock(L)+
         bookBlock(L)+
         outcomesBlock(false)+
