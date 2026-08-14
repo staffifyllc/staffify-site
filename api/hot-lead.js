@@ -40,6 +40,17 @@ export default async function handler(req, res) {
         created_at: String(Date.now()),
     };
 
+    // A summary must be backed by the other person actually speaking (Paul, 2026-08-14: "you
+    // said he agreed, but there's no call whatsoever"). Bland hands back a transcript the moment
+    // our assistant talks, so a call nobody answered still arrives with a confident-sounding
+    // summary attached. Refuse it here too, not just upstream, because this endpoint accepts
+    // whatever the webhook sends.
+    const humanTurns = (String(lead.transcript || '').match(/^\s*(user|human|customer|prospect)\s*:/gim) || []).length;
+    if (!humanTurns && lead.summary) {
+        lead.summary = 'No conversation. The line opened but the other side never spoke, so there is no outcome to report.';
+        lead.noConversation = 'true';
+    }
+
     await redis.hset(lead.id, lead);
     await redis.zadd('hotleads', { score: Date.now(), member: lead.id });
 
