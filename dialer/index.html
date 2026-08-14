@@ -835,19 +835,21 @@
         textBlock(L)+
         bookBlock(L)+
         outcomesBlock(false)+
-        '</div><div class="cardside">'+
-        '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
-        priorBlock(L)+
-        (MOTION==='staffing'?renderGuide(L):'')+
-        (MOTION==='staffing'?'<details><summary>Full road track</summary><div class="script">'+roadTrack(L)+'</div></details>':'')+
+        // Left column also carries the lead's own detail and the tools used while talking.
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(deRoof(L.brief))+'</div>':'')+
         provBlock(L)+
         histBlock(L)+
         ammo(L)+
-        (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
         renderQuote()+
         renderObjections()+
         fbBlock(L)+
+        '</div><div class="cardside">'+
+        // Right column is purely the conversation: what to say, and where you are in it.
+        '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
+        priorBlock(L)+
+        (MOTION==='staffing'?renderGuide(L):'')+
+        (MOTION==='staffing'?'<details><summary>Full road track</summary><div class="script">'+roadTrack(L)+'</div></details>':'')+
+        (scriptBits?'<details><summary>Full script, objections & rules</summary><div class="script">'+scriptBits+'</div></details>':'')+
         '</div></div>'+
       '</div>';
     wire();
