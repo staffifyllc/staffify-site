@@ -22,12 +22,12 @@ export default async function handler(req, res) {
     const apply = req.query.apply === '1';
 
     const ids = (await redis.zrange('hotleads', 0, -1)) || [];
-    const out = { stored: ids.length, invented: 0, real: 0, noSummary: 0, rewritten: 0, examples: [] };
+    const out = { stored: ids.length, invented: 0, alreadyFixed: 0, real: 0, noSummary: 0, rewritten: 0, examples: [] };
 
     for (const id of ids) {
         const lead = await redis.hgetall(id);
         if (!lead || !lead.summary) { out.noSummary++; continue; }
-        if (lead.summary === NO_CONVO) { out.invented++; continue; }   // already scrubbed
+        if (lead.summary === NO_CONVO) { out.alreadyFixed++; continue; } // done on a previous run
         if (humanTurns(lead.transcript) > 0) { out.real++; continue; }
 
         out.invented++;
@@ -70,11 +70,12 @@ a.btn{display:inline-block;margin-top:24px;background:var(--acc);color:#04212b;f
 <div class="sub">A summary only means something if the other person actually spoke. These were written from a transcript containing nothing but our own opener.</div>
 <div class="grid">
   <div class="stat"><b>${out.stored}</b><span>Hot leads stored</span></div>
-  <div class="stat bad"><b>${out.invented}</b><span>Nothing was said</span></div>
+  <div class="stat ${out.invented ? 'bad' : 'ok'}"><b>${out.invented}</b><span>Still to fix</span></div>
+  <div class="stat ok"><b>${out.alreadyFixed}</b><span>Already fixed</span></div>
   <div class="stat ok"><b>${out.real}</b><span>Real conversation</span></div>
   <div class="stat"><b>${out.noSummary}</b><span>No summary at all</span></div>
 </div>
-${out.examples.length ? `<table><tr><th>Business</th><th>What the card claimed</th></tr>${rows}</table>` : '<div class="none">Nothing to clean up. Every stored summary has a real conversation behind it.</div>'}
+${out.examples.length ? `<table><tr><th>Business</th><th>What the card claimed</th></tr>${rows}</table>` : ('<div class="none">Nothing left to fix. ' + (out.alreadyFixed ? out.alreadyFixed + ' were cleaned up already, and every ' : 'Every ') + 'summary still standing has a real conversation behind it.</div>')}
 ${apply ? `<div class="done">Rewritten ${out.rewritten}. Those cards now say there was no conversation.</div>`
         : (out.invented ? '<a class="btn" href="?apply=1">Rewrite these ' + out.invented + '</a>' : '')}
 </div></body></html>`);
