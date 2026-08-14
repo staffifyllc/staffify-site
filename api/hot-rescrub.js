@@ -5,16 +5,20 @@
 // fixed in call-intel and in hot-lead, but records written before that still carry the false
 // summary. This rewrites them in place. Runs on Vercel, where the KV credentials actually live.
 //
-//   GET /api/hot-rescrub?admin=<ADMIN_TOKEN>        report only, changes nothing
-//   GET /api/hot-rescrub?admin=<ADMIN_TOKEN>&apply=1  rewrite them
+//   GET /api/hot-rescrub          report only, changes nothing
+//   GET /api/hot-rescrub?apply=1  rewrite them
+// Signed-in hub session is enough; no token needs to change hands.
 // ------------------------------------------------------------------
-import { redis, adminAuthorized } from './_auth.js';
+import { redis, requireAccess } from './_auth.js';
 
 const NO_CONVO = 'No conversation. The line opened but the other side never spoke, so there is no outcome to report.';
 const humanTurns = (t) => (String(t || '').match(/^\s*(user|human|customer|prospect)\s*:/gim) || []).length;
 
 export default async function handler(req, res) {
-    if (!adminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' });
+    // A logged-in rep OR an admin token. Paul is already signed into the hub, so he can just
+    // open this in the browser rather than anyone passing a secret around.
+    const who = await requireAccess(req);
+    if (!who) return res.status(401).json({ error: 'sign in to the hub first, then reload this page' });
     const apply = req.query.apply === '1';
 
     const ids = (await redis.zrange('hotleads', 0, -1)) || [];
