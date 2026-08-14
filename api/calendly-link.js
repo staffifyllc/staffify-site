@@ -6,7 +6,7 @@
 
 import { redis } from './_auth.js';
 
-const CACHE_KEY = 'calendly:eventtypes';
+const CACHE_KEY = 'calendly:eventtypes:v2';
 const CACHE_TTL = 3600;
 
 export default async function handler(req, res) {
@@ -35,8 +35,17 @@ export default async function handler(req, res) {
         const events = (j.collection || [])
             .filter(e => e.scheduling_url)
             .map(e => ({ name: e.name || 'Call', url: e.scheduling_url, duration: e.duration || null }))
-            // Shortest first: a rep booking off a cold call wants the 15 minute one, not the 2 hour one.
-            .sort((a, b) => (a.duration || 999) - (b.duration || 999));
+            // Rank for the job: a rep booking off a COLD call wants a discovery/leads call, not a client
+            // follow-up, an interview or a 2 hour strategy session. Then prefer the shorter meeting.
+            .map(e => {
+                const n = (e.name || '').toLowerCase();
+                let rank = 2;
+                if (/discovery|lead|intro|prospect/.test(n)) rank = 0;
+                if (/follow.?up|client|onboard|interview|1 on 1|strategy/.test(n)) rank = 3;
+                return { ...e, rank };
+            })
+            .sort((a, b) => (a.rank - b.rank) || ((a.duration || 999) - (b.duration || 999)))
+            .map(({ rank, ...e }) => e);
 
         const payload = { ok: true, events };
         try { await redis.set(CACHE_KEY, JSON.stringify(payload), { ex: CACHE_TTL }); } catch (e) { /* ignore */ }
