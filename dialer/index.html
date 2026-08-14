@@ -1130,6 +1130,29 @@
     window.scrollTo({top:0, behavior:'smooth'});
   }
 
+  // Notes are typed mid-call, and every tap re-renders the card, so the textarea is read back into
+  // NOTES before anything rebuilds. Losing a rep's notes is the one thing this box must never do.
+  function stashNotes(){
+    var el=document.getElementById('callnotes');
+    if(el && shownLeadId!=null) NOTES[shownLeadId]=el.value;
+  }
+  function notesFor(L){ return (L && NOTES[L.id]!=null) ? NOTES[L.id] : ''; }
+  function notesBlock(){
+    return '<div class="notesbox"><div class="lbl">Notes from the call</div>'+
+      '<textarea id="callnotes" placeholder="What did they actually say? Who owns the hire, what are they paying, when to follow up."></textarea>'+
+      '<div class="nhint">Saved onto their <b>HubSpot</b> record when you hit Next lead.</div></div>';
+  }
+
+  // Where the rep is in the list, so cycling does not feel like falling through an endless stack.
+  function posRow(){
+    var q=QUEUES[MOTION]||[];
+    var done=WORKED.filter(function(w){return w.motion===MOTION;}).length;
+    var total=q.length+done;
+    if(!total) return '';
+    return '<div class="posrow"><span>Lead <b>'+(done+1)+'</b> of <b>'+total+'</b> in '+esc(LABEL[MOTION])+'</span>'+
+           '<span>'+q.length+' left to work</span></div>';
+  }
+
   function confirmRow(){
     if(!selOutcome) return '';
     var label=({won:'Closed / Won',interested:'Interested',callback:'Callback',no_answer:'No answer',
