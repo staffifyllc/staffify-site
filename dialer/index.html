@@ -115,6 +115,13 @@
         .pre .pl.warn { color:#ffb59a; }
         .oc.sel { border-color:var(--cyan); background:rgba(26,189,225,0.18); color:#fff; box-shadow:0 0 0 1px var(--cyan) inset; }
         .oc.sel::after { content:' \2713'; font-weight:900; }
+        .notesbox { margin-top:14px; }
+        .notesbox textarea { width:100%; min-height:74px; resize:vertical; font-family:inherit; font-size:14.5px;
+                             line-height:1.5; color:#eaf6fb; background:rgba(255,255,255,0.04);
+                             border:1px solid var(--card-border); border-radius:12px; padding:12px 14px; }
+        .notesbox textarea:focus { outline:none; border-color:var(--cyan); background:rgba(26,189,225,0.06); }
+        .notesbox .nhint { font-size:12px; color:var(--muted); margin-top:6px; }
+        .notesbox .nhint b { color:var(--cyan-hi); font-weight:700; }
         .confirmrow { display:flex; justify-content:flex-end; align-items:center; gap:12px; margin-top:14px; }
         .confirmrow .cnote { font-size:12.5px; color:var(--muted); }
         .confirmbtn { font-size:15px; font-weight:800; color:#04222b; background:var(--green-hi); border:none;
@@ -618,7 +625,7 @@
     return '<div class="lbl">How did it go?</div><div class="outcomes">'+
       opts.map(function(o){
         return '<button class="'+o[2]+(selOutcome===o[0]?' sel':'')+'" data-o="'+o[0]+'">'+o[1]+'</button>';
-      }).join('')+'</div>'+confirmRow();
+      }).join('')+'</div>'+notesBlock()+confirmRow();
   }
 
   function renderObjections(){
@@ -705,6 +712,8 @@
   // Log with a 5-second Undo window so a misclick never burns a warm lead.
   var pendingLog=null;
   var selOutcome=null;      // highlighted but not yet confirmed
+  var NOTES={};             // per-lead call notes, so they survive a re-render and a step back
+  var shownLeadId=null;     // which lead is on screen, so notes get stashed against the right one
   var WORKED=[];            // committed leads, newest last, so a rep can step back and correct
   var FORWARD=[];           // leads stepped back past, so she can go forward again without redoing the call
   // Fired only from commitLog, i.e. AFTER the 5 second undo window. A misclicked "No answer"
@@ -765,6 +774,7 @@
   });
 
   function render(){
+    stashNotes();   // capture anything typed before this rebuild wipes the DOM
     var q=QUEUES[MOTION]||[];
     var t=SCORE&&SCORE.total||{};
     var head=
@@ -901,6 +911,13 @@
     Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
     var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
     Array.prototype.forEach.call(document.querySelectorAll('.fbb'),function(b){ b.onclick=function(){ sendFeedback(b); }; });
+    // Remember which lead is displayed, and put its notes back in the box after the rebuild.
+    (function(){
+      var q=QUEUES[MOTION], L=(MOTION==='hot'? (q&&q[0]) : (q&&q[0]));
+      shownLeadId = L ? L.id : null;
+      var el=document.getElementById('callnotes');
+      if(el){ el.value = notesFor(L); el.oninput=function(){ if(shownLeadId!=null) NOTES[shownLeadId]=el.value; }; }
+    })();
     wireGuide();
     if(MOTION==='staffing'){ var _q=QUEUES[MOTION]; if(_q&&_q[0]) maybeAutoLog(_q[0]); }
     var kb=document.getElementById('calbtn');
@@ -982,6 +999,20 @@
     window.scrollTo({top:0, behavior:'smooth'});
   }
 
+  // Notes are typed mid-call, and every tap (an outcome, a guided-call branch) re-renders the card,
+  // so the textarea is read back into NOTES before anything rebuilds. Losing a rep's notes is the one
+  // thing this box must never do.
+  function stashNotes(){
+    var el=document.getElementById('callnotes');
+    if(el && shownLeadId!=null) NOTES[shownLeadId]=el.value;
+  }
+  function notesFor(L){ return (L && NOTES[L.id]!=null) ? NOTES[L.id] : ''; }
+  function notesBlock(L){
+    return '<div class="notesbox"><div class="lbl">Notes from the call</div>'+
+      '<textarea id="callnotes" placeholder="What did they actually say? Who owns the hire, what are they paying, when to follow up."></textarea>'+
+      '<div class="nhint">Saved onto their <b>HubSpot</b> record when you hit Next lead.</div></div>';
+  }
+
   function confirmRow(){
     if(!selOutcome) return '';
     var label=({won:'Closed / Won',interested:'Interested',callback:'Callback',no_answer:'No answer',
@@ -1010,13 +1041,15 @@
     var redo = FORWARD.length && FORWARD[FORWARD.length-1].lead===lead;
     var prior = redo ? FORWARD.pop() : null;
     var changed = redo && prior.outcome!==selOutcome;
-    var entry={lead:lead, outcome:selOutcome, motion:MOTION, correction:!!lead.__reopened};
+    stashNotes();
+    var notes=(NOTES[lead.id]||'').trim();
+    var entry={lead:lead, outcome:selOutcome, motion:MOTION, correction:!!lead.__reopened, notes:notes};
     WORKED.push(entry);
     // Re-log only when it is genuinely new or actually changed, so stepping forward through
     // untouched leads does not spam the log with duplicates.
     if(!redo || changed) commitLog(entry);
     if(selOutcome==='no_answer' && (!redo || changed)) sendNoAnswerText(lead, (repGet()||{}).name, MOTION);
-    if(!redo || changed) crmSync('call', lead, entry.outcome);
+    if(!redo || changed) crmSync('call', lead, entry.outcome, notes);
     if(!redo) FORWARD=[];                     // moving on from a fresh lead abandons the forward path
     // If more forward history remains, show that lead with what was logged on it.
     selOutcome = FORWARD.length ? FORWARD[FORWARD.length-1].outcome : null;
@@ -1032,6 +1065,7 @@
     var last=WORKED.pop();
     FORWARD.push(last);
     last.lead.__reopened=true;
+    if(last.notes!=null) NOTES[last.lead.id]=last.notes;   // bring the notes back with the lead
     if(MOTION!==last.motion) MOTION=last.motion;
     (QUEUES[MOTION]||[]).unshift(last.lead);
     selOutcome=last.outcome;     // show what was logged so they can change it
