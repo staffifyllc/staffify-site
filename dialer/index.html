@@ -27,15 +27,21 @@
         .tb-right { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
         .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 15px; cursor:pointer; text-decoration:none; }
         .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
-        .wrap { max-width:1180px; margin:0 auto; padding:22px; }
-        /* The card splits into what the rep DOES (left) and what the rep SAYS or needs to know (right),
-           so a live call fits on one screen instead of a single long scroll. */
-        .cardgrid { display:grid; grid-template-columns:1.05fr 1fr; gap:24px; align-items:start; }
+        .wrap { max-width:1560px; margin:0 auto; padding:22px clamp(16px, 3vw, 40px); }
+        /* Three panes: what the rep DOES, what the rep SAYS, and the tools they reach for mid-call.
+           They fold down as the screen narrows so a phone still gets one clean column. */
+        .cardgrid { display:grid; gap:24px; align-items:start;
+                    grid-template-areas: "main" "side" "tools"; }
         .cardgrid > div { min-width:0; }
-        @media (max-width:1000px){ .cardgrid { grid-template-columns:1fr; gap:8px; } }
-        @media (min-width:1001px){
-          .cardside { max-height:none; }
+        .cardmain { grid-area:main; }
+        .cardside { grid-area:side; }
+        .cardtools { grid-area:tools; }
+        @media (min-width:1000px){
+          .cardgrid { grid-template-columns:1.02fr 1fr; grid-template-areas:"main side" "tools side"; }
           .card { padding:24px 26px 22px; }
+        }
+        @media (min-width:1400px){
+          .cardgrid { grid-template-columns:0.95fr 1.05fr 0.9fr; grid-template-areas:"main side tools"; }
         }
         .toprow { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
         .motions { display:flex; gap:6px; }
@@ -835,7 +841,8 @@
         textBlock(L)+
         bookBlock(L)+
         outcomesBlock(false)+
-        // Left column also carries the lead's own detail and the tools used while talking.
+        '</div><div class="cardtools">'+
+        // The things a rep reaches for mid-call, kept out of the way of the script.
         (L.brief?'<div class="lbl">Context</div><div class="brief">'+esc(deRoof(L.brief))+'</div>':'')+
         provBlock(L)+
         histBlock(L)+
@@ -874,10 +881,11 @@
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         outcomesBlock(true)+
-        '</div><div class="cardside">'+
-        ctx+rec+trans+cp+
+        '</div><div class="cardtools">'+
         renderQuote()+
         renderObjections()+
+        '</div><div class="cardside">'+
+        ctx+rec+trans+cp+
         '</div></div>'+
       '</div>';
     wire();
