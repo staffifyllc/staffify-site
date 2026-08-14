@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>The Dialer — Staffify Sales</title>
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green:#1d9e75; --green-hi:#7ef5c2; }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; margin-bottom: 14px; }
+        .eyebrow::before { content: ''; width: 30px; height: 2px; background: linear-gradient(90deg, var(--cyan), transparent); }
+        .chip { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); border: 1px solid rgba(26,189,225,0.4); background: rgba(26,189,225,0.08); border-radius: 999px; padding: 6px 14px; }
+        .chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:12px 22px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .topbar img { height:22px; }
+        .nav { display:flex; gap:5px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:7px 13px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        @media (max-width: 880px) { .topbar { flex-wrap: wrap; } .nav { order: 3; flex-basis: 100%; justify-content: center; margin-top: 6px; } }
+        .tb-right { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 15px; cursor:pointer; text-decoration:none; }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .wrap { max-width:720px; margin:0 auto; padding:22px; }
+        .toprow { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+        .motions { display:flex; gap:6px; }
+        .motions button { font-size:13.5px; font-weight:700; color:var(--muted); background:var(--card); border:1px solid var(--card-border); border-radius:999px; padding:8px 16px; cursor:pointer; }
+        .motions button.on { color:#04222b; background:var(--cyan); border-color:var(--cyan); }
+        .motions button.hot { color:#ffb59a; border-color:rgba(226,90,60,0.55); }
+        .motions button.hot.on { color:#3a0f0c; background:#ff8a6b; border-color:#ff8a6b; }
+        .stats { display:flex; gap:16px; font-size:12.5px; color:var(--muted); }
+        .stats b { color:var(--white); font-weight:800; }
+        .card { background:var(--card); border:1px solid var(--card-border); border-radius:18px; padding:26px 26px 22px; }
+        .company { font-size:30px; font-weight:900; letter-spacing:-0.02em; line-height:1.1; }
+        .sub { font-size:14px; color:var(--muted); margin-top:4px; }
+        .phone { display:flex; align-items:center; gap:12px; margin:18px 0; }
+        .phone a { font-size:30px; font-weight:900; letter-spacing:-0.01em; color:var(--cyan-hi); text-decoration:none; }
+        .phone .call { font-size:13px; font-weight:800; color:#04222b; background:var(--green-hi); border-radius:999px; padding:8px 16px; text-decoration:none; }
+        .lbl { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:18px 0 8px; }
+        .pctag { display:inline-block; margin-top:8px; background:rgba(255,193,7,0.12); color:#ffc94d; border:1px solid rgba(255,193,7,0.35); border-radius:999px; font-size:11.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:4px 11px; }
+        .step { margin-top:12px; border:1px solid var(--card-border); border-radius:12px; padding:13px 16px; background:rgba(255,255,255,0.03); }
+        .step.win { border-color:rgba(45,190,120,0.45); background:rgba(45,190,120,0.07); }
+        .step > span { display:block; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#9aa3ad; margin-bottom:7px; }
+        .step.win > span { color:#5fd39a; }
+        .step ul { margin:0; padding-left:18px; }
+        .step li { font-size:14.5px; color:#dfe3e8; margin-bottom:6px; line-height:1.5; }
+        .step li:last-child { margin-bottom:0; }
+        .fb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+        .fbb { font:inherit; font-size:13px; font-weight:700; padding:9px 13px; border-radius:10px; border:1px solid var(--card-border); background:rgba(255,255,255,0.04); color:#c8cfd6; cursor:pointer; }
+        .fbb.ok { color:#5fd39a; border-color:rgba(45,190,120,0.4); }
+        .fbb.no { color:#ff8a7a; border-color:rgba(255,110,90,0.4); }
+        .fbb[disabled] { opacity:.4; cursor:default; }
+        .fbmsg { font-size:13px; font-weight:700; color:#5fd39a; }
+        .brief { font-size:15.5px; color:#dfe3e8; background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:12px; padding:14px 16px; }
+        .rolebox { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:14px 0 2px; padding:12px 16px;
+                   background:rgba(26,189,225,0.07); border:1px solid rgba(26,189,225,0.3); border-radius:12px; }
+        .rolebox .rl { font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); }
+        .rolebox .rv { font-size:19px; font-weight:800; letter-spacing:-.01em; color:#eaf6fb; line-height:1.2; }
+        .metarow { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+        .metatag { font-size:11.5px; font-weight:600; color:var(--muted); background:rgba(255,255,255,0.04);
+                   border:1px solid var(--card-border); border-radius:999px; padding:3px 10px; }
+        .prov .ps { display:flex; align-items:baseline; gap:10px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; }
+        .prov .ps:last-child { border-bottom:none; }
+        .prov .ps b { min-width:96px; color:#fff; font-weight:700; font-size:12px; }
+        .prov .ps span { flex:1; color:var(--muted); }
+        .prov .ps i { font-style:normal; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+                      color:var(--green-hi); background:rgba(29,158,117,0.14); border:1px solid rgba(29,158,117,0.35);
+                      border-radius:999px; padding:2px 8px; white-space:nowrap; }
+        .prov .ps i.bad { color:#ffb59a; background:rgba(226,90,60,0.12); border-color:rgba(226,90,60,0.4); }
+        .prov .pf { font-size:12.5px; color:#ffb59a; padding:6px 0; }
+        .track { margin-top:6px; }
+        .tstep { display:grid; grid-template-columns:26px 1fr; gap:10px; }
+        .tstep .tdot { display:flex; flex-direction:column; align-items:center; }
+        .tstep .tnum { width:22px; height:22px; border-radius:50%; flex-shrink:0; display:flex; align-items:center;
+                       justify-content:center; font-size:11px; font-weight:900; color:#04222b; background:var(--cyan); }
+        .tstep .tline { flex:1; width:2px; background:var(--card-border); margin:4px 0; min-height:10px; }
+        .tstep:last-child .tline { display:none; }
+        .tstep .tbody { padding-bottom:14px; }
+        .tstep .tsay { font-size:15.5px; font-weight:600; color:#eaf6fb; line-height:1.45; }
+        .tstep .tnote { font-size:12.5px; color:var(--muted); margin-top:3px; }
+        .tstep.key .tnum { background:var(--green-hi); }
+        .tstep.key .tsay { color:#d8fff0; }
+        .keytag { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+                  color:#04222b; background:var(--green-hi); border-radius:999px; padding:2px 8px; margin-bottom:5px; }
+        .tif { display:flex; gap:8px; margin-top:7px; font-size:13px; color:#cfd4da; }
+        .tif b { flex-shrink:0; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+                 color:var(--cyan-hi); background:rgba(26,189,225,0.10); border:1px solid rgba(26,189,225,0.3);
+                 border-radius:999px; padding:2px 9px; height:fit-content; }
+        /* live guided call */
+        .guide { background:linear-gradient(160deg, rgba(26,189,225,0.10), rgba(13,86,164,0.05)); border:1px solid rgba(26,189,225,0.35);
+                 border-radius:16px; padding:18px 20px 16px; margin-top:6px; }
+        .gstep { font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); }
+        .gsay { font-size:20px; font-weight:700; line-height:1.35; color:#eaf6fb; margin:8px 0 4px; }
+        .gsay.small { font-size:16.5px; font-weight:600; }
+        .gnote { font-size:13px; color:var(--muted); line-height:1.45; }
+        .gopts { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+        .gopt { text-align:left; font-size:14.5px; font-weight:700; color:#eaf6fb; background:rgba(255,255,255,0.05);
+                border:1px solid var(--card-border); border-radius:11px; padding:12px 14px; cursor:pointer; }
+        .gopt:hover { border-color:var(--cyan); background:rgba(26,189,225,0.10); }
+        .gopt.win { color:#04222b; background:var(--green-hi); border-color:var(--green-hi); }
+        .gopt.dead { color:var(--muted); }
+        .gback { margin-top:12px; font-size:12.5px; color:var(--muted); background:none; border:none; cursor:pointer; padding:0; text-decoration:underline; }
+        .gwin { font-size:15px; font-weight:700; color:#7ef5c2; }
+        .pre { background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-left:3px solid var(--cyan);
+               border-radius:12px; padding:14px 16px; margin-top:6px; }
+        .pre .pl { display:flex; gap:10px; padding:5px 0; font-size:14px; color:#dfe3e8; line-height:1.45; }
+        .pre .pl b { flex-shrink:0; min-width:74px; font-size:10.5px; font-weight:800; letter-spacing:.1em;
+                     text-transform:uppercase; color:var(--cyan); padding-top:3px; }
+        .pre .pl.warn { color:#ffb59a; }
+        .oc.sel { border-color:var(--cyan); background:rgba(26,189,225,0.18); color:#fff; box-shadow:0 0 0 1px var(--cyan) inset; }
+        .oc.sel::after { content:' \2713'; font-weight:900; }
+        .confirmrow { display:flex; justify-content:flex-end; align-items:center; gap:12px; margin-top:14px; }
+        .confirmrow .cnote { font-size:12.5px; color:var(--muted); }
+        .confirmbtn { font-size:15px; font-weight:800; color:#04222b; background:var(--green-hi); border:none;
+                      border-radius:12px; padding:13px 22px; cursor:pointer; }
+        .confirmbtn:hover { filter:brightness(1.06); }
+        .headrow { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+        .backbtn { flex-shrink:0; font-size:12.5px; font-weight:700; color:var(--muted); background:transparent;
+                   border:1px solid var(--card-border); border-radius:999px; padding:7px 13px; cursor:pointer; }
+        .backbtn:hover { color:#fff; border-color:var(--cyan); }
+        .navbtns { display:flex; gap:8px; flex-shrink:0; }
+        .srchwrap { position:relative; margin-bottom:14px; }
+        .srch { width:100%; font-family:inherit; font-size:14.5px; color:#fff; background:rgba(255,255,255,0.05);
+                border:1px solid var(--card-border); border-radius:12px; padding:12px 14px; }
+        .srch:focus { outline:none; border-color:var(--cyan); }
+        .srchres { position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:20; background:#0d1418;
+                   border:1px solid var(--card-border); border-radius:12px; overflow:hidden; max-height:320px; overflow-y:auto; }
+        .srchres button { display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+                          padding:11px 14px; border-bottom:1px solid rgba(255,255,255,0.06); color:#eaf6fb; }
+        .srchres button:hover { background:rgba(26,189,225,0.12); }
+        .srchres .sc { font-size:14px; font-weight:700; }
+        .srchres .sm { font-size:12px; color:var(--muted); margin-top:2px; }
+        .srchres .none { padding:12px 14px; font-size:13.5px; color:var(--muted); }
+        .hist { display:flex; flex-direction:column; gap:8px; }
+        .htouch { display:flex; flex-direction:column; gap:3px; max-width:90%; padding:9px 12px; border-radius:12px; }
+        .htouch.out { align-self:flex-start; background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
+        .htouch.in { align-self:flex-end; background:rgba(29,158,117,0.14); border:1px solid rgba(126,245,194,0.35); }
+        .htouch .hwho { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+        .htouch .htext { font-size:14.5px; color:#eaf6fb; line-height:1.45; }
+        .hstat { font-size:11px; color:var(--cyan-hi); background:rgba(26,189,225,0.10); border:1px solid rgba(26,189,225,0.35); border-radius:999px; padding:2px 9px; margin-left:8px; text-transform:none; letter-spacing:0; font-weight:600; }
+        .ammorow { display:flex; gap:8px; flex-wrap:wrap; }
+        .ammo { font-size:13px; font-weight:700; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:999px; padding:8px 14px; text-decoration:none; }
+        .ammo:hover { background:rgba(26,189,225,0.16); }
+        .say { font-size:17px; font-weight:600; color:#eaf6fb; background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:12px; padding:16px 18px; line-height:1.5; }
+        .say .line { margin-bottom:8px; } .say .line:last-child { margin-bottom:0; }
+        details { margin-top:14px; border:1px solid var(--card-border); border-radius:12px; padding:0 16px; background:rgba(255,255,255,0.02); }
+        summary { cursor:pointer; font-size:13.5px; font-weight:700; color:var(--cyan-hi); padding:13px 0; list-style:none; }
+        summary::-webkit-details-marker { display:none; }
+        .script { font-size:14px; color:#cfd4da; padding-bottom:14px; }
+        .script b { color:var(--white); }
+        .script .blk { margin-bottom:12px; white-space:pre-wrap; }
+        .outcomes { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:22px; }
+        @media (max-width:560px){ .outcomes { grid-template-columns:1fr 1fr; } .company,.phone a{font-size:26px;} }
+        .oc { font-size:14.5px; font-weight:800; border:1px solid var(--card-border); border-radius:12px; padding:15px 10px; cursor:pointer; background:var(--card); color:var(--white); }
+        .oc:hover { border-color:var(--cyan); }
+        .oc.good { background:rgba(29,158,117,0.16); border-color:rgba(29,158,117,0.5); color:var(--green-hi); }
+        .oc.warm { background:rgba(26,189,225,0.10); border-color:rgba(26,189,225,0.4); color:var(--cyan-hi); }
+        .nextbtn { width:100%; margin-top:12px; font-size:14.5px; font-weight:800; color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.35); border-radius:12px; padding:14px; cursor:pointer; }
+        .nextbtn:hover { background:rgba(26,189,225,0.16); }
+        .txtwrap { margin-top:12px; }
+        .txtbtn { width:100%; font-size:14.5px; font-weight:800; color:#04222b; background:var(--green-hi);
+                  border:none; border-radius:12px; padding:14px; cursor:pointer; }
+        .txtbtn:hover { filter:brightness(1.05); }
+        .txtbtn:disabled { opacity:.6; cursor:default; }
+        .calbtn { width:100%; font-size:14.5px; font-weight:800; color:#04222b; background:var(--cyan);
+                  border:none; border-radius:12px; padding:14px; cursor:pointer; }
+        .calbtn:hover { background:var(--cyan-hi); }
+        .txtprev { margin-top:8px; font-size:13px; color:#cfd4da; background:rgba(255,255,255,0.03);
+                   border:1px solid var(--card-border); border-left:2px solid var(--green-hi);
+                   border-radius:10px; padding:10px 12px; line-height:1.45; }
+        .txtprev span { display:block; font-size:10.5px; font-weight:800; letter-spacing:.12em;
+                        text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+        .gate, .empty { max-width:440px; margin:70px auto; text-align:center; }
+        .gate { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; }
+        .gate h2, .empty h2 { font-size:22px; font-weight:900; margin-bottom:10px; }
+        .gate p, .empty p { color:var(--muted); font-size:14.5px; margin-bottom:18px; }
+        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .gate .btn { width:100%; padding:13px; }
+        .err { color:#ff9a8d; font-size:13px; min-height:18px; }
+        .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#0d1418; border:1px solid var(--card-border); color:#eaf6fb; font-size:13.5px; font-weight:600; padding:11px 18px; border-radius:999px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; }
+        .toast.show { opacity:1; }
+        .toast .undo { margin-left:14px; color:var(--cyan-hi); font-weight:800; cursor:pointer; text-decoration:underline; }
+        .objrow { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+        .objchip { font-size:13px; font-weight:700; color:#ffb59a; background:rgba(226,90,60,0.10); border:1px solid rgba(226,90,60,0.4); border-radius:999px; padding:7px 13px; cursor:pointer; }
+        .objchip:hover { color:#fff; }
+        .objchip.on { color:#3a0f0c; background:#ff8a6b; border-color:#ff8a6b; }
+        .objsay { font-size:16px; line-height:1.5; color:#eaf6fb; background:rgba(26,189,225,0.06); border:1px solid rgba(26,189,225,0.3); border-radius:12px; padding:14px 16px; margin-bottom:8px; display:none; }
+        .objsay.show { display:block; }
+        .quote { background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+        .qtiers { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+        .qtier { font-size:13px; font-weight:700; color:var(--muted); background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:999px; padding:7px 13px; cursor:pointer; }
+        .qtier.on { color:#04222b; background:var(--cyan); border-color:var(--cyan); }
+        .qtoggle { display:flex; align-items:center; gap:8px; font-size:13.5px; color:#cfd4da; cursor:pointer; margin-bottom:10px; }
+        .qrow { display:flex; justify-content:space-between; align-items:baseline; font-size:15px; color:#cfd4da; padding:4px 0; }
+        .qrow b { font-size:18px; color:#fff; }
+        .qrow.qfin { font-size:13px; color:var(--muted); } .qrow.qfin b { font-size:13px; color:var(--cyan-hi); }
+        .qguard { font-size:12.5px; color:#ffb59a; margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; line-height:1.5; }
+    
+  /* demo-only chrome */
+  .demoband { background:linear-gradient(100deg, rgba(238,192,106,.14), transparent 70%);
+              border-bottom:1px solid rgba(238,192,106,.3); padding:9px 22px; font-size:12.5px; color:#eec06a;
+              display:flex; gap:10px; align-items:center; justify-content:center; text-align:center; }
+  .demoband b { color:#ffd98a; }
+  .noteline { max-width:720px; margin:0 auto 18px; padding:0 22px; font-size:14px; color:var(--muted); line-height:1.55; }
+  .caption { max-width:720px; margin:26px auto 0; padding:0 22px; }
+  .caption .k { font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); margin-bottom:6px; }
+  .caption p { font-size:14.5px; color:#cfd4da; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="demoband"><span><b>Sample view.</b> Fictional prospect, illustrative numbers. This is the live calling tool our reps work from.</span></div>
+
+<header class="topbar">
+  <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+  <nav class="nav">
+    <a href="#">Hub</a><a href="#" class="active">Dialer</a><a href="#">Scoreboard</a>
+    <a href="#">Pipeline</a><a href="#">Commissions</a><a href="#">Training</a>
+  </nav>
+  <div class="tb-right"><button class="btn btn-ghost">Hi, Madison</button></div>
+</header>
+
+<div class="wrap">
+  <div class="toprow">
+    <div class="eyebrow">The Dialer</div>
+  </div>
+  <div class="toprow">
+    <div class="motions">
+      <button class="hot">&#128293; Hot &middot; 3</button>
+      <button>Foundry &middot; 60</button>
+      <button class="on">Staffify &middot; 54</button>
+    </div>
+    <div class="stats"><span>Dials <b>18</b></span><span>Answers <b>7</b></span><span>Interested <b>3</b></span></div>
+  </div>
+
+  <div class="srchwrap"><input class="srch" type="search" placeholder="Someone calling back? Search name, company, number or role"></div>
+
+  <div class="card">
+    <div class="headrow"><div class="company">Cedar Ridge Dental</div>
+      <div class="navbtns"><button class="backbtn">&#8592; Back</button><button class="backbtn">Forward &#8594;</button></div></div>
+    <div class="sub">Marcus Webb &middot; Owner</div>
+
+    <div class="rolebox"><span class="rl">Open role</span><span class="rv">Dental Front Desk Administrator</span></div>
+    <div class="metarow"><span class="metatag">12 employees</span><span class="metatag">Scottsdale AZ</span></div>
+
+    <div class="lbl">Before you dial</div>
+    <div class="pre">
+      <div class="pl"><b>Calling</b><span>Marcus Webb &middot; Owner</span></div>
+      <div class="pl"><b>They posted</b><span>Dental Front Desk Administrator &middot; 12 employees</span></div>
+      <div class="pl"><b>Angle</b><span>Sounds on-site, so get them to picture it remote before anything else. Most of that job is phones, scheduling and insurance follow-up.</span></div>
+      <div class="pl warn"><b>Unverified</b><span>Company size is a guess, do not quote it as fact.</span></div>
+    </div>
+
+    <div class="phone"><a href="#">(555) 014-2288</a><a class="call" href="#">Call now</a></div>
+    <button class="nextbtn">Next call &#8594;</button>
+
+    <div class="txtwrap">
+      <button class="txtbtn">Text them</button>
+      <div class="txtprev"><span>What sends</span>Hey Marcus, it's Madison. Just tried you about the Dental Front Desk Administrator role you posted. Still hiring for it?</div>
+    </div>
+    <div class="txtwrap">
+      <button class="calbtn">Book the call &#8599;</button>
+      <div class="txtprev" style="border-left-color:var(--cyan)"><span>Opens Calendly</span>Staffify Leads Discovery Call &middot; 15 min, prefilled with their name.</div>
+    </div>
+
+    <div class="lbl">How did it go?</div>
+    <div class="outcomes">
+      <button class="oc good">Interested</button>
+      <button class="oc warm sel">Callback</button>
+      <button class="oc">No answer</button>
+      <button class="oc">Voicemail</button>
+      <button class="oc">Gatekeeper</button>
+      <button class="oc">Not interested</button>
+      <button class="oc">Bad number</button>
+    </div>
+    <div class="confirmrow"><span class="cnote">Logging as <b>Callback</b>.</span><button class="confirmbtn">Next lead &#8594;</button></div>
+
+    <div class="lbl">Say this</div>
+    <div class="say"><div class="line">Hi Marcus, this is Madison. Quick question, are you still hiring for the Dental Front Desk Administrator role you posted?</div></div>
+
+    <div class="lbl">Guided call &middot; do not skip this</div>
+    <div class="guide">
+      <div class="gstep">THE PIVOT</div>
+      <div class="gsay">"Would you be open to that role being filled remotely, if the right person could do the work?"</div>
+      <div class="gnote">Ask this early. They are picturing someone at the front desk, so nothing else lands until they can picture it remotely.</div>
+      <div class="gopts">
+        <button class="gopt">Open to it / maybe</button>
+        <button class="gopt">"It has to be in person"</button>
+        <button class="gopt">Hard no on remote</button>
+      </div>
+    </div>
+
+    <div class="lbl">Quick quote &amp; your cut</div>
+    <div class="quote">
+      <div class="qtiers"><button class="qtier on">1 hire</button><button class="qtier">2 hires</button><button class="qtier">3-4</button><button class="qtier">5-9</button><button class="qtier">10+</button></div>
+      <div class="qout">
+        <div class="qrow"><span>Client onboarding &middot; $2,099</span><b>$2,099</b></div>
+        <div class="qrow"><span>Your 35% commission</span><b style="color:#7ef5c2">$735</b></div>
+        <div class="qrow qfin"><span>Or roll it into the rate</span><b>+$1/hr per hire &middot; $0 today &middot; 0% interest</b></div>
+      </div>
+    </div>
+
+    <div class="lbl">Objection? Tap the comeback</div>
+    <div class="objrow">
+      <button class="objchip">&ldquo;Too expensive&rdquo;</button>
+      <button class="objchip">&ldquo;Let me think&rdquo;</button>
+      <button class="objchip">&ldquo;Offshore quality?&rdquo;</button>
+      <button class="objchip">&ldquo;Send me info&rdquo;</button>
+    </div>
+  </div>
+
+  <div class="caption">
+    <div class="k">What the rep never has to decide</div>
+    <p>The brief tells them who they are calling and what angle to take before the phone rings. The guided call gives them the next line based on what the prospect actually said. Logging the outcome fires the follow-up text, updates the CRM, and loads the next lead. The only thing the rep supplies is the conversation.</p>
+  </div>
+</div>
+
+</body>
+</html>
