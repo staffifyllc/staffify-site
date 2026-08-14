@@ -40,13 +40,13 @@ export default async function handler(req, res) {
         const body = [who_what, b.body || '', outcome ? 'Outcome: ' + (LABEL[outcome] || outcome) : '']
             .filter(Boolean).join('\n');
         const r = await logCall({ contactId: c.id, title, body, outcome, repName: rep, at });
-        out.did.push({ call: r.ok ? r.id : r.reason });
+        out.did.push({ call: r.ok ? r.id : r.reason, status: r.status, detail: r.detail });
     } else if (type === 'text') {
         const r = await logText({ contactId: c.id, body: b.body || '', direction: 'OUTBOUND', at });
-        out.did.push({ text: r.ok ? r.id : r.reason });
+        out.did.push({ text: r.ok ? r.id : r.reason, status: r.status, detail: r.detail });
     } else {
         const r = await logNote({ contactId: c.id, body: b.body || '', at });
-        out.did.push({ note: r.ok ? r.id : r.reason });
+        out.did.push({ note: r.ok ? r.id : r.reason, status: r.status, detail: r.detail });
     }
 
     if (outcome) {
