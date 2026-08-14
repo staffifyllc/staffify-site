@@ -480,7 +480,7 @@
       rows.push([L.priorCall?'They asked for':'Open role', '<span class="v big">'+esc(L.role)+'</span>', 'big']);
     }
 
-    if(L.priorCall) rows.push(['We spoke', esc(L.priorCall)+', and never followed up properly', '']);
+    if(L.priorCall) rows.push(['We spoke', (L.lastCall? esc(L.lastCall)+', and never followed up properly' : 'previously, and never followed up properly'), '']);
     if(L.employees) rows.push(['Size', esc(L.employees)+' employees', '']);
 
     // The single line that tells the rep what to actually do on this call.
