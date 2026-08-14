@@ -606,6 +606,21 @@
     {label:'“Send me info”', say:'Happy to, I will text you the pricing page right now while we are on. What is the best cell? Open it up, and while you have it, tell me the first thing a great hire would take off your plate.'},
     {label:'Gatekeeper', say:'Totally get it, is the owner around by any chance? Quick question only they can answer, two minutes tops. If not, when is the best time to catch them?'}
   ];
+  // Outcomes sit high on the card: the moment a call ends the rep should be able to log it without
+  // scrolling past the script they no longer need.
+  function outcomesBlock(hot){
+    var opts = hot
+      ? [['won','Closed / Won','oc good'],['callback','Callback','oc warm'],['no_answer','No answer','oc'],
+         ['not_interested','Not interested','oc'],['bad_number','Bad number','oc']]
+      : [['interested','Interested','oc good'],['callback','Callback','oc warm'],['no_answer','No answer','oc'],
+         ['voicemail','Voicemail','oc'],['gatekeeper','Gatekeeper','oc'],['not_interested','Not interested','oc'],
+         ['bad_number','Bad number','oc']];
+    return '<div class="lbl">How did it go?</div><div class="outcomes">'+
+      opts.map(function(o){
+        return '<button class="'+o[2]+(selOutcome===o[0]?' sel':'')+'" data-o="'+o[0]+'">'+o[1]+'</button>';
+      }).join('')+'</div>'+confirmRow();
+  }
+
   function renderObjections(){
     return '<div class="lbl">Objection? Tap the comeback</div><div class="objrow">'+
       OBJECTIONS.map(function(o,i){return '<button class="objchip" data-obj="'+i+'">'+esc(o.label)+'</button>';}).join('')+
@@ -799,6 +814,7 @@
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         textBlock(L)+
         bookBlock(L)+
+        outcomesBlock(false)+
         '<div class="lbl">Say this</div><div class="say">'+openerLines+'</div>'+
         priorBlock(L)+
         (MOTION==='staffing'?renderGuide(L):'')+
@@ -811,17 +827,6 @@
         renderQuote()+
         renderObjections()+
         fbBlock(L)+
-        '<div class="lbl">How did it go?</div>'+
-        '<div class="outcomes">'+
-          '<button class="oc good'+(selOutcome==='interested'?' sel':'')+'" data-o="interested">Interested</button>'+
-          '<button class="oc warm'+(selOutcome==='callback'?' sel':'')+'" data-o="callback">Callback</button>'+
-          '<button class="oc'+(selOutcome==='no_answer'?' sel':'')+'" data-o="no_answer">No answer</button>'+
-          '<button class="oc'+(selOutcome==='voicemail'?' sel':'')+'" data-o="voicemail">Voicemail</button>'+
-          '<button class="oc'+(selOutcome==='gatekeeper'?' sel':'')+'" data-o="gatekeeper">Gatekeeper</button>'+
-          '<button class="oc'+(selOutcome==='not_interested'?' sel':'')+'" data-o="not_interested">Not interested</button>'+
-          '<button class="oc'+(selOutcome==='bad_number'?' sel':'')+'" data-o="bad_number">Bad number</button>'+
-        '</div>'+
-        confirmRow()+
       '</div>';
     wire();
   }
@@ -844,17 +849,9 @@
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Next call &#8594;</button>'+
         ctx+rec+trans+cp+
+        outcomesBlock(true)+
         renderQuote()+
         renderObjections()+
-        '<div class="lbl">How did it go?</div>'+
-        '<div class="outcomes">'+
-          '<button class="oc good'+(selOutcome==='won'?' sel':'')+'" data-o="won">Closed / Won</button>'+
-          '<button class="oc warm'+(selOutcome==='callback'?' sel':'')+'" data-o="callback">Callback</button>'+
-          '<button class="oc'+(selOutcome==='no_answer'?' sel':'')+'" data-o="no_answer">No answer</button>'+
-          '<button class="oc'+(selOutcome==='not_interested'?' sel':'')+'" data-o="not_interested">Not interested</button>'+
-          '<button class="oc'+(selOutcome==='bad_number'?' sel':'')+'" data-o="bad_number">Bad number</button>'+
-        '</div>'+
-        confirmRow()+
       '</div>';
     wire();
   }
