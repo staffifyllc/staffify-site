@@ -223,6 +223,93 @@
         .qrow b { font-size:18px; color:#fff; }
         .qrow.qfin { font-size:13px; color:var(--muted); } .qrow.qfin b { font-size:13px; color:var(--cyan-hi); }
         .qguard { font-size:12.5px; color:#ffb59a; margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; line-height:1.5; }
+
+        /* ------------------------------------------------------------------
+           Refinement layer. The card had 37 outlined boxes, 7 corner radii and
+           a dozen text colours, so nothing read as more important than anything
+           else. Separation now comes from elevation and space rather than a line
+           around every element, colour is reserved for meaning, and the type
+           runs on a single scale. Loaded last so it wins the cascade cleanly.
+           ------------------------------------------------------------------ */
+        :root {
+          --s1: rgba(255,255,255,0.028);   /* pane surface   */
+          --s2: rgba(255,255,255,0.05);    /* inner surface  */
+          --hair: rgba(255,255,255,0.07);  /* divider only   */
+          --t1: #f2f5f8;                   /* primary text   */
+          --t2: #a7b0bb;                   /* secondary      */
+          --t3: #737d88;                   /* tertiary       */
+          --r-lg: 18px; --r-md: 13px;
+        }
+
+        /* one calm card, generous air */
+        .card { background:var(--s1); border:1px solid var(--hair); border-radius:22px;
+                padding:30px 32px 28px; box-shadow:0 1px 2px rgba(0,0,0,.35), 0 24px 60px rgba(0,0,0,.25); }
+        .cardgrid { gap:34px; }
+        @media (min-width:1000px){ .card { padding:32px 34px 30px; } }
+
+        /* inner blocks: elevation, not outlines */
+        .brief, .say, .pre, .guide, .quote, .notesbox textarea, .txtprev, .hist,
+        .prov, details, .rolebox, .metatag, .objsay {
+          border-color:transparent !important; background:var(--s2); border-radius:var(--r-md);
+        }
+        .card details { background:var(--s2); border:none; border-radius:var(--r-md); padding:2px 16px; }
+        .pre { border-left:2px solid var(--cyan) !important; border-radius:4px var(--r-md) var(--r-md) 4px; }
+        .say { border-left:2px solid var(--cyan) !important; border-radius:4px var(--r-md) var(--r-md) 4px; }
+        .guide { background:linear-gradient(168deg, rgba(26,189,225,.09), rgba(26,189,225,.02));
+                 border:1px solid rgba(26,189,225,.22) !important; border-radius:var(--r-lg); padding:20px 22px; }
+
+        /* type: one scale, three weights of emphasis */
+        .company { font-size:34px; letter-spacing:-.03em; color:var(--t1); }
+        .sub { color:var(--t2); font-size:14.5px; }
+        .lbl { color:var(--cyan); letter-spacing:.1em; margin:26px 0 10px; }
+        .brief, .qrow span, .tstep .tnote, .gnote { color:var(--t2); }
+        .say { font-size:17.5px; line-height:1.5; color:var(--t1); }
+
+        /* controls: solid, tactile, no competing outlines */
+        .nextbtn, .txtbtn, .calbtn, .confirmbtn, .oc {
+          border:none !important; border-radius:14px; padding:15px 16px; font-weight:700;
+          transition:transform .12s ease, filter .12s ease, background .12s ease;
+        }
+        .nextbtn:active, .txtbtn:active, .calbtn:active, .oc:active, .confirmbtn:active { transform:scale(.985); }
+        .nextbtn { background:var(--s2); color:var(--t1); }
+        .nextbtn:hover { background:rgba(255,255,255,.09); }
+        .oc { background:var(--s2); color:var(--t1); font-size:14.5px; }
+        .oc:hover { background:rgba(255,255,255,.09); }
+        .oc.good { background:rgba(126,245,194,.12); color:#8ff5c8; }
+        .oc.warm { background:rgba(95,224,250,.12); color:var(--cyan-hi); }
+        .oc.sel { background:var(--cyan) !important; color:#04222b !important; box-shadow:none; }
+        .oc.sel::after { content:''; }
+        .outcomes { gap:12px; }
+        .phone .call { padding:11px 20px; font-size:14px; }
+        .phone a { letter-spacing:-.02em; }
+
+        /* quiet the chrome: pills, tags and secondary chips stop shouting */
+        .metatag, .chip, .metarow .metatag { background:var(--s2); color:var(--t2); border:none; }
+        .ammo { background:var(--s2); color:var(--cyan-hi); border:none; }
+        .ammo:hover { background:rgba(26,189,225,.16); }
+        .objchip { background:var(--s2); color:var(--t1); border:none; }
+        .objchip.on { background:var(--cyan); color:#04222b; }
+        .qtier { background:var(--s2); color:var(--t2); border:none; }
+        .qtier.on { background:var(--cyan); color:#04222b; }
+        .backbtn { background:var(--s2); border:none; color:var(--t2); }
+        .srch { background:var(--s2); border:1px solid transparent; border-radius:14px; padding:14px 16px; }
+        .srch:focus { border-color:rgba(26,189,225,.5); background:rgba(26,189,225,.06); }
+
+        /* dividers instead of boxes */
+        .qrow { border-color:var(--hair); }
+        .prov .ps { border-color:var(--hair); }
+        .row { border-color:var(--hair); }
+        summary { color:var(--cyan-hi); font-size:14px; }
+
+        /* the guided call is the focal point of its pane */
+        .gsay { font-size:21px; letter-spacing:-.015em; }
+        .gopt { background:rgba(255,255,255,.055); border:none; border-radius:12px; padding:14px 16px; }
+        .gopt:hover { background:rgba(26,189,225,.14); }
+
+        .rolebox { background:rgba(26,189,225,.08); padding:14px 18px; }
+        .rolebox .rv { font-size:20px; }
+        .notesbox textarea { padding:14px 16px; min-height:90px; }
+
     </style>
 </head>
 <body>
