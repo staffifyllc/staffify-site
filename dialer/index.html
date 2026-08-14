@@ -58,6 +58,8 @@
         .phone a { font-size:30px; font-weight:900; letter-spacing:-0.01em; color:var(--cyan-hi); text-decoration:none; }
         .phone .call { font-size:13px; font-weight:800; color:#04222b; background:var(--green-hi); border-radius:999px; padding:8px 16px; text-decoration:none; }
         .lbl { font-size:13.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--cyan); margin:18px 0 8px; }
+        .fresh { display:inline-block; margin-top:8px; background:rgba(45,190,120,0.12); color:#5fd39a; border:1px solid rgba(45,190,120,0.4); border-radius:999px; font-size:11.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:4px 11px; }
+        .touched { display:block; margin-top:8px; background:rgba(255,255,255,0.04); color:#c8cfd6; border:1px solid var(--card-border); border-radius:10px; font-size:13px; padding:8px 12px; }
         .pctag { display:inline-block; margin-top:8px; background:rgba(255,193,7,0.12); color:#ffc94d; border:1px solid rgba(255,193,7,0.35); border-radius:999px; font-size:11.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:4px 11px; }
         .step { margin-top:12px; border:1px solid var(--card-border); border-radius:12px; padding:13px 16px; background:rgba(255,255,255,0.03); }
         .step.win { border-color:rgba(45,190,120,0.45); background:rgba(45,190,120,0.07); }
@@ -1039,6 +1041,10 @@
         '<div class="headrow"><div class="company">'+esc(L.company||'(no company)')+'</div>'+navBtns()+'</div>'+
         '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
         (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
+        // Paul: if no touchpoints have been done, mark that. A first-ever call and a fifth
+        // attempt are different conversations and the card has to say which.
+        (L.firstTouch===true?'<div class="fresh">Never contacted &middot; first touch</div>'
+          :(L.touchpoints&&L.touchpoints.length?'<div class="touched">'+L.touchpoints.length+' previous touchpoint'+(L.touchpoints.length>1?'s':'')+' &middot; '+esc(L.touchSummary||'')+'</div>':''))+
         leadPanel(L)+
         '<div class="cardgrid"><div class="cardmain">'+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
