@@ -5,7 +5,7 @@
 // throws back into the dialer, because a CRM hiccup must not interrupt someone mid call.
 
 import { openIdentity, readBody, redis } from './_auth.js';
-import { configured, findOrCreateContact, logCall, logText, logNote, setLeadStatus, upsertDeal, archiveContact } from './_hubspot.js';
+import { configured, findOrCreateContact, findContact, logCall, logText, logNote, setLeadStatus, upsertDeal, archiveContact } from './_hubspot.js';
 
 const BUYING = ['interested', 'booked', 'won'];
 const LABEL = { won:'Closed / Won', interested:'Interested', callback:'Callback', no_answer:'No answer',
@@ -24,6 +24,28 @@ export default async function handler(req, res) {
     const rep = (b.rep || (who && who.name) || '').toString();
     const at = Number(b.at) || Date.now();
 
+    // Bad data is handled BEFORE any create. Blacklist the number so it can never re-enter a queue,
+    // and archive the contact only if one already exists: creating a record purely to delete it would
+    // leave the real contact untouched and orphan a new one.
+    if (b.purge || outcome === 'bad_number') {
+        const digits = String(lead.phone || '').replace(/[^0-9]/g, '').slice(-10);
+        const out = { ok: true, purged: false, did: [] };
+        if (digits) {
+            try { await redis.sadd('bad:numbers', digits); out.did.push({ blacklisted: digits }); } catch (e) { /* non-fatal */ }
+        }
+        if (lead.phone) { try { await redis.sadd('hot:handled', lead.phone); } catch (e) { /* non-fatal */ } }
+        const found = await findContact({ phone: lead.phone, email: lead.email });
+        if (found.ok && found.id) {
+            const del = await archiveContact(found.id);
+            out.contactId = found.id;
+            out.purged = !!del.ok;
+            out.did.push({ hubspot: del.ok ? 'contact archived' : ('archive_failed ' + (del.status || del.reason)) });
+        } else {
+            out.did.push({ hubspot: 'no contact to archive' });
+        }
+        return res.status(200).json(out);
+    }
+
     const nameParts = String(lead.name || '').trim().split(/\s+/);
     const c = await findOrCreateContact({
         phone: lead.phone, email: lead.email,
@@ -34,19 +56,6 @@ export default async function handler(req, res) {
 
     const out = { ok: true, contactId: c.id, contactCreated: !!c.created, did: [] };
 
-    // Bad data. Purge it from HubSpot and blacklist the number so it can never re-enter a queue.
-    // The number is kept on a bad list precisely so the engine cannot serve it up again tomorrow.
-    if (b.purge || outcome === 'bad_number') {
-        const digits = String(lead.phone || '').replace(/[^0-9]/g, '').slice(-10);
-        if (digits) {
-            try { await redis.sadd('bad:numbers', digits); } catch (e) { /* non-fatal */ }
-            try { await redis.sadd('hot:handled', lead.phone); } catch (e) { /* non-fatal */ }
-        }
-        const del = await archiveContact(c.id);
-        out.did.push({ purged: del.ok ? 'hubspot contact archived' : (del.reason || 'archive_failed ' + del.status) });
-        out.purged = !!del.ok;
-        return res.status(200).json(out);
-    }
     const who_what = [lead.company, lead.role].filter(Boolean).join(' · ');
 
     if (type === 'call') {

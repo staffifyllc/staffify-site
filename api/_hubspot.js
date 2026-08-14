@@ -31,7 +31,12 @@ async function hs(path, opts = {}, tries = 2) {
 // ---- Contact ----------------------------------------------------------------
 // Match on phone first (that is what a dialer has), then email. Create only when nothing matches,
 // so repeat activity on the same prospect keeps stacking on one record instead of making duplicates.
-export async function findOrCreateContact({ phone, email, firstname, lastname, company }) {
+export async function findContact({ phone, email }) {
+    const r = await findOrCreateContact({ phone, email, __findOnly: true });
+    return r;
+}
+
+export async function findOrCreateContact({ phone, email, firstname, lastname, company, __findOnly }) {
     if (!token()) return { ok: false, reason: 'no_token' };
     const filters = [];
     const p = e164(phone), d = digits(phone);
@@ -54,6 +59,7 @@ export async function findOrCreateContact({ phone, email, firstname, lastname, c
         if (!r.ok && (r.status === 401 || r.status === 403)) return { ok: false, reason: 'scope', detail: r.raw };
     }
 
+    if (__findOnly) return { ok: false, reason: 'not_found' };
     if (!p && !email) return { ok: false, reason: 'no_identifier' };
     const props = { };
     if (p) props.phone = p;
