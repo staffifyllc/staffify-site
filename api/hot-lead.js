@@ -21,14 +21,20 @@ export default async function handler(req, res) {
 
     const b = readBody(req);
     const phone = pick(b, ['phone', 'to', 'number', 'customer_phone', 'customer.phone', 'call.to', 'lead.phone']);
-    if (!phone) return res.status(400).json({ error: 'phone_required' });
+    // A phone used to be mandatory because every hot lead came off a CALL. Email replies do not
+    // carry one, and a prospect who wrote back is the warmest lead we get: rejecting it for
+    // having no phone number threw away the best thing in the pipeline. An email is enough to
+    // identify and work them.
+    const email = pick(b, ['email', 'customer.email', 'lead.email']);
+    if (!phone && !email) return res.status(400).json({ error: 'phone_or_email_required' });
 
     const lead = {
         id: 'hot:' + Date.now() + ':' + newToken(4),
         name: pick(b, ['name', 'customer_name', 'customer.name', 'first_name', 'lead.name']),
         phone,
         company: pick(b, ['company', 'business', 'company_name', 'metadata.company', 'lead.company']),
-        email: pick(b, ['email', 'customer.email', 'lead.email']),
+        email,
+        channel: phone ? 'phone' : 'email',   // so the card can say how to reach them
         motion: pick(b, ['motion', 'metadata.motion']) || 'websites',
         summary: pick(b, ['summary', 'analysis', 'disposition', 'note', 'notes', 'ai_summary', 'call.summary']),
         transcript: pick(b, ['transcript', 'concatenated_transcript', 'call.transcript', 'call.concatenated_transcript']).slice(0, 6000),
@@ -56,7 +62,7 @@ export default async function handler(req, res) {
 
     const slackText =
         `:fire: *New Bland lead* — *${lead.company || lead.name || lead.phone}*` + (lead.motion ? ` · _${lead.motion}_` : '')
-        + `\n:telephone_receiver: ${lead.phone}`
+        + (lead.phone ? `\n:telephone_receiver: ${lead.phone}` : `\n:email: ${lead.email}`)
         + (lead.summary ? `\n> ${lead.summary.slice(0, 400)}` : '')
         + (lead.recordingUrl ? `\n:headphones: Recording: ${lead.recordingUrl}` : '')
         + `\n:mag: Review & listen in the hub: https://www.gostaffify.com/campaigns/  (Calls tab)`;
