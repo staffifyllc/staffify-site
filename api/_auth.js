@@ -19,7 +19,11 @@ export const newToken = (n = 24) => randomBytes(n).toString('hex');
 export const normEmail = (e) => (e || '').toString().trim().toLowerCase();
 
 export function adminAuthorized(req) {
-    const valid = [process.env.ADMIN_TOKEN, process.env.CRON_SECRET].filter(Boolean);
+    // HUB_TOKEN is a shared secret for machine-to-machine calls from campaign-dashboard, which
+    // pushes email replies and hot leads in. It exists because Vercel encrypts a saved value, so
+    // the existing ADMIN_TOKEN cannot be read back out of the dashboard to copy across. Adding a
+    // third accepted credential avoids touching either of the two already in use.
+    const valid = [process.env.ADMIN_TOKEN, process.env.CRON_SECRET, process.env.HUB_TOKEN].filter(Boolean);
     if (!valid.length) return false;
     const provided = (req.query?.token || '').toString();
     if (provided && valid.includes(provided)) return true;
