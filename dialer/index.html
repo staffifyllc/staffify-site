@@ -294,9 +294,13 @@
         .lp-row.warn .v { color:#ffb59a; }
         .lp-row .v a { color:var(--cyan-hi); text-decoration:none; font-weight:600; word-break:break-all; }
         .lp-row .v a:hover { text-decoration:underline; }
-        .sitebtn { display:inline-flex; align-items:center; gap:8px; margin-top:8px; font-size:13.5px; font-weight:800;
-                   color:#04222b; background:var(--cyan); border-radius:10px; padding:9px 14px; text-decoration:none; }
-        .sitebtn:hover { filter:brightness(1.07); }
+        .sitebtn { display:block; width:100%; box-sizing:border-box; margin-top:12px; text-align:center;
+                   font-size:15px; font-weight:800; letter-spacing:.01em; text-decoration:none !important;
+                   color:var(--t1) !important; background:var(--panel); border:1px solid var(--panel-edge);
+                   border-radius:14px; padding:15px 16px; box-shadow:0 6px 18px rgba(0,0,0,.22);
+                   transition:transform .12s ease, background .12s ease; }
+        .sitebtn:hover { background:rgba(255,255,255,.10); }
+        .sitebtn:active { transform:scale(.985); }
         .cbwrap { margin-top:14px; background:rgba(95,224,250,.08); border-radius:var(--r-md); padding:16px 18px; }
         .cbwrap .cbhead { font-size:13px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--cyan-hi); }
         .cbchips { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 10px; }
@@ -454,6 +458,13 @@
     if(MOTION==='websites') return hey+"it's Paul. Just tried you. Random question, do you know if "+(L.company||'')+' comes up when someone asks ChatGPT to find one nearby?';
     return hey+"it's "+rep+'. Just tried you about the '+(L.role||'')+' role you posted. Still hiring for it?';
   }
+  // Opening their site is an action, so it sits with the other actions rather than inside a data row.
+  function siteBtn(L){
+    if(MOTION!=='websites' || !L.website) return '';
+    return '<a class="sitebtn" href="'+esc(L.website)+'" target="_blank" rel="noopener">'+
+           'Open '+esc(siteHost(L.website))+' \u2197</a>';
+  }
+
   function textBlock(L){
     if(!L.phone) return '';
     if(MOTION==='websites' ? !L.company : !L.role) return '';
@@ -493,9 +504,7 @@
 
     if(MOTION==='websites'){
       if(L.industry) rows.push(['Business', esc(L.industry), '']);
-      if(L.website) rows.push(['Their site',
-        esc(siteHost(L.website))+
-        '<a class="sitebtn" href="'+esc(L.website)+'" target="_blank" rel="noopener">Open their site \u2197</a>', '']);
+      if(L.website) rows.push(['Their site', esc(siteHost(L.website)), '']);
     } else if(L.role){
       rows.push([L.priorCall?'They asked for':'Open role', '<span class="v big">'+esc(L.role)+'</span>', 'big']);
     }
