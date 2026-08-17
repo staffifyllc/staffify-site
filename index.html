@@ -1736,6 +1736,56 @@
             .va-voice-copy .vv-sub { margin-left: auto; margin-right: auto; }
         }
 
+        /* ─── VALUE: guarantee callout + same-hire comparison ─── */
+        .value-section { background: rgba(8,8,10,0.55); border-top: 1px solid rgba(26,189,225,0.07); }
+        .value-inner { max-width: 1080px; margin: 0 auto; }
+        .guarantee-band { text-align: center; max-width: 860px; margin: 0 auto 80px; }
+        .guarantee-title {
+            font-size: clamp(34px, 4.6vw, 62px);
+            font-weight: 900; letter-spacing: -0.035em; line-height: 1.04;
+            margin: 14px 0 26px;
+        }
+        .guarantee-sub {
+            font-size: 20px; color: var(--muted); line-height: 1.7;
+            max-width: 660px; margin: 0 auto;
+        }
+        .guarantee-sub strong { color: #fff; font-weight: 600; }
+        .compare-title {
+            text-align: center; font-size: clamp(24px, 2.8vw, 38px);
+            font-weight: 800; letter-spacing: -0.03em; margin-bottom: 40px;
+        }
+        .compare {
+            max-width: 980px; margin: 0 auto;
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; overflow: hidden;
+        }
+        .compare-row { display: grid; grid-template-columns: 1.05fr 1fr 1fr; align-items: stretch; }
+        .compare-row + .compare-row { border-top: 1px solid rgba(255,255,255,0.06); }
+        .compare-cell { padding: 22px 26px; font-size: 16px; line-height: 1.45; display: flex; align-items: center; }
+        .compare-cell.dim {
+            font-size: 12.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+            color: rgba(255,255,255,0.85);
+        }
+        .compare-cell.old { color: rgba(255,255,255,0.42); }
+        .compare-cell.us { color: rgba(255,255,255,0.92); font-weight: 600; background: rgba(26,189,225,0.045); }
+        .compare-cell.us strong { color: var(--c); font-weight: 800; }
+        .compare-row.head .compare-cell { padding: 18px 26px; background: rgba(255,255,255,0.02); }
+        .compare-row.head .compare-cell.old { color: rgba(255,120,120,0.85); font-weight: 800; letter-spacing: 0.04em; }
+        .compare-row.head .compare-cell.us { color: var(--c); font-weight: 800; letter-spacing: 0.04em; background: rgba(26,189,225,0.07); }
+        .compare-row.highlight .compare-cell.us { background: rgba(26,189,225,0.11); }
+        .value-note {
+            max-width: 720px; margin: 40px auto 0; text-align: center;
+            font-size: 17px; line-height: 1.7; color: var(--muted);
+        }
+        .value-note strong { color: #fff; font-weight: 700; }
+        @media (max-width: 760px) {
+            .compare-row { grid-template-columns: 1fr; }
+            .compare-cell { padding: 14px 20px; }
+            .compare-cell.dim { background: rgba(255,255,255,0.04); padding-top: 18px; }
+            .compare-row.head { display: none; }
+            .compare-cell.old::before { content: "Old way — "; color: rgba(255,120,120,0.7); font-weight: 700; }
+            .compare-cell.us::before { content: "Staffify — "; color: var(--c); font-weight: 700; }
+        }
+
         </style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
@@ -2077,6 +2127,58 @@
                 <div class="diff-item good"><span class="diff-icon check">✓</span><span>Perpetual free restaffing support</span></div>
             </div>
         </div>
+    </div>
+</section>
+
+<!-- ─── VALUE: guarantee + same-hire comparison ─── -->
+<section class="value-section">
+    <div class="value-inner">
+        <div class="guarantee-band reveal">
+            <div class="section-eyebrow">No-risk hiring</div>
+            <h2 class="guarantee-title">Hiring sucks.<br>We took the <span class="g">risk</span> out of it.</h2>
+            <p class="guarantee-sub">A bad hire costs you thousands and weeks you&rsquo;ll never get back. If a placement ever stops working, <strong>we replace them at no cost.</strong> No new finder&rsquo;s fee, no restarting the search yourself, no eating the mistake. Every placement is backed by our lifetime replacement guarantee, for as long as you work with us.</p>
+        </div>
+
+        <h3 class="compare-title reveal">Same hire. Two very different deals.</h3>
+        <div class="compare reveal">
+            <div class="compare-row head">
+                <div class="compare-cell dim"></div>
+                <div class="compare-cell old">The old way</div>
+                <div class="compare-cell us">Staffify</div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-cell dim">Upfront</div>
+                <div class="compare-cell old">$3,000&ndash;$5,000 finder&rsquo;s fee, every hire</div>
+                <div class="compare-cell us">One small onboarding investment, <strong>once</strong></div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-cell dim">Recruiting</div>
+                <div class="compare-cell old">Post a job and hope</div>
+                <div class="compare-cell us">Vetted, tested, benchmarked to the role</div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-cell dim">Payroll, HR, taxes</div>
+                <div class="compare-cell old">Your problem, every month</div>
+                <div class="compare-cell us">We handle all of it</div>
+            </div>
+            <div class="compare-row highlight">
+                <div class="compare-cell dim">When someone quits</div>
+                <div class="compare-cell old">Pay the finder&rsquo;s fee again, restart</div>
+                <div class="compare-cell us">95% stay. If one doesn&rsquo;t, <strong>we replace them free</strong></div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-cell dim">Contracts</div>
+                <div class="compare-cell old">Locked in</div>
+                <div class="compare-cell us">None. Leave anytime.</div>
+            </div>
+            <div class="compare-row">
+                <div class="compare-cell dim">Support</div>
+                <div class="compare-cell old">Gone in 90&ndash;120 days</div>
+                <div class="compare-cell us">For as long as you&rsquo;re with us</div>
+            </div>
+        </div>
+
+        <p class="value-note reveal"><strong>One investment. Not a bill every time someone quits.</strong> The upfront onboarding cost is less than a single traditional finder&rsquo;s fee, and it&rsquo;s the only hiring cost you&rsquo;ll ever pay for the role. &ldquo;One time&rdquo; is the whole point.</p>
     </div>
 </section>
 
