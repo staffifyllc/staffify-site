@@ -117,7 +117,7 @@
       if(!data.name || !data.email){ err.textContent='Please add your name and email.'; err.style.display='block'; return; }
       btn.disabled=true; btn.textContent='Sending…';
       try{
-        var r=await fetch('/api/intake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        var r=await fetch('/api/intake/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
         if(!r.ok){ throw new Error('bad'); }
         try{ if(window.va) window.va('event',{name:'sales_intake_submit'}); }catch(_){}
         document.getElementById('formView').style.display='none';
