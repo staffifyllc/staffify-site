@@ -1385,6 +1385,22 @@
       .kcard .kn{font-weight:700;font-size:12.5px}
       .kcard .km{color:#9ba1ab;font-size:11px;margin-top:2px}
       .dash-note{max-width:600px;margin:24px auto 0;text-align:center;font-size:14px;color:#6e6e73}
+      .feed-panel h4{display:flex;align-items:center;gap:8px}
+      .streaming{font-size:10px;color:#2fd27a;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-left:auto;display:inline-flex;align-items:center;gap:5px}
+      .streaming::before{content:"";width:6px;height:6px;border-radius:50%;background:#2fd27a;box-shadow:0 0 7px #2fd27a}
+      .feed{display:flex;flex-direction:column}
+      .ev{display:flex;gap:11px;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.05)}
+      .ev:last-child{border-bottom:none}
+      .ev .ei{width:28px;height:28px;flex:0 0 auto;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700}
+      .ev .eb{min-width:0;flex:1}
+      .ev .et{font-size:12.5px;color:rgba(255,255,255,.9);line-height:1.35}
+      .ev .em{font-size:10.5px;color:#6e6e73;margin-top:1px}
+      .ev .ex{font-size:10px;color:#6e6e73;white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0}
+      .pipe-panel{grid-column:1/-1;margin-top:14px}
+      .kanban4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+      .kanban4 .kh{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#6e6e73;margin-bottom:8px}
+      .kanban4 .kh b{color:var(--c,#1abde1);font-variant-numeric:tabular-nums}
+      @media(max-width:820px){.kanban4{grid-template-columns:repeat(2,1fr)}}
       @media(max-width:820px){.dash-body{grid-template-columns:repeat(2,1fr)}.dash-cols{grid-template-columns:1fr}}
     </style>
 
@@ -1446,17 +1462,37 @@
               <div class="funnel-row"><span class="fl">Warm</span><div class="funnel-bar" style="width:12%">96</div></div>
               <div class="funnel-row"><span class="fl">Booked</span><div class="funnel-bar" style="width:6%">18</div></div>
             </div>
-            <div class="dpanel">
-              <h4>Pipeline &middot; where the money is</h4>
-              <div class="kanban">
-                <div class="kcol"><div class="kh">Interested</div>
-                  <div class="kcard"><div class="kn">Maxfield RE</div><div class="km">replied &middot; needs pricing</div></div>
-                  <div class="kcard"><div class="kn">Vermont Life</div><div class="km">callback friday</div></div>
-                </div>
-                <div class="kcol"><div class="kh">Booked</div>
-                  <div class="kcard"><div class="kn">Harbor Studio</div><div class="km">tue 2:00pm</div></div>
-                  <div class="kcard"><div class="kn">Northgate</div><div class="km">wed 10:30am</div></div>
-                </div>
+            <div class="dpanel feed-panel">
+              <h4>Live activity <span class="streaming">Streaming</span></h4>
+              <div class="feed">
+                <div class="ev"><div class="ei" style="background:#2fd27a22;color:#2fd27a">&#10003;</div><div class="eb"><div class="et"><b>Meeting booked</b> &middot; Riverside Realty</div><div class="em">Tue 2:00pm &middot; on your calendar</div></div><div class="ex">now</div></div>
+                <div class="ev"><div class="ei" style="background:#1abde122;color:#1abde1">&#10022;</div><div class="eb"><div class="et"><b>Reply</b> &middot; interested</div><div class="em">Summit Property Group</div></div><div class="ex">2m</div></div>
+                <div class="ev"><div class="ei" style="background:#1abde122;color:#1abde1">in</div><div class="eb"><div class="et"><b>LinkedIn accepted</b></div><div class="em">Oakline Media</div></div><div class="ex">6m</div></div>
+                <div class="ev"><div class="ei" style="background:#1abde122;color:#1abde1">&#9993;</div><div class="eb"><div class="et"><b>Sequence sent</b></div><div class="em">40 new prospects entered</div></div><div class="ex">11m</div></div>
+                <div class="ev"><div class="ei" style="background:#f5a62322;color:#f5a623">&#9742;</div><div class="eb"><div class="et"><b>Call connected</b> &middot; callback set</div><div class="em">Harbor Studio</div></div><div class="ex">18m</div></div>
+                <div class="ev"><div class="ei" style="background:#1abde122;color:#1abde1">&#8635;</div><div class="eb"><div class="et"><b>Reactivated</b></div><div class="em">12 dormant leads re-engaged</div></div><div class="ex">24m</div></div>
+                <div class="ev"><div class="ei" style="background:#2fd27a22;color:#2fd27a">&#10003;</div><div class="eb"><div class="et"><b>Meeting booked</b> &middot; Cedar &amp; Co</div><div class="em">Wed 10:30am</div></div><div class="ex">40m</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="dpanel pipe-panel">
+            <h4>Pipeline &middot; where the money is</h4>
+            <div class="kanban4">
+              <div class="kcol"><div class="kh">Sourced <b>1,240</b></div>
+                <div class="kcard"><div class="kn">Oakline Media</div><div class="km">verified &middot; queued</div></div>
+                <div class="kcard"><div class="kn">Beacon Realty</div><div class="km">verified &middot; queued</div></div>
+              </div>
+              <div class="kcol"><div class="kh">Contacted <b>1,015</b></div>
+                <div class="kcard"><div class="kn">Harbor Studio</div><div class="km">day 3 &middot; email + LI</div></div>
+                <div class="kcard"><div class="kn">Cedar &amp; Co</div><div class="km">day 5 &middot; nudged</div></div>
+              </div>
+              <div class="kcol"><div class="kh">Interested <b>96</b></div>
+                <div class="kcard"><div class="kn">Summit Property Group</div><div class="km">replied &middot; needs pricing</div></div>
+                <div class="kcard"><div class="kn">Northgate Partners</div><div class="km">callback friday</div></div>
+              </div>
+              <div class="kcol"><div class="kh">Booked <b>18</b></div>
+                <div class="kcard"><div class="kn">Riverside Realty</div><div class="km">tue 2:00pm</div></div>
+                <div class="kcard"><div class="kn">Cedar &amp; Co</div><div class="km">wed 10:30am</div></div>
               </div>
             </div>
           </div>
