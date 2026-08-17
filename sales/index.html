@@ -3,11 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hire a Virtual Executive Assistant | Dedicated Admin | Staffify</title>
-    <meta name="description" content="Hire a full-time virtual executive admin starting at $12/hr. Trained on your tone and SOPs. Handles inbox, calls, scheduling, CRM, customer service. Vetted, dedicated, lifetime replacement guarantee.">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.gostaffify.com/admins/">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <title>Outbound Sales, Built and Staffed | Dedicated Sales VAs | Staffify</title>
+    <meta name="description" content="We build you a proven automated outbound funnel, then place a dedicated sales VA to run it. Verified lists, email + LinkedIn + database reactivation, a live pipeline you can watch. A full SDR motion for a fraction of a US hire.">
+    <link rel="canonical" href="https://www.gostaffify.com/sales/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.gostaffify.com/sales/">
+    <meta property="og:title" content="Outbound Sales, Built and Staffed | Staffify">
+    <meta property="og:description" content="We build you a proven automated outbound funnel, then place a dedicated sales VA to run it. Verified lists, email + LinkedIn + database reactivation, a live pipeline you can watch. A full SDR motion for a fraction of a US hire.">
+    <meta property="og:site_name" content="Staffify">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Outbound Sales, Built and Staffed | Staffify">
+    <meta name="twitter:description" content="We build you a proven automated outbound funnel, then place a dedicated sales VA to run it. Verified lists, email + LinkedIn + database reactivation, a live pipeline. A full SDR motion for a fraction of a US hire.">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -122,7 +129,7 @@
             background: #000;
         }
 
-        /* Faded ambient hero photo */
+        /* Faded ambient hero photo (subject on the right) */
         .hero-media {
             position: absolute; inset: 0; z-index: 1;
             pointer-events: none; opacity: 0;
@@ -130,24 +137,22 @@
         }
         .hero-media img {
             width: 100%; height: 100%;
-            object-fit: cover; object-position: 28% center;
-            filter: brightness(.74) contrast(1.03);
+            object-fit: cover; object-position: 74% center;
+            filter: brightness(.78) contrast(1.03);
         }
         .hero-media::after {
             content: ''; position: absolute; inset: 0;
             background:
-                linear-gradient(90deg, transparent 0%, rgba(5,5,7,0.2) 34%, rgba(5,5,7,0.55) 64%, #000 100%),
-                linear-gradient(180deg, #000 0%, transparent 24%, transparent 66%, #000 100%),
-                radial-gradient(85% 90% at 32% 46%, transparent 32%, rgba(5,5,7,0.38) 100%);
+                linear-gradient(90deg, #000 22%, rgba(5,5,7,0.82) 40%, rgba(5,5,7,0.42) 58%, rgba(5,5,7,0.1) 80%, transparent 100%),
+                linear-gradient(180deg, #000 0%, transparent 22%, transparent 74%, #000 100%);
         }
-        /* lift hero copy above the photo */
         .hero > .hero-badge,
         .hero > .hero-headline,
         .hero > .hero-rule-new,
         .hero > .hero-sub-new,
         .hero > .hero-ctas-new { position: relative; z-index: 3; }
         @media (max-width: 899px) {
-            .hero-media img { object-position: 40% 22%; filter: brightness(.55); }
+            .hero-media img { object-position: 62% 20%; filter: brightness(.55); }
             .hero-media::after {
                 background:
                     linear-gradient(180deg, rgba(5,5,7,0.68) 0%, rgba(5,5,7,0.5) 34%, rgba(5,5,7,0.66) 62%, #000 100%),
@@ -457,6 +462,59 @@
             line-height: 1.75;
         }
 
+        /* ── TRUST STRIP ── */
+        /* ── TRUST STRIP (scrolling marquee) ── */
+        .trust-strip { background: rgba(0,0,0,0.55); padding: 36px 0 44px; border-bottom: 1px solid var(--divider); overflow: hidden; position: relative; }
+        .trust-strip-label { text-align: center; font-size: 12.5px; font-weight: 700; letter-spacing: 0.20em; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
+        .trust-marquee { overflow: hidden; position: relative; mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent); }
+        .trust-marquee-track { display: flex; gap: 72px; width: max-content; align-items: center; animation: trustMarquee 70s linear infinite; }
+        .trust-marquee:hover .trust-marquee-track { animation-play-state: paused; }
+        .trust-marquee img { height: 30px; width: auto; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.5; transition: opacity .2s; flex-shrink: 0; user-select: none; -webkit-user-drag: none; }
+        .trust-marquee img:hover { opacity: 0.95; }
+        @keyframes trustMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @media (prefers-reduced-motion: reduce) { .trust-marquee-track { animation: none; flex-wrap: wrap; justify-content: center; row-gap: 24px; } }
+        @media (max-width: 700px) { .trust-marquee img { height: 24px; } .trust-marquee-track { gap: 48px; animation-duration: 50s; } }
+
+        /* ── HOW IT WORKS ── */
+        .process-section { background: rgba(8,8,10,0.62); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); }
+        .process-grid { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+        .process-step { background: rgba(255,255,255,0.025); border: 1px solid var(--divider); border-radius: 20px; padding: 36px 32px; transition: border-color .25s, background .25s; }
+        .process-step:hover { border-color: rgba(26,189,225,0.3); background: rgba(255,255,255,0.045); }
+        .process-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(26,189,225,0.12), rgba(20,86,164,0.08));
+            border: 1px solid rgba(26,189,225,0.25);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            transition: transform .25s cubic-bezier(.16,1,.3,1), background .25s;
+        }
+        .process-step:hover .process-icon { transform: translateY(-2px); background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.12)); }
+        .process-icon svg { width: 24px; height: 24px; stroke: var(--c); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .process-num { font-size: 13.5px; font-weight: 800; letter-spacing: 0.18em; color: var(--c); margin-bottom: 18px; }
+        .process-step h3 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--white); margin-bottom: 14px; line-height: 1.2; }
+        .process-step p { font-size: 16.5px; color: var(--muted); line-height: 1.65; }
+        .process-step strong { color: var(--white); font-weight: 600; }
+
+        .guarantee-card { max-width: 1320px; margin: 40px auto 0; background: linear-gradient(135deg, rgba(26,189,225,0.08) 0%, rgba(20,86,164,0.06) 100%); border: 1px solid rgba(26,189,225,0.25); border-radius: 20px; padding: 36px 40px; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+        .guarantee-card .badge { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--c); background: rgba(26,189,225,0.1); border: 1px solid rgba(26,189,225,0.25); border-radius: 999px; padding: 5px 12px; margin-bottom: 14px; }
+        .guarantee-card h3 { font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; letter-spacing: -0.02em; color: var(--white); margin-bottom: 8px; line-height: 1.2; }
+        .guarantee-card p { font-size: 17px; color: var(--muted); line-height: 1.6; max-width: 620px; }
+        .guarantee-card .guarantee-icon { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.18)); border: 1px solid rgba(26,189,225,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .guarantee-card .guarantee-icon svg { width: 38px; height: 38px; stroke: var(--c); fill: none; stroke-width: 2; }
+        @media (max-width: 768px) { .process-grid { grid-template-columns: 1fr; } .guarantee-card { grid-template-columns: 1fr; padding: 28px 24px; } }
+
+        /* ── INLINE CTA ── */
+        .inline-cta { max-width: 1320px; margin: 0 auto; padding: 48px 24px 16px; text-align: center; }
+        .inline-cta-btn { display: inline-flex; align-items: center; gap: 10px; background: var(--c); color: #000; padding: 13px 28px; border-radius: 999px; font-size: 16px; font-weight: 700; text-decoration: none; box-shadow: 0 0 32px rgba(26,189,225,0.18); transition: transform .15s, box-shadow .15s; }
+        .inline-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 0 48px rgba(26,189,225,0.4); }
+        .inline-cta-microcopy { font-size: 13.5px; color: var(--muted); margin-top: 12px; }
+        .inline-cta-microcopy strong { color: rgba(255,255,255,0.75); font-weight: 600; }
+        .call-preview { max-width: 540px; margin: 0 auto 22px; display: grid; gap: 8px; font-size: 15px; color: var(--muted); text-align: left; }
+        .call-preview-item { display: flex; align-items: flex-start; gap: 10px; line-height: 1.55; }
+        .call-preview-item svg { flex-shrink: 0; width: 16px; height: 16px; stroke: var(--c); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
+        .call-preview-item strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
         /* ── SOFT-YES LEAD MAGNET ── */
         .soft-yes { background: rgba(8,8,10,0.62); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); padding: 64px 24px; }
         .soft-yes-card { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
@@ -475,185 +533,13 @@
         .soft-yes-success.show { display: block; }
         @media (max-width: 760px) { .soft-yes-card { grid-template-columns: 1fr; gap: 28px; } }
 
-        /* ── TRUST STRIP (scrolling marquee) ── */
-        .trust-strip { background: rgba(0,0,0,0.55); padding: 36px 0 44px; border-bottom: 1px solid var(--divider); overflow: hidden; position: relative; }
-        .trust-strip-label { text-align: center; font-size: 12.5px; font-weight: 700; letter-spacing: 0.20em; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
-        .trust-marquee { overflow: hidden; position: relative; mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent); }
-        .trust-marquee-track { display: flex; gap: 72px; width: max-content; align-items: center; animation: trustMarquee 70s linear infinite; }
-        .trust-marquee:hover .trust-marquee-track { animation-play-state: paused; }
-        .trust-marquee img { height: 30px; width: auto; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.5; transition: opacity .2s; flex-shrink: 0; user-select: none; -webkit-user-drag: none; }
-        .trust-marquee img:hover { opacity: 0.95; }
-        @keyframes trustMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        @media (prefers-reduced-motion: reduce) { .trust-marquee-track { animation: none; flex-wrap: wrap; justify-content: center; row-gap: 24px; } }
-        @media (max-width: 700px) { .trust-marquee img { height: 24px; } .trust-marquee-track { gap: 48px; animation-duration: 50s; } }
-
-        /* ── INLINE / MID-PAGE CTA ── */
-        .inline-cta { max-width: 1320px; margin: 0 auto; padding: 48px 24px 16px; text-align: center; }
-        .inline-cta-btn {
-            display: inline-flex; align-items: center; gap: 10px;
-            background: var(--c); color: #000;
-            padding: 13px 28px; border-radius: 999px;
-            font-size: 16px; font-weight: 700;
-            text-decoration: none;
-            box-shadow: 0 0 32px rgba(26,189,225,0.18);
-            transition: transform .15s, box-shadow .15s;
-        }
-        .inline-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 0 48px rgba(26,189,225,0.4); }
-        .inline-cta-microcopy { font-size: 13.5px; color: var(--muted); margin-top: 12px; }
-        .inline-cta-microcopy strong { color: rgba(255,255,255,0.75); font-weight: 600; }
-
-        /* ── CALL PREVIEW ── */
-        .call-preview { max-width: 540px; margin: 0 auto 22px; display: grid; gap: 8px; font-size: 15px; color: var(--muted); text-align: left; }
-        .call-preview-item { display: flex; align-items: flex-start; gap: 10px; line-height: 1.55; }
-        .call-preview-item svg { flex-shrink: 0; width: 16px; height: 16px; stroke: var(--c); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
-        .call-preview-item strong { color: rgba(255,255,255,0.85); font-weight: 600; }
-
         /* ── STICKY CTA ── */
-        .sticky-cta {
-            position: fixed; bottom: 24px; right: 24px;
-            z-index: 90; opacity: 0;
-            transform: translateY(20px); pointer-events: none;
-            transition: opacity .3s cubic-bezier(.16,1,.3,1), transform .3s cubic-bezier(.16,1,.3,1);
-        }
+        .sticky-cta { position: fixed; bottom: 24px; right: 24px; z-index: 90; opacity: 0; transform: translateY(20px); pointer-events: none; transition: opacity .3s cubic-bezier(.16,1,.3,1), transform .3s cubic-bezier(.16,1,.3,1); }
         .sticky-cta.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
-        .sticky-cta a {
-            display: inline-flex; align-items: center; gap: 8px;
-            background: var(--c); color: #000;
-            padding: 14px 24px; border-radius: 999px;
-            font-size: 16px; font-weight: 700; text-decoration: none;
-            box-shadow: 0 12px 36px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
-            transition: transform .15s, box-shadow .15s;
-        }
+        .sticky-cta a { display: inline-flex; align-items: center; gap: 8px; background: var(--c); color: #000; padding: 14px 24px; border-radius: 999px; font-size: 16px; font-weight: 700; text-decoration: none; box-shadow: 0 12px 36px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06); transition: transform .15s, box-shadow .15s; }
         .sticky-cta a:hover { transform: translateY(-2px); box-shadow: 0 16px 48px rgba(26,189,225,0.35), 0 0 0 1px rgba(255,255,255,0.06); }
         .sticky-cta a svg { width: 16px; height: 16px; fill: currentColor; }
-        @media (max-width: 700px) {
-            .sticky-cta { left: 16px; right: 16px; bottom: 16px; }
-            .sticky-cta a { width: 100%; justify-content: center; padding: 16px; }
-        }
-
-        /* ── COST CALCULATOR (founder time reclaimed) ── */
-        .calc-input-row input[type=number]::-webkit-outer-spin-button,
-
-
-        @media (max-width: 900px) {
-        }
-
-        /* ── CASE STUDY teaser card ── */
-        .case-section {
-            background: rgba(0,0,0,0.55);
-            border-bottom: 1px solid var(--divider);
-        }
-        .case-card {
-            max-width: 1320px; margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1.1fr 1fr;
-            gap: 56px; align-items: center;
-            background: linear-gradient(180deg, rgba(26,189,225,0.06) 0%, rgba(26,189,225,0.015) 100%);
-            border: 1px solid rgba(26,189,225,0.18);
-            border-radius: 24px;
-            padding: 56px 56px;
-        }
-        .case-card .case-left { display: flex; flex-direction: column; gap: 18px; }
-        .case-card .case-context { font-size: 13.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-        .case-card .case-headline { font-size: clamp(28px, 3.4vw, 48px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.15; color: var(--white); }
-        .case-card .case-headline .g { font-size: 1.1em; }
-        .case-card .case-quote { font-family: 'Fraunces', Georgia, serif; font-size: 19px; line-height: 1.55; color: rgba(255,255,255,0.78); font-style: italic; margin-top: 4px; }
-        .case-card .case-cta { display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; color: var(--c); font-size: 16px; font-weight: 700; text-decoration: none; letter-spacing: 0.02em; transition: gap .2s; }
-        .case-card .case-cta:hover { gap: 14px; }
-        .case-card .case-stats { display: flex; flex-direction: column; gap: 24px; }
-        .case-stat { background: rgba(255,255,255,0.03); border: 1px solid var(--divider); border-radius: 16px; padding: 28px 28px; }
-        .case-stat .num { font-size: clamp(40px, 4.4vw, 67px); font-weight: 900; letter-spacing: -0.03em; line-height: 1; margin-bottom: 8px; }
-        .case-stat .label { font-size: 15px; color: var(--muted); line-height: 1.5; }
-        @media (max-width: 900px) {
-            .case-card { grid-template-columns: 1fr; padding: 40px 28px; gap: 32px; }
-        }
-
-        /* ── HOW IT WORKS ── */
-        .process-section {
-            background: rgba(8,8,10,0.62);
-            border-top: 1px solid var(--divider);
-            border-bottom: 1px solid var(--divider);
-        }
-        .process-grid {
-            max-width: 1320px; margin: 0 auto;
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;
-        }
-        .process-step {
-            background: rgba(255,255,255,0.025);
-            border: 1px solid var(--divider);
-            border-radius: 20px; padding: 36px 32px;
-            transition: border-color .25s, background .25s;
-        }
-        .process-step:hover { border-color: rgba(26,189,225,0.3); background: rgba(255,255,255,0.045); }
-        .process-icon {
-            width: 48px; height: 48px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, rgba(26,189,225,0.12), rgba(20,86,164,0.08));
-            border: 1px solid rgba(26,189,225,0.25);
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 20px;
-            transition: transform .25s cubic-bezier(.16,1,.3,1), background .25s;
-        }
-        .process-step:hover .process-icon {
-            transform: translateY(-2px);
-            background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.12));
-        }
-        .process-icon svg {
-            width: 24px; height: 24px;
-            stroke: var(--c); fill: none;
-            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-        }
-        .process-num {
-            font-size: 13.5px; font-weight: 800;
-            letter-spacing: 0.18em; color: var(--c);
-            margin-bottom: 18px;
-        }
-        .process-step h3 {
-            font-size: 22px; font-weight: 800;
-            letter-spacing: -0.02em; color: var(--white);
-            margin-bottom: 14px; line-height: 1.2;
-        }
-        .process-step p { font-size: 16.5px; color: var(--muted); line-height: 1.65; }
-        .process-step strong { color: var(--white); font-weight: 600; }
-
-        .guarantee-card {
-            max-width: 1320px; margin: 40px auto 0;
-            background: linear-gradient(135deg, rgba(26,189,225,0.08) 0%, rgba(20,86,164,0.06) 100%);
-            border: 1px solid rgba(26,189,225,0.25);
-            border-radius: 20px; padding: 36px 40px;
-            display: grid; grid-template-columns: 1fr auto;
-            gap: 32px; align-items: center;
-        }
-        .guarantee-card .badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            font-size: 12.5px; font-weight: 800;
-            letter-spacing: 0.16em; text-transform: uppercase;
-            color: var(--c);
-            background: rgba(26,189,225,0.1);
-            border: 1px solid rgba(26,189,225,0.25);
-            border-radius: 999px; padding: 5px 12px; margin-bottom: 14px;
-        }
-        .guarantee-card h3 {
-            font-size: clamp(22px, 2.6vw, 28px);
-            font-weight: 800; letter-spacing: -0.02em;
-            color: var(--white); margin-bottom: 8px; line-height: 1.2;
-        }
-        .guarantee-card p {
-            font-size: 17px; color: var(--muted);
-            line-height: 1.6; max-width: 620px;
-        }
-        .guarantee-card .guarantee-icon {
-            width: 80px; height: 80px; border-radius: 50%;
-            background: linear-gradient(135deg, rgba(26,189,225,0.18), rgba(20,86,164,0.18));
-            border: 1px solid rgba(26,189,225,0.3);
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .guarantee-card .guarantee-icon svg { width: 38px; height: 38px; stroke: var(--c); fill: none; stroke-width: 2; }
-
-        @media (max-width: 768px) {
-            .process-grid { grid-template-columns: 1fr; }
-            .guarantee-card { grid-template-columns: 1fr; padding: 28px 24px; }
-        }
+        @media (max-width: 700px) { .sticky-cta { left: 16px; right: 16px; bottom: 16px; } .sticky-cta a { width: 100%; justify-content: center; padding: 16px; } }
 
         /* ── SHOWCASE GRID (icon cards) ── */
         .showcase-section {
@@ -1242,7 +1128,7 @@
     "url": "https://www.gostaffify.com/",
     "logo": "https://www.gostaffify.com/assets/brand/logo-blue.svg",
     "image": "https://www.gostaffify.com/assets/brand/og-image.png",
-    "description": "Workforce infrastructure for growing service businesses. We place vetted full-time remote talent (video editors, executive admins, customer service reps, sales) and run the operations layer behind them.",
+    "description": "Workforce infrastructure for growing service businesses. We place vetted full-time remote talent (video editors, executive admins, sales VAs, sales) and run the operations layer behind them.",
     "foundingDate": "2023",
     "founder": { "@type": "Person", "name": "Paul Chareth", "url": "https://www.gostaffify.com/about/" },
     "address": { "@type": "PostalAddress", "addressLocality": "Miami", "addressRegion": "FL", "addressCountry": "US" },
@@ -1262,7 +1148,7 @@
     "knowsAbout": [
       "Virtual assistant staffing",
       "Remote talent placement",
-      "Customer service outsourcing",
+      "Outbound sales",
       "B2B email outreach",
       "Video editing services",
       "Executive admin services"
@@ -1296,16 +1182,16 @@
 {
   "@context": "https://schema.org",
   "@type": "Service",
-  "@id": "https://www.gostaffify.com/admins/#service",
-  "name": "Executive Admin Staffing",
-  "url": "https://www.gostaffify.com/admins/",
+  "@id": "https://www.gostaffify.com/sales/#service",
+  "name": "Outbound Sales, Built &amp; Staffed",
+  "url": "https://www.gostaffify.com/sales/",
   "image": "https://www.gostaffify.com/assets/brand/og-image.png",
   "provider": { "@id": "https://www.gostaffify.com/#organization" },
-  "serviceType": "Remote executive assistant placement",
-  "description": "Dedicated full-time executive admins handling inbox, calls, scheduling, CRM, and client communications. Trained on your tone and SOPs.",
+  "serviceType": "Remote outbound sales representative placement",
+  "description": "Dedicated full-time sales VAs trained on your tone and SOPs. Handles tickets, live chat, phone support, complaint resolution, retention and renewal touches.",
   "areaServed": { "@type": "Country", "name": "United States" },
-  "audience": { "@type": "BusinessAudience", "audienceType": "Service business owners, agencies, real estate professionals" },
-  "offers": { "@type": "Offer", "priceCurrency": "USD", "price": "12", "priceSpecification": { "@type": "UnitPriceSpecification", "price": 12, "priceCurrency": "USD", "unitText": "HOUR" } }
+  "audience": { "@type": "BusinessAudience", "audienceType": "Service businesses with growing outbound sales volume" },
+  "offers": { "@type": "Offer", "priceCurrency": "USD", "price": "11", "priceSpecification": { "@type": "UnitPriceSpecification", "price": 11, "priceCurrency": "USD", "unitText": "HOUR" } }
 }
 </script>
     <script type="application/ld+json">
@@ -1314,7 +1200,7 @@
   "@type": "BreadcrumbList",
   "itemListElement": [
     { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.gostaffify.com/" },
-    { "@type": "ListItem", "position": 2, "name": "Executive Admins", "item": "https://www.gostaffify.com/admins/" }
+    { "@type": "ListItem", "position": 2, "name": "Sales VAs", "item": "https://www.gostaffify.com/sales/" }
   ]
 }
 </script>
@@ -1337,9 +1223,9 @@
   {
     "@context": "https://schema.org",
     "@type": "SiteNavigationElement",
-    "name": "Customer Service Reps",
-    "url": "https://www.gostaffify.com/csr/",
-    "description": "Outsource customer service to a dedicated full-time CSR from $11/hr."
+    "name": "Sales VAs",
+    "url": "https://www.gostaffify.com/sales/",
+    "description": "Outsource outbound sales to a dedicated sales VA from $11/hr."
   },
   {
     "@context": "https://schema.org",
@@ -1381,29 +1267,29 @@
         <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
         <ul class="nav-links">
         <li><a href="/editors/">Video Editors</a></li>
-        <li><a href="/admins/" class="active">Exec Admins</a></li>
+        <li><a href="/admins/">Exec Admins</a></li>
         <li><a href="/csr/">CSR</a></li>
-        <li><a href="/sales/">Sales</a></li>
+        <li><a href="/sales/" class="active">Sales</a></li>
         <li><a href="/case-studies/">Case Studies</a></li>
         <li><a href="/about/">About</a></li>
     </ul>
         <a href="/apply/" class="nav-apply">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a>
-        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins" class="nav-cta">Get Started</a>
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=sales" class="nav-cta">Get Started</a>
         <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
 </nav>
 
 <div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
     <ul>
             <li><a href="/editors/">Video Editors</a></li>
-            <li><a href="/admins/" class="active">Exec Admins</a></li>
+            <li><a href="/admins/">Exec Admins</a></li>
             <li><a href="/csr/">CSR</a></li>
-            <li><a href="/sales/">Sales</a></li>
+            <li><a href="/sales/" class="active">Sales</a></li>
             <li><a href="/case-studies/">Case Studies</a></li>
-                <li><a href="/about/">About</a></li>
+            <li><a href="/about/">About</a></li>
 
-                <li><a href="/apply/">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a></li>
+            <li><a href="/apply/">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a></li>
     </ul>
-    <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins" class="nav-mobile-cta">Get Started</a>
+    <a href="https://calendly.com/go-staffify/discovery-call?utm_content=sales" class="nav-mobile-cta">Get Started</a>
 </div>
 
     <!-- HERO -->
@@ -1415,23 +1301,23 @@
     <div class="aurora"></div>
 
         <div class="hero-media">
-            <img src="/assets/img/admin-hero.jpg" alt="A Staffify executive admin managing communications at her desk" fetchpriority="high">
+            <img src="/assets/img/campaigns-hero.jpg" alt="A Staffify sales VA working an outbound pipeline" fetchpriority="high">
         </div>
 
-        <div class="hero-badge"><span class="badge-dot"></span> Executive Admin Staffing</div>
+        <div class="hero-badge"><span class="badge-dot"></span> Outbound Sales, Built &amp; Staffed</div>
 
         <div class="hero-headline">
-            <div class="text-row hero-pre"><span class="text-inner" style="--d:.35s">Full-time. Dedicated. Yours.</span></div>
-            <div class="text-row hero-main"><span class="text-inner" style="--d:.5s">Your Business Needs</span></div>
-            <div class="text-row hero-accent-line"><span class="text-inner" style="--d:.65s"><span class="g-text">a Dedicated Voice.</span></span></div>
+            <div class="text-row hero-pre"><span class="text-inner" style="--d:.35s">Infrastructure first. Then the team.</span></div>
+            <div class="text-row hero-main"><span class="text-inner" style="--d:.5s">We build the sales machine.</span></div>
+            <div class="text-row hero-accent-line"><span class="text-inner" style="--d:.65s"><span class="g-text">Then we staff it.</span></span></div>
         </div>
 
         <div class="hero-rule-new"></div>
 
-        <p class="hero-sub-new">Stop routing calls through voicemail and missing opportunities. Your Staffify admin handles communications end-to-end. Your clients always reach a real, professional voice.</p>
+        <p class="hero-sub-new">A proven, automated outbound funnel: verified lists, email, LinkedIn, and database reactivation, all feeding one live pipeline. Then a dedicated sales VA to run it every day, in your time zone. You get the system and the person, for a fraction of a US SDR.</p>
 
         <div class="hero-ctas-new">
-            <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins" class="btn-mag">Hire an Admin →</a>
+            <a href="https://calendly.com/go-staffify/discovery-call?utm_content=sales" class="btn-mag">Get Your Sales VA →</a>
             <a href="#how-it-works" class="btn-ghost-new">See How It Works ↓</a>
         </div>
     </section>
@@ -1463,328 +1349,147 @@
     </section>
 
     <!-- VALUE CARDS -->
-    <section class="costs-section">
-        <p class="section-eyebrow reveal">Built Around Your Business</p>
-        <h2 class="section-title reveal">What You <span class="g">Get Back</span></h2>
-        <p class="section-sub reveal">From day one, your dedicated full-time Executive Admin steps in and takes everything off your plate, so you can run your business instead of being buried in it.</p>
+        <style>
+      .sv-wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+      .offer2{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:44px}
+      .offer2.cols3{grid-template-columns:repeat(3,1fr)}
+      .offer2-card{background:var(--card,#0d0d0d);border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:40px 36px}
+      .offer2-card.hl{border-color:rgba(26,189,225,.35);box-shadow:0 0 60px rgba(26,189,225,.08)}
+      .offer2-num{font-size:12.5px;font-weight:800;letter-spacing:.12em;color:var(--c,#1abde1);margin-bottom:18px}
+      .offer2-card h3{font-size:clamp(22px,2.4vw,30px);font-weight:800;letter-spacing:-.02em;margin-bottom:14px}
+      .offer2-card>p{font-size:17px;line-height:1.65;color:var(--muted,#a1a1a6);margin-bottom:22px}
+      .offer2-list{list-style:none;display:flex;flex-direction:column;gap:12px;padding:0;margin:0}
+      .offer2-list li{display:flex;gap:11px;align-items:flex-start;font-size:15.5px;color:rgba(255,255,255,.82);line-height:1.5}
+      .offer2-list li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c,#1abde1);margin-top:8px;flex-shrink:0}
+      @media(max-width:820px){.offer2,.offer2.cols3{grid-template-columns:1fr}}
+      .dash-sec{background:rgba(8,8,10,.55);border-top:1px solid rgba(26,189,225,.07)}
+      .dash-frame{max-width:1120px;margin:44px auto 0;background:#0a0d12;border:1px solid rgba(255,255,255,.08);border-radius:20px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.6)}
+      .dash-bar{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.015)}
+      .dash-dot{width:9px;height:9px;border-radius:50%;background:#2fd27a;box-shadow:0 0 8px #2fd27a}
+      .dash-bar b{font-size:13px;letter-spacing:.02em}
+      .dash-bar .live{margin-left:auto;font-size:11px;color:#2fd27a;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+      .dash-body{padding:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+      .kpi{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px 18px}
+      .kpi .n{font-size:26px;font-weight:800;letter-spacing:-.02em}
+      .kpi .n.c{color:var(--c,#1abde1)}
+      .kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#6e6e73;margin-top:4px}
+      .dash-cols{grid-column:1/-1;display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+      .dpanel{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px 18px}
+      .dpanel h4{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#9ba1ab;margin-bottom:14px;font-weight:700}
+      .funnel-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+      .funnel-row .fl{width:78px;font-size:12px;color:#9ba1ab;flex-shrink:0}
+      .funnel-bar{height:22px;border-radius:6px;background:linear-gradient(90deg,#1abde1,#1456a4);display:flex;align-items:center;padding:0 9px;font-size:11.5px;font-weight:700;color:#04222b;min-width:44px}
+      .kanban{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .kcol .kh{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6e6e73;margin-bottom:8px}
+      .kcard{background:rgba(26,189,225,.06);border:1px solid rgba(26,189,225,.18);border-radius:8px;padding:9px 11px;margin-bottom:7px}
+      .kcard .kn{font-weight:700;font-size:12.5px}
+      .kcard .km{color:#9ba1ab;font-size:11px;margin-top:2px}
+      .dash-note{max-width:600px;margin:24px auto 0;text-align:center;font-size:14px;color:#6e6e73}
+      @media(max-width:820px){.dash-body{grid-template-columns:repeat(2,1fr)}.dash-cols{grid-template-columns:1fr}}
+    </style>
 
-        <div class="cards-grid">
-            <div class="card reveal">
-                <div class="card-num g">01</div>
-                <h3>A Full-Time Team Member</h3>
-                <p>This isn't a gig worker or a contractor. Your Executive Admin is dedicated to you. Full-time, fully invested, and fully aligned with how your business operates.</p>
-            </div>
-            <div class="card reveal">
-                <div class="card-num g">02</div>
-                <h3>Near-Native English. Client-Ready.</h3>
-                <p>Every client-facing admin is screened to a near-native English standard with a neutral accent and a polished written register. Emails, calls, and Slack threads all read like they came from inside your office. Your clients experience the same quality every time.</p>
-            </div>
-            <div class="card reveal">
-                <div class="card-num g">03</div>
-                <h3>Zero Hiring Headaches</h3>
-                <p>We source, screen, and place. You just show up to the intro call. No job posts, no vetting, no awkward trial periods. Your admin hits the ground running from week one.</p>
-            </div>
+    <!-- ═══ THE OFFER: build + staff ═══ -->
+    <section class="section">
+      <div class="sv-wrap" style="text-align:center">
+        <div class="section-eyebrow">The offer</div>
+        <h2 class="section-title">You get the system <span class="g">and</span> the person.</h2>
+        <p class="section-sub" style="max-width:660px;margin:0 auto">Most shops sell you software or a warm body. We build the machine, then put a trained operator behind it.</p>
+      </div>
+      <div class="sv-wrap">
+        <div class="offer2 reveal">
+          <div class="offer2-card">
+            <div class="offer2-num">01 &mdash; THE INFRASTRUCTURE</div>
+            <h3>We build the funnel</h3>
+            <p>Before anyone reaches out, the machine is built: the lists, the messaging, the follow-up, all wired into one live pipeline.</p>
+            <ul class="offer2-list">
+              <li>Triple-verified prospect lists, built to your ICP</li>
+              <li>Email, LinkedIn, and database reactivation sequences</li>
+              <li>Reply-first messaging, no spray-and-pray</li>
+              <li>One pipeline where every touch and reply lands</li>
+            </ul>
+          </div>
+          <div class="offer2-card hl">
+            <div class="offer2-num">02 &mdash; THE PERSON</div>
+            <h3>We staff it</h3>
+            <p>A dedicated sales VA runs the machine every day, so it actually gets worked instead of sitting idle.</p>
+            <ul class="offer2-list">
+              <li>Works every reply and warms the interested ones</li>
+              <li>Books qualified meetings onto your calendar</li>
+              <li>Keeps the pipeline moving, in your time zone</li>
+              <li>Backed by our lifetime replacement guarantee</li>
+            </ul>
+          </div>
         </div>
+      </div>
     </section>
 
-    <!-- COST CALCULATOR — what's admin work costing the founder? -->
-    <section class="calc-section" style="padding-bottom:0;">
-        <p class="section-eyebrow reveal">The Hidden Tax</p>
-        <h2 class="section-title reveal">Founders doing admin work <span class="g">kills growth.</span></h2>
-        <p class="section-sub reveal" style="margin-bottom:40px;">Every hour you spend on inbox triage, calendar logistics, or CRM cleanup is an hour you can&rsquo;t spend on the work that grows the business.</p>
-
-        
+    <!-- ═══ DASHBOARD + PIPELINE SNIPPET ═══ -->
+    <section class="section dash-sec">
+      <div class="sv-wrap" style="text-align:center">
+        <div class="section-eyebrow">Full visibility</div>
+        <h2 class="section-title">You watch it happen.<br>Your VA makes it happen.</h2>
+        <p class="section-sub" style="max-width:660px;margin:0 auto">Every list built, every touch sent, every reply and booked meeting, in one live view. You never have to wonder what your outbound is actually doing.</p>
+      </div>
+      <div class="dash-frame reveal">
+        <div class="dash-bar"><span class="dash-dot"></span><b>Campaign Command Center</b><span class="live">&#9679; Live</span></div>
+        <div class="dash-body">
+          <div class="kpi"><div class="n c">1,240</div><div class="l">Prospects in play</div></div>
+          <div class="kpi"><div class="n">3,880</div><div class="l">Touches sent</div></div>
+          <div class="kpi"><div class="n c">96</div><div class="l">Replies worth chasing</div></div>
+          <div class="kpi"><div class="n c">18</div><div class="l">Meetings booked</div></div>
+          <div class="dash-cols">
+            <div class="dpanel">
+              <h4>Campaign funnel &middot; found &rarr; booked</h4>
+              <div class="funnel-row"><span class="fl">Found</span><div class="funnel-bar" style="width:100%">1,240</div></div>
+              <div class="funnel-row"><span class="fl">Contacted</span><div class="funnel-bar" style="width:82%">1,015</div></div>
+              <div class="funnel-row"><span class="fl">Replied</span><div class="funnel-bar" style="width:31%">384</div></div>
+              <div class="funnel-row"><span class="fl">Warm</span><div class="funnel-bar" style="width:12%">96</div></div>
+              <div class="funnel-row"><span class="fl">Booked</span><div class="funnel-bar" style="width:6%">18</div></div>
+            </div>
+            <div class="dpanel">
+              <h4>Pipeline &middot; where the money is</h4>
+              <div class="kanban">
+                <div class="kcol"><div class="kh">Interested</div>
+                  <div class="kcard"><div class="kn">Maxfield RE</div><div class="km">replied &middot; needs pricing</div></div>
+                  <div class="kcard"><div class="kn">Vermont Life</div><div class="km">callback friday</div></div>
+                </div>
+                <div class="kcol"><div class="kh">Booked</div>
+                  <div class="kcard"><div class="kn">Harbor Studio</div><div class="km">tue 2:00pm</div></div>
+                  <div class="kcard"><div class="kn">Northgate</div><div class="km">wed 10:30am</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dash-note">A snapshot of the real Command Center your VA works out of. Figures illustrative.</p>
     </section>
 
-    <!-- INLINE CTA after calculator -->
-    <div class="inline-cta reveal">
-        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins&amp;utm_campaign=mid-calc" class="inline-cta-btn">Stop being the bottleneck →</a>
-        <p class="inline-cta-microcopy"><strong>No pitch, no obligation.</strong> If we're not a fit, we'll tell you in the first 5 minutes.</p>
-    </div>
-
-    <!-- CASE STUDY teaser -->
-    <section class="case-section" style="padding-top:24px;">
-        <p class="section-eyebrow reveal">Case Study</p>
-        <h2 class="section-title reveal">Real <span class="g">Numbers</span></h2>
-        <p class="section-sub reveal" style="margin-bottom:48px;">How one real estate marketing studio reclaimed 60 founder-hours every month with a single Staffify executive admin.</p>
-
-        <div class="case-card reveal">
-            <div class="case-left">
-                <p class="case-context">Real Estate Marketing Studio &middot; Anonymized composite</p>
-                <h3 class="case-headline">The studio reclaimed <span class="g">60 founder-hours</span> a month within 30 days.</h3>
-                <p class="case-quote">&ldquo;I didn't realize how much of my day was being eaten by 'quick' agent texts and shoot logistics until somebody else was handling it. By month two I was on real estate showings to grow the business, not in my inbox apologizing for late deliveries.&rdquo;</p>
-                <a href="/case-studies/operator-time-reclaimed/" class="case-cta">Read the full case study <span aria-hidden="true">→</span></a>
-            </div>
-            <div class="case-stats">
-                <div class="case-stat">
-                    <div class="num g">60 hrs</div>
-                    <div class="label">of founder time reclaimed every month</div>
-                </div>
-                <div class="case-stat">
-                    <div class="num g">~$10K</div>
-                    <div class="label">of growth-time recaptured per month</div>
-                </div>
-                <div class="case-stat">
-                    <div class="num g">30 days</div>
-                    <div class="label">to fully embedded in the workflow</div>
-                </div>
-            </div>
+    <!-- ═══ HOW IT WORKS ═══ -->
+    <section class="section">
+      <div class="sv-wrap" style="text-align:center">
+        <div class="section-eyebrow">How it works</div>
+        <h2 class="section-title">Live in about two weeks.</h2>
+      </div>
+      <div class="sv-wrap">
+        <div class="offer2 cols3 reveal">
+          <div class="offer2-card"><div class="offer2-num">STEP 1</div><h3>Discovery call</h3><p>15 minutes. We learn your offer, your ideal customer, and what a good meeting looks like.</p></div>
+          <div class="offer2-card"><div class="offer2-num">STEP 2</div><h3>We build the funnel</h3><p>Lists, sequences, and pipeline, wired up and tested before a single message goes out.</p></div>
+          <div class="offer2-card"><div class="offer2-num">STEP 3</div><h3>Your VA runs it</h3><p>A dedicated rep works the machine daily and books meetings onto your calendar. You take the calls.</p></div>
         </div>
+      </div>
     </section>
 
-    <!-- HOW IT WORKS -->
-    <section class="process-section">
-        <p class="section-eyebrow reveal">How It Works</p>
-        <h2 class="section-title reveal">How we find the <span class="g">right admin</span> for you</h2>
-        <p class="section-sub reveal" style="margin-bottom:48px;">An admin lives inside your business. We can't just send a resume and call it done. Every Staffify executive admin runs through the same process so the person sitting in your inbox actually sounds like you, thinks like you, and protects your time the way you would.</p>
-
-        <div class="process-grid">
-            <div class="process-step reveal">
-                <div class="process-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16" y2="16"/><line x1="7.5" y1="9.5" x2="13.5" y2="9.5"/><line x1="7.5" y1="12" x2="11" y2="12"/></svg>
-                </div>
-                <div class="process-num">STEP 01</div>
-                <h3>We map what's actually eating your day</h3>
-                <p>Before we touch a candidate, we walk through <strong>your inbox, calendar, CRM, and project tracker</strong> with you. We document the repetitive workflows, the recurring decisions, and the "quick things" that aren't quick. That becomes the spec we hire against.</p>
-            </div>
-
-            <div class="process-step reveal">
-                <div class="process-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1.5"/><polyline points="9 14 11 16 15 12"/></svg>
-                </div>
-                <div class="process-num">STEP 02</div>
-                <h3>Test tasks on your real workflows</h3>
-                <p>Candidates run <strong>real test tasks on your actual systems</strong>: inbox triage, calendar coordination, a sample CRM cleanup, drafting a follow-up email in your voice. You see the work product before they ever step into the role. If it's not your voice, they don't continue.</p>
-            </div>
-
-            <div class="process-step reveal">
-                <div class="process-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
-                </div>
-                <div class="process-num">STEP 03</div>
-                <h3>Full vetting on approved candidates</h3>
-                <p>Approved admins run through a traditional recruiting layer: <strong>near-native English fluency screening (written and verbal), neutral-accent calibration, reference checks, hardware and internet speed verification, and working-hours alignment with your time zone</strong>. Every placement passes a live communication assessment before they touch your clients.</p>
-            </div>
-
-            <div class="process-step reveal">
-                <div class="process-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><line x1="3" y1="20" x2="21" y2="20"/><rect x="5" y="14" width="3" height="6"/><rect x="10.5" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/><polyline points="4 11 9 9 14 6 19 3"/><polyline points="16 3 19 3 19 6"/></svg>
-                </div>
-                <div class="process-num">STEP 04</div>
-                <h3>Onboarding plan modeled upfront</h3>
-                <p>We track <strong>how long each test task actually took</strong>, so by the time we recommend someone, you know not just how they perform but how much of your weekly admin load they can realistically absorb. You see the load-out before you commit.</p>
-            </div>
-        </div>
-
-        <div class="guarantee-card reveal">
-            <div>
-                <div class="badge"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1abde1;"></span>Lifetime Replacement Guarantee</div>
-                <h3>If they aren't the right fit, we replace them. Free.</h3>
-                <p>If the admin we place underperforms, ghosts, or just isn't the right voice in your inbox for any reason, we source and place a replacement at <strong>no additional cost, no offset to your monthly rate, no cushion fees</strong>. The risk is on us, not you.</p>
-            </div>
-            <div class="guarantee-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            </div>
-        </div>
-
-        <!-- INLINE CTA after guarantee -->
-        <div class="inline-cta reveal">
-            <div class="call-preview">
-                <div class="call-preview-item">
-                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
-                    <span>We look at <strong>where your day is actually going</strong> right now</span>
-                </div>
-                <div class="call-preview-item">
-                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
-                    <span>We map an <strong>admin profile</strong> built for your specific workflows</span>
-                </div>
-                <div class="call-preview-item">
-                    <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
-                    <span>You get an honest read. <strong>If we're not a fit, we'll say so.</strong></span>
-                </div>
-            </div>
-            <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins&amp;utm_campaign=mid-guarantee" class="inline-cta-btn">Book a 25-min call →</a>
-            <p class="inline-cta-microcopy">No pitch deck. No obligation. No upsell.</p>
-        </div>
-    </section>
-
-    <!-- CAPABILITY SHOWCASE -->
-    <section class="showcase-section">
-        <p class="section-eyebrow reveal">What They Handle</p>
-        <h2 class="section-title reveal" style="margin-bottom:16px;">Everything That <span class="g">Eats Your Day</span></h2>
-        <p class="section-sub reveal">Seven core responsibilities. One dedicated full-time admin. Total coverage of your client-facing operations.</p>
-
-        <div class="showcase-grid">
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">📧</span>
-                <p class="showcase-stat">Inbox Zero, Every Day</p>
-                <h3>Email Management</h3>
-                <p>Your admin owns the inbox. Replies, follow-ups, and full client threads handled professionally, so nothing falls through and no client feels ignored.</p>
-            </div>
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">📅</span>
-                <p class="showcase-stat">Zero Back-and-Forth</p>
-                <h3>Appointment Scheduling</h3>
-                <p>Bookings confirmed, reminders sent, reschedules handled. Your calendar fills itself. You just show up prepared.</p>
-            </div>
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">📞</span>
-                <p class="showcase-stat">Always Available</p>
-                <h3>Phone Management</h3>
-                <p>Calls answered, messages taken, issues escalated appropriately. Your clients always reach a real, professional voice. Never a voicemail.</p>
-            </div>
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">💬</span>
-                <p class="showcase-stat">Every Inquiry Handled</p>
-                <h3>Customer Service</h3>
-                <p>Questions, concerns, complaints. Your admin handles them with professionalism and care. Happy clients stay longer and refer more.</p>
-            </div>
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">⭐</span>
-                <p class="showcase-stat">More 5-Star Reviews</p>
-                <h3>Review Collection</h3>
-                <p>Your admin follows up with satisfied clients at exactly the right moment and asks for reviews, consistently growing your reputation on autopilot.</p>
-            </div>
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">📊</span>
-                <p class="showcase-stat">No Deal Falls Through</p>
-                <h3>CRM Management</h3>
-                <p>Pipelines stay clean, contacts stay updated, and follow-ups never get missed. Your CRM finally reflects what's actually happening in your business.</p>
-            </div>
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">💰</span>
-                <p class="showcase-stat">Revenue You're Leaving Behind</p>
-                <h3>Upselling</h3>
-                <p>Your admin identifies the right moments to present additional services, turning existing clients into bigger clients without you having to ask.</p>
-            </div>
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">🧾</span>
-                <p class="showcase-stat">Money In, On Time</p>
-                <h3>Invoicing &amp; Payments</h3>
-                <p>Invoices go out the same day work is delivered. Payment follow-ups happen on cadence without you reminding anyone. Your AR shrinks while you stay focused on the actual business.</p>
-            </div>
-
-            <div class="showcase-card reveal">
-                <span class="showcase-icon">🤝</span>
-                <p class="showcase-stat">Nothing Slips Between Teams</p>
-                <h3>Vendor Coordination</h3>
-                <p>Contractors, photographers, editors, freelancers. Your admin keeps them aligned, paid, and on schedule. You stop being the middle of every chain of "where is this?"</p>
-            </div>
-
-        </div>
-
-        <div style="text-align:center; margin-top:60px;" class="reveal">
-            <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins" class="btn-primary">Book a Discovery Call</a>
-        </div>
-    </section>
-
-    <!-- STAT BANNER -->
-    <div class="stat-banner">
-        <div class="stat-row reveal">
-            <div class="stat-item">
-                <div class="stat-value">$12/hr</div>
-                <div class="stat-label">Starting Rate<br>Full-Time</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">95%</div>
-                <div class="stat-label">Client Satisfaction<br>Maintained</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">2 wks</div>
-                <div class="stat-label">Avg Ramp<br>Time</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">$0</div>
-                <div class="stat-label">Payroll &amp;<br>HR Fees</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MYTH VS REALITY -->
-    <section class="myths-section">
-        <p class="section-eyebrow reveal">The Truth About Delegation</p>
-        <h2 class="section-title reveal" style="margin-bottom:60px;">Myth vs. <span class="g">Reality</span></h2>
-
-        <div class="myths-grid reveal">
-            <div class="myth-header">
-                <div>Myth</div>
-                <div>Reality</div>
-            </div>
-
-            <div class="myth-row">
-                <div class="myth-side">
-                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
-                    <p class="myth-text">&ldquo;An admin can&rsquo;t really speak for me.&rdquo;</p>
-                </div>
-                <div class="reality-side">
-                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
-                    <p class="reality-text">Our admins are trained on your brand voice and communication style. Clients receive the same quality, tone, and professionalism they expect from you &mdash; they won&rsquo;t notice a difference.</p>
-                </div>
-            </div>
-
-            <div class="myth-row">
-                <div class="myth-side">
-                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
-                    <p class="myth-text">&ldquo;It&rsquo;ll take months to get up to speed.&rdquo;</p>
-                </div>
-                <div class="reality-side">
-                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
-                    <p class="reality-text">Most admins are fully operational within 2 weeks. Our onboarding process is built to move fast &mdash; we handle the ramp-up so you&rsquo;re not babysitting a learning curve.</p>
-                </div>
-            </div>
-
-            <div class="myth-row">
-                <div class="myth-side">
-                    <div class="myth-label"><span class="myth-icon red">&times;</span> Myth</div>
-                    <p class="myth-text">&ldquo;I&rsquo;ll lose control of my communications.&rdquo;</p>
-                </div>
-                <div class="reality-side">
-                    <div class="reality-label"><span class="myth-icon blue">&check;</span> Reality</div>
-                    <p class="reality-text">You set the rules. They execute. You have full visibility into every conversation and maintain final approval on anything that matters. Delegation doesn&rsquo;t mean disappearing.</p>
-                </div>
-            </div>
-
-        </div>
-    </section>
-
-    <!-- SOFT-YES LEAD MAGNET -->
-    <section class="soft-yes reveal">
-        <div class="soft-yes-card">
-            <div>
-                <div class="soft-yes-label">Not ready to talk yet?</div>
-                <h2>The 30-Day ROI List.</h2>
-                <p>Ten specific things to delegate this month, ordered by hours saved and dollars reclaimed. What "done" actually looks like for each one. Yours free.</p>
-            </div>
-            <div>
-                <form class="soft-yes-form" id="softYesForm" novalidate>
-                    <input type="email" name="email" id="softYesEmail" placeholder="you@example.com" required autocomplete="email">
-                    <button type="submit" id="softYesBtn">Send me the list</button>
-                </form>
-                <p class="soft-yes-microcopy" id="softYesMicro">One email. No spam. Unsubscribe in one click.</p>
-                <div class="soft-yes-success" id="softYesSuccess">✓ Check your inbox in 30 seconds. The list is on the way.</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- OPERATIONS STRIP — what we do after the hire -->
     <section class="ops-strip">
         <div class="ops-strip-inner">
             <div class="ops-strip-eyebrow">After the hire</div>
             <h2 class="ops-strip-title">We don&rsquo;t just place. We operate around you.</h2>
 
-            <div class="ops-dash reveal" role="img" aria-label="Live productivity dashboard for an executive admin: 96 percent utilization, 71 percent core work, 4 hours 41 minutes of focus time, top apps, and an anomaly that was flagged and cleared by ops">
+            <div class="ops-dash reveal" role="img" aria-label="Live productivity dashboard for a outbound sales rep: 96 percent utilization, 71 percent core work, 4 hours 41 minutes of focus time, top support apps, and an anomaly that was flagged and cleared by ops">
                 <div class="ops-dash-head">
                     <div class="ops-dash-id">
-                        <span class="ods-avatar">CA</span>
-                        <span><span class="ods-name">Camille A.</span><span class="ods-role">Executive Admin &middot; Manila</span></span>
+                        <span class="ods-avatar">JR</span>
+                        <span><span class="ods-name">Joana R.</span><span class="ods-role">Sales VA &middot; Cebu</span></span>
                     </div>
                     <div class="ops-dash-meta"><span class="live-dot"></span>Live &middot; Today</div>
                 </div>
@@ -1814,17 +1519,17 @@
                         </div>
                     </div>
                     <div class="odt">
-                        <div class="odt-label">Focus time</div>
-                        <div class="odt-big">4:41</div>
-                        <div class="odt-sub">3 deep-work sessions &middot; 1:33 avg</div>
-                        <div class="odt-sub" style="color:var(--c);font-weight:600">Activity 41%</div>
+                        <div class="odt-label">Tickets today</div>
+                        <div class="odt-big">37<span>resolved</span></div>
+                        <div class="odt-sub">First-reply avg &middot; 4m 12s</div>
+                        <div class="odt-sub" style="color:var(--c);font-weight:600">CSAT 98%</div>
                     </div>
                     <div class="odt">
                         <div class="odt-label">Top apps today</div>
                         <ul class="odt-apps">
-                            <li><div class="row"><span>Google Workspace</span><span>38%</span></div><div class="track"><i style="width:38%"></i></div></li>
-                            <li><div class="row"><span>HubSpot CRM</span><span>22%</span></div><div class="track"><i style="width:22%"></i></div></li>
-                            <li><div class="row"><span>Slack</span><span>16%</span></div><div class="track"><i style="width:16%"></i></div></li>
+                            <li><div class="row"><span>Zendesk</span><span>41%</span></div><div class="track"><i style="width:41%"></i></div></li>
+                            <li><div class="row"><span>Gmail</span><span>24%</span></div><div class="track"><i style="width:24%"></i></div></li>
+                            <li><div class="row"><span>Slack</span><span>14%</span></div><div class="track"><i style="width:14%"></i></div></li>
                         </ul>
                     </div>
                 </div>
@@ -1874,8 +1579,8 @@
 
     <!-- CLOSER -->
     <section class="closer-section bg-pulse">
-        <p class="closer-text reveal">The best business owners don&rsquo;t answer every email. They hire someone who does it better. <strong class="shimmer-text">That&rsquo;s exactly what Staffify builds for you.</strong></p>
-        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins" class="btn-primary btn-pulse reveal">Get Your Executive Admin</a>
+        <p class="closer-text reveal">The best businesses don&rsquo;t answer every ticket themselves. They build a customer experience that runs whether they&rsquo;re online or not. <strong class="shimmer-text">That&rsquo;s exactly what Staffify builds for you.</strong></p>
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=sales" class="btn-primary btn-pulse reveal">Get Your Sales VA</a>
     </section>
 
     <footer>
@@ -1889,7 +1594,7 @@
             <a href="/editors/">Video Editors</a>
             <a href="/admins/">Exec Admins</a>
             <a href="/csr/">CSR</a>
-            <a href="/sales/">Sales</a>
+            <a href="/sales/" class="active">Sales</a>
             <a href="/case-studies/">Case Studies</a>
             <a href="/blog/">Blog</a>
             <a href="/about/">About</a>
@@ -1899,53 +1604,19 @@
         <p class="f-copy">&copy; 2026 Staffify LLC. All rights reserved. &middot; <a href="/privacy/" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms/" style="color:inherit;text-decoration:underline;">Terms</a></p>
     </footer>
 
-    <!-- CALENDLY POPUP WIDGET (intercepts all Calendly links on this page) -->
+    <!-- CALENDLY POPUP WIDGET -->
     <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
     <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
 
     <!-- STICKY FLOATING CTA -->
     <div class="sticky-cta" id="stickyCta" aria-hidden="true">
-        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=admins&amp;utm_campaign=sticky">
+        <a href="https://calendly.com/go-staffify/discovery-call?utm_content=sales&amp;utm_campaign=sticky">
             <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm0 16H5V9h14v11z"/></svg>
             Book a 25-min call
         </a>
     </div>
 
     <script>
-        // ─── SOFT-YES LEAD MAGNET (playbook capture) ───
-        (function() {
-            var form = document.getElementById('softYesForm');
-            if (!form) return;
-            var emailInput = document.getElementById('softYesEmail');
-            var btn = document.getElementById('softYesBtn');
-            var micro = document.getElementById('softYesMicro');
-            var success = document.getElementById('softYesSuccess');
-
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                var email = emailInput.value.trim();
-                if (!email || email.indexOf('@') < 0) { emailInput.focus(); return; }
-                btn.disabled = true;
-                btn.textContent = 'Sending…';
-                try {
-                    var r = await fetch('/api/subscribe/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: email, source: 'admins-page-softyes', website: '' })
-                    });
-                    if (!r.ok) throw new Error('http ' + r.status);
-                    form.style.display = 'none';
-                    micro.style.display = 'none';
-                    success.classList.add('show');
-                } catch (err) {
-                    btn.disabled = false;
-                    btn.textContent = 'Send me the list';
-                    micro.textContent = 'Hmm, that didn\'t go through. Try again or email hello@gostaffify.com.';
-                    micro.style.color = '#fca5a5';
-                }
-            });
-        })();
-
         // ─── CALENDLY POPUP INTERCEPTOR ───
         document.addEventListener('click', function(e) {
             var a = e.target.closest && e.target.closest('a');
@@ -1969,19 +1640,42 @@
             if (!el) return;
             var threshold = 800;
             function check() {
-                if (window.scrollY > threshold) {
-                    el.classList.add('visible');
-                    el.setAttribute('aria-hidden', 'false');
-                } else {
-                    el.classList.remove('visible');
-                    el.setAttribute('aria-hidden', 'true');
-                }
+                if (window.scrollY > threshold) { el.classList.add('visible'); el.setAttribute('aria-hidden','false'); }
+                else { el.classList.remove('visible'); el.setAttribute('aria-hidden','true'); }
             }
             window.addEventListener('scroll', check, { passive: true });
             check();
         })();
 
-        
+        // ─── SOFT-YES LEAD MAGNET ───
+        (function() {
+            var form = document.getElementById('softYesForm');
+            if (!form) return;
+            var emailInput = document.getElementById('softYesEmail');
+            var btn = document.getElementById('softYesBtn');
+            var micro = document.getElementById('softYesMicro');
+            var success = document.getElementById('softYesSuccess');
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var email = emailInput.value.trim();
+                if (!email || email.indexOf('@') < 0) { emailInput.focus(); return; }
+                btn.disabled = true; btn.textContent = 'Sending…';
+                try {
+                    var r = await fetch('/api/subscribe/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, source: 'sales-page-softyes', website: '' })
+                    });
+                    if (!r.ok) throw new Error('http ' + r.status);
+                    form.style.display = 'none'; micro.style.display = 'none';
+                    success.classList.add('show');
+                } catch (err) {
+                    btn.disabled = false; btn.textContent = 'Send me the list';
+                    micro.textContent = "Hmm, that didn't go through. Try again or email hello@gostaffify.com.";
+                    micro.style.color = '#fca5a5';
+                }
+            });
+        })();
 
         // Scroll reveal
         const observer = new IntersectionObserver((entries) => {
