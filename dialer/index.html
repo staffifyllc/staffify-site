@@ -440,8 +440,8 @@
     var links=[];
     links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.google.com/search?q='+qs+'">Google them</a>');
     links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.google.com/maps/search/'+qs+'">Maps &amp; reviews</a>');
-    if(L.website){ links.push('<a class="ammo" target="_blank" rel="noopener" href="'+esc(L.website)+'">Their site</a>'); }
-    else { links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(loc+' official website')+'">Find their site</a>'); }
+    // No site link here when the lead panel already shows one, otherwise the same URL appears twice.
+    if(!L.website){ links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(loc+' official website')+'">Find their site</a>'); }
     var liq=encodeURIComponent(L.name||L.company||'');
     links.push('<a class="ammo" target="_blank" rel="noopener" href="https://www.linkedin.com/search/results/all/?keywords='+liq+'">LinkedIn</a>');
     return '<div class="lbl">Arm yourself</div><div class="ammorow">'+links.join('')+'</div>';
@@ -494,7 +494,7 @@
     if(MOTION==='websites'){
       if(L.industry) rows.push(['Business', esc(L.industry), '']);
       if(L.website) rows.push(['Their site',
-        '<a href="'+esc(L.website)+'" target="_blank" rel="noopener">'+esc(siteHost(L.website))+'</a>'+
+        esc(siteHost(L.website))+
         '<a class="sitebtn" href="'+esc(L.website)+'" target="_blank" rel="noopener">Open their site \u2197</a>', '']);
     } else if(L.role){
       rows.push([L.priorCall?'They asked for':'Open role', '<span class="v big">'+esc(L.role)+'</span>', 'big']);
