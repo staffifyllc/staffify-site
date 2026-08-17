@@ -46,6 +46,7 @@
   button:disabled{opacity:.55;cursor:default;transform:none}
   .fineprint{font-size:12.5px;color:#6e6e73}
   .err{grid-column:1/-1;color:#ff8a8a;font-size:13.5px;display:none}
+  input.bad,select.bad,textarea.bad{border-color:#ff6b6b;box-shadow:0 0 0 3px rgba(255,107,107,.16)}
   /* success */
   .done{display:none;text-align:center;padding:30px 0}
   .done .check{width:66px;height:66px;border-radius:50%;background:rgba(47,210,122,.12);border:1px solid rgba(47,210,122,.4);
@@ -68,7 +69,7 @@
       <h1>Let&rsquo;s build your <span class="g">outbound machine.</span></h1>
       <p class="lede">Tell us what you sell and who you sell to. We&rsquo;ll come back with the plan for your funnel and the rep to run it. Takes about a minute.</p>
 
-      <form id="intakeForm">
+      <form id="intakeForm" novalidate>
         <div class="field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" required placeholder="Jane Doe"></div>
         <div class="field"><label for="email">Work email</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="jane@company.com"></div>
         <div class="field"><label for="company">Company</label><input id="company" name="company" type="text" autocomplete="organization" required placeholder="Company name"></div>
@@ -114,8 +115,20 @@
       var data={};
       new FormData(form).forEach(function(v,k){ data[k]=v; });
       data.source='sales-intake';
+      var labels={name:'your name',email:'a work email',company:'your company',phone:'a phone number',sell:'what you sell',target:'your ideal customer',stage:'where you are with outbound',notes:'your main goal'};
       var need=['name','email','company','phone','sell','target','stage','notes'];
-      for(var i=0;i<need.length;i++){ if(!data[need[i]] || !String(data[need[i]]).trim()){ err.textContent='Please fill in every field.'; err.style.display='block'; return; } }
+      [].forEach.call(form.elements, function(el){ if(el.classList) el.classList.remove('bad'); });
+      for(var i=0;i<need.length;i++){
+        var v=(data[need[i]]||'').trim();
+        var el=document.getElementById(need[i]);
+        var emailOk = need[i]!=='email' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        if(!v || !emailOk){
+          err.textContent = !v ? ('Please add '+labels[need[i]]+'.') : 'Please enter a valid work email.';
+          err.style.display='block';
+          if(el){ el.classList.add('bad'); try{el.focus({preventScroll:true});}catch(_){el.focus();} el.scrollIntoView({block:'center',behavior:'smooth'}); }
+          return;
+        }
+      }
       btn.disabled=true; btn.textContent='Sending…';
       try{
         var r=await fetch('/api/intake/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -129,6 +142,8 @@
         err.textContent='Something went wrong. Please try again, or email hello@gostaffify.com.'; err.style.display='block';
       }
     });
+    form.addEventListener('input', function(e){ if(e.target.classList) e.target.classList.remove('bad'); err.style.display='none'; });
+    form.addEventListener('change', function(e){ if(e.target.classList) e.target.classList.remove('bad'); err.style.display='none'; });
   })();
   </script>
 </body>
