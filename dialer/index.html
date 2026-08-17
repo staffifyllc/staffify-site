@@ -1078,6 +1078,7 @@
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Skip to next lead <span class="kbd">&#8594;</span></button>'+
         posRow()+
+        siteBtn(L)+
         textBlock(L)+
         (L.email?'<button class="emailbtn" id="emailbtn">Email them &middot; '+esc(L.email)+'</button>':'')+
         bookBlock(L)+
