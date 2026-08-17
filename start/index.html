@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get to Building | Staffify</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--c:#1abde1;--c4:#1456a4;--bg:#000;--card:#0d0d0d;--white:#fff;--muted:#a1a1a6;--hair:rgba(255,255,255,.09)}
+  html{background:#000}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--white);line-height:1.6;
+    background:radial-gradient(58rem 46rem at 3% 4%,rgba(26,189,225,.10),transparent 55%),
+               radial-gradient(56rem 58rem at 97% 30%,rgba(20,86,164,.13),transparent 55%),#000;
+    background-attachment:fixed;min-height:100vh;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:660px;margin:0 auto;padding:38px 22px 90px}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:44px}
+  .top img{height:26px;width:auto;display:block}
+  .top a.back{font-size:13px;color:var(--muted);text-decoration:none}
+  .top a.back:hover{color:#fff}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--c);margin-bottom:14px}
+  h1{font-size:clamp(30px,5vw,44px);font-weight:900;letter-spacing:-.03em;line-height:1.05;margin-bottom:14px}
+  h1 .g{background:linear-gradient(105deg,#1abde1,#1456a4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .lede{font-size:17px;color:var(--muted);max-width:520px;margin-bottom:40px}
+  form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field{display:flex;flex-direction:column;gap:7px}
+  .field.full{grid-column:1/-1}
+  label{font-size:13px;font-weight:600;color:rgba(255,255,255,.82)}
+  label .opt{color:#6e6e73;font-weight:500}
+  input,select,textarea{font-family:inherit;font-size:15px;color:#fff;background:var(--card);border:1px solid var(--hair);
+    border-radius:12px;padding:13px 15px;width:100%;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+  input::placeholder,textarea::placeholder{color:#5c5c61}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--c);box-shadow:0 0 0 3px rgba(26,189,225,.14)}
+  select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236e6e73' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center;padding-right:38px}
+  textarea{resize:vertical;min-height:92px}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .submit{grid-column:1/-1;margin-top:8px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  button{font-family:inherit;font-size:16px;font-weight:700;color:#04222b;background:linear-gradient(180deg,#5fe0fa,#1abde1);
+    border:none;border-radius:999px;padding:15px 32px;cursor:pointer;transition:transform .12s,box-shadow .2s;box-shadow:0 10px 30px -8px rgba(26,189,225,.5)}
+  button:hover{transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  button:disabled{opacity:.55;cursor:default;transform:none}
+  .fineprint{font-size:12.5px;color:#6e6e73}
+  .err{grid-column:1/-1;color:#ff8a8a;font-size:13.5px;display:none}
+  /* success */
+  .done{display:none;text-align:center;padding:30px 0}
+  .done .check{width:66px;height:66px;border-radius:50%;background:rgba(47,210,122,.12);border:1px solid rgba(47,210,122,.4);
+    display:grid;place-items:center;margin:0 auto 24px;font-size:30px;color:#2fd27a}
+  .done h2{font-size:clamp(26px,4vw,36px);font-weight:900;letter-spacing:-.02em;margin-bottom:14px}
+  .done p{font-size:17px;color:var(--muted);max-width:440px;margin:0 auto 26px}
+  .done a.home{font-size:14px;color:var(--c);text-decoration:none;font-weight:600}
+  @media(max-width:560px){form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a href="/sales/"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify"></a>
+      <a class="back" href="/sales/">&larr; Back</a>
+    </div>
+
+    <div id="formView">
+      <div class="eyebrow">Get to building</div>
+      <h1>Let&rsquo;s build your <span class="g">outbound machine.</span></h1>
+      <p class="lede">Tell us what you sell and who you sell to. We&rsquo;ll come back with the plan for your funnel and the rep to run it. Takes about a minute.</p>
+
+      <form id="intakeForm" novalidate>
+        <div class="field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" required placeholder="Jane Doe"></div>
+        <div class="field"><label for="email">Work email</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="jane@company.com"></div>
+        <div class="field"><label for="company">Company</label><input id="company" name="company" type="text" autocomplete="organization" placeholder="Company name"></div>
+        <div class="field"><label for="phone">Phone <span class="opt">(optional)</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+1 555 123 4567"></div>
+        <div class="field full"><label for="sell">What do you sell?</label><input id="sell" name="sell" type="text" placeholder="e.g. real estate media, SaaS onboarding, roofing"></div>
+        <div class="field full"><label for="target">Who&rsquo;s your ideal customer?</label><input id="target" name="target" type="text" placeholder="e.g. listing agents in the Southeast doing $2M+ GCI"></div>
+        <div class="field full"><label for="stage">Where are you with outbound today?</label>
+          <select id="stage" name="stage">
+            <option value="">Choose one…</option>
+            <option>Not doing any yet</option>
+            <option>I do it myself, on and off</option>
+            <option>I have someone on it, inconsistent</option>
+            <option>I use an agency / tool</option>
+            <option>I have a team, want more output</option>
+          </select>
+        </div>
+        <div class="field full"><label for="notes">Anything else we should know? <span class="opt">(optional)</span></label><textarea id="notes" name="notes" placeholder="Goals, timeline, current numbers, whatever helps."></textarea></div>
+        <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="err" id="err"></div>
+        <div class="submit">
+          <button type="submit" id="submitBtn">Get to building &rarr;</button>
+          <span class="fineprint">No spam. A real person reviews every submission.</span>
+        </div>
+      </form>
+    </div>
+
+    <div class="done" id="doneView">
+      <div class="check">&#10003;</div>
+      <h2>You&rsquo;re in. We&rsquo;re on it.</h2>
+      <p>We&rsquo;ve got your details and someone from the team will reach out shortly with the plan for your funnel and next steps.</p>
+      <a class="home" href="/sales/">&larr; Back to Staffify</a>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var form=document.getElementById('intakeForm');
+    var btn=document.getElementById('submitBtn');
+    var err=document.getElementById('err');
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      err.style.display='none';
+      var data={};
+      new FormData(form).forEach(function(v,k){ data[k]=v; });
+      data.source='sales-intake';
+      if(!data.name || !data.email){ err.textContent='Please add your name and email.'; err.style.display='block'; return; }
+      btn.disabled=true; btn.textContent='Sending…';
+      try{
+        var r=await fetch('/api/intake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        if(!r.ok){ throw new Error('bad'); }
+        try{ if(window.va) window.va('event',{name:'sales_intake_submit'}); }catch(_){}
+        document.getElementById('formView').style.display='none';
+        document.getElementById('doneView').style.display='block';
+        window.scrollTo(0,0);
+      }catch(_){
+        btn.disabled=false; btn.textContent='Get to building →';
+        err.textContent='Something went wrong. Please try again, or email hello@gostaffify.com.'; err.style.display='block';
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
