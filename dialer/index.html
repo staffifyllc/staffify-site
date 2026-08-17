@@ -386,6 +386,20 @@
         /* the card itself steps back so the panels inside it come forward */
         .card { background:rgba(255,255,255,0.016); }
 
+
+        /* Section headers, sized to actually lead a section. 13.5px uppercase still read as
+           fine print, which is not what was asked for twice. Tracking eases off as size goes up,
+           because wide letter-spacing on larger uppercase starts to look stretched. */
+        .lbl { font-size:17px !important; letter-spacing:.07em !important; font-weight:800 !important;
+               margin:34px 0 14px !important; color:var(--cyan) !important; }
+        .cbwrap .cbhead { font-size:15px !important; letter-spacing:.07em !important; }
+        .lead-panel .lp-row .k { font-size:13px !important; letter-spacing:.07em !important; }
+        .gstep { font-size:13.5px !important; letter-spacing:.08em !important; }
+        .txtprev span { font-size:12.5px !important; }
+        .prov .ps b { font-size:13px !important; }
+        /* the first header in a pane should not push the pane open */
+        .cardmain > .lbl:first-child, .cardside > .lbl:first-child, .cardtools > .lbl:first-child { margin-top:0 !important; }
+
     </style>
 </head>
 <body>
