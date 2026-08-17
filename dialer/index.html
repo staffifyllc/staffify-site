@@ -918,9 +918,9 @@
   function refreshStaffifyQuote(){ Array.prototype.forEach.call(document.querySelectorAll('.qtier:not(.fqprod)'),function(b){ b.classList.toggle('on', (+b.getAttribute('data-tier'))===tierIdx(quoteHires)); }); var hv=document.getElementById('qhval'); if(hv)hv.textContent=quoteHires; var qo=document.getElementById('qout'); if(qo)qo.innerHTML=quoteOut(); }
 
   // Foundry commission: 30% on a website deal, 10% on an AI automation deal. Rep sets the deal
-  // size (websites default to the $1,499 portfolio-build price; standard is $4,995).
+  // size (websites: Paul confirmed 2026-08-15, $995 to build plus $49 a month to keep it live).
   var FOUNDRY_PRODUCTS=[{key:'website',label:'Website',rate:0.30},{key:'ai',label:'AI automation',rate:0.10}];
-  var fqProd=0, fqAmt=1499;
+  var fqProd=0, fqAmt=995;
   function fqOut(){
     var p=FOUNDRY_PRODUCTS[fqProd];
     var el=document.getElementById('fqamt'); if(el){ fqAmt=parseInt(String(el.value).replace(/[^0-9]/g,''),10)||0; }
@@ -928,7 +928,7 @@
     return '<div class="qrow"><span>Deal &middot; '+esc(p.label)+'</span><b>$'+fqAmt.toLocaleString()+'</b></div>'+
       '<div class="qrow"><span>Your '+Math.round(p.rate*100)+'% commission</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
       '<div class="qguard">'+(p.key==='website'
-        ? 'Website build. Portfolio price $1,499, standard $4,995. You keep 30% of what closes.'
+        ? 'Website build. $995 to build, then $49 a month to keep it live. You keep 30% of what closes.'
         : 'AI automation build. You keep 10% of the deal. Set the deal size above.')+'</div>';
   }
   function renderFoundryQuote(){
