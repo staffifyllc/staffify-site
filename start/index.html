@@ -68,15 +68,15 @@
       <h1>Let&rsquo;s build your <span class="g">outbound machine.</span></h1>
       <p class="lede">Tell us what you sell and who you sell to. We&rsquo;ll come back with the plan for your funnel and the rep to run it. Takes about a minute.</p>
 
-      <form id="intakeForm" novalidate>
+      <form id="intakeForm">
         <div class="field"><label for="name">Your name</label><input id="name" name="name" type="text" autocomplete="name" required placeholder="Jane Doe"></div>
         <div class="field"><label for="email">Work email</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="jane@company.com"></div>
-        <div class="field"><label for="company">Company</label><input id="company" name="company" type="text" autocomplete="organization" placeholder="Company name"></div>
-        <div class="field"><label for="phone">Phone <span class="opt">(optional)</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+1 555 123 4567"></div>
-        <div class="field full"><label for="sell">What do you sell?</label><input id="sell" name="sell" type="text" placeholder="e.g. real estate media, SaaS onboarding, roofing"></div>
-        <div class="field full"><label for="target">Who&rsquo;s your ideal customer?</label><input id="target" name="target" type="text" placeholder="e.g. listing agents in the Southeast doing $2M+ GCI"></div>
+        <div class="field"><label for="company">Company</label><input id="company" name="company" type="text" autocomplete="organization" required placeholder="Company name"></div>
+        <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel" required placeholder="+1 555 123 4567"></div>
+        <div class="field full"><label for="sell">What do you sell?</label><input id="sell" name="sell" type="text" required placeholder="e.g. real estate media, SaaS onboarding, roofing"></div>
+        <div class="field full"><label for="target">Who&rsquo;s your ideal customer?</label><input id="target" name="target" type="text" required placeholder="e.g. listing agents in the Southeast doing $2M+ GCI"></div>
         <div class="field full"><label for="stage">Where are you with outbound today?</label>
-          <select id="stage" name="stage">
+          <select id="stage" name="stage" required>
             <option value="">Choose one…</option>
             <option>Not doing any yet</option>
             <option>I do it myself, on and off</option>
@@ -85,7 +85,7 @@
             <option>I have a team, want more output</option>
           </select>
         </div>
-        <div class="field full"><label for="notes">Anything else we should know? <span class="opt">(optional)</span></label><textarea id="notes" name="notes" placeholder="Goals, timeline, current numbers, whatever helps."></textarea></div>
+        <div class="field full"><label for="notes">What&rsquo;s your main goal?</label><textarea id="notes" name="notes" required placeholder="e.g. 15 booked meetings a month, revive old leads, hit $X in new pipeline."></textarea></div>
         <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
         <div class="err" id="err"></div>
         <div class="submit">
@@ -114,7 +114,8 @@
       var data={};
       new FormData(form).forEach(function(v,k){ data[k]=v; });
       data.source='sales-intake';
-      if(!data.name || !data.email){ err.textContent='Please add your name and email.'; err.style.display='block'; return; }
+      var need=['name','email','company','phone','sell','target','stage','notes'];
+      for(var i=0;i<need.length;i++){ if(!data[need[i]] || !String(data[need[i]]).trim()){ err.textContent='Please fill in every field.'; err.style.display='block'; return; } }
       btn.disabled=true; btn.textContent='Sending…';
       try{
         var r=await fetch('/api/intake/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
