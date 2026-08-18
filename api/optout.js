@@ -33,11 +33,24 @@ async function scanOpenPhone(limit, debug) {
             if (!cr.ok) continue;
             const convos = (await cr.json()).data || [];
             diag.convos += convos.length;
+            if (!diag.convoShape && convos[0]) diag.convoShape = Object.keys(convos[0]);
+            if (!diag.convoSample && convos[0]) diag.convoSample = JSON.parse(JSON.stringify(convos[0]));
             for (const c of convos) {
                 const participant = (c.participants || []).find(p => p && p !== c.phoneNumber) || (c.participants || [])[0];
                 if (!participant) continue;
-                const mUrl = `${OP}/messages?phoneNumberId=${encodeURIComponent(pn)}&participants[]=${encodeURIComponent(participant)}&maxResults=20`;
-                const mr = await fetch(mUrl, { headers });
+                // OpenPhone wants participants as a real array. Different stacks encode that differently,
+                // so try the documented forms rather than assuming one.
+                const forms = [
+                    `participants[]=${encodeURIComponent(participant)}`,
+                    `participants=${encodeURIComponent(participant)}`,
+                    `participants%5B0%5D=${encodeURIComponent(participant)}`,
+                ];
+                let mr = null, mUrl = '';
+                for (const f of forms) {
+                    mUrl = `${OP}/messages?phoneNumberId=${encodeURIComponent(pn)}&${f}&maxResults=20`;
+                    mr = await fetch(mUrl, { headers });
+                    if (mr.ok) { if (!diag.workingForm) diag.workingForm = f.split('=')[0]; break; }
+                }
                 diag.msgCalls = (diag.msgCalls || 0) + 1;
                 if (!mr.ok) {
                     diag.msgFail = (diag.msgFail || 0) + 1;
