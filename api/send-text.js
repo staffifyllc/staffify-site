@@ -17,6 +17,7 @@
 import { openIdentity, redis, readBody } from './_auth.js';
 import { slackNotify } from './_slack.js';
 import { configured as hsReady, findOrCreateContact, logText } from './_hubspot.js';
+import { isOptedOut } from './_optout.js';
 
 const OP_API = 'https://api.openphone.com/v1/messages';
 const SENT_KEY = 'text:sent';        // hash phone -> when/who, so a lead is never texted twice
@@ -86,6 +87,11 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, sent: false, reason: 'no_role' });
     }
     if (motion !== 'websites' && !firstName(rep)) return res.status(200).json({ ok: true, sent: false, reason: 'no_rep_name' });
+
+    // Consent first. Someone who said STOP is never texted again, on any number, for any campaign.
+    if (await isOptedOut({ phone: to })) {
+        return res.status(200).json({ ok: true, sent: false, reason: 'opted_out' });
+    }
 
     // Never text the same lead twice.
     try {

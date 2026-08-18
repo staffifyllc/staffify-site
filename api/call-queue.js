@@ -6,6 +6,7 @@
 // Auth: logged-in rep (session) or admin token. Env: SALES_PORTAL_BASE, SALES_PORTAL_TOKEN.
 
 import { openIdentity, readBody } from './_auth.js';
+import { optedOutSet, last10 } from './_optout.js';
 
 const BASE = process.env.SALES_PORTAL_BASE;
 const TOKEN = process.env.SALES_PORTAL_TOKEN;
@@ -51,6 +52,25 @@ export default async function handler(req, res) {
         const n = req.query.n ? `&n=${encodeURIComponent(req.query.n)}` : '';
         const r = await fetch(`${BASE}?action=${encodeURIComponent(action)}&t=${encodeURIComponent(TOKEN)}${n}`);
         const j = await r.json().catch(() => ({}));
+
+        // Someone who said STOP withdrew consent for every channel, not just texting, so they are
+        // stripped out of the call lists before a rep ever sees them. Filtering here rather than in
+        // the browser means it holds even if the page is stale or the engine serves them again.
+        if (action === 'list' && j && (j.websites || j.staffing)) {
+            try {
+                const { numbers } = await optedOutSet();
+                if (numbers.size) {
+                    let removed = 0;
+                    for (const k of ['websites', 'staffing']) {
+                        if (!Array.isArray(j[k])) continue;
+                        const before = j[k].length;
+                        j[k] = j[k].filter(l => !numbers.has(last10(l && l.phone)));
+                        removed += before - j[k].length;
+                    }
+                    if (removed) j.suppressed = removed;
+                }
+            } catch (e) { /* never block the queue on the consent check */ }
+        }
         return res.status(r.status).json(j);
     } catch (e) {
         return res.status(502).json({ error: 'portal_error', detail: String(e.message || e) });
