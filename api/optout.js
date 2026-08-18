@@ -8,66 +8,84 @@
 // The scan exists because opt-outs arrive as ordinary inbound texts. Carriers stop the SMS at their
 // end, but nothing stops us CALLING them tomorrow, which is the part that gets a company in trouble.
 
-import { adminAuthorized, currentRep, readBody } from './_auth.js';
+import { adminAuthorized, currentRep, readBody, redis } from './_auth.js';
 import { optOut, isOptedOut, optOutList, looksLikeOptOut, last10 } from './_optout.js';
-import { redis } from './_auth.js';
 
+const SEEN = 'optout:scan:seen';
 const OP = 'https://api.openphone.com/v1';
 
-async function scanOpenPhone(limit, debug) {
+export async function scanOpenPhone(limit, debug) {
+    // Resumable and incremental. A conversation is only re-read when it has new activity, and the
+    // sweep remembers where it got to, so a big inbox is worked through across runs instead of
+    // restarting on the same first few threads every time and never reaching the rest.
     const started = Date.now();
     const BUDGET_MS = Number(process.env.OPTOUT_SCAN_BUDGET_MS || 20000);
     const key = process.env.OPENPHONE_API_KEY;
     if (!key) return { ok: false, reason: 'openphone_not_configured' };
     const headers = { Authorization: key, 'Content-Type': 'application/json' };
+
+    let seen = {};
+    try { seen = (await redis.hgetall(SEEN)) || {}; } catch { seen = {}; }
+    const touched = {};
+
     try {
         const nr = await fetch(`${OP}/phone-numbers`, { headers });
         if (!nr.ok) return { ok: false, reason: 'phone_numbers_' + nr.status };
         const numJson = await nr.json();
         const numbers = ((numJson.data || [])).map(n => n.id).filter(Boolean);
-        const diag = { numbers: numbers.length, numberLabels: (numJson.data || []).map(n => n.number || n.name || n.id), convos: 0, incoming: 0, samples: [] };
+        const diag = { numbers: numbers.length, convos: 0, checked: 0, skipped: 0, incoming: 0, samples: [] };
         if (!numbers.length) return { ok: false, reason: 'no_numbers', diag };
 
         const found = [];
+        let out = false;
         for (const pn of numbers) {
-            // Conversations first, then the recent messages in each, so one sweep sees every thread.
-            const cr = await fetch(`${OP}/conversations?phoneNumberId=${encodeURIComponent(pn)}&maxResults=100`, { headers });
-            if (!cr.ok) continue;
-            const convos = (await cr.json()).data || [];
-            diag.convos += convos.length;
-            if (!diag.convoShape && convos[0]) diag.convoShape = Object.keys(convos[0]);
-            if (!diag.convoSample && convos[0]) diag.convoSample = JSON.parse(JSON.stringify(convos[0]));
-            for (const c of convos) {
-                if (Date.now() - started > BUDGET_MS) { diag.timedOut = true; break; }
-                const participant = (c.participants || []).find(p => p && p !== c.phoneNumber) || (c.participants || [])[0];
-                if (!participant) continue;
-                // OpenPhone takes participants as a plain repeated param. Verified against the live API:
-                // participants[] and participants[0] both 400 with "Expected array".
-                const mUrl = `${OP}/messages?phoneNumberId=${encodeURIComponent(pn)}&participants=${encodeURIComponent(participant)}&maxResults=20`;
-                const mr = await fetch(mUrl, { headers });
-                diag.msgCalls = (diag.msgCalls || 0) + 1;
-                if (!mr.ok) {
-                    diag.msgFail = (diag.msgFail || 0) + 1;
-                    if (!diag.msgError) diag.msgError = mr.status + ' ' + (await mr.text().catch(() => '')).slice(0, 180);
-                    continue;
-                }
-                const msgs = (await mr.json()).data || [];
-                diag.msgSeen = (diag.msgSeen || 0) + msgs.length;
-                if (!diag.dirSample && msgs.length) diag.dirSample = msgs.slice(0, 3).map(m => ({ direction: m.direction, text: String(m.text || m.body || '').slice(0, 30) }));
-                for (const m of msgs) {
-                    const dir = (m.direction || '').toLowerCase();
-                    if (dir === 'incoming') {
-                        diag.incoming++;
-                        if (diag.samples.length < 8) diag.samples.push({ dir, text: String(m.text || m.body || '').slice(0, 40), from: m.from || '' });
+            let pageToken = null;
+            do {
+                const cu = `${OP}/conversations?phoneNumberId=${encodeURIComponent(pn)}&maxResults=100` +
+                           (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
+                const cr = await fetch(cu, { headers });
+                if (!cr.ok) break;
+                const cj = await cr.json();
+                const convos = cj.data || [];
+                pageToken = cj.nextPageToken || (cj.totalItems && convos.length === 100 ? cj.nextPageToken : null) || null;
+                diag.convos += convos.length;
+
+                for (const c of convos) {
+                    if (Date.now() - started > BUDGET_MS) { diag.timedOut = out = true; break; }
+                    const stamp = String(c.lastActivityAt || c.updatedAt || '');
+                    // Nothing has happened in this thread since we last read it, so there is no new reply to find.
+                    if (c.id && seen[c.id] && seen[c.id] === stamp) { diag.skipped++; continue; }
+
+                    const participant = (c.participants || []).find(p => p && p !== c.phoneNumber) || (c.participants || [])[0];
+                    if (!participant) { if (c.id) touched[c.id] = stamp; continue; }
+
+                    // OpenPhone takes participants as a plain repeated param. Verified against the live
+                    // API: participants[] and participants[0] both 400 with "Expected array".
+                    const mUrl = `${OP}/messages?phoneNumberId=${encodeURIComponent(pn)}` +
+                                 `&participants=${encodeURIComponent(participant)}&maxResults=20`;
+                    const mr = await fetch(mUrl, { headers });
+                    diag.checked++;
+                    if (!mr.ok) {
+                        diag.msgFail = (diag.msgFail || 0) + 1;
+                        if (!diag.msgError) diag.msgError = mr.status + ' ' + (await mr.text().catch(() => '')).slice(0, 180);
+                        continue; // not marked seen, so a failed read is retried next run
                     }
-                    if (dir !== 'incoming') continue;
-                    if (!looksLikeOptOut(m.text || m.body || '')) continue;
-                    found.push({ phone: m.from || participant, text: (m.text || m.body || '').slice(0, 120), at: m.createdAt || '' });
-                    break;
+                    const msgs = (await mr.json()).data || [];
+                    for (const m of msgs) {
+                        if ((m.direction || '').toLowerCase() !== 'incoming') continue;
+                        diag.incoming++;
+                        const body = m.text || m.body || '';
+                        if (diag.samples.length < 8) diag.samples.push({ text: String(body).slice(0, 40), from: m.from || '' });
+                        if (!looksLikeOptOut(body)) continue;
+                        found.push({ phone: m.from || participant, text: String(body).slice(0, 120), at: m.createdAt || '' });
+                        break;
+                    }
+                    if (c.id) touched[c.id] = stamp;
+                    if (limit && found.length >= limit) { out = true; break; }
                 }
-                if (limit && found.length >= limit) break;
-            }
-            if (limit && found.length >= limit) break;
+                if (out) break;
+            } while (pageToken);
+            if (out) break;
         }
 
         const added = [];
@@ -76,13 +94,22 @@ async function scanOpenPhone(limit, debug) {
             const r = await optOut({ phone: f.phone, reason: 'replied stop', source: 'openphone scan', text: f.text });
             if (r.ok && !already) added.push({ phone: r.phone, text: f.text });
         }
+        // Only recorded once the threads were genuinely read, so a crash mid-sweep re-reads rather than skips.
+        if (Object.keys(touched).length) { try { await redis.hset(SEEN, touched); } catch {} }
+
         return {
-            ok: true, scanned: found.length, newlySuppressed: added.length, added,
+            ok: true,
+            scanned: found.length,
+            newlySuppressed: added.length,
+            added,
+            threadsRead: diag.checked,
+            threadsUnchanged: diag.skipped,
             incomplete: !!diag.timedOut,
-            note: diag.timedOut ? 'Hit the time budget. Run it again to continue through the remaining threads.' : undefined,
+            note: diag.timedOut ? 'Time budget reached. Run again to pick up where this left off.' : undefined,
             ...(debug ? { diag } : {}),
         };
     } catch (e) {
+        if (Object.keys(touched).length) { try { await redis.hset(SEEN, touched); } catch {} }
         return { ok: false, reason: 'error', detail: String((e && e.message) || e).slice(0, 160) };
     }
 }

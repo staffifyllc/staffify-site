@@ -8,6 +8,10 @@
       "schedule": "0 14 * * 1"
     },
     {
+      "path": "/api/cron-optout",
+      "schedule": "15 * * * *"
+    },
+    {
       "path": "/api/cron-nurture",
       "schedule": "30 14 * * *"
     },
