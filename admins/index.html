@@ -1463,6 +1463,34 @@
     </section>
 
     <!-- VALUE CARDS -->
+    <!-- ─── MEET CAMILLE (real admin video) ─── -->
+    <section class="meet-admin">
+      <style>
+        .meet-admin{padding:84px 24px;background:rgba(8,8,10,0.55);border-top:1px solid rgba(26,189,225,0.07)}
+        .ma-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.15fr 1fr;gap:56px;align-items:center}
+        .ma-frame{border-radius:20px;overflow:hidden;border:1px solid rgba(26,189,225,0.35);box-shadow:0 0 60px rgba(26,189,225,0.12),0 24px 60px rgba(0,0,0,0.5);background:#000;line-height:0}
+        .ma-frame video{width:100%;aspect-ratio:8/5;object-fit:cover;display:block}
+        .ma-eyebrow{font-size:12px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--c,#1abde1);margin-bottom:16px}
+        .ma-copy h2{font-size:clamp(26px,3vw,40px);font-weight:900;letter-spacing:-.02em;line-height:1.1;margin-bottom:18px;color:#fff}
+        .ma-copy p{font-size:18px;line-height:1.65;color:var(--muted,#a1a1a6)}
+        @media(max-width:860px){.ma-inner{grid-template-columns:1fr;gap:28px}}
+      </style>
+      <div class="ma-inner">
+        <div class="ma-frame">
+          <video controls preload="metadata" playsinline poster="/assets/img/camille-poster.jpg" src="/assets/video/camille-admin.mp4"></video>
+        </div>
+        <div class="ma-copy">
+          <div class="ma-eyebrow">Meet a real admin</div>
+          <h2>This is Camille.<br>She runs the day for founders like you.</h2>
+          <p>One of our executive admins, in her own words. A couple of minutes on how she works, what she takes off your plate, and why our clients keep her. Vetted, trained, and paid a living wage &mdash; which is why our people stay.</p>
+        </div>
+      </div>
+      <script>
+        (function(){var v=document.querySelector('.meet-admin video');if(!v)return;var f=false;
+          v.addEventListener('play',function(){if(f)return;f=true;window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};window.va('event',{name:'camille_video_play',data:{page:'/admins/'}});});})();
+      </script>
+    </section>
+
     <section class="costs-section">
         <p class="section-eyebrow reveal">Built Around Your Business</p>
         <h2 class="section-title reveal">What You <span class="g">Get Back</span></h2>
