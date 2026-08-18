@@ -14,15 +14,17 @@ import { redis } from './_auth.js';
 
 const OP = 'https://api.openphone.com/v1';
 
-async function scanOpenPhone(limit) {
+async function scanOpenPhone(limit, debug) {
     const key = process.env.OPENPHONE_API_KEY;
     if (!key) return { ok: false, reason: 'openphone_not_configured' };
     const headers = { Authorization: key, 'Content-Type': 'application/json' };
     try {
         const nr = await fetch(`${OP}/phone-numbers`, { headers });
         if (!nr.ok) return { ok: false, reason: 'phone_numbers_' + nr.status };
-        const numbers = ((await nr.json()).data || []).map(n => n.id).filter(Boolean);
-        if (!numbers.length) return { ok: false, reason: 'no_numbers' };
+        const numJson = await nr.json();
+        const numbers = ((numJson.data || [])).map(n => n.id).filter(Boolean);
+        const diag = { numbers: numbers.length, numberLabels: (numJson.data || []).map(n => n.number || n.name || n.id), convos: 0, incoming: 0, samples: [] };
+        if (!numbers.length) return { ok: false, reason: 'no_numbers', diag };
 
         const found = [];
         for (const pn of numbers) {
@@ -30,6 +32,7 @@ async function scanOpenPhone(limit) {
             const cr = await fetch(`${OP}/conversations?phoneNumberId=${encodeURIComponent(pn)}&maxResults=100`, { headers });
             if (!cr.ok) continue;
             const convos = (await cr.json()).data || [];
+            diag.convos += convos.length;
             for (const c of convos) {
                 const participant = (c.participants || []).find(p => p && p !== c.phoneNumber) || (c.participants || [])[0];
                 if (!participant) continue;
@@ -37,7 +40,12 @@ async function scanOpenPhone(limit) {
                 if (!mr.ok) continue;
                 const msgs = (await mr.json()).data || [];
                 for (const m of msgs) {
-                    if ((m.direction || '').toLowerCase() !== 'incoming') continue;
+                    const dir = (m.direction || '').toLowerCase();
+                    if (dir === 'incoming') {
+                        diag.incoming++;
+                        if (diag.samples.length < 8) diag.samples.push({ dir, text: String(m.text || m.body || '').slice(0, 40), from: m.from || '' });
+                    }
+                    if (dir !== 'incoming') continue;
                     if (!looksLikeOptOut(m.text || m.body || '')) continue;
                     found.push({ phone: m.from || participant, text: (m.text || m.body || '').slice(0, 120), at: m.createdAt || '' });
                     break;
@@ -53,7 +61,7 @@ async function scanOpenPhone(limit) {
             const r = await optOut({ phone: f.phone, reason: 'replied stop', source: 'openphone scan', text: f.text });
             if (r.ok && !already) added.push({ phone: r.phone, text: f.text });
         }
-        return { ok: true, scanned: found.length, newlySuppressed: added.length, added };
+        return { ok: true, scanned: found.length, newlySuppressed: added.length, added, ...(debug ? { diag } : {}) };
     } catch (e) {
         return { ok: false, reason: 'error', detail: String((e && e.message) || e).slice(0, 160) };
     }
@@ -83,7 +91,7 @@ export default async function handler(req, res) {
 
     if (req.query.scan) {
         if (!isAdmin) return res.status(401).json({ error: 'unauthorized' });
-        return res.status(200).json(await scanOpenPhone(Number(req.query.limit) || 0));
+        return res.status(200).json(await scanOpenPhone(Number(req.query.limit) || 0, !!req.query.debug));
     }
 
     if (!isAdmin) return res.status(401).json({ error: 'unauthorized' });
