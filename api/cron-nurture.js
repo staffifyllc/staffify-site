@@ -3,6 +3,7 @@
 
 import { Redis } from '@upstash/redis';
 import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
+import { optedOutSet } from './_optout.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -229,10 +230,19 @@ export default async function handler(req, res) {
     const result = { processed: 0, day3_sent: 0, day14_sent: 0, day45_sent: 0, removed: 0, errors: 0 };
 
     try {
+        // Anyone who has opted out is dropped before a single send is attempted. This covers people who
+        // replied STOP to a text as well as one-click email unsubscribes, because withdrawing consent
+        // applies to every channel and not just the one they happened to use.
+        const suppressed = await optedOutSet();
         const emails = await redis.zrange('nurture:active', 0, -1);
         for (const email of emails) {
             result.processed++;
             try {
+                if (suppressed.emails.has(String(email).trim().toLowerCase())) {
+                    await redis.zrem('nurture:active', email);
+                    result.suppressed = (result.suppressed || 0) + 1;
+                    continue;
+                }
                 const rec = await redis.hgetall(`nurture:${email}`);
                 if (!rec || !rec.enrolled_at) continue;
 

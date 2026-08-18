@@ -9,7 +9,7 @@
 // end, but nothing stops us CALLING them tomorrow, which is the part that gets a company in trouble.
 
 import { adminAuthorized, currentRep, readBody, redis } from './_auth.js';
-import { optOut, isOptedOut, optOutList, looksLikeOptOut, last10 } from './_optout.js';
+import { optOut, optOutEverywhere, isOptedOut, optOutList, looksLikeOptOut, last10 } from './_optout.js';
 
 const SEEN = 'optout:scan:seen';
 const OP = 'https://api.openphone.com/v1';
@@ -91,7 +91,7 @@ export async function scanOpenPhone(limit, debug) {
         const added = [];
         for (const f of found) {
             const already = await isOptedOut({ phone: f.phone });
-            const r = await optOut({ phone: f.phone, reason: 'replied stop', source: 'openphone scan', text: f.text });
+            const r = await optOutEverywhere({ phone: f.phone, reason: 'replied stop', source: 'openphone scan', text: f.text });
             if (r.ok && !already) added.push({ phone: r.phone, text: f.text });
         }
         // Only recorded once the threads were genuinely read, so a crash mid-sweep re-reads rather than skips.
@@ -128,7 +128,7 @@ export default async function handler(req, res) {
             if (b.email) await redis.srem('optout:emails', String(b.email).toLowerCase());
             return res.status(200).json({ ok: true, restored: d || b.email });
         }
-        const r = await optOut({ phone: b.phone, email: b.email, reason: b.reason || 'manual', source: 'manual' });
+        const r = await optOutEverywhere({ phone: b.phone, email: b.email, reason: b.reason || 'manual', source: 'manual' });
         return res.status(r.ok ? 200 : 400).json(r);
     }
 
