@@ -36,9 +36,17 @@ async function scanOpenPhone(limit, debug) {
             for (const c of convos) {
                 const participant = (c.participants || []).find(p => p && p !== c.phoneNumber) || (c.participants || [])[0];
                 if (!participant) continue;
-                const mr = await fetch(`${OP}/messages?phoneNumberId=${encodeURIComponent(pn)}&participants[]=${encodeURIComponent(participant)}&maxResults=20`, { headers });
-                if (!mr.ok) continue;
+                const mUrl = `${OP}/messages?phoneNumberId=${encodeURIComponent(pn)}&participants[]=${encodeURIComponent(participant)}&maxResults=20`;
+                const mr = await fetch(mUrl, { headers });
+                diag.msgCalls = (diag.msgCalls || 0) + 1;
+                if (!mr.ok) {
+                    diag.msgFail = (diag.msgFail || 0) + 1;
+                    if (!diag.msgError) diag.msgError = mr.status + ' ' + (await mr.text().catch(() => '')).slice(0, 180);
+                    continue;
+                }
                 const msgs = (await mr.json()).data || [];
+                diag.msgSeen = (diag.msgSeen || 0) + msgs.length;
+                if (!diag.dirSample && msgs.length) diag.dirSample = msgs.slice(0, 3).map(m => ({ direction: m.direction, text: String(m.text || m.body || '').slice(0, 30) }));
                 for (const m of msgs) {
                     const dir = (m.direction || '').toLowerCase();
                     if (dir === 'incoming') {
