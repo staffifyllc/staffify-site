@@ -174,13 +174,18 @@
     } else {
       rows='<div style="overflow-x:auto"><table><thead><tr><th>Client</th><th>Type</th><th class="num">Deal</th><th class="num">Rate</th><th class="num">Your commission</th><th>Status</th></tr></thead><tbody>'+
         deals.map(function(d){
-          var pill=d.status==='payable'?'<span class="pill paid">Payable</span>':(d.status==='paid_out'?'<span class="pill done">Paid out</span>':'<span class="pill pending">Pending</span>');
+          var pill=d.status==='payable'?'<span class="pill paid">Payable</span>'
+                  :(d.status==='paid_out'?'<span class="pill done">Paid out</span>'
+                  :(d.status==='clawed_back'?'<span class="pill pending" style="color:#ffb59a;background:rgba(226,90,60,.12);border-color:rgba(226,90,60,.35)">Clawed back</span>'
+                  :'<span class="pill pending">Pending</span>'));
           var sub=(d.status==='payable'&&d.paidDate)?'<div class="cl-sub">invoice paid '+niceDate(d.paidDate)+'</div>':(d.closeDate?'<div class="cl-sub">won '+niceDate(d.closeDate)+'</div>':'');
           return '<tr><td><div class="cl-name">'+esc(d.client)+'</div>'+sub+'</td>'+
             '<td><span class="pill type">'+esc(typeLabel(d.dealType))+'</span></td>'+
-            '<td class="num">'+money(d.base)+'</td>'+
+            '<td class="num">'+money(d.base)+
+              (d.fee>0?'<div class="cl-sub">'+money(d.gross)+' less '+money(d.fee)+' card fee</div>':'')+'</td>'+
             '<td class="num">'+esc(d.rate)+'%</td>'+
-            '<td class="num"><span class="money">'+money(d.commission)+'</span></td>'+
+            '<td class="num"><span class="money">'+money(d.commission)+'</span>'+
+              (d.clawback>0?'<div class="cl-sub" style="color:#ffb59a">'+money(d.clawback)+' reversed, client refunded</div>':'')+'</td>'+
             '<td>'+pill+'</td></tr>';
         }).join('')+'</tbody></table></div>';
     }
@@ -189,7 +194,7 @@
     var adminBtn=isAdmin?'<button class="toggle" id="admToggle">'+(ADMIN_OPEN?'Hide deal admin':'Deal admin (attribution + payouts)')+'</button>':'';
     var body=head+cards+
       '<div class="panel"><div class="ph"><h2>Your deals</h2><span class="meta">'+deals.length+' total</span></div>'+rows+qNote+'</div>'+
-      '<div class="note">Shown here: the onboarding commission on deals you closed, payable when the client\'s invoice is paid. The $1/hr residual, the 40% strong-month accelerator, and the $200 90-day retention bonus are coming next (they need placement hours from the billing side).</div>'+
+      '<div class="note">Commission is calculated after card processing fees, so a card payment nets a little less than an ACH or a cheque for the same invoice. If a client is refunded, the commission on that deal is reversed. Shown here: the onboarding commission on deals you closed, payable when the client\'s invoice is paid. The $1/hr residual, the 40% strong-month accelerator, and the $200 90-day retention bonus are coming next (they need placement hours from the billing side).</div>'+
       (adminBtn?'<div style="margin-top:20px">'+adminBtn+'</div><div id="admPanel"></div>':'');
     app.innerHTML=body;
     if(isAdmin){ document.getElementById('admToggle').onclick=function(){ ADMIN_OPEN=!ADMIN_OPEN; if(ADMIN_OPEN) loadAdmin(); else { ADMIN_DATA=null; render(j); } document.getElementById('admToggle').textContent=ADMIN_OPEN?'Hide deal admin':'Deal admin (attribution + payouts)'; }; if(ADMIN_OPEN) renderAdmin(); }

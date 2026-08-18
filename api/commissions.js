@@ -31,7 +31,17 @@ const FLAT_COMMISSION = { website: Number(process.env.FOUNDRY_COMMISSION || 300)
 const ACCEL_AFTER = Number(process.env.ACCEL_AFTER_DEALS || 5);  // 40% starts on the 6th close of a month
 const ACCEL_RATE = Number(process.env.ACCEL_RATE || 40);
 
+// Paul, 2026-08-14: commission is calculated NET of card processing fees, and a refund or chargeback
+// claws the commission back automatically. Fees are only applied when the payment actually went
+// through a card, so an ACH or a cheque is not docked a fee it never incurred.
+const FEE_PCT = Number(process.env.PROCESSING_FEE_PCT || 2.9);
+const FEE_FIXED = Number(process.env.PROCESSING_FEE_FIXED || 0.30);
+const CARD_METHOD = /card|credit|visa|master|amex|discover|stripe/i;
+
 function rateFor(dealType, rate) { if (dealType === 'ai') return 10; return rate; }
+// A flat-fee deal type pays a fixed amount, so netting a processing fee off the invoice would not
+// change the payout. Skip the calculation rather than showing a deduction that does nothing.
+function flatOrPct(dealType) { return (FLAT_COMMISSION[dealType] != null) ? 'skip' : 'pct'; }
 function round(n) { return Math.round(Number(n) || 0); }
 function norm(s) { return String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
 
@@ -162,7 +172,7 @@ async function loadQboPaid() {
     });
 
     const byCust = {};
-    function ensure(id, name) { return byCust[id] || (byCust[id] = { id, name: name || (custById[id] && custById[id].name) || '', paidTotal: 0, paidCount: 0, openTotal: 0, lastPaidDate: '', received: 0, invoices: [] }); }
+    function ensure(id, name) { return byCust[id] || (byCust[id] = { id, name: name || (custById[id] && custById[id].name) || '', paidTotal: 0, paidCount: 0, openTotal: 0, lastPaidDate: '', received: 0, cardPaid: 0, cardCount: 0, refunded: 0, lastRefundDate: '', invoices: [] }); }
     invoices.forEach(inv => {
         const id = inv.CustomerRef && inv.CustomerRef.value;
         if (!id) return;
@@ -183,12 +193,34 @@ async function loadQboPaid() {
     // payment, so payable requires a paid invoice AND received > 0.
     let payments = [];
     try {
-        const j = await qboQuery("SELECT CustomerRef, TotalAmt, TxnDate FROM Payment ORDERBY TxnDate DESC MAXRESULTS 1000");
+        const j = await qboQuery("SELECT CustomerRef, TotalAmt, TxnDate, PaymentMethodRef FROM Payment ORDERBY TxnDate DESC MAXRESULTS 1000");
         payments = (j && j.QueryResponse && j.QueryResponse.Payment) || [];
     } catch (e) { payments = []; }
     payments.forEach(p => {
         const id = p.CustomerRef && p.CustomerRef.value; if (!id) return;
-        ensure(id, p.CustomerRef && p.CustomerRef.name).received += Number(p.TotalAmt) || 0;
+        const c = ensure(id, p.CustomerRef && p.CustomerRef.name);
+        const amt = Number(p.TotalAmt) || 0;
+        c.received += amt;
+        const method = (p.PaymentMethodRef && (p.PaymentMethodRef.name || p.PaymentMethodRef.value)) || '';
+        if (CARD_METHOD.test(String(method))) { c.cardPaid += amt; c.cardCount++; }
+    });
+
+    // Money that went back OUT to the client. A refund or a credit memo reverses the commission.
+    let refunds = [];
+    try {
+        const j = await qboQuery("SELECT CustomerRef, TotalAmt, TxnDate FROM RefundReceipt ORDERBY TxnDate DESC MAXRESULTS 500");
+        refunds = (j && j.QueryResponse && j.QueryResponse.RefundReceipt) || [];
+    } catch (e) { refunds = []; }
+    try {
+        const j = await qboQuery("SELECT CustomerRef, TotalAmt, TxnDate FROM CreditMemo ORDERBY TxnDate DESC MAXRESULTS 500");
+        refunds = refunds.concat((j && j.QueryResponse && j.QueryResponse.CreditMemo) || []);
+    } catch (e) { /* credit memos optional */ }
+    refunds.forEach(r => {
+        const id = r.CustomerRef && r.CustomerRef.value; if (!id) return;
+        const c = ensure(id, r.CustomerRef && r.CustomerRef.name);
+        c.refunded += Number(r.TotalAmt) || 0;
+        const d = (r.TxnDate || '').toString();
+        if (d && (!c.lastRefundDate || d > c.lastRefundDate)) c.lastRefundDate = d;
     });
 
     return { connected: true, byCust, custById, custByName, custByEmail, truncated: invoices.length >= 1000 || payments.length >= 1000 };
@@ -429,11 +461,29 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     // Payable requires THIS deal's own invoice to be paid, plus real money received from that client.
     const invoicePaid = !!(inv && inv.paid && cust && cust.received > 0);
 
-    const base = round((ov && ov.amount != null) ? ov.amount : (invoicePaid ? (inv.total || deal.amount) : deal.amount));
+    const gross = round((ov && ov.amount != null) ? ov.amount : (invoicePaid ? (inv.total || deal.amount) : deal.amount));
+
+    // Net of processing fees (Paul, 2026-08-14). Only charged when the money actually came in on a
+    // card: an ACH or a cheque incurs no processing fee and must not be docked one. An explicit
+    // admin amount is taken as already-final and is never reduced again.
+    const paidByCard = !!(cust && cust.cardCount > 0);
+    const feeApplies = invoicePaid && paidByCard && !(ov && ov.amount != null) && flatOrPct(dealType) !== 'skip';
+    const fee = feeApplies ? Math.round((gross * (FEE_PCT / 100) + FEE_FIXED) * 100) / 100 : 0;
+    const base = round(gross - fee);
+
     const flat = FLAT_COMMISSION[dealType];
-    const commission = (flat != null) ? round(flat) : round(base * rate / 100);
+    let commission = (flat != null) ? round(flat) : round(base * rate / 100);
+
+    // A refund or chargeback reverses the commission. The rep does not keep a cut of money we gave back.
+    const refunded = !!(cust && cust.refunded > 0);
     const paidOut = !!(ov && ov.paidOut);
-    const status = paidOut ? 'paid_out' : (invoicePaid ? 'payable' : 'pending');
+    let status = paidOut ? 'paid_out' : (invoicePaid ? 'payable' : 'pending');
+    let clawback = 0;
+    if (refunded && !(ov && ov.keepOnRefund)) {
+        clawback = commission;
+        commission = 0;
+        status = 'clawed_back';
+    }
 
     return {
         dealId: deal.dealId, client: deal.name, company: deal.company,
@@ -441,7 +491,8 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
         ownerEmail: deal.ownerEmail, ownerName: deal.ownerName,
         closerEmail, closerName: (snap && snap.ownerName) || deal.ownerName, ownerChanged,
         dealType, dealTypeAuto: !!(deal.dealType && !(ov && ov.dealType)),
-        base, rate: (flat != null) ? null : rate, flat: (flat != null) ? round(flat) : null, commission,
+        gross, fee, base, rate: (flat != null) ? null : rate, flat: (flat != null) ? round(flat) : null, commission,
+        paidByCard, refunded, refundedAmount: cust ? round(cust.refunded) : 0, clawback, refundDate: cust ? cust.lastRefundDate : '',
         leadSource, splitPlan: houseRate != null, accelerated: false,
         closeDate: deal.closeDate,
         customerId, customerMatched: !!customerId,
