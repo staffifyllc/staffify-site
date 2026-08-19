@@ -196,14 +196,15 @@
                   border:none; border-radius:12px; padding:14px; cursor:pointer; }
         .txtbtn:hover { filter:brightness(1.05); }
         .txtbtn:disabled { opacity:.6; cursor:default; }
-        .sentwrap { margin-top:10px; }
-        .sentlbl { display:block; font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
-                   color:var(--muted); margin-bottom:6px; }
-        .sentrow { display:flex; gap:8px; }
-        .sentbtn { flex:1; font-size:13.5px; font-weight:800; color:var(--ink); background:transparent;
-                   border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; }
-        .sentbtn:hover { border-color:var(--green-hi); color:var(--green-hi); }
-        .sentbtn:disabled { opacity:.6; cursor:default; border-color:var(--line); color:var(--muted); }
+        .sentwrap { margin-top:14px; }
+        .sentlbl { display:block; font-size:11.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+                   color:var(--muted); margin-bottom:8px; }
+        .sentrow { display:flex; gap:10px; }
+        .sentbtn { flex:1; font-size:14.5px; font-weight:800; color:var(--white); background:var(--card);
+                   border:1px solid var(--card-border); border-radius:12px; padding:14px 10px; cursor:pointer; }
+        .sentbtn:hover { border-color:var(--green); background:rgba(29,158,117,0.12); color:var(--green-hi); }
+        .sentbtn:disabled { opacity:.55; cursor:default; border-color:var(--card-border); color:var(--muted);
+                            background:var(--card); }
         .calbtn { width:100%; font-size:14.5px; font-weight:800; color:#04222b; background:var(--cyan);
                   border:none; border-radius:12px; padding:14px; cursor:pointer; }
         .calbtn:hover { background:var(--cyan-hi); }
@@ -325,6 +326,10 @@
         .cbadd a:hover { filter:brightness(1.07); }
         .oc { background:var(--s2); color:var(--t1); font-size:14.5px; }
         .oc:hover { background:rgba(255,255,255,.09); }
+        /* Match the outcome buttons in this theme too, or the send controls read as flat text. */
+        .sentbtn { background:var(--s2); color:var(--t1); border:none; font-size:14.5px; }
+        .sentbtn:hover { background:rgba(126,245,194,.12); color:#8ff5c8; }
+        .sentbtn:disabled { background:var(--s2); color:var(--muted); }
         .oc.good { background:rgba(126,245,194,.12); color:#8ff5c8; }
         .oc.warm { background:rgba(95,224,250,.12); color:var(--cyan-hi); }
         .oc.sel { background:var(--cyan) !important; color:#04222b !important; box-shadow:none; }
