@@ -478,10 +478,12 @@
   // instead of living only in whoever's sent folder it went out from.
   function sentBlock(L){
     if(!L.phone && !L.email) return '';
-    var b='<div class="sentwrap"><span class="sentlbl">Just sent them something?</span><div class="sentrow">';
-    if(MOTION==='websites') b+='<button class="sentbtn" data-sent="audit">Audit sent</button>'+
-                               '<button class="sentbtn" data-sent="mockup">Mockup sent</button>';
-    else b+='<button class="sentbtn" data-sent="audit">Audit sent</button>';
+    // On the hot tab the global motion is 'hot', so the lead's own motion is what decides whether a
+    // mockup is even a thing for them. Only the Foundry pipeline has a Mockup Sent stage.
+    var mo=L.motion||MOTION;
+    var b='<div class="sentwrap"><span class="sentlbl">Just sent them something?</span><div class="sentrow">'+
+          '<button class="sentbtn" data-sent="audit">Audit sent</button>';
+    if(mo==='websites') b+='<button class="sentbtn" data-sent="mockup">Mockup sent</button>';
     return b+'</div></div>';
   }
 
@@ -1144,6 +1146,7 @@
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
         '<button class="nextbtn" data-next="1">Skip to next lead <span class="kbd">&#8594;</span></button>'+
         posRow()+
+        sentBlock(L)+
         outcomesBlock(true)+
         '</div><div class="cardtools">'+
         renderQuote()+
@@ -1257,13 +1260,13 @@
     var cpb=document.getElementById('cpbtn'); if(cpb)cpb.onclick=function(){ if(!CURHOT||!window.StaffifyClosePlan)return; var r=repGet(); var mo=CURHOT.motion==='staffing'?'Staffify VA':(CURHOT.motion==='websites'?'Foundry website':''); StaffifyClosePlan.run({mode:'prep',transcript:CURHOT.transcript||'',name:CURHOT.name||'',company:CURHOT.company||'',grade:mo,phone:CURHOT.phone||'',rep:(r&&r.name)||''}, document.getElementById('cpout'), cpb); };
     Array.prototype.forEach.call(document.querySelectorAll('.sentbtn'),function(b){
       b.onclick=function(){
-        var q=QUEUES[MOTION]; var L=q&&q[0]; if(!L) return;
+        var q=QUEUES[MOTION]; var L=(MOTION==='hot'?CURHOT:(q&&q[0])); if(!L) return;
         var kind=b.getAttribute('data-sent'); var r=repGet(); var was=b.textContent;
         b.disabled=true; b.textContent='Saving...';
         fetch('/api/deal-flow/',{method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({kind:kind, rep:(r&&r.name)||'', lead:{
             company:L.company||'', name:L.name||'', phone:L.phone||'', email:L.email||'',
-            role:L.role||'', motion:MOTION, website:L.website||''}})})
+            role:L.role||'', motion:L.motion||MOTION, website:L.website||''}})})
           .then(function(x){return x.json();})
           .then(function(j){
             if(j&&j.ok&&j.deal&&j.deal.id){
