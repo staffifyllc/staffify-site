@@ -1240,6 +1240,14 @@
         +'Want me to send it over?\n\nPaul\nFoundry';
       window.open('mailto:'+encodeURIComponent(L.email)+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body),'_blank');
       eb.textContent='Email opened';
+      // This email pitches the audit, so it is a real touch and belongs in the CRM. It records an
+      // offer rather than a send, because the rep sends it from their own mail client and we never
+      // actually learn whether they went through with it.
+      var r=repGet();
+      fetch('/api/deal-flow/',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({kind:'outreach', rep:(r&&r.name)||'', note:'Subject: '+sub, lead:{
+          company:L.company||'', name:L.name||'', phone:L.phone||'', email:L.email||'',
+          role:L.role||'', motion:L.motion||MOTION, website:L.website||''}})}).catch(function(){});
     };
     var tb=document.getElementById('txtbtn');
     if(tb) tb.onclick=function(){

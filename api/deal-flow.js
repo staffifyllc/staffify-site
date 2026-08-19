@@ -6,7 +6,7 @@
 // in the CRM at all.
 //
 // Body: {
-//   kind: 'mockup' | 'audit',            what went out
+//   kind: 'mockup' | 'audit' | 'outreach',  what went out
 //   lead: { company, name, phone, email, role, motion, website },
 //   rep:  'Madison Sterling',            who sent it (falls back to the signed-in identity)
 //   amount, note, at
@@ -24,6 +24,10 @@ import { isOptedOut } from './_optout.js';
 const KINDS = {
     audit:  { stage: 'contacted', label: 'Audit sent',  motion: 'websites' },
     mockup: { stage: 'mockup',    label: 'Mockup sent', motion: 'websites' },
+    // The dialer's email button opens the rep's own mail client offering an audit, so we know it was
+    // offered but never that it was sent. Recorded as its own thing rather than as a sent audit,
+    // because a CRM that overstates what happened is worse than one that says less.
+    outreach: { stage: 'contacted', label: 'Audit offered by email', motion: 'websites' },
 };
 
 export default async function handler(req, res) {
@@ -35,7 +39,7 @@ export default async function handler(req, res) {
     const b = readBody(req) || {};
     const lead = b.lead || {};
     const kind = KINDS[String(b.kind || '').toLowerCase()] ? String(b.kind).toLowerCase() : '';
-    if (!kind) return res.status(400).json({ ok: false, error: 'kind must be mockup or audit' });
+    if (!kind) return res.status(400).json({ ok: false, error: 'kind must be mockup, audit or outreach' });
     const spec = KINDS[kind];
 
     if (!lead.phone && !lead.email) {

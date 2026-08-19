@@ -192,11 +192,24 @@ const stageKey = (pipe, id) => Object.keys(pipe.stages).find(k => pipe.stages[k]
 // Won/Lost/Dropped are terminal: that deal is finished and a new approach deserves a new deal.
 const TERMINAL = new Set(['won', 'lost', 'dropped']);
 
+// The two pipelines do not have the same stages: only VA has 'booked', only Foundry has 'mockup'.
+// Asking for a stage the pipeline does not have used to write no stage at all, dropping the deal at the
+// pipeline's first stage, so a booked call on a Foundry lead looked untouched. Fall back to the nearest
+// earlier stage that pipeline does have, which is the most that can be said truthfully about progress.
+function resolveStage(pipe, stage) {
+    if (!stage) return '';
+    if (pipe.stages[stage]) return stage;
+    for (let i = ORDER.indexOf(stage) - 1; i >= 0; i--) {
+        if (pipe.stages[ORDER[i]]) return ORDER[i];
+    }
+    return '';
+}
+
 // Opens a deal, or moves an already-open one forward. `stage` is a key like 'mockup' or 'contacted'.
 export async function upsertDeal({ contactId, company, role, ownerId, motion, amount, stage, dealname }) {
     if (!token()) return { ok: false, reason: 'no_token' };
     const pipe = pipelineFor(motion);
-    const want = stage && pipe.stages[stage] ? stage : '';
+    const want = resolveStage(pipe, stage);
 
     // Look at the contact's existing deals and pick the open one in THIS pipeline. A finished deal is
     // deliberately left alone: someone who was Lost last quarter and is being pitched again should get

@@ -12,7 +12,7 @@ const BUYING = ['interested', 'booked', 'won'];
 // stage in the VA pipeline, and a win is a win. upsertDeal only ever moves a deal forward, so an
 // interested call after a mockup went out will not drag the deal back down the pipeline.
 const OUTCOME_STAGE = { interested: 'engaged', booked: 'booked', won: 'won' };
-const LABEL = { won:'Closed / Won', interested:'Interested', callback:'Callback', no_answer:'No answer',
+const LABEL = { won:'Closed / Won', interested:'Interested', booked:'Call booked', callback:'Callback', no_answer:'No answer',
                 voicemail:'Voicemail', gatekeeper:'Gatekeeper', not_interested:'Not interested', bad_number:'Bad number' };
 
 export default async function handler(req, res) {
