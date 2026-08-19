@@ -196,6 +196,14 @@
                   border:none; border-radius:12px; padding:14px; cursor:pointer; }
         .txtbtn:hover { filter:brightness(1.05); }
         .txtbtn:disabled { opacity:.6; cursor:default; }
+        .sentwrap { margin-top:10px; }
+        .sentlbl { display:block; font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+                   color:var(--muted); margin-bottom:6px; }
+        .sentrow { display:flex; gap:8px; }
+        .sentbtn { flex:1; font-size:13.5px; font-weight:800; color:var(--ink); background:transparent;
+                   border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; }
+        .sentbtn:hover { border-color:var(--green-hi); color:var(--green-hi); }
+        .sentbtn:disabled { opacity:.6; cursor:default; border-color:var(--line); color:var(--muted); }
         .calbtn { width:100%; font-size:14.5px; font-weight:800; color:#04222b; background:var(--cyan);
                   border:none; border-radius:12px; padding:14px; cursor:pointer; }
         .calbtn:hover { background:var(--cyan-hi); }
@@ -463,6 +471,18 @@
     if(MOTION!=='websites' || !L.website) return '';
     return '<a class="sitebtn" href="'+esc(L.website)+'" target="_blank" rel="noopener">'+
            'Open '+esc(siteHost(L.website))+' \u2197</a>';
+  }
+
+  // Sending a mockup or an audit is the point a prospect becomes real work, so it has to reach the CRM.
+  // The rep records it here and the deal opens (or moves to Mockup Sent) in HubSpot on the spot,
+  // instead of living only in whoever's sent folder it went out from.
+  function sentBlock(L){
+    if(!L.phone && !L.email) return '';
+    var b='<div class="sentwrap"><span class="sentlbl">Just sent them something?</span><div class="sentrow">';
+    if(MOTION==='websites') b+='<button class="sentbtn" data-sent="audit">Audit sent</button>'+
+                               '<button class="sentbtn" data-sent="mockup">Mockup sent</button>';
+    else b+='<button class="sentbtn" data-sent="audit">Audit sent</button>';
+    return b+'</div></div>';
   }
 
   function textBlock(L){
@@ -1081,6 +1101,7 @@
         siteBtn(L)+
         textBlock(L)+
         (L.email?'<button class="emailbtn" id="emailbtn">Email them &middot; '+esc(L.email)+'</button>':'')+
+        sentBlock(L)+
         bookBlock(L)+
         outcomesBlock(false)+
         '</div><div class="cardtools">'+
@@ -1234,6 +1255,25 @@
         }).catch(function(){ tb.disabled=false; tb.textContent='Text them'; toast('Network error.'); });
     };
     var cpb=document.getElementById('cpbtn'); if(cpb)cpb.onclick=function(){ if(!CURHOT||!window.StaffifyClosePlan)return; var r=repGet(); var mo=CURHOT.motion==='staffing'?'Staffify VA':(CURHOT.motion==='websites'?'Foundry website':''); StaffifyClosePlan.run({mode:'prep',transcript:CURHOT.transcript||'',name:CURHOT.name||'',company:CURHOT.company||'',grade:mo,phone:CURHOT.phone||'',rep:(r&&r.name)||''}, document.getElementById('cpout'), cpb); };
+    Array.prototype.forEach.call(document.querySelectorAll('.sentbtn'),function(b){
+      b.onclick=function(){
+        var q=QUEUES[MOTION]; var L=q&&q[0]; if(!L) return;
+        var kind=b.getAttribute('data-sent'); var r=repGet(); var was=b.textContent;
+        b.disabled=true; b.textContent='Saving...';
+        fetch('/api/deal-flow/',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({kind:kind, rep:(r&&r.name)||'', lead:{
+            company:L.company||'', name:L.name||'', phone:L.phone||'', email:L.email||'',
+            role:L.role||'', motion:MOTION, website:L.website||''}})})
+          .then(function(x){return x.json();})
+          .then(function(j){
+            if(j&&j.ok&&j.deal&&j.deal.id){
+              b.textContent=(j.deal.created?'Deal opened':'Deal updated');
+              toast(j.deal.created?'Deal opened in HubSpot.':'Deal moved to '+(j.deal.stage||'the next stage')+'.');
+            } else if(j&&j.skipped){ b.textContent=was; b.disabled=false; toast('They opted out, so no deal was created.'); }
+            else { b.disabled=false; b.textContent=was; toast((j&&(j.reason||j.error))||'Could not save, try again.'); }
+          }).catch(function(){ b.disabled=false; b.textContent=was; toast('Network error.'); });
+      };
+    });
     Array.prototype.forEach.call(document.querySelectorAll('.nextbtn'),function(b){ b.onclick=nextCall; });
   }
 
