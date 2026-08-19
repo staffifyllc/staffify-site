@@ -145,24 +145,106 @@ export async function setLeadStatus(contactId, outcome) {
 // ---- Deal -------------------------------------------------------------------
 // Created only on a real buying signal. The OWNER is the rep, because the commission engine pays
 // whoever owns the deal when it is won. Never created in a closed stage.
-export async function upsertDeal({ contactId, company, role, ownerId, motion, amount }) {
+// ---- Deals ------------------------------------------------------------------
+// The two pipelines are real objects in the portal, and their stage ids are portal-specific hashes
+// rather than names, so they are pinned here and overridable by env if the portal is ever rebuilt.
+//
+// Routing by motion matters for money, not just tidiness: commissions.js reads the pipeline label to
+// decide whether a deal pays the flat Foundry rate or the VA percentage, so a staffing deal filed in
+// the Foundry pipeline is paid the wrong amount.
+export const PIPELINES = {
+    website: {
+        id: process.env.HS_PIPELINE_FOUNDRY || 'default',
+        stages: {
+            new:      process.env.HS_STAGE_FOUNDRY_NEW      || '1402153538',
+            contacted:process.env.HS_STAGE_FOUNDRY_CONTACTED|| '1402153539',
+            engaged:  process.env.HS_STAGE_FOUNDRY_ENGAGED  || '1402153540',
+            mockup:   process.env.HS_STAGE_FOUNDRY_MOCKUP   || '1402153541',
+            won:      process.env.HS_STAGE_FOUNDRY_WON      || '1402153543',
+            lost:     process.env.HS_STAGE_FOUNDRY_LOST     || '1402153544',
+            dropped:  process.env.HS_STAGE_FOUNDRY_DROPPED  || '1402153542',
+        },
+    },
+    va: {
+        id: process.env.HS_PIPELINE_VA || '914670001',
+        stages: {
+            new:      process.env.HS_STAGE_VA_NEW       || '1390230871',
+            contacted:process.env.HS_STAGE_VA_CONTACTED || '1390230872',
+            engaged:  process.env.HS_STAGE_VA_ENGAGED   || '1390230873',
+            booked:   process.env.HS_STAGE_VA_BOOKED    || '1390230874',
+            won:      process.env.HS_STAGE_VA_WON       || '1390230875',
+            lost:     process.env.HS_STAGE_VA_LOST      || '1390230876',
+            dropped:  process.env.HS_STAGE_VA_DROPPED   || '1402034032',
+        },
+    },
+};
+
+// The hub calls the website motion "websites"/"foundry" and the staffing motion "staffing"/"va".
+export function pipelineFor(motion) {
+    return /websit|foundry|build|site|design/i.test(String(motion || '')) ? PIPELINES.website : PIPELINES.va;
+}
+
+// How far along the pipeline a stage is, so a deal is only ever moved FORWARD. Without this, a
+// later no-answer call would drag a deal that already reached Mockup Sent back to Contacted.
+const ORDER = ['new', 'contacted', 'engaged', 'booked', 'mockup', 'won', 'lost', 'dropped'];
+const rank = (k) => { const i = ORDER.indexOf(k); return i < 0 ? -1 : i; };
+const stageKey = (pipe, id) => Object.keys(pipe.stages).find(k => pipe.stages[k] === String(id)) || '';
+// Won/Lost/Dropped are terminal: that deal is finished and a new approach deserves a new deal.
+const TERMINAL = new Set(['won', 'lost', 'dropped']);
+
+// Opens a deal, or moves an already-open one forward. `stage` is a key like 'mockup' or 'contacted'.
+export async function upsertDeal({ contactId, company, role, ownerId, motion, amount, stage, dealname }) {
     if (!token()) return { ok: false, reason: 'no_token' };
-    // One open deal per contact: reuse rather than stacking a new deal on every interested call.
+    const pipe = pipelineFor(motion);
+    const want = stage && pipe.stages[stage] ? stage : '';
+
+    // Look at the contact's existing deals and pick the open one in THIS pipeline. A finished deal is
+    // deliberately left alone: someone who was Lost last quarter and is being pitched again should get
+    // a fresh deal rather than having their closed one quietly reopened.
     const assoc = await hs(`/crm/v4/objects/contacts/${contactId}/associations/deals`, { method: 'GET' });
-    const existing = assoc.ok && assoc.body && assoc.body.results && assoc.body.results[0];
-    if (existing) return { ok: true, id: existing.toObjectId || existing.id, created: false };
+    const ids = (assoc.ok && assoc.body && assoc.body.results || [])
+        .map(a => a.toObjectId || a.id).filter(Boolean).slice(0, 25);
+
+    let open = null;
+    for (const id of ids) {
+        const d = await hs(`/crm/v3/objects/deals/${id}?properties=dealstage,pipeline,hs_is_closed_won,hs_is_closed`, { method: 'GET' });
+        if (!d.ok || !d.body) continue;
+        const pr = d.body.properties || {};
+        if (String(pr.pipeline) !== String(pipe.id)) continue;
+        const k = stageKey(pipe, pr.dealstage);
+        // HubSpot returns these as the STRINGS "true"/"false", so compare rather than trusting truthiness.
+        const closed = String(pr.hs_is_closed) === 'true' || String(pr.hs_is_closed_won) === 'true';
+        if (closed || TERMINAL.has(k)) continue;
+        open = { id, key: k };
+        break;
+    }
+
+    if (open) {
+        // Only ever forward. Re-sending a mockup to someone already at Mockup Sent is a no-op, not a bounce.
+        if (want && rank(want) > rank(open.key)) {
+            const up = await hs(`/crm/v3/objects/deals/${open.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ properties: { dealstage: pipe.stages[want] } }),
+            });
+            if (!up.ok) return { ok: false, reason: 'stage_update_failed', status: up.status, detail: up.raw, id: open.id };
+            return { ok: true, id: open.id, created: false, advanced: true, from: open.key, to: want, pipeline: pipe.id };
+        }
+        return { ok: true, id: open.id, created: false, advanced: false, at: open.key, pipeline: pipe.id };
+    }
 
     const props = {
-        dealname: `${company || 'New deal'}${role ? ' · ' + role : ''}`.slice(0, 250),
-        pipeline: 'default',
+        dealname: (dealname || `${company || 'New deal'}${role ? ' · ' + role : ''}`).slice(0, 250),
+        pipeline: pipe.id,
     };
+    if (want) props.dealstage = pipe.stages[want];
     if (amount) props.amount = String(amount);
     if (ownerId) props.hubspot_owner_id = String(ownerId);
     const r = await hs('/crm/v3/objects/deals', { method: 'POST', body: JSON.stringify({ properties: props }) });
     if (!r.ok) return { ok: false, reason: 'deal_failed', status: r.status, detail: r.raw };
     await associate('deals', r.body.id, 'contacts', contactId);
-    return { ok: true, id: r.body.id, created: true };
+    return { ok: true, id: r.body.id, created: true, to: want || 'new', pipeline: pipe.id };
 }
+
 
 // Bad data: take the contact out of HubSpot. This uses the archive endpoint, which is what the UI's
 // own delete does, so it is recoverable for 90 days rather than being an unrecoverable wipe.

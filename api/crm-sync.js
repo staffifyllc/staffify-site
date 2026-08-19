@@ -8,6 +8,10 @@ import { openIdentity, readBody, redis } from './_auth.js';
 import { configured, findOrCreateContact, findContact, logCall, logText, logNote, setLeadStatus, upsertDeal, archiveContact } from './_hubspot.js';
 
 const BUYING = ['interested', 'booked', 'won'];
+// Where a call outcome puts the deal. Contact on the phone is real engagement, a booked call is its own
+// stage in the VA pipeline, and a win is a win. upsertDeal only ever moves a deal forward, so an
+// interested call after a mockup went out will not drag the deal back down the pipeline.
+const OUTCOME_STAGE = { interested: 'engaged', booked: 'booked', won: 'won' };
 const LABEL = { won:'Closed / Won', interested:'Interested', callback:'Callback', no_answer:'No answer',
                 voicemail:'Voicemail', gatekeeper:'Gatekeeper', not_interested:'Not interested', bad_number:'Bad number' };
 
@@ -80,8 +84,15 @@ export default async function handler(req, res) {
     // A real buying signal opens a deal, owned by the rep so the commission engine credits the closer.
     if (BUYING.indexOf(outcome) >= 0) {
         const ownerId = await repOwnerId(rep);
-        const d = await upsertDeal({ contactId: c.id, company: lead.company, role: lead.role, ownerId, motion: lead.motion });
-        out.did.push({ deal: d.ok ? (d.created ? 'created ' + d.id : 'existing ' + d.id) : d.reason });
+        const stage = OUTCOME_STAGE[outcome] || '';
+        const d = await upsertDeal({
+            contactId: c.id, company: lead.company, role: lead.role,
+            ownerId, motion: lead.motion, stage,
+        });
+        out.did.push({
+            deal: d.ok ? (d.created ? 'created ' + d.id : (d.advanced ? `moved ${d.from} -> ${d.to} ` + d.id : 'existing ' + d.id)) : d.reason,
+            pipeline: d.pipeline,
+        });
         if (d.ok && !ownerId) out.warn = 'deal has no owner: map this rep to a HubSpot owner id or the commission will not attribute';
     }
     return res.status(200).json(out);
