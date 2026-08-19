@@ -4,17 +4,20 @@
 // real prospect even if it is called by mistake. HubSpot's delete is an archive, recoverable in the
 // portal for 90 days, rather than an unrecoverable wipe.
 //
-// GET  /api/crm-cleanup/?token=...          -> list what WOULD be removed, changes nothing
+// GET  /api/crm-cleanup/                    -> list what WOULD be removed, changes nothing
 // POST /api/crm-cleanup/ {confirm:true}     -> archive them
 
-import { adminAuthorized, readBody } from './_auth.js';
+import { adminAuthorized, currentRep, readBody } from './_auth.js';
 
 const HS = 'https://api.hubapi.com';
 const PREFIX = 'ZZZ';
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
-    if (!adminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' });
+    // A signed-in admin or a machine token. Deliberately NOT openIdentity: this one deletes.
+    const rep = await currentRep(req).catch(() => null);
+    const isAdmin = (rep && rep.role === 'admin') || adminAuthorized(req);
+    if (!isAdmin) return res.status(401).json({ error: 'unauthorized' });
     const token = process.env.HUBSPOT_TOKEN || '';
     if (!token) return res.status(200).json({ configured: false });
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
