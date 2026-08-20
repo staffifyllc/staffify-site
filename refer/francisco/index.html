@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Unlisted referral sheet. Not linked from anywhere on the site. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Referral Kit | Staffify &amp; Foundry</title>
+<link rel="icon" href="/favicon.ico?v=2">
+<link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
+<link rel="apple-touch-icon" href="/assets/brand/icon-180.png?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground:      #f2f4f6;
+    --surface:     #ffffff;
+    --surface-alt: #e8ecef;
+    --ink:         #14181d;
+    --ink-soft:    #4a5560;
+    --ink-faint:   #78848f;
+    --rule:        #d3dade;
+    --staffify:    #0f6f63;
+    --staffify-lo: rgba(15, 111, 99, 0.09);
+    --foundry:     #a8502a;
+    --foundry-lo:  rgba(168, 80, 42, 0.09);
+    --flag:        #8a5a00;
+    --flag-lo:     rgba(138, 90, 0, 0.10);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0e1114;
+      --surface:     #171c21;
+      --surface-alt: #1e252b;
+      --ink:         #e9edf0;
+      --ink-soft:    #a5b1bb;
+      --ink-faint:   #7a8792;
+      --rule:        #2b343b;
+      --staffify:    #4fbfae;
+      --staffify-lo: rgba(79, 191, 174, 0.12);
+      --foundry:     #e08d5f;
+      --foundry-lo:  rgba(224, 141, 95, 0.12);
+      --flag:        #d6a44a;
+      --flag-lo:     rgba(214, 164, 74, 0.13);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0e1114;
+    --surface:     #171c21;
+    --surface-alt: #1e252b;
+    --ink:         #e9edf0;
+    --ink-soft:    #a5b1bb;
+    --ink-faint:   #7a8792;
+    --rule:        #2b343b;
+    --staffify:    #4fbfae;
+    --staffify-lo: rgba(79, 191, 174, 0.12);
+    --foundry:     #e08d5f;
+    --foundry-lo:  rgba(224, 141, 95, 0.12);
+    --flag:        #d6a44a;
+    --flag-lo:     rgba(214, 164, 74, 0.13);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  h1 {
+    font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.1rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    margin: 10px 0 0;
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-size: 17.5px;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 16px 0 0;
+  }
+
+  h2 {
+    font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 1.45rem;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 10px;
+  }
+
+  section { display: flex; flex-direction: column; gap: 18px; }
+
+  .rule-top { border-top: 1px solid var(--rule); padding-top: 34px; }
+
+  /* Say-this blocks: the words Francisco reads out loud */
+  .say {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink-faint);
+    border-radius: 3px;
+    padding: 20px 22px;
+    font-size: 17px;
+    line-height: 1.62;
+  }
+  .say p { margin: 0; }
+  .say p + p { margin-top: 13px; }
+  .say.tealed  { border-left-color: var(--staffify); }
+  .say.clayed  { border-left-color: var(--foundry); }
+
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  @media (min-width: 860px) {
+    .cols { grid-template-columns: 1fr 1fr; gap: 26px; }
+  }
+
+  .biz {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 26px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .biz-head { display: flex; flex-direction: column; gap: 5px; }
+
+  .tag {
+    display: inline-block;
+    align-self: flex-start;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 3px;
+  }
+  .tag.tealed { background: var(--staffify-lo); color: var(--staffify); }
+  .tag.clayed { background: var(--foundry-lo); color: var(--foundry); }
+
+  .biz h2 { font-size: 1.3rem; }
+
+  ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  li { color: var(--ink-soft); }
+  li strong { color: var(--ink); font-weight: 600; }
+
+  .links { display: flex; flex-direction: column; gap: 2px; }
+
+  .link-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .link-row:last-child { border-bottom: none; }
+
+  .link-row a {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 13px;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+    word-break: break-all;
+  }
+  .link-row a:hover { border-bottom-color: currentColor; }
+  .link-row a:focus-visible { outline: 2px solid var(--staffify); outline-offset: 3px; border-radius: 2px; }
+  .clayed-links .link-row a:focus-visible { outline-color: var(--foundry); }
+
+  .link-note { font-size: 13.5px; color: var(--ink-faint); }
+
+  .why {
+    background: var(--surface-alt);
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .why strong { color: var(--ink); font-weight: 600; }
+
+  /* Decisions Paul owns */
+  .flag {
+    background: var(--flag-lo);
+    border: 1px solid var(--flag);
+    border-radius: 5px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .flag h2 { color: var(--flag); font-size: 1.2rem; }
+  .flag p { margin: 0; color: var(--ink-soft); }
+  .flag p strong { color: var(--ink); font-weight: 600; }
+
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .step:last-child { border-bottom: none; }
+  .step-n {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-faint);
+    padding-top: 2px;
+  }
+  .step-b { display: flex; flex-direction: column; gap: 5px; }
+  .step-b b { font-weight: 600; font-size: 15.5px; }
+  .step-b span { color: var(--ink-soft); font-size: 15px; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 22px;
+    font-size: 14px;
+    color: var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">For Francisco</div>
+    <h1>What to say, and what to send.</h1>
+    <p class="lede">Two businesses, two different kinds of owner. You do not need to pitch either one. All you are doing is spotting the problem in conversation and offering to make an introduction. Paul does the selling.</p>
+  </header>
+
+  <section class="rule-top">
+    <h3>Start here</h3>
+    <h2>The only thing you have to do</h2>
+    <div class="say">
+      <p>"Hey, I know a guy who does this. Want me to connect you?"</p>
+    </div>
+    <div class="why">
+      <strong>That is the whole job.</strong> Do not explain pricing, do not describe how it works, and do not try to answer their questions. Every question they ask you is a reason to get them on a call with Paul instead. The two scripts below are only for recognizing which of the two businesses fits.</div>
+  </section>
+
+  <section class="rule-top">
+    <h3>The two businesses</h3>
+    <div class="cols">
+
+      <div class="biz">
+        <div class="biz-head">
+          <span class="tag tealed">Staffify</span>
+          <h2>Full-time assistants, placed inside a business</h2>
+        </div>
+
+        <div>
+          <h3>Say this</h3>
+          <div class="say tealed">
+            <p>"You know how you're still doing all the admin yourself? Paul's company places a full-time assistant inside businesses like yours. Not a freelancer you have to manage, an actual person who works your hours and only your account."</p>
+            <p>"Want me to introduce you? Costs you nothing to hear it."</p>
+          </div>
+        </div>
+
+        <div>
+          <h3>Who this is for</h3>
+          <ul>
+            <li><strong>Service businesses</strong> doing roughly $500K to $5M</li>
+            <li>The owner is <strong>still doing the admin</strong>: inbox, scheduling, invoicing, follow-up</li>
+            <li>They have said some version of <strong>"I need to hire but I can't justify a full salary"</strong></li>
+            <li>They <strong>tried Upwork or Fiverr</strong> and it did not stick</li>
+            <li>Real estate, agencies, law firms, med spas, dental, ecommerce, coaching</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3>Send them this</h3>
+          <div class="links">
+            <div class="link-row">
+              <a href="https://www.gostaffify.com/cost/" target="_blank" rel="noopener">gostaffify.com/cost</a>
+              <span class="link-note">Best opener. Answers the price question before they ask it.</span>
+            </div>
+            <div class="link-row">
+              <a href="https://www.gostaffify.com/case-studies/" target="_blank" rel="noopener">gostaffify.com/case-studies</a>
+              <span class="link-note">For the skeptic who wants proof.</span>
+            </div>
+            <div class="link-row">
+              <a href="https://www.gostaffify.com/" target="_blank" rel="noopener">gostaffify.com</a>
+              <span class="link-note">If they just want to look you up.</span>
+            </div>
+            <div class="link-row">
+              <a href="https://calendly.com/go-staffify/discovery-call" target="_blank" rel="noopener">Book a call directly</a>
+              <span class="link-note">Send this only when they have already said yes.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="why"><strong>Why the cost page first:</strong> the first question every owner asks is what it runs. Sending the answer up front makes you look like you know the business, and it filters out anyone who was never going to buy.</div>
+      </div>
+
+      <div class="biz">
+        <div class="biz-head">
+          <span class="tag clayed">Foundry</span>
+          <h2>Websites, built rather than templated</h2>
+        </div>
+
+        <div>
+          <h3>Say this</h3>
+          <div class="say clayed">
+            <p>"Paul also builds websites. Before you pay him anything he'll run a free audit and show you exactly what's costing you leads on the one you have now."</p>
+            <p>"Want me to have him send it over? No charge and no pitch, you just get the audit."</p>
+          </div>
+        </div>
+
+        <div>
+          <h3>Who this is for</h3>
+          <ul>
+            <li>Local businesses whose site is <strong>old, slow, or clearly a template</strong></li>
+            <li>Anyone who says <strong>"our website is embarrassing"</strong> or "we get nothing from it"</li>
+            <li>They are <strong>spending on ads</strong> but sending that traffic to a weak site</li>
+            <li>Med spas, dentists, clinics, contractors, home services</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3>Send them this</h3>
+          <div class="links clayed-links">
+            <div class="link-row">
+              <span class="link-note">There is nothing to send yet. Foundry has no website of its own, so the free audit is the entire offer. Get the name and the URL of their current site to Paul and he sends the audit.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="why"><strong>The audit is the hook, not the pitch.</strong> You are not asking anyone to buy a website. You are offering a free look at what is wrong with the one they already paid for. Almost nobody says no to that, which is exactly why it works.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="rule-top">
+    <h3>The handoff</h3>
+    <h2>How to actually pass one over</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01</div>
+        <div class="step-b">
+          <b>Get permission first</b>
+          <span>"Can I give Paul your number?" A warm name beats a cold link every single time.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">02</div>
+        <div class="step-b">
+          <b>Text Paul four things</b>
+          <span>Name, business, phone, and one line on what they said. For a Foundry lead, add their current website address.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">03</div>
+        <div class="step-b">
+          <b>Or make it a group text</b>
+          <span>You, them, Paul, one message: "Meet Paul, he's who I mentioned." This converts better than anything else on this page. Then you are out.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">04</div>
+        <div class="step-b">
+          <b>Stop there</b>
+          <span>Do not chase it and do not follow up on price. Paul takes it from the introduction.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Questions on any of this, or you have someone and you are not sure which one they fit, just text Paul.
+  </footer>
+
+</div>
+
+</body>
+</html>
