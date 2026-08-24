@@ -41,10 +41,21 @@ function buildMessage({ first, rep, role, company, motion, priorCall, lastCall }
     // signs as him no matter which rep is on the dialer. Staffing signs as the rep who made the call.
     const who = (motion === 'websites') ? (process.env.FOUNDRY_SENDER_NAME || 'Paul') : firstName(rep);
     const hey = first ? `Hey ${first}, ` : 'Hey, ';
+    // "find one nearby" has no antecedent: the only noun before it is the company's proper name, so
+    // the question reads as a fragment. Name what they actually are. The verticals arrive plural
+    // ("veterinary clinics"), and this slot needs the singular.
+    const industry = String(b.industry || '').trim();
+    const oneOf = industry
+        ? 'a ' + industry
+            .replace(/\bpractices\b/i, 'practice').replace(/\bclinics\b/i, 'clinic')
+            .replace(/\boffices\b/i, 'office').replace(/\bcompanies\b/i, 'company')
+            .replace(/\bbusinesses\b/i, 'business').replace(/\bcenters\b/i, 'center')
+            .replace(/\bstudios\b/i, 'studio').replace(/\bshops\b/i, 'shop')
+        : 'one';
     if (motion === 'websites') {
         // Foundry has no "open role" hook, so the curiosity is whether they show up in AI search.
         // Nobody knows the answer to this, which is exactly why it gets a reply.
-        return `${hey}it's ${who}. Just tried you. Random question, do you know if ${company} comes up when someone asks ChatGPT to find one nearby?`;
+        return `${hey}it's ${who}. Just tried you. Random question, do you know if ${company} comes up when someone asks ChatGPT to find ${oneOf} nearby?`;
     }
     // A missed sales call NEVER posted a job. They told US what they wanted, on our own
     // booking form. Sending them the cold "the role you posted" line is a claim we cannot

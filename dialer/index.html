@@ -469,7 +469,13 @@
     var rep=firstNameOf(ME&&ME.name)||'[set your name]';
     var first=firstNameOf(L.name);
     var hey=(first?('Hey '+first+', '):'Hey, ');
-    if(MOTION==='websites') return hey+"it's Paul. Just tried you. Random question, do you know if "+(L.company||'')+' comes up when someone asks ChatGPT to find one nearby?';
+    // Foundry threads run under Paul's name by design, so a websites text signs as him whoever is
+    // dialing. The server can override that name, so read it from the queue when it says so rather
+    // than hardcoding it, or this preview quietly stops matching what actually sends.
+    var sender=(L.senderName||'Paul');
+    var ind=String(L.industry||'').trim();
+    var oneOf=ind ? 'a '+singularIndustry(ind) : 'one';
+    if(MOTION==='websites') return hey+"it's "+sender+". Just tried you. Random question, do you know if "+(L.company||'')+' comes up when someone asks ChatGPT to find '+oneOf+' nearby?';
     return hey+"it's "+rep+'. Just tried you about the '+(L.role||'')+' role you posted. Still hiring for it?';
   }
   // Opening their site is an action, so it sits with the other actions rather than inside a data row.
@@ -1286,7 +1292,7 @@
       var body='Hi'+(first?' '+first:'')+',\n\n'
         +'I was looking at '+(L.company||'your site')+' and noticed something worth a minute of your time.\n\n'
         +(L.siteFault?L.siteFault+'\n\n':'')
-        +'We build sites for '+(L.industry||'practices like yours')+', and I can run a free AI-visibility audit that shows whether ChatGPT and Google actually surface you when someone nearby goes looking. No cost and no commitment.\n\n'
+        +'We build sites for '+(L.industry||'businesses like yours')+', and I can run a free AI-visibility audit that shows whether ChatGPT and Google actually surface you when someone nearby goes looking. No cost and no commitment.\n\n'
         +'Want me to send it over?\n\nPaul\nFoundry';
       window.open('mailto:'+encodeURIComponent(L.email)+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body),'_blank');
       eb.textContent='Email opened';
@@ -1306,7 +1312,7 @@
       if(MOTION!=='websites' && (!r||!r.name)){ toast('Set your name first, it goes in the text.'); return; }
       tb.disabled=true; tb.textContent='Sending...';
       fetch('/api/send-text/',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', motion:MOTION, rep:(r&&r.name)||'', priorCall:!!L.priorCall, lastCall:L.lastCall||''})})
+        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', industry:L.industry||'', motion:MOTION, rep:(r&&r.name)||'', priorCall:!!L.priorCall, lastCall:L.lastCall||''})})
         .then(function(x){return x.json();})
         .then(function(j){
           if(j&&j.sent){ tb.textContent='Text sent'; toast('Text sent.'); }
