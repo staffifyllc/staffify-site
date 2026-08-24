@@ -254,6 +254,8 @@
         .objsay.show { display:block; }
         .quote { background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
         .qtiers { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+        .qcap { font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase;
+                color:var(--muted); margin:2px 0 5px; }
         .qtier { font-size:13px; font-weight:700; color:var(--muted); background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:999px; padding:7px 13px; cursor:pointer; }
         .qtier.on { color:#04222b; background:var(--cyan); border-color:var(--cyan); }
         .qtoggle { display:flex; align-items:center; gap:8px; font-size:13.5px; color:#cfd4da; cursor:pointer; margin-bottom:10px; }
@@ -587,7 +589,11 @@
   // Opening their site is an action, so it sits with the other actions rather than inside a data row.
   function siteBtn(L){
     if(MOTION!=='websites' || !L.website) return '';
-    return '<a class="sitebtn" href="'+esc(L.website)+'" target="_blank" rel="noopener">'+
+    // Bare domains are common in this data, and a bare href resolves against gostaffify.com rather
+    // than the prospect's site, so the button quietly 404s. siteUrl puts the scheme back.
+    var su=siteUrl(L.website);
+    if(!su) return '';
+    return '<a class="sitebtn" href="'+esc(su)+'" target="_blank" rel="noopener noreferrer">'+
            'Open '+esc(siteHost(L.website))+' \u2197</a>';
   }
 
@@ -655,6 +661,21 @@
   function siteHost(u){
     try{ return String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').split(/[\/?#]/)[0]; }catch(e){ return u||''; }
   }
+  // A openable address for a site that is usually stored bare, like "healinghandsfc.com".
+  // Anything that is not plain http or https comes back empty and the caller shows text instead:
+  // this data is scraped, and a scraped string is not something to hand to the browser unchecked.
+  function siteUrl(u){
+    var raw=String(u||'').trim();
+    if(!raw) return '';
+    try{
+      // Parse rather than pattern match. Hand-rolled checks kept mistaking a port for a scheme, and
+      // the browser's own parser is the thing that will resolve the href anyway.
+      var p=new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : 'https://'+raw.replace(/^\/+/,''));
+      if(p.protocol!=='http:' && p.protocol!=='https:') return '';
+      if(!p.hostname || p.hostname.indexOf('.')<0) return '';
+      return p.href;
+    }catch(e){ return ''; }
+  }
 
   // ONE panel for everything about the lead. The role, the flags and the context used to appear in
   // three separate places, which is what made the card feel like it was repeating itself.
@@ -665,7 +686,14 @@
 
     if(MOTION==='websites'){
       if(L.industry) rows.push(['Business', esc(L.industry), '']);
-      if(L.website) rows.push(['Their site', esc(siteHost(L.website)), '']);
+      // Reps look a prospect's site up mid call, so the address itself opens it. New tab, because
+      // losing the dialer mid call would lose the queue position with it.
+      if(L.website){
+        var su=siteUrl(L.website);
+        rows.push(['Their site', su
+          ? '<a href="'+esc(su)+'" target="_blank" rel="noopener noreferrer">'+esc(siteHost(L.website))+' \u2197</a>'
+          : esc(siteHost(L.website)), '']);
+      }
     } else if(L.role){
       rows.push([L.priorCall?'They asked for':'Open role', '<span class="v big">'+esc(L.role)+'</span>', 'big']);
     }
@@ -1114,8 +1142,9 @@
     var p=FOUNDRY_PRODUCTS[fqProd];
     var el=document.getElementById('fqamt'); if(el){ fqAmt=parseInt(String(el.value).replace(/[^0-9]/g,''),10)||0; }
     var comm=(p.flat!=null)?p.flat:Math.round(fqAmt*p.rate);
-    var label=(p.flat!=null)?'Your commission &middot; flat per site':('Your '+Math.round(p.rate*100)+'% commission');
-    return '<div class="qrow"><span>Deal &middot; '+esc(p.label)+'</span><b>$'+fqAmt.toLocaleString()+'</b></div>'+
+    var label=(p.flat!=null)?'You earn &middot; flat per site':('You earn &middot; '+Math.round(p.rate*100)+'% of the deal');
+    // "They pay" against "You earn" so the two numbers can never be read as the same thing.
+    return '<div class="qrow"><span>They pay &middot; '+esc(p.label)+'</span><b>$'+fqAmt.toLocaleString()+'</b></div>'+
       '<div class="qrow"><span>'+label+'</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
       '<div class="qguard">'+(p.key==='website'
         ? 'Normally $4,995. Next 100 spots are $2,995. Only drop to $995 plus $49 a month if they say no. You earn $400 per site either way.'
@@ -1123,9 +1152,11 @@
   }
   function renderFoundryQuote(){
     return '<div class="lbl">Quick quote &amp; your cut</div><div class="quote">'+
-      '<div class="qtiers">'+FOUNDRY_PRODUCTS.map(function(p,i){return '<button class="qtier fqprod'+(i===fqProd?' on':'')+'" data-fqp="'+i+'">'+esc(p.label)+' &middot; '+((p.flat!=null)?('$'+p.flat):(Math.round(p.rate*100)+'%'))+'</button>';}).join('')+'</div>'+
+      '<div class="qcap">What you are quoting</div>'+
+      '<div class="qtiers">'+FOUNDRY_PRODUCTS.map(function(p,i){return '<button class="qtier fqprod'+(i===fqProd?' on':'')+'" data-fqp="'+i+'">'+esc(p.label)+'</button>';}).join('')+'</div>'+
       (FOUNDRY_PRODUCTS[fqProd].key==='website'
-        ? '<div class="qtiers">'+FOUNDRY_PRICES.map(function(x,i){return '<button class="qtier fqprice'+(i===fqPrice?' on':'')+'" data-fqx="'+i+'">'+esc(x.label)+' &middot; $'+x.amt.toLocaleString()+'</button>';}).join('')+'</div>'
+        ? '<div class="qcap">Price you land on</div>'+
+          '<div class="qtiers">'+FOUNDRY_PRICES.map(function(x,i){return '<button class="qtier fqprice'+(i===fqPrice?' on':'')+'" data-fqx="'+i+'">'+esc(x.label)+' &middot; $'+x.amt.toLocaleString()+'</button>';}).join('')+'</div>'
         : '')+
       '<label class="qtoggle">Deal size&nbsp; $ <input type="text" id="fqamt" inputmode="numeric" value="'+fqAmt+'" style="width:96px;font:inherit;color:#fff;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:8px;padding:4px 8px"></label>'+
       '<div class="qout" id="qout">'+fqOut()+'</div>'+
