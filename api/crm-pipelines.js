@@ -15,6 +15,32 @@ export default async function handler(req, res) {
     const token = process.env.HUBSPOT_TOKEN || '';
     if (!token) return res.status(200).json({ configured: false });
 
+    // Read one deal back, to check what was actually written rather than what we meant to write.
+    // GET /api/crm-pipelines/?deal=<id>
+    const dealId = (req.query.deal || '').toString().trim();
+    if (dealId) {
+        try {
+            const props = 'dealname,pipeline,dealstage,amount,hubspot_owner_id,createdate';
+            const d = await fetch(`${HS}/crm/v3/objects/deals/${encodeURIComponent(dealId)}?properties=${props}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const body = await d.json().catch(() => null);
+            if (!d.ok) return res.status(200).json({ ok: false, status: d.status, detail: JSON.stringify(body).slice(0, 250) });
+            const pr = (body && body.properties) || {};
+            // Resolve the owner id to a person, because an id alone does not answer "whose deal is this".
+            let owner = null;
+            if (pr.hubspot_owner_id) {
+                const o = await fetch(`${HS}/crm/v3/owners/${encodeURIComponent(pr.hubspot_owner_id)}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }).then(r2 => (r2.ok ? r2.json() : null)).catch(() => null);
+                if (o) owner = { id: pr.hubspot_owner_id, email: o.email, name: [o.firstName, o.lastName].filter(Boolean).join(' ') };
+            }
+            return res.status(200).json({ ok: true, deal: { id: body.id, ...pr }, owner });
+        } catch (e) {
+            return res.status(200).json({ ok: false, detail: String((e && e.message) || e).slice(0, 200) });
+        }
+    }
+
     try {
         const r = await fetch(`${HS}/crm/v3/pipelines/deals`, {
             headers: { Authorization: `Bearer ${token}` },
