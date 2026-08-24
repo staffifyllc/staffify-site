@@ -451,6 +451,12 @@
 (function(){
   var app=document.getElementById('app'), tbRight=document.getElementById('tbRight'), toastEl=document.getElementById('toast');
   var claimedLeadId=null;
+  // What was done to the lead currently on screen. Emailing someone or opening a booking link is
+  // real contact, but neither finishes the call, so the lead is not retired on the spot: the rep
+  // still needs the card in front of them. It is retired when they move on instead, which is what
+  // stops the next rep being handed a prospect who has already been approached.
+  var actedOn=null;   // { id: leadId, how: 'emailed' }
+  function markActed(L, how){ if(L && L.id) actedOn={id:L.id, how:how}; }
   var ME=null, MOTION='websites', firstLoad=true, QUEUES={websites:[],staffing:[],hot:[]}, TRAIN={}, SCORE=null, LABEL={websites:'Foundry',staffing:'Staffify',hot:'Hot'}, CURHOT=null;
 
   // Recordings live in a private bucket, so pointing an <audio> tag straight at the stored URL gets a
@@ -1356,6 +1362,7 @@
       var q=QUEUES[MOTION], L=(MOTION==='hot'? (q&&q[0]) : (q&&q[0]));
       // Tell the server this lead is being worked. The queue is shared, so without this two reps
       // starting at the top both dial the same prospect. The hold is short and expires on its own.
+      if(L && actedOn && actedOn.id!==L.id) actedOn=null;   // new lead, nothing done to it yet
       if(L && L.id && L.id!==claimedLeadId){
         claimedLeadId=L.id;
         fetch('/api/call-queue?action=claim',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -1374,6 +1381,7 @@
       var ev=CAL[pick?(+pick.value||0):0];
       window.open(calUrl(ev,L),'_blank','noopener');
       crmSync('note', L, '', 'Rep opened '+ev.name+' to book with '+(L.name||L.company||'the prospect')+'.');
+      markActed(L,'booking_opened');
       toast('Calendly opened. Book it while they are on the line.');
     };
     var eb=document.getElementById('emailbtn');
@@ -1390,6 +1398,7 @@
         +'Want me to send it over?\n\nPaul\nFoundry';
       window.open('mailto:'+encodeURIComponent(L.email)+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body),'_blank');
       eb.textContent='Email opened';
+      markActed(L,'emailed');
       // This email pitches the audit, so it is a real touch and belongs in the CRM. It records an
       // offer rather than a send, because the rep sends it from their own mail client and we never
       // actually learn whether they went through with it.
@@ -1669,6 +1678,15 @@
   function nextCall(){
     var q=QUEUES[MOTION]; if(!q||!q.length) return;
     flushPending();
+    var head=q[0];
+    // Something was actually sent to this one, so moving on finishes it. Rotating it to the back
+    // would hand an already-contacted prospect to whoever reaches it next.
+    if(head && actedOn && actedOn.id===head.id){
+      var how=actedOn.how; actedOn=null;
+      retireLead(head, how);
+      toast('Done with this one. Next up.');
+      return;
+    }
     if(q.length<2){ toast('That is the only lead left in this list.'); return; }
     var lead=q.shift(); q.push(lead); render();
   }
