@@ -1012,7 +1012,7 @@
     return '<div class="qrow"><span>Deal &middot; '+esc(p.label)+'</span><b>$'+fqAmt.toLocaleString()+'</b></div>'+
       '<div class="qrow"><span>Your '+Math.round(p.rate*100)+'% commission</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
       '<div class="qguard">'+(p.key==='website'
-        ? 'Ask $2,995 first. Only drop to $995 plus $49 a month if they say no to it. You keep 30% of what closes.'
+        ? 'Normally $4,995. Next 100 spots are $2,995. Only drop to $995 plus $49 a month if they say no. You keep 30% of what closes.'
         : 'AI automation build. You keep 10% of the deal. Set the deal size above.')+'</div>';
   }
   function renderFoundryQuote(){
@@ -1158,13 +1158,14 @@
     if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(fillTokens(tr.theAsk,L))+'</div>';
     // This named a trade the prospect is not in, and unlike the opener it was never run through the
     // sanitizer, so a rep quoting price to a clinic said "our roofing portfolio" out loud.
-    var portfolioInd=industryOf(L);
     // Ask for the build price first and let them react to it. The monthly plan is a DOWNSELL, not an
     // alternative offered up front: leading with $49 a month makes $2,995 unaskable afterwards.
+    // The discount is a limited run, not a vague portfolio claim, because a number they can picture
+    // running out is what makes it worth deciding today.
     var priceText=(MOTION==='websites')
-      ? ('Only if THEY ask. Lead with this: normally $4,995, but we are building our portfolio'
-         +(portfolioInd?' of '+portfolioInd:'')+' right now so we will build it for $2,995, one time. '
-         +'ONLY if they push back on the number: $995 to get it built, then $49 a month to keep it live and updated. '
+      ? ('Only if THEY ask. Lead with this: sites are normally $4,995. Right now we are doing our next '
+         +'100 spots at $2,995, one time. '
+         +'ONLY if they push back on the number: $995 to build it, then $49 a month to keep it live and updated. '
          +'Do not offer the monthly until they have said no to $2,995.')
       : tr.price;
     if(priceText) scriptBits+='<div class="blk"><b>Price (only if asked):</b> '+esc(priceText)+'</div>';
