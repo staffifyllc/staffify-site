@@ -29,7 +29,11 @@ export default async function handler(req, res) {
                 });
             }
         } catch (e) {
-            // swallow: never reveal whether the address exists or that sending failed
+            // The response stays {ok:true} so this endpoint can never be used to work out which
+            // addresses have accounts. But swallowing the reason entirely made a broken mail key look
+            // exactly like a delivered email, with nothing anywhere to say otherwise, so the reason is
+            // logged server-side where only we can see it. /api/auth-diag reports it on demand.
+            console.error('[auth-request] failed to send sign-in link:', (e && e.message) || e);
         }
     }
 
