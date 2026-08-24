@@ -2,11 +2,46 @@
 // GET  /api/call-queue?action=list[&n=25]  -> { date, websites:[...], staffing:[...], total }
 // GET  /api/call-queue?action=training      -> per-motion call scripts
 // GET  /api/call-queue?action=scoreboard    -> dials / answers / interested
-// POST /api/call-queue?action=log  { id, outcome, motion }  -> logs + removes the lead (dedup)
+// POST /api/call-queue?action=log    { id, outcome, motion } -> logs it and takes the lead out of
+//      EVERY rep's queue, not just the caller's browser.
+// POST /api/call-queue?action=claim  { id }                  -> holds a lead briefly while a rep has
+//      it open, so two reps are never handed the same prospect at once.
 // Auth: logged-in rep (session) or admin token. Env: SALES_PORTAL_BASE, SALES_PORTAL_TOKEN.
 
 import { openIdentity, readBody } from './_auth.js';
 import { optedOutSet, last10 } from './_optout.js';
+import { redis } from './_auth.js';
+
+// A lead someone has already worked. The queue is shared, so without this a lead a rep dispositioned
+// stays in every other rep's list and the prospect gets called a second time by someone else. Logging
+// an outcome only removed it from that one browser's copy, and a reload brought it straight back.
+const WORKED = 'queue:worked';
+// A lead currently on someone's screen. The queue is shared and every rep starts at the top, so
+// without this Paul and Madison dial the same prospect within seconds of each other. Short lived on
+// purpose: a rep who closes their laptop should not hold a lead hostage, so the claim simply expires
+// and the lead comes back to the pool.
+const CLAIM = (id) => `queue:claim:${id}`;
+const CLAIM_TTL = Number(process.env.QUEUE_CLAIM_TTL || 900);   // 15 minutes
+
+async function claimsHeldByOthers(me) {
+    try {
+        const keys = await redis.keys('queue:claim:*');
+        if (!keys || !keys.length) return new Set();
+        const vals = await Promise.all(keys.map(k => redis.get(k).catch(() => null)));
+        const out = new Set();
+        keys.forEach((k, i) => {
+            const holder = String(vals[i] || '');
+            // A rep always keeps sight of their own claim, or refreshing would lose their place.
+            if (holder && holder !== me) out.add(k.replace('queue:claim:', ''));
+        });
+        return out;
+    } catch (e) { return new Set(); }
+}
+
+async function workedIds() {
+    try { return new Set(Object.keys((await redis.hgetall(WORKED)) || {})); }
+    catch (e) { return new Set(); }   // never block the queue on this
+}
 
 const BASE = process.env.SALES_PORTAL_BASE;
 const TOKEN = process.env.SALES_PORTAL_TOKEN;
@@ -20,10 +55,35 @@ export default async function handler(req, res) {
     const action = (req.query.action || 'list').toString();
 
     try {
+        // A rep opened this lead. Held briefly so nobody else is handed the same prospect.
+        if (req.method === 'POST' && action === 'claim') {
+            const b = readBody(req);
+            if (!b.id) return res.status(400).json({ error: 'id_required' });
+            const me = ((who && who.email) || 'guest').toString();
+            try {
+                await redis.set(CLAIM(b.id), me, { ex: CLAIM_TTL });
+                return res.status(200).json({ ok: true, heldFor: CLAIM_TTL });
+            } catch (e) {
+                return res.status(200).json({ ok: false, reason: 'claim_store_failed' });
+            }
+        }
+
         if (req.method === 'POST' && action === 'log') {
             const b = readBody(req);
             if (!b.id) return res.status(400).json({ error: 'id_required' });
             if (!OUTCOMES.includes(b.outcome)) return res.status(400).json({ error: 'bad_outcome', outcomes: OUTCOMES });
+            // Recorded before the upstream call so a slow or failing engine cannot leave a worked lead
+            // sitting in everyone else's queue.
+            try {
+                await redis.hset(WORKED, {
+                    [String(b.id)]: JSON.stringify({
+                        at: Date.now(), outcome: b.outcome,
+                        rep: (b.rep || (who && who.name) || '').toString().slice(0, 80),
+                    }),
+                });
+                await redis.del(CLAIM(b.id));
+            } catch (e) { /* non-fatal: the log itself still goes through */ }
+
             const r = await fetch(`${BASE}?action=log&t=${encodeURIComponent(TOKEN)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -58,17 +118,28 @@ export default async function handler(req, res) {
         // the browser means it holds even if the page is stale or the engine serves them again.
         if (action === 'list' && j && (j.websites || j.staffing)) {
             try {
-                const { numbers } = await optedOutSet();
-                if (numbers.size) {
-                    let removed = 0;
-                    for (const k of ['websites', 'staffing']) {
-                        if (!Array.isArray(j[k])) continue;
-                        const before = j[k].length;
-                        j[k] = j[k].filter(l => !numbers.has(last10(l && l.phone)));
-                        removed += before - j[k].length;
-                    }
-                    if (removed) j.suppressed = removed;
+                const me = ((who && who.email) || 'guest').toString();
+                const [{ numbers }, worked, claimed] = await Promise.all([
+                    optedOutSet(), workedIds(), claimsHeldByOthers(me),
+                ]);
+                let removed = 0, alreadyWorked = 0, withAnotherRep = 0;
+                for (const k of ['websites', 'staffing']) {
+                    if (!Array.isArray(j[k])) continue;
+                    const before = j[k].length;
+                    j[k] = j[k].filter(l => !numbers.has(last10(l && l.phone)));
+                    removed += before - j[k].length;
+
+                    const mid = j[k].length;
+                    j[k] = j[k].filter(l => !worked.has(String(l && l.id)));
+                    alreadyWorked += mid - j[k].length;
+
+                    const afterWorked = j[k].length;
+                    j[k] = j[k].filter(l => !claimed.has(String(l && l.id)));
+                    withAnotherRep += afterWorked - j[k].length;
                 }
+                if (removed) j.suppressed = removed;
+                if (alreadyWorked) j.alreadyWorked = alreadyWorked;
+                if (withAnotherRep) j.withAnotherRep = withAnotherRep;
             } catch (e) { /* never block the queue on the consent check */ }
         }
         return res.status(r.status).json(j);

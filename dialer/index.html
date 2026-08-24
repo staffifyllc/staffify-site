@@ -447,6 +447,7 @@
 <script>
 (function(){
   var app=document.getElementById('app'), tbRight=document.getElementById('tbRight'), toastEl=document.getElementById('toast');
+  var claimedLeadId=null;
   var ME=null, MOTION='websites', firstLoad=true, QUEUES={websites:[],staffing:[],hot:[]}, TRAIN={}, SCORE=null, LABEL={websites:'Foundry',staffing:'Staffify',hot:'Hot'}, CURHOT=null;
 
   // Recordings live in a private bucket, so pointing an <audio> tag straight at the stored URL gets a
@@ -1302,6 +1303,13 @@
     // Remember which lead is displayed, and put its notes back in the box after the rebuild.
     (function(){
       var q=QUEUES[MOTION], L=(MOTION==='hot'? (q&&q[0]) : (q&&q[0]));
+      // Tell the server this lead is being worked. The queue is shared, so without this two reps
+      // starting at the top both dial the same prospect. The hold is short and expires on its own.
+      if(L && L.id && L.id!==claimedLeadId){
+        claimedLeadId=L.id;
+        fetch('/api/call-queue?action=claim',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({id:L.id})}).catch(function(){});
+      }
       shownLeadId = L ? L.id : null;
       var el=document.getElementById('callnotes');
       if(el){ el.value = notesFor(L); el.oninput=function(){ if(shownLeadId!=null) NOTES[shownLeadId]=el.value; }; }
