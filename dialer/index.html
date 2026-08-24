@@ -1235,6 +1235,7 @@
           '<p><b>'+HELDBACK.n+'</b> '+esc(LABEL[MOTION])+' leads were held back because the number is not a confirmed mobile:</p>'+
           '<ul class="whylist">'+why+'</ul>'+
           '<p>These are not lost. They come back as soon as the numbers are carrier-checked.</p></div>';
+        wire();   // the motion tabs live in `head`, so skipping this leaves them dead
         return;
       }
       app.innerHTML=head+'<div class="empty"><h2>All caught up on '+esc(LABEL[MOTION])+'.</h2><p>No one left to call in this list right now. Switch motions or check back later.</p></div>';
