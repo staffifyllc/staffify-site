@@ -12,6 +12,10 @@
 
 export const MOBILE = new Set(['mobile', 'cell', 'cellular', 'wireless']);
 
+// Set LINETYPE_REQUIRE_CARRIER=false to accept a bare timestamp again. Left on by default because a
+// timestamp with no carrier behind it is currently how bad numbers reach a rep.
+const REQUIRE_CARRIER = String(process.env.LINETYPE_REQUIRE_CARRIER || 'true') !== 'false';
+
 // Types a carrier has explicitly told us are not a person's phone. Named so the rep sees why.
 const NOT_A_PERSON = {
     landline: 'landline',
@@ -61,7 +65,21 @@ export function rejectReason(lead) {
     }
 
     const key = type.toLowerCase().replace(/[\s_-]/g, '');
-    if (MOBILE.has(key)) return null;
+    if (MOBILE.has(key)) {
+        // A real Twilio Line Type Intelligence response always names the carrier, so a lead stamped
+        // verified with no carrier on it was stamped by something that never asked one. Measured
+        // 2026-08-24: all 24 staffing leads carried a carrier (AT&T, Verizon, T-Mobile); all 195
+        // website leads carried none, and their 195 timestamps landed inside a single 0.537 second
+        // window. 195 carrier lookups do not complete in half a second. The stamp was bulk written.
+        //
+        // This is the same failure the typeCheckedAt rule was meant to stop, moved up one layer: the
+        // thing that was supposed to be the proof is now itself being forged. The carrier name is
+        // what a lookup cannot fake, so that is what is checked.
+        if (REQUIRE_CARRIER && !norm(lead && lead.carrier)) {
+            return 'stamped as checked but carries no carrier name, so no carrier was actually asked';
+        }
+        return null;
+    }
 
     const known = NOT_A_PERSON[type] || NOT_A_PERSON[key];
     return known ? `carrier says it is ${known}` : `carrier says it is "${type || 'unknown'}"`;
