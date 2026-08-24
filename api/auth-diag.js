@@ -4,7 +4,7 @@
 // work out which addresses have accounts. The cost of that is a completely silent failure: a broken
 // mail key looks exactly like a delivered email. This runs the same steps and reports which one broke.
 //
-// GET /api/auth-diag/?token=ADMIN_TOKEN&email=someone@gostaffify.com
+// GET /api/auth-diag/?token=ADMIN_TOKEN&email=someone@gostaffify.com[&emailId=<resend id>]
 //
 // Admin token only, because "does this address have an account" is exactly the question the sign-in
 // endpoint refuses to answer. Never returns the API key itself, only whether one is configured.
@@ -68,6 +68,24 @@ export default async function handler(req, res) {
             out.steps.testSend = { ok: r.ok, status: r.status, detail: body.slice(0, 300) };
         } catch (e) {
             out.steps.testSend = { ok: false, error: String((e && e.message) || e).slice(0, 200) };
+        }
+    }
+
+    // Resend accepting a message is not the same as the mailbox receiving it. This asks Resend what
+    // actually happened to a given message: delivered, bounced, or marked as spam. Pass the id from a
+    // previous testSend as ?emailId=... to look one up.
+    const lookupId = (req.query.emailId || '').toString().trim();
+    if (key && lookupId) {
+        try {
+            const r = await fetch(`https://api.resend.com/emails/${encodeURIComponent(lookupId)}`, {
+                headers: { Authorization: `Bearer ${key}` },
+            });
+            const body = await r.json().catch(() => null);
+            out.steps.deliveryStatus = r.ok
+                ? { ok: true, last_event: body && body.last_event, to: body && body.to, subject: body && body.subject, created_at: body && body.created_at }
+                : { ok: false, status: r.status, detail: JSON.stringify(body).slice(0, 250) };
+        } catch (e) {
+            out.steps.deliveryStatus = { ok: false, error: String((e && e.message) || e).slice(0, 200) };
         }
     }
 
