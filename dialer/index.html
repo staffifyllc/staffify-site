@@ -59,6 +59,10 @@
         .lineflag.ok  { color:#7ef5c2; background:rgba(126,245,194,.10); border:1px solid rgba(126,245,194,.30); }
         .lineflag.bad { color:#ffb4a2; background:rgba(255,120,90,.10); border:1px solid rgba(255,120,90,.32);
                         text-transform:none; letter-spacing:0; font-weight:700; }
+        .whylist { list-style:none; padding:0; margin:14px auto; max-width:520px; text-align:left; }
+        .whylist li { padding:9px 14px; margin-bottom:7px; border-radius:10px; font-size:13.5px;
+                      color:var(--white); background:rgba(255,120,90,.09);
+                      border:1px solid rgba(255,120,90,.28); }
         .heldback { margin:10px 0 0; padding:11px 14px; border-radius:12px; font-size:13px; line-height:1.5;
                     color:var(--muted); background:rgba(255,255,255,0.03); border:1px dashed var(--card-border); }
         .heldback b { color:var(--white); font-weight:700; }
@@ -1221,6 +1225,18 @@
     if(MOTION==='hot'){ renderHot(head, QUEUES.hot); return; }
 
     if(!q.length){
+      // An empty list because everything was withheld is not the same as an empty list because the
+      // work is done, and telling a rep they are "all caught up" when 316 leads were held back is
+      // how a list stops being believed. Say which one it is.
+      if(HELDBACK && HELDBACK.n){
+        var why=Object.keys(HELDBACK.reasons||{}).map(function(k){
+          return '<li>'+esc(HELDBACK.reasons[k]+' \u00d7 '+k)+'</li>'; }).join('');
+        app.innerHTML=head+'<div class="empty"><h2>Nothing here is safe to dial yet.</h2>'+
+          '<p><b>'+HELDBACK.n+'</b> '+esc(LABEL[MOTION])+' leads were held back because the number is not a confirmed mobile:</p>'+
+          '<ul class="whylist">'+why+'</ul>'+
+          '<p>These are not lost. They come back as soon as the numbers are carrier-checked.</p></div>';
+        return;
+      }
       app.innerHTML=head+'<div class="empty"><h2>All caught up on '+esc(LABEL[MOTION])+'.</h2><p>No one left to call in this list right now. Switch motions or check back later.</p></div>';
       wire();
       return;
