@@ -10,6 +10,7 @@
 
 import { openIdentity, readBody } from './_auth.js';
 import { optedOutSet, last10 } from './_optout.js';
+import { partition } from './_linetype.js';
 import { redis } from './_auth.js';
 
 // A lead someone has already worked. The queue is shared, so without this a lead a rep dispositioned
@@ -166,7 +167,8 @@ export default async function handler(req, res) {
                 const [{ numbers }, worked, handled, claimed] = await Promise.all([
                     optedOutSet(), workedIds(), handledPhones(), claimsHeldByOthers(me),
                 ]);
-                let removed = 0, alreadyWorked = 0, withAnotherRep = 0;
+                let removed = 0, alreadyWorked = 0, withAnotherRep = 0, unverified = 0;
+                const unverifiedReasons = {};
                 for (const k of ['websites', 'staffing']) {
                     if (!Array.isArray(j[k])) continue;
                     const before = j[k].length;
@@ -180,10 +182,24 @@ export default async function handler(req, res) {
                     const afterWorked = j[k].length;
                     j[k] = j[k].filter(l => !claimed.has(String(l && l.id)));
                     withAnotherRep += afterWorked - j[k].length;
+
+                    // Last, because it is the one a rep will ask about: a number nobody has actually
+                    // asked a carrier about is not a number we hand someone to dial.
+                    const part = partition(j[k]);
+                    j[k] = part.kept;
+                    if (part.rejected) {
+                        unverified += part.rejected;
+                        for (const [why, n] of Object.entries(part.reasons)) {
+                            unverifiedReasons[why] = (unverifiedReasons[why] || 0) + n;
+                        }
+                    }
                 }
                 if (removed) j.suppressed = removed;
                 if (alreadyWorked) j.alreadyWorked = alreadyWorked;
                 if (withAnotherRep) j.withAnotherRep = withAnotherRep;
+                // Surfaced rather than swallowed: a queue that quietly shrinks is a queue reps stop
+                // trusting, so it reports how many were held back and why.
+                if (unverified) { j.unverified = unverified; j.unverifiedReasons = unverifiedReasons; }
             } catch (e) { /* never block the queue on the consent check */ }
         }
         return res.status(r.status).json(j);

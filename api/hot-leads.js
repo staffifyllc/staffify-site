@@ -8,6 +8,7 @@
 //   For engine leads: marks the phone handled locally and best-effort logs it back to the engine.
 
 import { openIdentity, redis, readBody } from './_auth.js';
+import { carryLineType, partition } from './_linetype.js';
 import { slackNotify } from './_slack.js';
 
 const OUTCOMES = ['won', 'callback', 'not_interested', 'no_answer', 'bad_number'];
@@ -41,7 +42,11 @@ async function fetchEngineWarm() {
                 const summary = w.summary || (w.grade === 'replied'
                     ? 'Replied to our outreach, warm. Call to qualify and set the hook.'
                     : 'Warm lead from the engine. Call to move it forward.');
-                out.push({ id: 'engine:' + w.phone, name: w.name || '', company: w.company || '', phone: w.phone, email: '', motion, grade: w.grade || '', summary, source: w.source || 'engine', recordingUrl: (w.recording_url || w.recordingUrl || ''), transcript: (w.transcript || w.concatenated_transcript || '') });
+                // Line-type fields must survive this rebuild. Anything not listed here vanishes, which is
+
+                // exactly how a verified number arrives at the UI looking unverified.
+
+                out.push(carryLineType({ id: 'engine:' + w.phone, name: w.name || '', company: w.company || '', phone: w.phone, email: '', motion, grade: w.grade || '', summary, source: w.source || 'engine', recordingUrl: (w.recording_url || w.recordingUrl || ''), transcript: (w.transcript || w.concatenated_transcript || '') }, w));
             });
         });
         return out;
@@ -110,8 +115,12 @@ export default async function handler(req, res) {
         if (!h || !h.phone || h.status === 'done') continue;
         if (handled.has(h.phone) || seen.has(h.phone)) continue;
         seen.add(h.phone);
-        leads.push({ id, name: h.name || '', company: h.company || '', phone: h.phone, email: h.email || '', motion: h.motion || 'websites', grade: '', summary: h.summary || '', source: h.source || '', recordingUrl: (h.recordingUrl || ''), transcript: (h.transcript || '') });
+        leads.push(carryLineType({ id, name: h.name || '', company: h.company || '', phone: h.phone, email: h.email || '', motion: h.motion || 'websites', grade: '', summary: h.summary || '', source: h.source || '', recordingUrl: (h.recordingUrl || ''), transcript: (h.transcript || '') }, h));
     }
 
-    return res.status(200).json({ count: leads.length, leads });
+    // Same rule as the dialer queue: an unverified number is not a lead, it is a guess.
+    const part = partition(leads);
+    const body = { count: part.kept.length, leads: part.kept };
+    if (part.rejected) { body.unverified = part.rejected; body.unverifiedReasons = part.reasons; }
+    return res.status(200).json(body);
 }
