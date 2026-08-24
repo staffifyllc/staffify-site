@@ -221,7 +221,7 @@ export async function upsertDeal({ contactId, company, role, ownerId, motion, am
 
     let open = null;
     for (const id of ids) {
-        const d = await hs(`/crm/v3/objects/deals/${id}?properties=dealstage,pipeline,hs_is_closed_won,hs_is_closed`, { method: 'GET' });
+        const d = await hs(`/crm/v3/objects/deals/${id}?properties=dealstage,pipeline,hs_is_closed_won,hs_is_closed,hubspot_owner_id`, { method: 'GET' });
         if (!d.ok || !d.body) continue;
         const pr = d.body.properties || {};
         if (String(pr.pipeline) !== String(pipe.id)) continue;
@@ -229,11 +229,20 @@ export async function upsertDeal({ contactId, company, role, ownerId, motion, am
         // HubSpot returns these as the STRINGS "true"/"false", so compare rather than trusting truthiness.
         const closed = String(pr.hs_is_closed) === 'true' || String(pr.hs_is_closed_won) === 'true';
         if (closed || TERMINAL.has(k)) continue;
-        open = { id, key: k };
+        open = { id, key: k, owner: pr.hubspot_owner_id || '' };
         break;
     }
 
     if (open) {
+        // Adopt an orphan. A deal that opened before we could resolve the rep stayed unowned forever,
+        // because every later touch only ever considered the stage. An unowned deal pays nobody.
+        if (ownerId && !open.owner) {
+            await hs(`/crm/v3/objects/deals/${open.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ properties: { hubspot_owner_id: String(ownerId) } }),
+            });
+            open.owner = String(ownerId);
+        }
         // Only ever forward. Re-sending a mockup to someone already at Mockup Sent is a no-op, not a bounce.
         if (want && rank(want) > rank(open.key)) {
             const up = await hs(`/crm/v3/objects/deals/${open.id}`, {
@@ -304,6 +313,10 @@ export async function repOwnerId(rep, repEmail, deps = {}) {
     // The signed-in rep's own email is the reliable one. A name posted in a request body carries no
     // email, so fall back to the hub's roster to find it.
     let email = String(repEmail || '').trim().toLowerCase();
+    // The dialer mints an identity from whatever name a rep types, at "<slug>@rep.local". That is not
+    // an address anyone can be matched on, and treating it as one meant the roster lookup below never
+    // ran and the match below always missed. Discard it and carry on as though there were no email.
+    if (/@rep\.local$/i.test(email)) email = '';
     if (!email && key && typeof deps.listReps === 'function') {
         try {
             const reps = (await deps.listReps()) || [];

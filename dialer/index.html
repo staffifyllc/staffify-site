@@ -1217,8 +1217,11 @@
     try{
       fetch('/api/crm-sync/',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({type:type, outcome:outcome||'', body:body||'', rep:(repGet()||{}).name||'',
+          // The lead's OWN motion decides the pipeline. MOTION is the tab, and on the hot tab that
+          // string is "hot", which matches no pipeline and quietly files Foundry website deals in the
+          // Staffify VA pipeline. sentBlock already got this right; this did not.
           lead:{company:lead.company||'', name:lead.name||'', phone:lead.phone||'', email:lead.email||'',
-                role:lead.role||'', motion:MOTION}})}).catch(function(){});
+                role:lead.role||'', motion:(lead.motion||MOTION)}})}).catch(function(){});
     }catch(e){}
   }
 
