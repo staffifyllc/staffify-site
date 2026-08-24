@@ -11,6 +11,30 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+      .lookup { margin:0 0 26px; }
+      .lookup input { width:100%; font-family:inherit; font-size:15.5px; color:#fff;
+        background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.10);
+        border-radius:14px; padding:15px 18px; outline:none; }
+      .lookup input:focus { border-color:#1abde1; background:rgba(255,255,255,0.06); }
+      .lookup input::placeholder { color:#6f7680; }
+      .lkout { display:none; margin-top:10px; }
+      .lkcard { background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.09);
+        border-radius:14px; padding:18px 20px; }
+      .lkwho { font-size:19px; font-weight:800; letter-spacing:-0.01em; }
+      .lksub { font-size:13.5px; color:#9ba1ab; margin-top:3px; }
+      .lkflags { display:flex; flex-wrap:wrap; gap:7px; margin-top:11px; }
+      .lkflag { font-size:11.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+        padding:4px 10px; border-radius:999px; }
+      .lkflag.bad { color:#ffb4a2; background:rgba(255,120,90,.12); border:1px solid rgba(255,120,90,.34); }
+      .lkflag.warn{ color:#e8c37a; background:rgba(232,195,122,.10); border:1px solid rgba(232,195,122,.30); }
+      .lkadvice { margin-top:12px; font-size:14.5px; line-height:1.55; color:#dfe4ea; }
+      .lksay { margin-top:11px; padding:11px 13px; border-radius:10px; font-size:14px; line-height:1.5;
+        background:rgba(26,189,225,.07); border-left:2px solid #1abde1; color:#dfe4ea; }
+      .lksay b { display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+        color:#1abde1; margin-bottom:4px; font-weight:800; }
+      .lkcall { display:inline-block; margin-top:13px; font-size:16px; font-weight:800; color:#1abde1; text-decoration:none; }
+      .lkempty { padding:14px 18px; font-size:14px; color:#9ba1ab;
+        background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.10); border-radius:14px; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); }
         .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
@@ -236,6 +260,59 @@
     }).join('');
   }
 
+  // Someone calls back and the rep has seconds to work out who they are. Number, name, company or
+  // email, and it answers from the live queue, the hot leads, HubSpot and the opt-out list at once.
+  function lookupBox(){
+    return '<div class="lookup">'+
+      '<input id="lk" type="search" autocomplete="off" placeholder="Who is calling? Paste a number, or type a name or company">'+
+      '<div id="lkout" class="lkout"></div></div>';
+  }
+
+  function lkFlag(cls, text){ return '<span class="lkflag '+cls+'">'+esc(text)+'</span>'; }
+
+  function lkRender(j){
+    var box=document.getElementById('lkout'); if(!box) return;
+    if(j.__loading){ box.innerHTML='<div class="lkempty">Looking...</div>'; box.style.display='block'; return; }
+    var flags='';
+    if(j.optedOut) flags+=lkFlag('bad','Opted out, do not pitch');
+    if(j.alreadyWorked) flags+=lkFlag('warn','Already worked');
+    var head=(j.found&&j.found.length)?j.found[0]:null;
+    var who = head ? (head.company||head.name||'Unknown')
+            : (j.hubspot ? (j.hubspot.company||j.hubspot.name||'In HubSpot') : 'Not in any campaign');
+    var sub  = head ? [head.name, head.role||head.industry, head.city].filter(Boolean).join(' \u00b7 ')
+            : (j.hubspot ? [j.hubspot.name, j.hubspot.email].filter(Boolean).join(' \u00b7 ') : '');
+    var lines='';
+    if(head&&head.sayThis) lines+='<div class="lksay"><b>Say this</b>'+esc(head.sayThis)+'</div>';
+    if(head&&head.hook)    lines+='<div class="lksay"><b>The hook</b>'+esc(head.hook)+'</div>';
+    if(head&&head.priorCall) flags+=lkFlag('warn','Previously booked a call'+(head.lastCall?' \u00b7 '+head.lastCall:''));
+    box.innerHTML='<div class="lkcard">'+
+      '<div class="lkwho">'+esc(who)+'</div>'+
+      (sub?'<div class="lksub">'+esc(sub)+'</div>':'')+
+      (flags?'<div class="lkflags">'+flags+'</div>':'')+
+      '<div class="lkadvice">'+esc(j.advice||'')+'</div>'+
+      lines+
+      (head&&head.phone?'<a class="lkcall" href="tel:'+esc(head.phone)+'">'+esc(head.phone)+'</a>':'')+
+      '</div>';
+    box.style.display='block';
+  }
+
+  var lkTimer=null;
+  function wireLookup(){
+    var el=document.getElementById('lk'); if(!el) return;
+    el.addEventListener('input', function(){
+      var q=el.value.trim();
+      var box=document.getElementById('lkout');
+      if(q.length<3){ if(box){box.style.display='none';box.innerHTML='';} return; }
+      clearTimeout(lkTimer);
+      lkTimer=setTimeout(function(){
+        lkRender({__loading:true});
+        fetch('/api/lookup/?q='+encodeURIComponent(q),{cache:'no-store'})
+          .then(function(r){return r.json();}).then(lkRender)
+          .catch(function(){ var b=document.getElementById('lkout'); if(b) b.innerHTML='<div class="lkempty">Lookup failed. Try again.</div>'; });
+      }, 250);
+    });
+  }
+
   function render(pipeData, ld, apps){
     tbRight.innerHTML='<a class="btn btn-ghost" href="/api/auth-logout" style="text-decoration:none">Sign out</a>';
 
@@ -257,6 +334,7 @@
     }).join('');
 
     app.innerHTML=
+      lookupBox()+
       '<div class="eyebrow">Sales Hub</div><h1>Welcome back, <span class="grad">'+esc(first)+'</span></h1>'+
       '<div class="sub">'+upCount+' upcoming call'+(upCount===1?'':'s')+' &middot; '+leadCount+' warm lead'+(leadCount===1?'':'s')+(isAdmin?' &middot; '+appList.length+' applicant'+(appList.length===1?'':'s'):'')+' &middot; '+esc(ME.rate||'35')+'% commission</div>'+
       '<div class="cols">'+
@@ -280,6 +358,7 @@
         StaffifyClosePlan.run({mode:'prep',transcript:l.transcript||'',name:l.name||'',company:l.company||'',grade:g,phone:l.phone||''}, document.getElementById('cp-'+b.getAttribute('data-cp')), b);
       };
     });
+    wireLookup();
   }
 
   load();
