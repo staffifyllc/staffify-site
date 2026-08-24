@@ -27,7 +27,7 @@ function repRate(rep) { const n = Number(rep && rep.rate); return (n > 0 && n < 
 function repHouseRate(rep) { const n = Number(rep && rep.houseRate); return (n > 0 && n < 100) ? n : null; }
 
 // Foundry websites pay a FLAT amount per site, not a percentage (Paul, 2026-08-11). AI stays a percentage.
-const FLAT_COMMISSION = { website: Number(process.env.FOUNDRY_COMMISSION || 300) };
+const FLAT_COMMISSION = { website: Number(process.env.FOUNDRY_COMMISSION || 400) };
 const ACCEL_AFTER = Number(process.env.ACCEL_AFTER_DEALS || 5);  // 40% starts on the 6th close of a month
 const ACCEL_RATE = Number(process.env.ACCEL_RATE || 40);
 

@@ -1051,7 +1051,10 @@
 
   // Foundry commission: 30% on a website deal, 10% on an AI automation deal. Rep sets the deal
   // size (websites: Paul confirmed 2026-08-15, $995 to build plus $49 a month to keep it live).
-  var FOUNDRY_PRODUCTS=[{key:'website',label:'Website',rate:0.30},{key:'ai',label:'AI automation',rate:0.10}];
+  // A website pays a flat fee per site, not a share of the deal, so the same money lands whether the
+  // rep closed at $2,995 or dropped to $995. Showing it as a percentage told a rep they had earned
+  // $899 on a full-price site when the commission engine pays $400.
+  var FOUNDRY_PRODUCTS=[{key:'website',label:'Website',flat:400},{key:'ai',label:'AI automation',rate:0.10}];
   // The two website prices, in the order they are offered. The rep taps whichever the call landed on
   // so the commission figure matches what they actually closed.
   var FOUNDRY_PRICES=[
@@ -1062,16 +1065,17 @@
   function fqOut(){
     var p=FOUNDRY_PRODUCTS[fqProd];
     var el=document.getElementById('fqamt'); if(el){ fqAmt=parseInt(String(el.value).replace(/[^0-9]/g,''),10)||0; }
-    var comm=Math.round(fqAmt*p.rate);
+    var comm=(p.flat!=null)?p.flat:Math.round(fqAmt*p.rate);
+    var label=(p.flat!=null)?'Your commission &middot; flat per site':('Your '+Math.round(p.rate*100)+'% commission');
     return '<div class="qrow"><span>Deal &middot; '+esc(p.label)+'</span><b>$'+fqAmt.toLocaleString()+'</b></div>'+
-      '<div class="qrow"><span>Your '+Math.round(p.rate*100)+'% commission</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
+      '<div class="qrow"><span>'+label+'</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
       '<div class="qguard">'+(p.key==='website'
-        ? 'Normally $4,995. Next 100 spots are $2,995. Only drop to $995 plus $49 a month if they say no. You keep 30% of what closes.'
+        ? 'Normally $4,995. Next 100 spots are $2,995. Only drop to $995 plus $49 a month if they say no. You earn $400 per site either way.'
         : 'AI automation build. You keep 10% of the deal. Set the deal size above.')+'</div>';
   }
   function renderFoundryQuote(){
     return '<div class="lbl">Quick quote &amp; your cut</div><div class="quote">'+
-      '<div class="qtiers">'+FOUNDRY_PRODUCTS.map(function(p,i){return '<button class="qtier fqprod'+(i===fqProd?' on':'')+'" data-fqp="'+i+'">'+esc(p.label)+' &middot; '+Math.round(p.rate*100)+'%</button>';}).join('')+'</div>'+
+      '<div class="qtiers">'+FOUNDRY_PRODUCTS.map(function(p,i){return '<button class="qtier fqprod'+(i===fqProd?' on':'')+'" data-fqp="'+i+'">'+esc(p.label)+' &middot; '+((p.flat!=null)?('$'+p.flat):(Math.round(p.rate*100)+'%'))+'</button>';}).join('')+'</div>'+
       (FOUNDRY_PRODUCTS[fqProd].key==='website'
         ? '<div class="qtiers">'+FOUNDRY_PRICES.map(function(x,i){return '<button class="qtier fqprice'+(i===fqPrice?' on':'')+'" data-fqx="'+i+'">'+esc(x.label)+' &middot; $'+x.amt.toLocaleString()+'</button>';}).join('')+'</div>'
         : '')+
