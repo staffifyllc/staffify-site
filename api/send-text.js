@@ -63,10 +63,11 @@ function buildMessage({ first, rep, role, company, industry, motion, priorCall, 
     // within a minute of getting it. Say the true thing instead: our team talked to them.
     if (priorCall) {
         const when = monthOf(lastCall);
-        // "about the X you were looking for" reads right for every role we have on file.
-        // "about a Executive Admin / Assistant" does not, so no bare article.
-        const about = role ? ` about the ${role} you were looking for` : '';
-        return `${hey}it's ${who} at Staffify. Just tried you. Our team spoke with you${when ? ' back in ' + when : ''}${about} and we never closed the loop with you. Did that ever get sorted?`;
+        // Reference the conversation itself. They came to us and told us what they wanted, so the
+        // thing that makes this land is that we remember it, not that we spotted a listing.
+        // "the X we discussed" reads right for every role we have on file; a bare article does not.
+        const about = role ? `the ${role} we discussed` : 'what we discussed';
+        return `${hey}it's ${who} at Staffify. Just tried you about ${about}${when ? ' back in ' + when : ''}. We never closed the loop on that one. Did it ever get sorted?`;
     }
     return `${hey}it's ${who}. Just tried you about the ${role} role you posted. Still hiring for it?`;
 }

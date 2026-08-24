@@ -60,6 +60,9 @@
         .lbl { font-size:13.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--cyan); margin:18px 0 8px; }
         .fault { margin-top:10px; background:rgba(255,170,60,0.08); border:1px solid rgba(255,170,60,0.35); border-radius:12px; padding:11px 14px; font-size:14.5px; color:#ffd9a0; }
         .fault > span { display:block; font-size:10.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#c9903f; margin-bottom:5px; }
+        .nomail { width:100%; margin-top:10px; padding:12px 14px; font-size:13.5px; line-height:1.45;
+                  color:var(--muted); background:rgba(255,255,255,0.03);
+                  border:1px dashed var(--card-border); border-radius:12px; text-align:center; }
         .emailbtn { display:block; width:100%; margin-top:10px; background:rgba(26,189,225,0.12); color:#7fd8ee; border:1px solid rgba(26,189,225,0.45); border-radius:12px; padding:13px; font:inherit; font-weight:800; font-size:15px; cursor:pointer; }
         .emailbtn:hover { background:rgba(26,189,225,0.2); }
         .fresh { display:inline-block; margin-top:8px; background:rgba(45,190,120,0.12); color:#5fd39a; border:1px solid rgba(45,190,120,0.4); border-radius:999px; font-size:11.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:4px 11px; }
@@ -478,6 +481,22 @@
     return '<div class="lbl">Arm yourself</div><div class="ammorow">'+links.join('')+'</div>';
   }
   // Mirrors the server-side copy in api/send-text.js so the rep sees exactly what will go out.
+  // "2026-05-15" -> "May". Blank when we have no date, so the text never invents one.
+  function monthName(iso){
+    try{ var d=new Date(String(iso||'')+'T12:00:00Z');
+      return isNaN(d)?'':d.toLocaleString('en-US',{month:'long',timeZone:'UTC'}); }
+    catch(e){ return ''; }
+  }
+
+  // The engine flags leads whose address failed verification. The card printed that warning and then
+  // offered an Email button directly underneath it, so the rep was invited to do the one thing the
+  // lead was flagged against. Trust the flag and take the button away.
+  function emailIsBad(L){
+    return (L && L.flags || []).some(function(f){
+      return /do not email|email bounced|bounced verification|bad email|invalid email/i.test(String(f||''));
+    });
+  }
+
   function textPreview(L){
     var rep=firstNameOf(ME&&ME.name)||'[set your name]';
     var first=firstNameOf(L.name);
@@ -489,6 +508,14 @@
     var ind=String(L.industry||'').trim();
     var oneOf=ind ? 'a '+singularIndustry(ind) : 'one';
     if(MOTION==='websites') return hey+"it's "+sender+". Just tried you. Random question, do you know if "+(L.company||'')+' comes up when someone asks ChatGPT to find '+oneOf+' nearby?';
+    // Someone who booked a call with us never posted a job anywhere. The server has always known
+    // this and sent a different message, but the preview showed the cold "role you posted" line to
+    // every lead, so the rep was reading a claim we do not make and would never actually send.
+    if(L.priorCall){
+      var when=monthName(L.lastCall);
+      var about=L.role?('the '+L.role+' we discussed'):'what we discussed';
+      return hey+"it's "+rep+' at Staffify. Just tried you about '+about+(when?' back in '+when:'')+'. We never closed the loop on that one. Did it ever get sorted?';
+    }
     return hey+"it's "+rep+'. Just tried you about the '+(L.role||'')+' role you posted. Still hiring for it?';
   }
   // Opening their site is an action, so it sits with the other actions rather than inside a data row.
@@ -1190,7 +1217,11 @@
         posRow()+
         siteBtn(L)+
         textBlock(L)+
-        (L.email?'<button class="emailbtn" id="emailbtn">Email them &middot; '+esc(L.email)+'</button>':'')+
+        (L.email
+          ? (emailIsBad(L)
+              ? '<div class="nomail">Email is dead on this one. It failed verification, so call or text instead.</div>'
+              : '<button class="emailbtn" id="emailbtn">Email them &middot; '+esc(L.email)+'</button>')
+          : '')+
         sentBlock(L)+
         bookBlock(L)+
         outcomesBlock(false)+
