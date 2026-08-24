@@ -7,6 +7,7 @@
 // into the caller, because failing to log an activity must never break a rep's call flow.
 
 const HS = 'https://api.hubapi.com';
+const OWNER_KEY = 'crm:owners';
 const token = () => process.env.HUBSPOT_TOKEN || '';
 const headers = () => ({ Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' });
 
@@ -266,6 +267,71 @@ export async function archiveContact(contactId) {
     if (!contactId) return { ok: false, reason: 'no_contact' };
     const r = await hs(`/crm/v3/objects/contacts/${contactId}`, { method: 'DELETE' });
     return { ok: r.ok || r.status === 204, status: r.status, detail: r.raw };
+}
+
+// True only when exactly one rep on the roster goes by this first name. With no roster to check, the
+// answer is no: a missing alias costs one extra lookup, a wrong one costs somebody their commission.
+async function firstNameIsUnique(first, deps = {}) {
+    if (typeof deps.listReps !== 'function') return false;
+    try {
+        const reps = (await deps.listReps()) || [];
+        const matches = reps.filter(r => String(r.name || '').trim().toLowerCase().split(/\s+/)[0] === first);
+        return matches.length === 1;
+    } catch (e) { return false; }
+}
+
+// Which HubSpot owner is this rep? An ownerless deal pays no commission, so this tries three things in
+// order: the saved name map, the rep's first name, then HubSpot's own owner list matched on email. The
+// email match is what stops a newly added rep from quietly producing unattributed deals until somebody
+// remembers to run /api/crm-owners/ {auto:true}; the result is written back to the map so it happens once.
+export async function repOwnerId(rep, repEmail, deps = {}) {
+    const redis = deps.redis;
+    const key = String(rep || '').trim().toLowerCase();
+    const first = key.split(/\s+/)[0];
+
+    if (key && redis) {
+        try {
+            const direct = await redis.hget(OWNER_KEY, key);
+            if (direct) return String(direct);
+            if (first && first !== key) {
+                const byFirst = await redis.hget(OWNER_KEY, first);
+                if (byFirst) return String(byFirst);
+            }
+        } catch (e) { /* fall through to the email match */ }
+    }
+    if (!token()) return '';
+
+    // The signed-in rep's own email is the reliable one. A name posted in a request body carries no
+    // email, so fall back to the hub's roster to find it.
+    let email = String(repEmail || '').trim().toLowerCase();
+    if (!email && key && typeof deps.listReps === 'function') {
+        try {
+            const reps = (await deps.listReps()) || [];
+            const hit = reps.find(r => String(r.name || '').trim().toLowerCase() === key);
+            email = hit ? String(hit.email || '').trim().toLowerCase() : '';
+        } catch (e) { /* no roster, no email match */ }
+    }
+    if (!email || email === 'guest' || email === 'admin') return '';
+
+    // Exact match only. A fuzzy match here would credit one rep's work to another.
+    const r = await hs('/crm/v3/owners?limit=200', { method: 'GET' });
+    const owner = r.ok && r.body && (r.body.results || []).find(
+        o => String(o.email || '').trim().toLowerCase() === email);
+    if (!owner) return '';
+
+    const id = String(owner.id);
+    if (redis && key) {
+        try {
+            await redis.hset(OWNER_KEY, { [key]: id });
+            // Only alias the bare first name when it is unambiguous. Two reps named "Chris" sharing one
+            // alias would credit whichever of them happened to be resolved first, and commission would
+            // land on the wrong person.
+            if (first && first !== key && (await firstNameIsUnique(first, deps))) {
+                await redis.hset(OWNER_KEY, { [first]: id });
+            }
+        } catch (e) { /* the id is still good even if caching it failed */ }
+    }
+    return id;
 }
 
 export function configured() { return !!token(); }

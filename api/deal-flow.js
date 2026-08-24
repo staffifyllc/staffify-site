@@ -15,8 +15,8 @@
 // Callable three ways, because the senders live in three places: a signed-in rep in the dialer, an
 // admin/machine token from the lead-gen engine, or a typed name on a shared link.
 
-import { openIdentity, readBody, redis } from './_auth.js';
-import { configured, findOrCreateContact, logNote, upsertDeal, setLeadStatus } from './_hubspot.js';
+import { openIdentity, readBody, redis, listReps } from './_auth.js';
+import { configured, findOrCreateContact, logNote, upsertDeal, setLeadStatus, repOwnerId } from './_hubspot.js';
 import { isOptedOut } from './_optout.js';
 
 // An audit is the opener, so it lands the deal at Contacted. A mockup is real work in the prospect's
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
 
     const out = { ok: true, kind, contactId: c.id, contactCreated: !!c.created, did: [] };
 
-    const ownerId = await repOwnerId(rep);
+    const ownerId = await repOwnerId(rep, (who && who.email) || '', { redis, listReps });
     const d = await upsertDeal({
         contactId: c.id, company: lead.company, role: lead.role,
         ownerId, motion, amount: b.amount, stage: spec.stage,
@@ -102,14 +102,3 @@ export default async function handler(req, res) {
     return res.status(200).json(out);
 }
 
-async function repOwnerId(rep) {
-    const key = String(rep || '').trim().toLowerCase();
-    if (!key) return '';
-    try {
-        const direct = await redis.hget('crm:owners', key);
-        if (direct) return String(direct);
-        const byFirst = await redis.hget('crm:owners', key.split(/\s+/)[0]);
-        if (byFirst) return String(byFirst);
-    } catch (e) { /* fall through */ }
-    return '';
-}

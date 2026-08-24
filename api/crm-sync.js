@@ -4,8 +4,8 @@
 // Fire-and-forget from the rep's point of view: it always returns 200 with what happened, and never
 // throws back into the dialer, because a CRM hiccup must not interrupt someone mid call.
 
-import { openIdentity, readBody, redis } from './_auth.js';
-import { configured, findOrCreateContact, findContact, logCall, logText, logNote, setLeadStatus, upsertDeal, archiveContact } from './_hubspot.js';
+import { openIdentity, readBody, redis, listReps } from './_auth.js';
+import { configured, findOrCreateContact, findContact, logCall, logText, logNote, setLeadStatus, upsertDeal, archiveContact, repOwnerId } from './_hubspot.js';
 
 const BUYING = ['interested', 'booked', 'won'];
 // Where a call outcome puts the deal. Contact on the phone is real engagement, a booked call is its own
@@ -83,7 +83,7 @@ export default async function handler(req, res) {
 
     // A real buying signal opens a deal, owned by the rep so the commission engine credits the closer.
     if (BUYING.indexOf(outcome) >= 0) {
-        const ownerId = await repOwnerId(rep);
+        const ownerId = await repOwnerId(rep, (who && who.email) || '', { redis, listReps });
         const stage = OUTCOME_STAGE[outcome] || '';
         const d = await upsertDeal({
             contactId: c.id, company: lead.company, role: lead.role,
@@ -96,18 +96,4 @@ export default async function handler(req, res) {
         if (d.ok && !ownerId) out.warn = 'deal has no owner: map this rep to a HubSpot owner id or the commission will not attribute';
     }
     return res.status(200).json(out);
-}
-
-// rep name -> HubSpot owner id, cached. Set the map once in redis: hset crm:owners "<lower name>" "<ownerId>"
-async function repOwnerId(rep) {
-    const key = String(rep || '').trim().toLowerCase();
-    if (!key) return '';
-    try {
-        const direct = await redis.hget('crm:owners', key);
-        if (direct) return String(direct);
-        const first = key.split(/\s+/)[0];
-        const byFirst = await redis.hget('crm:owners', first);
-        if (byFirst) return String(byFirst);
-    } catch (e) { /* fall through */ }
-    return '';
 }
