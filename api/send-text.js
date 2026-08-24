@@ -36,7 +36,7 @@ const cleanRole = (s) => String(s || '').split(/[-–—|(]/)[0].replace(/\s+/g,
 
 // One template per motion. Both open the same way (name, no company, no pitch) and end on a single
 // question the prospect can answer in a word. Never add a claim, a rate, or a CTA to these.
-function buildMessage({ first, rep, role, company, motion, priorCall, lastCall }) {
+function buildMessage({ first, rep, role, company, industry, motion, priorCall, lastCall }) {
     // Foundry is Paul's brand and its threads already run under his name, so a websites text always
     // signs as him no matter which rep is on the dialer. Staffing signs as the rep who made the call.
     const who = (motion === 'websites') ? (process.env.FOUNDRY_SENDER_NAME || 'Paul') : firstName(rep);
@@ -44,9 +44,9 @@ function buildMessage({ first, rep, role, company, motion, priorCall, lastCall }
     // "find one nearby" has no antecedent: the only noun before it is the company's proper name, so
     // the question reads as a fragment. Name what they actually are. The verticals arrive plural
     // ("veterinary clinics"), and this slot needs the singular.
-    const industry = String(b.industry || '').trim();
-    const oneOf = industry
-        ? 'a ' + industry
+    const vertical = String(industry || '').trim();
+    const oneOf = vertical
+        ? 'a ' + vertical
             .replace(/\bpractices\b/i, 'practice').replace(/\bclinics\b/i, 'clinic')
             .replace(/\boffices\b/i, 'office').replace(/\bcompanies\b/i, 'company')
             .replace(/\bbusinesses\b/i, 'business').replace(/\bcenters\b/i, 'center')
@@ -127,7 +127,7 @@ export default async function handler(req, res) {
     const pick = (motion === 'websites' && foundryRaw) ? foundryRaw : fromRaw;
     const from = /^PN/i.test(pick) ? pick : (e164(pick) || pick);
 
-    const content = buildMessage({ first, rep, role, company, motion, priorCall: !!b.priorCall, lastCall: b.lastCall || '' });
+    const content = buildMessage({ first, rep, role, company, industry: b.industry || '', motion, priorCall: !!b.priorCall, lastCall: b.lastCall || '' });
     try {
         const r = await fetch(OP_API, {
             method: 'POST',
