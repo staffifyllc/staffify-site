@@ -998,7 +998,13 @@
   // Foundry commission: 30% on a website deal, 10% on an AI automation deal. Rep sets the deal
   // size (websites: Paul confirmed 2026-08-15, $995 to build plus $49 a month to keep it live).
   var FOUNDRY_PRODUCTS=[{key:'website',label:'Website',rate:0.30},{key:'ai',label:'AI automation',rate:0.10}];
-  var fqProd=0, fqAmt=995;
+  // The two website prices, in the order they are offered. The rep taps whichever the call landed on
+  // so the commission figure matches what they actually closed.
+  var FOUNDRY_PRICES=[
+    {label:'Ask first', amt:2995, note:'$2,995 one time to build.'},
+    {label:'Downsell',  amt:995,  note:'$995 to build, then $49 a month to keep it live.'}
+  ];
+  var fqProd=0, fqAmt=2995, fqPrice=0;
   function fqOut(){
     var p=FOUNDRY_PRODUCTS[fqProd];
     var el=document.getElementById('fqamt'); if(el){ fqAmt=parseInt(String(el.value).replace(/[^0-9]/g,''),10)||0; }
@@ -1006,17 +1012,24 @@
     return '<div class="qrow"><span>Deal &middot; '+esc(p.label)+'</span><b>$'+fqAmt.toLocaleString()+'</b></div>'+
       '<div class="qrow"><span>Your '+Math.round(p.rate*100)+'% commission</span><b style="color:#7ef5c2">$'+comm.toLocaleString()+'</b></div>'+
       '<div class="qguard">'+(p.key==='website'
-        ? 'Website build. $995 to build, then $49 a month to keep it live. You keep 30% of what closes.'
+        ? 'Ask $2,995 first. Only drop to $995 plus $49 a month if they say no to it. You keep 30% of what closes.'
         : 'AI automation build. You keep 10% of the deal. Set the deal size above.')+'</div>';
   }
   function renderFoundryQuote(){
     return '<div class="lbl">Quick quote &amp; your cut</div><div class="quote">'+
       '<div class="qtiers">'+FOUNDRY_PRODUCTS.map(function(p,i){return '<button class="qtier fqprod'+(i===fqProd?' on':'')+'" data-fqp="'+i+'">'+esc(p.label)+' &middot; '+Math.round(p.rate*100)+'%</button>';}).join('')+'</div>'+
+      (FOUNDRY_PRODUCTS[fqProd].key==='website'
+        ? '<div class="qtiers">'+FOUNDRY_PRICES.map(function(x,i){return '<button class="qtier fqprice'+(i===fqPrice?' on':'')+'" data-fqx="'+i+'">'+esc(x.label)+' &middot; $'+x.amt.toLocaleString()+'</button>';}).join('')+'</div>'
+        : '')+
       '<label class="qtoggle">Deal size&nbsp; $ <input type="text" id="fqamt" inputmode="numeric" value="'+fqAmt+'" style="width:96px;font:inherit;color:#fff;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:8px;padding:4px 8px"></label>'+
       '<div class="qout" id="qout">'+fqOut()+'</div>'+
       '</div>';
   }
-  function refreshFoundryQuote(){ Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.classList.toggle('on',(+b.getAttribute('data-fqp'))===fqProd); }); var qo=document.getElementById('qout'); if(qo)qo.innerHTML=fqOut(); }
+  function refreshFoundryQuote(){
+    Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.classList.toggle('on',(+b.getAttribute('data-fqp'))===fqProd); });
+    Array.prototype.forEach.call(document.querySelectorAll('.fqprice'),function(b){ b.classList.toggle('on',(+b.getAttribute('data-fqx'))===fqPrice); });
+    var qo=document.getElementById('qout'); if(qo)qo.innerHTML=fqOut();
+  }
 
   // The quote block matches the motion: Foundry leads show the website/AI cut, everything else the VA cut.
   function renderQuote(){ return MOTION==='websites' ? renderFoundryQuote() : renderStaffifyQuote(); }
@@ -1146,8 +1159,13 @@
     // This named a trade the prospect is not in, and unlike the opener it was never run through the
     // sanitizer, so a rep quoting price to a clinic said "our roofing portfolio" out loud.
     var portfolioInd=industryOf(L);
+    // Ask for the build price first and let them react to it. The monthly plan is a DOWNSELL, not an
+    // alternative offered up front: leading with $49 a month makes $2,995 unaskable afterwards.
     var priceText=(MOTION==='websites')
-      ? ('Only if THEY ask: normally $4,995, but we are building our portfolio'+(portfolioInd?' of '+portfolioInd:'')+' right now so we will rebuild it for $1,499. Half to start, half when it is live.')
+      ? ('Only if THEY ask. Lead with this: normally $4,995, but we are building our portfolio'
+         +(portfolioInd?' of '+portfolioInd:'')+' right now so we will build it for $2,995, one time. '
+         +'ONLY if they push back on the number: $995 to get it built, then $49 a month to keep it live and updated. '
+         +'Do not offer the monthly until they have said no to $2,995.')
       : tr.price;
     if(priceText) scriptBits+='<div class="blk"><b>Price (only if asked):</b> '+esc(priceText)+'</div>';
     if(tr.rules&&tr.rules.length) scriptBits+='<div class="blk"><b>Rules:</b>\n- '+tr.rules.map(esc).join('\n- ')+'</div>';
@@ -1274,6 +1292,10 @@
     Array.prototype.forEach.call(document.querySelectorAll('.qstep'),function(b){ b.onclick=function(){ quoteHires=Math.max(1, quoteHires+(+b.getAttribute('data-step'))); refreshQuote(); }; });
     var qa=document.getElementById('qaction'); if(qa)qa.onchange=function(){ quoteAction=qa.checked; refreshQuote(); };
     Array.prototype.forEach.call(document.querySelectorAll('.fqprod'),function(b){ b.onclick=function(){ fqProd=+b.getAttribute('data-fqp'); refreshFoundryQuote(); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('.fqprice'),function(b){ b.onclick=function(){
+      fqPrice=+b.getAttribute('data-fqx'); fqAmt=FOUNDRY_PRICES[fqPrice].amt;
+      var el=document.getElementById('fqamt'); if(el) el.value=fqAmt;
+      refreshFoundryQuote(); }; });
     var fam=document.getElementById('fqamt'); if(fam)fam.oninput=function(){ refreshFoundryQuote(); };
     Array.prototype.forEach.call(document.querySelectorAll('.fbb'),function(b){ b.onclick=function(){ sendFeedback(b); }; });
     // Remember which lead is displayed, and put its notes back in the box after the rebuild.
