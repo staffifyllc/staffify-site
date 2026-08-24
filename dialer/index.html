@@ -449,6 +449,18 @@
   var app=document.getElementById('app'), tbRight=document.getElementById('tbRight'), toastEl=document.getElementById('toast');
   var ME=null, MOTION='websites', firstLoad=true, QUEUES={websites:[],staffing:[],hot:[]}, TRAIN={}, SCORE=null, LABEL={websites:'Foundry',staffing:'Staffify',hot:'Hot'}, CURHOT=null;
 
+  // Recordings live in a private bucket, so pointing an <audio> tag straight at the stored URL gets a
+  // 403 and the player just sits at 0:00 with no error the rep can see. The call id is the filename,
+  // and the server can already fetch the audio with it, so route playback through that instead.
+  function playableRecording(url){
+    var u = String(url == null ? '' : url);
+    if (!u) return '';
+    if (u.indexOf('/api/') === 0) return u;               // already proxied
+    var m = u.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (!m) return u;                                     // not a call recording, leave it alone
+    return '/api/outreach-log/?action=audio&call_id=' + encodeURIComponent(m[1]);
+  }
+
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function toast(m){toastEl.textContent=m; toastEl.classList.add('show'); setTimeout(function(){toastEl.classList.remove('show');},1600);}
   function telHref(p){return 'tel:'+String(p||'').replace(/[^0-9+]/g,'');}
@@ -1190,7 +1202,7 @@
     }
     var L=q[0]; CURHOT=L;
     var ctx=L.summary?'<div class="lbl">What Bland learned</div><div class="brief">'+esc(L.summary)+'</div>':'';
-    var rec=L.recordingUrl?'<div class="lbl">Listen to the call</div><audio controls preload="none" style="width:100%;height:38px" src="'+esc(L.recordingUrl)+'"></audio>':'';
+    var rec=L.recordingUrl?'<div class="lbl">Listen to the call</div><audio controls preload="none" style="width:100%;height:38px" src="'+esc(playableRecording(L.recordingUrl))+'"></audio>':'';
     var trans=L.transcript?'<details><summary>Full call transcript</summary><div class="script"><div class="blk">'+esc(L.transcript)+'</div></div></details>':'';
     var cp=L.transcript?'<button class="cp-btn" id="cpbtn">AI close plan</button><div class="cp-out" id="cpout"></div>':'';
     app.innerHTML=head+

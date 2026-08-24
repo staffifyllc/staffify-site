@@ -132,6 +132,18 @@
     ['/admins/','Role pages','Send to prospects']
   ];
 
+  // Recordings live in a private bucket, so pointing an <audio> tag straight at the stored URL gets a
+  // 403 and the player just sits at 0:00 with no error the rep can see. The call id is the filename,
+  // and the server can already fetch the audio with it, so route playback through that instead.
+  function playableRecording(url){
+    var u = String(url == null ? '' : url);
+    if (!u) return '';
+    if (u.indexOf('/api/') === 0) return u;               // already proxied
+    var m = u.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (!m) return u;                                     // not a call recording, leave it alone
+    return '/api/outreach-log/?action=audio&call_id=' + encodeURIComponent(m[1]);
+  }
+
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function fmt(ts){var d=new Date(ts); return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})+', '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
   function ago(ms){var n=Number(ms); if(!n)return ''; var d=Math.floor((Date.now()-n)/864e5); return d<=0?'today':(d===1?'1d ago':d+'d ago');}
@@ -208,7 +220,7 @@
       return '<div class="row"><div class="who"><div class="n">'+esc(l.company||l.name||'Lead')+'</div>'+
         (l.phone?'<div class="e"><a href="tel:'+esc(l.phone)+'">'+esc(l.phone)+'</a></div>':'')+
         (l.summary?'<div style="font-size:12px;color:#9ba1ab;margin-top:3px;line-height:1.4">'+esc(l.summary)+'</div>':'')+
-        (l.recordingUrl?'<audio controls preload="none" style="width:100%;margin-top:8px;height:32px" src="'+esc(l.recordingUrl)+'"></audio>':'')+
+        (l.recordingUrl?'<audio controls preload="none" style="width:100%;margin-top:8px;height:32px" src="'+esc(playableRecording(l.recordingUrl))+'"></audio>':'')+
         (l.transcript?'<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--cyan-hi);font-size:11.5px;font-weight:700">Transcript</summary><div style="font-size:12px;color:#9ba1ab;margin-top:6px;max-height:170px;overflow:auto;white-space:pre-wrap;line-height:1.5">'+esc(l.transcript)+'</div></details>':'')+
         cp+
         '</div>'+grade+'</div>';
