@@ -504,13 +504,28 @@
   // The engine's Foundry brief and opener still say "roofing" from before the vertical pivot.
   // Until it passes the real vertical through, strip the stale claim rather than have a rep say it
   // out loud to a med spa. Belt and braces: it also catches it inside the opener lines.
-  var STALE_ROOFING = /roofing compan(y|ies)\.?/ig;
-  function deRoof(t){
-    return String(t==null?'':t)
-      .replace(/I design websites for roofing companies/ig, 'I build websites for local businesses')
-      .replace(/^Roofing company\.\s*/i, '')
-      .replace(STALE_ROOFING, 'business');
+  // The engine now sends each lead's real vertical, so a rep should name it: "I build websites for
+  // physical therapy clinics", not a vague "local businesses". Anything that still hardcodes a trade
+  // gets the actual industry swapped in, and only falls back to something generic when the lead
+  // genuinely has no vertical on it.
+  function industryOf(L){
+    var s = String((L && (L.industry || '')) || '').trim();
+    return s || '';
   }
+  var STALE_TRADE = /\b(roofing|plumbing|hvac|landscaping|contracting)\s+compan(y|ies)\.?/ig;
+  function sayVertical(t, L){
+    var ind = industryOf(L);
+    var generic = 'local businesses';
+    return String(t==null?'':t)
+      .replace(/I (design|build) websites for (roofing|plumbing|hvac|landscaping|contracting) companies/ig,
+               'I build websites for ' + (ind || generic))
+      .replace(/^(Roofing|Plumbing|HVAC|Landscaping|Contracting) company\.\s*/i, '')
+      .replace(STALE_TRADE, ind || 'business')
+      .replace(/\bour (roofing|plumbing|hvac|landscaping|contracting) portfolio\b/ig,
+               ind ? 'our portfolio of ' + ind : 'our portfolio');
+  }
+  // Kept under the old name so existing call sites keep working.
+  function deRoof(t, L){ return sayVertical(t, L); }
 
   // Where each fact came from and how much to trust it. Madison should be able to check a lead's
   // provenance before she dials, rather than taking the row on faith.
@@ -1082,11 +1097,22 @@
     var ownOpener=Array.isArray(L.opener)?L.opener:[L.opener||''];
     var opArr=(L.priorCall||!(tr.opener&&tr.opener.length))?ownOpener:tr.opener;
     var opFirst=firstNameOf(L.name);
-    var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=deRoof(fillTokens(x,L)); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
+    var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=deRoof(fillTokens(x,L),L); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
+    // The engine writes this line per lead with that lead's real vertical in it, and the dialer was
+    // dropping it, so the rep never actually said what we do or who we do it for. It follows the
+    // greeting because that is the order it is spoken in.
+    if(L.sayIndustry){
+      openerLines += '<div class="line">'+esc(sayVertical(fillTokens(L.sayIndustry,L),L))+'</div>';
+    }
     var scriptBits='';
     if(tr.goal) scriptBits+='<div class="blk"><b>Goal:</b> '+esc(tr.goal)+'</div>';
     if(tr.theAsk) scriptBits+='<div class="blk"><b>The ask:</b> '+esc(fillTokens(tr.theAsk,L))+'</div>';
-    var priceText=(MOTION==='websites') ? 'Only if THEY ask: normally $4,995, but we are building our roofing portfolio right now so we will rebuild it for $1,499. Half to start, half when it is live.' : tr.price;
+    // This named a trade the prospect is not in, and unlike the opener it was never run through the
+    // sanitizer, so a rep quoting price to a clinic said "our roofing portfolio" out loud.
+    var portfolioInd=industryOf(L);
+    var priceText=(MOTION==='websites')
+      ? ('Only if THEY ask: normally $4,995, but we are building our portfolio'+(portfolioInd?' of '+portfolioInd:'')+' right now so we will rebuild it for $1,499. Half to start, half when it is live.')
+      : tr.price;
     if(priceText) scriptBits+='<div class="blk"><b>Price (only if asked):</b> '+esc(priceText)+'</div>';
     if(tr.rules&&tr.rules.length) scriptBits+='<div class="blk"><b>Rules:</b>\n- '+tr.rules.map(esc).join('\n- ')+'</div>';
     if(tr.objections) scriptBits+='<div class="blk"><b>Objections:</b>\n'+esc(tr.objections)+'</div>';
@@ -1115,7 +1141,7 @@
         '</div><div class="cardtools">'+
         // The things a rep reaches for mid-call, kept out of the way of the script.
         ((L.brief||provBlock(L))?'<details><summary>Background and where this came from</summary><div class="script">'+
-          (L.brief?'<div class="blk">'+esc(deRoof(L.brief))+'</div>':'')+provBlock(L)+'</div></details>':'')+
+          (L.brief?'<div class="blk">'+esc(deRoof(L.brief,L))+'</div>':'')+provBlock(L)+'</div></details>':'')+
         histBlock(L)+
         ammo(L)+
         renderQuote()+
