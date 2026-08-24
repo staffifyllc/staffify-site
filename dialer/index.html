@@ -507,8 +507,12 @@
       body:JSON.stringify({id:L.id, phone:L.phone||'', reason:reason||'actioned', rep:(r&&r.name)||''})}).catch(function(){});
     var q=QUEUES[MOTION];
     if(q && q.length && q[0] && q[0].id===L.id){
-      WORKED.push({id:L.id, motion:MOTION, action:reason||'actioned'});
+      // Same shape every other worked entry uses. The search rebuild reads w.lead and stepping back
+      // reads w.lead and w.notes, so an entry without the lead object on it throws inside render()
+      // and the card silently stops updating.
       q.shift();
+      WORKED.push({lead:L, outcome:'', motion:MOTION, action:reason||'actioned',
+                   notes:(NOTES[L.id]||'')});
       render();
     }
   }
