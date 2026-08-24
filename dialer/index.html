@@ -823,11 +823,28 @@
     return t.map(function(x){return '<span class="metatag">'+x+'</span>';}).join('');
   }
   function firstNameOf(s){return String(s||'').trim().split(/\s+/)[0]||'';}
+  // "have you done anything to show up when someone asks AI to find a ..." needs the singular,
+  // and the engine sends these plural ("physical therapy clinics", "medical practices").
+  function singularIndustry(ind){
+    return String(ind||'')
+      .replace(/\bpractices\b/i,'practice').replace(/\bclinics\b/i,'clinic')
+      .replace(/\boffices\b/i,'office').replace(/\bcompanies\b/i,'company')
+      .replace(/\bbusinesses\b/i,'business').replace(/\bstudios\b/i,'studio')
+      .replace(/\bshops\b/i,'shop').replace(/\bcenters\b/i,'center');
+  }
+
   function fillTokens(line, lead){
     var first=firstNameOf(lead.name);
     var you=firstNameOf(ME&&ME.name)||'[your name]';
     var m=line.match(/\(no name:\s*"([^"]+)"\)/i);
     if(m){ line = first ? line.replace(/\s*\(no name:[^)]*\)/i,'') : m[1]; }
+    // The training script carries industry placeholders like "[their industry, shown on the card]".
+    // They were never substituted, so a rep read the instruction out loud instead of the industry.
+    var ind = String((lead && lead.industry) || '').trim();
+    line = line
+      .replace(/\[their industry[^\]]*\]/gi, ind || 'local businesses')
+      .replace(/\[a business like theirs\]/gi, ind ? 'a ' + singularIndustry(ind) : 'a business like theirs')
+      .replace(/\[industry\]/gi, ind || 'local businesses');
     return line.replace(/\[first name\]/gi, first||'there').replace(/\[company\]/gi, lead.company||'your company').replace(/\[role\]/gi, lead.role||'that role').replace(/\[you\]/gi, you);
   }
 
@@ -1101,7 +1118,8 @@
     // The engine writes this line per lead with that lead's real vertical in it, and the dialer was
     // dropping it, so the rep never actually said what we do or who we do it for. It follows the
     // greeting because that is the order it is spoken in.
-    if(L.sayIndustry){
+    // Only when the script did not already cover this beat, otherwise the rep sees it twice.
+    if(L.sayIndustry && !/I (build|design) websites for/i.test(opArr.join(' '))){
       openerLines += '<div class="line">'+esc(sayVertical(fillTokens(L.sayIndustry,L),L))+'</div>';
     }
     var scriptBits='';
