@@ -82,6 +82,32 @@ export default async function handler(req, res) {
             }
         }
 
+        // Action taken that is not a dialed outcome: a text, an audit, a mockup. It takes the lead
+        // out of every queue exactly like a disposition does, but it deliberately does NOT log a call
+        // outcome upstream, because recording a text as a no-answer would quietly corrupt the
+        // scoreboard every rep is measured on.
+        if (req.method === 'POST' && action === 'worked') {
+            const b = readBody(req);
+            if (!b.id && !b.phone) return res.status(400).json({ error: 'id_or_phone_required' });
+            try {
+                if (b.id) {
+                    await redis.hset(WORKED, {
+                        [String(b.id)]: JSON.stringify({
+                            at: Date.now(),
+                            action: String(b.reason || 'actioned').slice(0, 40),
+                            rep: ((b.rep || (who && who.name) || '')).toString().slice(0, 80),
+                        }),
+                    });
+                    await redis.del(CLAIM(b.id));
+                }
+                const d = digits10(b.phone);
+                if (d) await redis.sadd(HANDLED, d);
+                return res.status(200).json({ ok: true });
+            } catch (e) {
+                return res.status(200).json({ ok: false, reason: 'store_failed' });
+            }
+        }
+
         if (req.method === 'POST' && action === 'log') {
             const b = readBody(req);
             if (!b.id) return res.status(400).json({ error: 'id_required' });

@@ -497,6 +497,22 @@
     });
   }
 
+  // A lead someone has texted, audited or sent a mockup to has been actioned, so it should leave the
+  // list and the counter should drop. It is retired server side too, or it stays in every other rep's
+  // queue and the prospect gets worked twice.
+  function retireLead(L, reason){
+    if(!L) return;
+    var r=repGet();
+    fetch('/api/call-queue?action=worked',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:L.id, phone:L.phone||'', reason:reason||'actioned', rep:(r&&r.name)||''})}).catch(function(){});
+    var q=QUEUES[MOTION];
+    if(q && q.length && q[0] && q[0].id===L.id){
+      WORKED.push({id:L.id, motion:MOTION, action:reason||'actioned'});
+      q.shift();
+      render();
+    }
+  }
+
   function textPreview(L){
     var rep=firstNameOf(ME&&ME.name)||'[set your name]';
     var first=firstNameOf(L.name);
@@ -1389,8 +1405,9 @@
         body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', industry:L.industry||'', motion:MOTION, rep:(r&&r.name)||'', priorCall:!!L.priorCall, lastCall:L.lastCall||''})})
         .then(function(x){return x.json();})
         .then(function(j){
-          if(j&&j.sent){ tb.textContent='Text sent'; toast('Text sent.'); }
-          else if(j&&j.reason==='already_texted'){ tb.textContent='Already texted'; toast('This lead was already texted.'); }
+          if(j&&j.sent){ toast('Text sent. Next up.'); retireLead(L,'texted'); }
+          else if(j&&j.reason==='already_texted'){ toast('Already texted. Moving on.'); retireLead(L,'already_texted'); }
+          else if(j&&j.reason==='opted_out'){ toast('They opted out, so nothing was sent.'); retireLead(L,'opted_out'); }
           else if(j&&j.error==='not_configured'){ tb.disabled=false; tb.textContent='Text them'; toast('OpenPhone is not connected.'); }
           else { tb.disabled=false; tb.textContent='Text them'; toast('Could not send, try again.'); }
         }).catch(function(){ tb.disabled=false; tb.textContent='Text them'; toast('Network error.'); });
@@ -1408,8 +1425,8 @@
           .then(function(x){return x.json();})
           .then(function(j){
             if(j&&j.ok&&j.deal&&j.deal.id){
-              b.textContent=(j.deal.created?'Deal opened':'Deal updated');
-              toast(j.deal.created?'Deal opened in HubSpot.':'Deal moved to '+(j.deal.stage||'the next stage')+'.');
+              toast((j.deal.created?'Deal opened in HubSpot.':'Deal moved to '+(j.deal.stage||'the next stage')+'.')+' Next up.');
+              retireLead(L, kind==='mockup'?'mockup_sent':'audit_sent');
             } else if(j&&j.skipped){ b.textContent=was; b.disabled=false; toast('They opted out, so no deal was created.'); }
             else { b.disabled=false; b.textContent=was; toast((j&&(j.reason||j.error))||'Could not save, try again.'); }
           }).catch(function(){ b.disabled=false; b.textContent=was; toast('Network error.'); });
