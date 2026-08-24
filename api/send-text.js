@@ -128,7 +128,29 @@ export default async function handler(req, res) {
     const pick = (motion === 'websites' && foundryRaw) ? foundryRaw : fromRaw;
     const from = /^PN/i.test(pick) ? pick : (e164(pick) || pick);
 
-    const content = buildMessage({ first, rep, role, company, industry: b.industry || '', motion, priorCall: !!b.priorCall, lastCall: b.lastCall || '' });
+    // A rep can edit the message before it goes. What they cannot do is bypass the checks: the
+    // opt-out list, the never-text-twice rule and the hourly cap all still apply, because those
+    // protect the person on the other end rather than the wording.
+    const drafted = buildMessage({ first, rep, role, company, industry: b.industry || '', motion, priorCall: !!b.priorCall, lastCall: b.lastCall || '' });
+    const edited = String(b.message || '').trim();
+    if (edited && edited.length > 480) {
+        return res.status(400).json({ ok: false, error: 'too_long', limit: 480, was: edited.length });
+    }
+    // Claims we cannot stand behind do not go out over our number, edited or not. This mirrors the
+    // opener validator: invented volume, percentages and guarantees are the things that get a
+    // number reported, and they are never true of a first text to a stranger.
+    // Two patterns, not one: a trailing \b cannot follow "%" or "#1" because neither ends in a word
+    // character, so folding them into the word-bounded alternation silently disabled them.
+    const UNSUPPORTABLE = /\b(guarantee[ds]?|dozens|hundreds of|thousands of|best in|risk[- ]free|no obligation trial)\b/i;
+    const UNSUPPORTABLE_NUM = /(\d+\s?%|#\s?1\b)/;
+    if (edited && (UNSUPPORTABLE.test(edited) || UNSUPPORTABLE_NUM.test(edited))) {
+        return res.status(400).json({
+            ok: false, error: 'unsupportable_claim',
+            detail: 'That text makes a claim we cannot back (a number, a percentage or a guarantee). Say the true thing instead.',
+        });
+    }
+    const content = edited || drafted;
+    const wasEdited = !!edited && edited !== drafted;
     try {
         const r = await fetch(OP_API, {
             method: 'POST',
@@ -141,7 +163,7 @@ export default async function handler(req, res) {
         }
         // Record it so the lead is never texted again, and so it can be audited later.
         try {
-            await redis.hset(SENT_KEY, { [to]: JSON.stringify({ at: Date.now(), rep: firstName(rep), role, company, motion, by: (who && who.email) || 'guest', content }) });
+            await redis.hset(SENT_KEY, { [to]: JSON.stringify({ edited: wasEdited, at: Date.now(), rep: firstName(rep), role, company, motion, by: (who && who.email) || 'guest', content }) });
         } catch (e) { /* the text went out; logging is best effort */ }
         // Mirror the text onto the HubSpot contact so the CRM shows the full thread. Never block on it.
         if (hsReady()) {

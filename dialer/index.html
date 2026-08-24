@@ -223,6 +223,14 @@
         .calbtn { width:100%; font-size:14.5px; font-weight:800; color:#04222b; background:var(--cyan);
                   border:none; border-radius:12px; padding:14px; cursor:pointer; }
         .calbtn:hover { background:var(--cyan-hi); }
+        .txtedit { width:100%; margin-top:8px; font-family:inherit; font-size:14px; line-height:1.5;
+                    color:var(--white); background:rgba(255,255,255,0.05); border:1px solid var(--card-border);
+                    border-radius:10px; padding:11px 13px; resize:vertical; }
+        .txtedit:focus { outline:none; border-color:var(--cyan); }
+        .txtmeta { display:flex; justify-content:space-between; align-items:center; margin-top:7px;
+                   font-size:11.5px; color:var(--muted); }
+        .txtreset { font:inherit; font-size:11.5px; color:var(--cyan); background:none; border:none;
+                    cursor:pointer; padding:0; text-decoration:underline; }
         .txtprev { margin-top:8px; font-size:13px; color:#cfd4da; background:rgba(255,255,255,0.03);
                    border:1px solid var(--card-border); border-left:2px solid var(--green-hi);
                    border-radius:10px; padding:10px 12px; line-height:1.45; }
@@ -600,8 +608,14 @@
   function textBlock(L){
     if(!L.phone) return '';
     if(MOTION==='websites' ? !L.company : !L.role) return '';
+    // Editable, because the rep is the one who knows what came up on the call. What they cannot
+    // edit away is the opt-out check, the never-text-twice rule or the claims filter: those live
+    // server side and protect the person receiving it, not the wording.
     return '<div class="txtwrap"><button class="txtbtn" id="txtbtn">Text them</button>'+
-      '<div class="txtprev"><span>What sends</span>'+esc(textPreview(L))+'</div></div>';
+      '<div class="txtprev"><span>What sends &middot; edit it if you need to</span>'+
+      '<textarea class="txtedit" id="txtedit" rows="3" maxlength="480">'+esc(textPreview(L))+'</textarea>'+
+      '<div class="txtmeta"><span id="txtcount"></span><button class="txtreset" id="txtreset">Reset to the default</button></div>'+
+      '</div></div>';
   }
 
   // At-a-glance context so the rep knows who they are calling before they dial.
@@ -1461,6 +1475,14 @@
           company:L.company||'', name:L.name||'', phone:L.phone||'', email:L.email||'',
           role:L.role||'', motion:L.motion||MOTION, website:L.website||''}})}).catch(function(){});
     };
+    (function(){
+      var ta=document.getElementById('txtedit'), cnt=document.getElementById('txtcount'), rs=document.getElementById('txtreset');
+      if(!ta) return;
+      var q=QUEUES[MOTION], L0=(MOTION==='hot'?CURHOT:(q&&q[0]));
+      var count=function(){ if(cnt) cnt.textContent=ta.value.length+' / 480'; };
+      ta.addEventListener('input', count); count();
+      if(rs) rs.onclick=function(){ if(L0){ ta.value=textPreview(L0); count(); toast('Back to the default.'); } };
+    })();
     var tb=document.getElementById('txtbtn');
     if(tb) tb.onclick=function(){
       var q=QUEUES[MOTION]; var L=q&&q[0]; if(!L) return;
@@ -1468,13 +1490,15 @@
       if(MOTION!=='websites' && (!r||!r.name)){ toast('Set your name first, it goes in the text.'); return; }
       tb.disabled=true; tb.textContent='Sending...';
       fetch('/api/send-text/',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', industry:L.industry||'', motion:MOTION, rep:(r&&r.name)||'', priorCall:!!L.priorCall, lastCall:L.lastCall||''})})
+        body:JSON.stringify({phone:L.phone, first:L.name||'', role:L.role||'', company:L.company||'', industry:L.industry||'', message:((document.getElementById('txtedit')||{}).value||'').trim(), motion:MOTION, rep:(r&&r.name)||'', priorCall:!!L.priorCall, lastCall:L.lastCall||''})})
         .then(function(x){return x.json();})
         .then(function(j){
           if(j&&j.sent){ toast('Text sent. Next up.'); retireLead(L,'texted'); }
           else if(j&&j.reason==='already_texted'){ toast('Already texted. Moving on.'); retireLead(L,'already_texted'); }
           else if(j&&j.reason==='opted_out'){ toast('They opted out, so nothing was sent.'); retireLead(L,'opted_out'); }
           else if(j&&j.error==='not_configured'){ tb.disabled=false; tb.textContent='Text them'; toast('OpenPhone is not connected.'); }
+          else if(j&&j.error==='unsupportable_claim'){ tb.disabled=false; tb.textContent='Text them'; toast(j.detail||'That claim cannot go out.'); }
+          else if(j&&j.error==='too_long'){ tb.disabled=false; tb.textContent='Text them'; toast('Too long for one text: '+j.was+' of '+j.limit+' characters.'); }
           else { tb.disabled=false; tb.textContent='Text them'; toast('Could not send, try again.'); }
         }).catch(function(){ tb.disabled=false; tb.textContent='Text them'; toast('Network error.'); });
     };
