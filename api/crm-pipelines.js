@@ -15,6 +15,61 @@ export default async function handler(req, res) {
     const token = process.env.HUBSPOT_TOKEN || '';
     if (!token) return res.status(200).json({ configured: false });
 
+    // Recent deals with their owners. This is the audit that answers "is our reps' work actually being
+    // attributed to them", which a per-deal read cannot answer at scale.
+    // GET /api/crm-pipelines/?recent=1[&days=30]
+    if (req.query.recent) {
+        try {
+            const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
+            const since = Date.now() - days * 86400000;
+            const r = await fetch(`${HS}/crm/v3/objects/deals/search`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filterGroups: [{ filters: [{ propertyName: 'createdate', operator: 'GTE', value: String(since) }] }],
+                    properties: ['dealname', 'pipeline', 'dealstage', 'hubspot_owner_id', 'createdate', 'amount'],
+                    sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }],
+                    limit: 100,
+                }),
+            });
+            const j = await r.json().catch(() => null);
+            if (!r.ok) return res.status(200).json({ ok: false, status: r.status, detail: JSON.stringify(j).slice(0, 250) });
+
+            // Resolve owner ids once, so the report names people instead of listing numbers.
+            const names = {};
+            const ow = await fetch(`${HS}/crm/v3/owners?limit=200`, { headers: { Authorization: `Bearer ${token}` } })
+                .then(x => (x.ok ? x.json() : null)).catch(() => null);
+            ((ow && ow.results) || []).forEach(o => {
+                names[String(o.id)] = [o.firstName, o.lastName].filter(Boolean).join(' ').trim() || o.email || String(o.id);
+            });
+
+            const rows = ((j && j.results) || []).map(d => {
+                const pr = d.properties || {};
+                return {
+                    id: d.id,
+                    name: pr.dealname || '',
+                    pipeline: pr.pipeline || '',
+                    stage: pr.dealstage || '',
+                    created: pr.createdate || '',
+                    amount: pr.amount || null,
+                    owner: pr.hubspot_owner_id ? (names[String(pr.hubspot_owner_id)] || pr.hubspot_owner_id) : null,
+                };
+            });
+            const byOwner = {};
+            rows.forEach(x => { const k = x.owner || 'NOBODY'; byOwner[k] = (byOwner[k] || 0) + 1; });
+            const byPipeline = {};
+            rows.forEach(x => { byPipeline[x.pipeline] = (byPipeline[x.pipeline] || 0) + 1; });
+            return res.status(200).json({
+                ok: true, days, total: rows.length,
+                unowned: rows.filter(x => !x.owner).length,
+                byOwner, byPipeline,
+                deals: rows,
+            });
+        } catch (e) {
+            return res.status(200).json({ ok: false, detail: String((e && e.message) || e).slice(0, 200) });
+        }
+    }
+
     // Read one deal back, to check what was actually written rather than what we meant to write.
     // GET /api/crm-pipelines/?deal=<id>
     const dealId = (req.query.deal || '').toString().trim();
