@@ -74,6 +74,15 @@
         .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
         .gate input:focus { outline:none; border-color:var(--cyan); }
         .gate .btn { width:100%; padding:13px; font-size:15px; }
+        .gbtn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+                padding:13px; margin-bottom:16px; font-family:inherit; font-size:15px; font-weight:800;
+                color:#1f1f1f; background:#fff; border:1px solid #dadce0; border-radius:10px;
+                text-decoration:none; cursor:pointer; }
+        .gbtn:hover { background:#f7f8f8; }
+        .gbtn svg { flex:0 0 auto; }
+        .or { display:flex; align-items:center; gap:10px; margin:0 0 14px; font-size:12px;
+              color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+        .or::before, .or::after { content:''; flex:1; height:1px; background:var(--card-border); }
         .err { color:#ff9a8d; font-size:13px; margin-top:10px; min-height:18px; }
         .empty { color:var(--muted); font-size:13.5px; padding:16px 0; }
     </style>
@@ -128,11 +137,21 @@
   function ago(ms){var n=Number(ms); if(!n)return ''; var d=Math.floor((Date.now()-n)/864e5); return d<=0?'today':(d===1?'1d ago':d+'d ago');}
   function qp(k){return new URLSearchParams(location.search).get(k);}
 
+    var EMSG={expired:'That link expired. Request a new one.',
+      norep:'That Google account is not set up as a rep yet. Ask Paul to add you.',
+      google_denied:'Google sign-in was cancelled.',
+      google_unverified:'That Google account has no verified email address.',
+      google_exchange:'Google sign-in failed. Try again, or use the email link below.',
+      google_unconfigured:'Google sign-in is not configured yet. Use the email link below.',
+      google_incomplete:'Google sign-in did not complete. Try again.',
+      google_state:'Google sign-in timed out. Try again.'};
   function showSignIn(msg){
     tbRight.innerHTML='';
-    app.innerHTML='<div class="gate"><h2>Staffify sales hub</h2><p>Sign in with your work email. We send you a one-time link, no password to remember.</p>'+
+    app.innerHTML='<div class="gate"><h2>Staffify sales hub</h2><p>Use the Google account you already sign in to work with.</p>'+
+      '<a class="gbtn" href="/api/auth-google-start">'+'<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">'+'<path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.63z"/>'+'<path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>'+'<path fill="#FBBC05" d="M3.97 10.73a5.4 5.4 0 0 1 0-3.46V4.94H.96a9 9 0 0 0 0 8.12l3.01-2.33z"/>'+'<path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.42 0 9 0A9 9 0 0 0 .96 4.94l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>'+'</svg>Continue with Google</a>'+
+      '<div class="or">or</div>'+
       '<input id="em" type="email" placeholder="you@example.com" autocomplete="email">'+
-      '<button class="btn" id="go">Email me a sign-in link</button>'+
+            '<button class="btn" id="go">Email me a sign-in link</button>'+
       '<div class="err" id="err">'+(msg||'')+'</div></div>';
     document.getElementById('go').onclick=send;
     document.getElementById('em').addEventListener('keydown',function(e){if(e.key==='Enter')send();});
@@ -156,7 +175,7 @@
     try{ meRes=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showSignIn('Network error.'); return; }
     if(meRes.status!==200){
       var m=qp('e');
-      showSignIn(m==='expired'?'That link expired. Request a new one.':(m==='norep'?'That account is not set up as a rep yet.':''));
+      showSignIn(EMSG[m]||'');
       return;
     }
     ME=(await meRes.json()).rep;
