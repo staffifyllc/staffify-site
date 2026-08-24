@@ -11,7 +11,7 @@
 // permanently, and a "start fresh" that quietly re-enabled texting them would be the single most
 // damaging thing this endpoint could do.
 
-import { adminAuthorized, readBody, redis } from './_auth.js';
+import { adminAuthorized, currentRep, readBody, redis } from './_auth.js';
 
 // Cleared: what the hub remembers about the previous batch.
 const CLEARS = [
@@ -45,7 +45,11 @@ async function sizeOf(key) {
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
-    if (!adminAuthorized(req)) return res.status(401).json({ error: 'unauthorized' });
+    // A signed-in admin or a machine token. Deliberately NOT openIdentity: this one deletes.
+    const rep = await currentRep(req).catch(() => null);
+    if (!((rep && rep.role === 'admin') || adminAuthorized(req))) {
+        return res.status(401).json({ error: 'unauthorized' });
+    }
 
     const counts = {};
     for (const c of CLEARS) counts[c.key] = { holds: await sizeOf(c.key), what: c.what };
