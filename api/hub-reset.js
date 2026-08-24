@@ -21,6 +21,7 @@ const CLEARS = [
     { key: 'sent:mockup', kind: 'hash',         what: 'record of which leads were sent a mockup' },
     { key: 'sent:audit',  kind: 'hash',         what: 'record of which leads were sent an audit' },
     { key: 'bad:numbers', kind: 'set',          what: 'numbers previously marked as bad data' },
+    { key: 'queue:worked', kind: 'hash',        what: 'leads already dispositioned, hidden from every rep' },
 ];
 
 // Never cleared, listed so it is obvious what survives and why.
@@ -68,6 +69,16 @@ export default async function handler(req, res) {
     }
 
     const cleared = {};
+    // Claims expire on their own, but a reset should not leave leads parked with a rep who is no
+    // longer working them.
+    try {
+        const keys = await redis.keys('queue:claim:*');
+        if (keys && keys.length) await Promise.all(keys.map(k => redis.del(k)));
+        cleared['queue:claim:*'] = { ok: true, hadHeld: (keys || []).length };
+    } catch (e) {
+        cleared['queue:claim:*'] = { ok: false, error: String((e && e.message) || e).slice(0, 160) };
+    }
+
     for (const c of CLEARS) {
         try {
             await redis.del(c.key);
