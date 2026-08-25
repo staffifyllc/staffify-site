@@ -15,6 +15,52 @@ export default async function handler(req, res) {
     const token = process.env.HUBSPOT_TOKEN || '';
     if (!token) return res.status(200).json({ configured: false });
 
+    // Find a contact and everything already open on them, so a deal is attached to the person we
+    // already have rather than creating a second copy of them.
+    // GET /api/crm-pipelines/?contact=taddewald@gmail.com
+    const q = (req.query.contact || '').toString().trim();
+    if (q) {
+        try {
+            const search = async (propertyName, operator, value) => {
+                const r = await fetch(`${HS}/crm/v3/objects/contacts/search`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filterGroups: [{ filters: [{ propertyName, operator, value }] }],
+                        properties: ['firstname', 'lastname', 'email', 'phone', 'company', 'website', 'hs_lead_status', 'best_fit_segment'],
+                        limit: 10,
+                    }),
+                });
+                if (!r.ok) return [];
+                const j = await r.json();
+                return j.results || [];
+            };
+            let hits = await search('email', 'EQ', q);
+            if (!hits.length) hits = await search('email', 'CONTAINS_TOKEN', q);
+            if (!hits.length) hits = await search('lastname', 'CONTAINS_TOKEN', q);
+            if (!hits.length) hits = await search('company', 'CONTAINS_TOKEN', q);
+
+            const out = [];
+            for (const c of hits) {
+                const assoc = await fetch(`${HS}/crm/v4/objects/contacts/${c.id}/associations/deals`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }).then(r2 => (r2.ok ? r2.json() : null)).catch(() => null);
+                const dealIds = ((assoc && assoc.results) || []).map(a => a.toObjectId || a.id).filter(Boolean).slice(0, 10);
+                const deals = [];
+                for (const id of dealIds) {
+                    const d = await fetch(`${HS}/crm/v3/objects/deals/${id}?properties=dealname,pipeline,dealstage,amount,hubspot_owner_id`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }).then(r2 => (r2.ok ? r2.json() : null)).catch(() => null);
+                    if (d) deals.push({ id: d.id, ...(d.properties || {}) });
+                }
+                out.push({ id: c.id, ...(c.properties || {}), deals });
+            }
+            return res.status(200).json({ ok: true, query: q, found: out.length, contacts: out });
+        } catch (e) {
+            return res.status(200).json({ ok: false, detail: String((e && e.message) || e).slice(0, 200) });
+        }
+    }
+
     // Recent deals with their owners. This is the audit that answers "is our reps' work actually being
     // attributed to them", which a per-deal read cannot answer at scale.
     // GET /api/crm-pipelines/?recent=1[&days=30]
