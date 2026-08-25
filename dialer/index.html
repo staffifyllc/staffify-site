@@ -1333,8 +1333,16 @@
         (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
         // Paul: if no touchpoints have been done, mark that. A first-ever call and a fifth
         // attempt are different conversations and the card has to say which.
-        (L.firstTouch===true?'<div class="fresh">Never contacted &middot; first touch</div>'
-          :(L.touchpoints&&L.touchpoints.length?'<div class="touched">'+L.touchpoints.length+' previous touchpoint'+(L.touchpoints.length>1?'s':'')+' &middot; '+esc(L.touchSummary||'')+'</div>':''))+
+        // touchpoints is only assembled for the Foundry book. warmth is assembled for every lead in
+        // both motions, so a warmed Staffify lead used to show nothing at all here and read as though
+        // nobody had ever been near it.
+        (function(){
+          if(L.firstTouch===true) return '<div class="fresh">Never contacted &middot; first touch</div>';
+          var n=(L.touchpoints&&L.touchpoints.length)||(L.warmth&&L.warmth.count)||0;
+          if(!n) return '';
+          return '<div class="touched">'+n+' previous touchpoint'+(n>1?'s':'')+' &middot; '+
+                 esc(L.touchSummary||(L.warmth&&L.warmth.summary)||'')+'</div>';
+        })()+
         leadPanel(L)+
         '<div class="cardgrid"><div class="cardmain">'+
         lineBadge(L)+
