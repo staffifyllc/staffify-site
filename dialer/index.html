@@ -754,14 +754,25 @@
   var FLOW=null, flowAt='open', flowHist=[];
 
   function buildFlow(L){
-    var role=L.role||'that role', first=firstNameOf(L.name)||'', onsite=ONSITE_ROLE.test(role);
+    // Madison, 2026-08-25: "none have specified roles". The opener asked whether they were still
+    // hiring for "the that role role", which is both broken English and a claim about a job posting
+    // these people never made. Owner-list leads have no posting behind them, so the opener asks a
+    // real question instead of inventing one.
+    var hasRole=!!String(L.role||'').trim();
+    var role=L.role||'', first=firstNameOfLead(L)||'', onsite=hasRole&&ONSITE_ROLE.test(role);
     var afterOwner = onsite ? 'pivot' : 'rate';
+    var openSay = hasRole
+      ? '"Hi'+(first?' '+first:'')+', are you still hiring for the '+role+' role?"'
+      : '"Hi'+(first?' '+first:'')+', quick question. Who handles the admin and client follow-up over there day to day?"';
     return {
-      open:{ step:'Open', say:'"Hi'+(first?' '+first:'')+', are you still hiring for the '+role+' role?"',
-        note:'Light and quick. You are just checking, not selling.',
+      open:{ step:'Open', say:openSay,
+        note:hasRole?'Light and quick. You are just checking, not selling.'
+                    :'They have not posted a role, so do not imply they have. You are finding out who carries the admin load.',
         opts:[['Yes, still open',afterOwner==='pivot'?'owner':'owner'],['They filled it','filled'],['"Who is this?"','whois'],['Gatekeeper / not them','gate']] },
 
-      whois:{ step:'Who is this', say:'"It is '+(firstNameOf(ME&&ME.name)||'me')+', I came across your '+role+' posting. Are you still looking to fill it?"',
+      whois:{ step:'Who is this', say:hasRole
+          ? '"It is '+(firstNameOf(ME&&ME.name)||'me')+', I came across your '+role+' posting. Are you still looking to fill it?"'
+          : '"It is '+(firstNameOf(ME&&ME.name)||'me')+' at Staffify. We place remote assistants with owner-run businesses. I was curious how you are covering the admin side right now."',
         note:'Answer plainly and put the question straight back.', opts:[['Yes, still open','owner'],['They filled it','filled']] },
 
       gate:{ step:'Gatekeeper', say:'"Totally get it. It is a two minute question only the person doing the hiring can answer. Is the owner around, or when is a good time?"',
@@ -877,16 +888,22 @@
   }
 
   function roadTrack(L){
-    var role = L.role || 'that role';
-    var first = firstNameOf(L.name);
-    var onsite = ONSITE_ROLE.test(role);
+    var hasRole = !!String(L.role || '').trim();
+    var role = L.role || '';
+    var first = firstNameOfLead(L);
+    var onsite = hasRole && ONSITE_ROLE.test(role);
     var steps = [];
 
-    steps.push({ say:'"Hi'+(first?' '+esc(first):'')+', are you still hiring for the '+esc(role)+' role?"',
-                 note:'Light and quick. You are just checking, not selling yet.',
-                 ifs:[['Filled','"Got it. What else are you trying to get covered right now?" If nothing: "What did you end up paying for that one?" The number is worth having, and it opens the next call.']] });
+    steps.push(hasRole
+      ? { say:'"Hi'+(first?' '+esc(first):'')+', are you still hiring for the '+esc(role)+' role?"',
+          note:'Light and quick. You are just checking, not selling yet.',
+          ifs:[['Filled','"Got it. What else are you trying to get covered right now?" If nothing: "What did you end up paying for that one?" The number is worth having, and it opens the next call.']] }
+      : { say:'"Hi'+(first?' '+esc(first):'')+', quick question. Who handles the admin and client follow-up over there day to day?"',
+          note:'No posting behind this one, so do not imply there is. Find out who carries the admin load and whether they are at capacity.',
+          ifs:[['"I do"','"That is what I figured. How much of your week goes to it?" Their own number is the whole pitch.'],
+               ['"We have someone"','"Are they at capacity?" If yes, that is the opening. If no, thank them and move on.']] });
 
-    steps.push({ say:'"Are you the one handling that hire, or is that someone else?"',
+    steps.push({ say:hasRole?'"Are you the one handling that hire, or is that someone else?"':'"Are you the one who would decide on something like that, or is that someone else?"',
                  note:'Find this out before you pitch. Wrong person, get a name and move on.',
                  ifs:[['Not them','"Who would be the best person to ask about it?" Get a name and the best time.']] });
 
@@ -969,6 +986,24 @@
     return t.map(function(x){return '<span class="metatag">'+x+'</span>';}).join('');
   }
   function firstNameOf(s){return String(s||'').trim().split(/\s+/)[0]||'';}
+  // Madison, 2026-08-25: "None of these have names". They looked like they did. HubSpot's firstname
+  // field on a chunk of the Foundry book holds the COMPANY, so "Topside Roofing and Construction"
+  // arrived as a person called Topside and the script told her to ask for Topside by name.
+  // A name that is just a word out of the company name is not a person, and pretending otherwise
+  // puts her on the phone asking for someone who does not exist.
+  function personName(L){
+    var n=String((L&&L.name)||'').trim();
+    if(!n) return '';
+    var co=String((L&&L.company)||'').trim();
+    if(!co) return n;
+    var norm=function(x){return x.toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();};
+    var nn=norm(n), cc=norm(co);
+    if(!nn) return '';
+    // The whole name appears inside the company, or the company starts with it: same string, not a person.
+    if(cc===nn || cc.indexOf(nn+' ')===0 || (' '+cc+' ').indexOf(' '+nn+' ')>=0) return '';
+    return n;
+  }
+  function firstNameOfLead(L){ return firstNameOf(personName(L)); }
   // "have you done anything to show up when someone asks AI to find a ..." needs the singular,
   // and the engine sends these plural ("physical therapy clinics", "medical practices").
   function singularIndustry(ind){
@@ -980,10 +1015,16 @@
   }
 
   function fillTokens(line, lead){
-    var first=firstNameOf(lead.name);
+    var first=firstNameOfLead(lead);
     var you=firstNameOf(ME&&ME.name)||'[your name]';
     var m=line.match(/\(no name:\s*"([^"]+)"\)/i);
     if(m){ line = first ? line.replace(/\s*\(no name:[^)]*\)/i,'') : m[1]; }
+    // Same convention for a missing role. Without it "[role]" fell back to the words "that role"
+    // inside "the [role] role you posted", which read as "the that role role you posted" and told
+    // the prospect they had posted a job they never posted.
+    var hasRole=!!String((lead&&lead.role)||'').trim();
+    var r=line.match(/\(no role:\s*"([^"]+)"\)/i);
+    if(r){ line = hasRole ? line.replace(/\s*\(no role:[^)]*\)/i,'') : r[1]; }
     // The training script carries industry placeholders like "[their industry, shown on the card]".
     // They were never substituted, so a rep read the instruction out loud instead of the industry.
     var ind = String((lead && lead.industry) || '').trim();
@@ -991,7 +1032,7 @@
       .replace(/\[their industry[^\]]*\]/gi, ind || 'local businesses')
       .replace(/\[a business like theirs\]/gi, ind ? 'a ' + singularIndustry(ind) : 'a business like theirs')
       .replace(/\[industry\]/gi, ind || 'local businesses');
-    return line.replace(/\[first name\]/gi, first||'there').replace(/\[company\]/gi, lead.company||'your company').replace(/\[role\]/gi, lead.role||'that role').replace(/\[you\]/gi, you);
+    return line.replace(/\[first name\]/gi, first||'there').replace(/\[company\]/gi, lead.company||'your company').replace(/\[role\]/gi, lead.role||'the role').replace(/\[you\]/gi, you);
   }
 
   function repGet(){try{var r=JSON.parse(localStorage.getItem('sfy_rep')||'null');if(r&&r.name)return r;}catch(e){}return null;}
@@ -1328,7 +1369,9 @@
     app.innerHTML=head+
       '<div class="card">'+
         '<div class="headrow"><div class="company">'+esc(L.company||'(no company)')+'</div>'+navBtns()+'</div>'+
-        '<div class="sub">'+esc([L.name,L.city].filter(Boolean).join(' &middot; ')||LABEL[MOTION]+' lead')+'</div>'+
+        // esc() after the join turned the & into &amp; and printed "Natalie &middot; Nebraska" on
+        // the card. Escape the parts, join with the entity outside.
+        '<div class="sub">'+([personName(L),L.city].filter(Boolean).map(esc).join(' &middot; ')||esc(LABEL[MOTION]+' lead'))+'</div>'+
         (L.siteFault?'<div class="fault"><span>What is wrong with their site</span>'+esc(L.siteFault)+'</div>':'')+
         (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
         // Paul: if no touchpoints have been done, mark that. A first-ever call and a fifth
@@ -1394,7 +1437,7 @@
       '<div class="card">'+
         '<div class="lbl">🔥 Interested &middot; call now while they are hot</div>'+
         '<div class="headrow"><div class="company">'+esc(L.company||L.name||'Hot lead')+'</div>'+navBtns()+'</div>'+
-        '<div class="sub">'+esc([L.name,L.email].filter(Boolean).join(' &middot; ')||'From '+(L.source||'Bland'))+'</div>'+
+        '<div class="sub">'+([personName(L),L.email].filter(Boolean).map(esc).join(' &middot; ')||esc('From '+(L.source||'Bland')))+'</div>'+
         '<div class="cardgrid"><div class="cardmain">'+
         lineBadge(L)+
         '<div class="phone"><a href="'+telHref(L.phone)+'">'+esc(L.phone||'no number')+'</a>'+(L.phone?'<a class="call" href="'+telHref(L.phone)+'">Call now</a>':'')+'</div>'+
