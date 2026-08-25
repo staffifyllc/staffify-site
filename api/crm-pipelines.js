@@ -15,6 +15,41 @@ export default async function handler(req, res) {
     const token = process.env.HUBSPOT_TOKEN || '';
     if (!token) return res.status(200).json({ configured: false });
 
+    // Change specific fields on an existing deal. Only the fields sent are touched, so assigning an
+    // owner cannot quietly reset a stage or a value somebody arrived at for a reason.
+    // POST /api/crm-pipelines/  { update:[{ dealId, ownerId?, amount?, stage?, note? }] }
+    if (req.method === 'POST' && Array.isArray((req.body || {}).update)) {
+        const results = [];
+        for (const u of req.body.update.slice(0, 10)) {
+            try {
+                const props = {};
+                if (u.ownerId) props.hubspot_owner_id = String(u.ownerId);
+                if (u.amount != null) props.amount = String(u.amount);
+                if (u.stage) props.dealstage = String(u.stage);
+                if (Object.keys(props).length) {
+                    const r = await fetch(`${HS}/crm/v3/objects/deals/${u.dealId}`, {
+                        method: 'PATCH',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ properties: props }),
+                    });
+                    if (!r.ok) { results.push({ dealId: u.dealId, error: `hubspot ${r.status}` }); continue; }
+                }
+                if (u.note) {
+                    await fetch(`${HS}/crm/v3/objects/notes`, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            properties: { hs_note_body: String(u.note).slice(0, 4000), hs_timestamp: new Date().toISOString() },
+                            associations: [{ to: { id: u.dealId }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 214 }] }],
+                        }),
+                    }).catch(() => null);
+                }
+                results.push({ dealId: u.dealId, changed: Object.keys(props), noteAdded: !!u.note });
+            } catch (e) { results.push({ dealId: u.dealId, error: String((e && e.message) || e).slice(0, 160) }); }
+        }
+        return res.status(200).json({ ok: true, results });
+    }
+
     // Open a deal deliberately, with the pipeline, stage, amount and owner stated rather than
     // inferred. upsertDeal is the right tool when a rep's outcome should nudge a deal along; this is
     // for the case where a person tells us about three businesses at once and someone decides what
