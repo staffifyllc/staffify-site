@@ -15,6 +15,75 @@ export default async function handler(req, res) {
     const token = process.env.HUBSPOT_TOKEN || '';
     if (!token) return res.status(200).json({ configured: false });
 
+    // Open a deal deliberately, with the pipeline, stage, amount and owner stated rather than
+    // inferred. upsertDeal is the right tool when a rep's outcome should nudge a deal along; this is
+    // for the case where a person tells us about three businesses at once and someone decides what
+    // each one is worth.
+    //
+    // POST /api/crm-pipelines/
+    //   { create:[{ dealname, pipeline, stage, amount, ownerId, contactId, note }] }
+    // Refuses to duplicate: a contact that already has an open deal of the same name is skipped.
+    if (req.method === 'POST' && Array.isArray((req.body || {}).create)) {
+        const wanted = req.body.create.slice(0, 10);
+        const results = [];
+        for (const d of wanted) {
+            try {
+                const name = String(d.dealname || '').trim().slice(0, 250);
+                if (!name) { results.push({ error: 'dealname required' }); continue; }
+
+                // Do not open a second copy of something already open on this contact.
+                if (d.contactId) {
+                    const assoc = await fetch(`${HS}/crm/v4/objects/contacts/${d.contactId}/associations/deals`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+                    const ids = ((assoc && assoc.results) || []).map(a => a.toObjectId || a.id).filter(Boolean).slice(0, 25);
+                    let clash = null;
+                    for (const id of ids) {
+                        const ex = await fetch(`${HS}/crm/v3/objects/deals/${id}?properties=dealname,dealstage,pipeline,amount`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+                        const nm = ex && ex.properties && String(ex.properties.dealname || '').trim().toLowerCase();
+                        if (nm && nm === name.toLowerCase()) { clash = { id: ex.id, ...(ex.properties || {}) }; break; }
+                    }
+                    if (clash) { results.push({ skipped: 'a deal with this name is already open on this contact', existing: clash }); continue; }
+                }
+
+                const props = { dealname: name, pipeline: String(d.pipeline || 'default') };
+                if (d.stage) props.dealstage = String(d.stage);
+                if (d.amount != null) props.amount = String(d.amount);
+                if (d.ownerId) props.hubspot_owner_id = String(d.ownerId);
+
+                const r = await fetch(`${HS}/crm/v3/objects/deals`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ properties: props }),
+                });
+                const body = await r.json().catch(() => null);
+                if (!r.ok) { results.push({ error: `hubspot ${r.status}`, detail: JSON.stringify(body).slice(0, 200) }); continue; }
+
+                if (d.contactId) {
+                    await fetch(`${HS}/crm/v4/objects/deals/${body.id}/associations/default/contacts/${d.contactId}`, {
+                        method: 'PUT', headers: { Authorization: `Bearer ${token}` },
+                    }).catch(() => null);
+                }
+                if (d.note) {
+                    await fetch(`${HS}/crm/v3/objects/notes`, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            properties: { hs_note_body: String(d.note).slice(0, 4000), hs_timestamp: new Date().toISOString() },
+                            associations: [{ to: { id: body.id }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 214 }] }],
+                        }),
+                    }).catch(() => null);
+                }
+                results.push({ created: body.id, dealname: name, pipeline: props.pipeline, stage: props.dealstage, amount: props.amount, owner: props.hubspot_owner_id });
+            } catch (e) {
+                results.push({ error: String((e && e.message) || e).slice(0, 160) });
+            }
+        }
+        return res.status(200).json({ ok: true, results });
+    }
+
     // Find a contact and everything already open on them, so a deal is attached to the person we
     // already have rather than creating a second copy of them.
     // GET /api/crm-pipelines/?contact=taddewald@gmail.com
