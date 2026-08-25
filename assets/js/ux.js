@@ -159,3 +159,14 @@
     // One delayed rescan to catch sticky CTAs / lazy-injected buttons
     setTimeout(scan, 600);
 })();
+
+// Sitewide lead-capture modal. Loaded here so it rides on every public page
+// that already includes ux.js, with a single source of truth. The modal file
+// self-guards against denied paths, opt-outs, and double injection.
+(function () {
+    'use strict';
+    var s = document.createElement('script');
+    s.src = '/assets/js/lead-modal.js?v=1';
+    s.defer = true;
+    document.head.appendChild(s);
+})();
