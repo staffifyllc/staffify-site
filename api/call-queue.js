@@ -132,7 +132,16 @@ export default async function handler(req, res) {
             const r = await fetch(`${BASE}?action=log&t=${encodeURIComponent(TOKEN)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: b.id, outcome: b.outcome, motion: b.motion || '', rep: who.name || who.email }),
+                // The phone and the company have to travel with the disposition. The dialer sends
+                // both and this rebuilt the body by hand without them, so all 111 rows in sales:log
+                // carry an empty phone. That silently killed three things: the touchpoint line that
+                // tells a rep someone already called this prospect, any warm-versus-cold measurement,
+                // and the guard that stops the AI callers dialling a lead a human already worked.
+                body: JSON.stringify({
+                    id: b.id, outcome: b.outcome, motion: b.motion || '',
+                    phone: b.phone || '', company: b.company || '',
+                    rep: who.name || who.email,
+                }),
             });
             const j = await r.json().catch(() => ({}));
             return res.status(r.status).json(j);

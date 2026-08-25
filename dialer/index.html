@@ -1233,7 +1233,7 @@
       return;
     }
     try{
-      fetch('/api/call-queue?action=log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,phone:p.lead.phone||'',outcome:p.outcome,motion:p.motion,rep:r&&r.name,email:r&&r.email,correction:!!p.correction})})
+      fetch('/api/call-queue?action=log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.lead.id,phone:p.lead.phone||'',company:p.lead.company||'',outcome:p.outcome,motion:p.motion,rep:r&&r.name,email:r&&r.email,correction:!!p.correction})})
         .then(function(){ return fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); })
         .then(function(s){ return s&&s.ok?s.json():null; })
         .then(function(j){ if(j){ SCORE=j; if(!pendingLog) render(); } }).catch(function(){});
