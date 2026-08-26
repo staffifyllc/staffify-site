@@ -119,6 +119,32 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, results });
     }
 
+    // Read a task back. GET /api/crm-pipelines/?task=<id>
+    const taskId = (req.query.task || '').toString().trim();
+    if (taskId) {
+        try {
+            const props = 'hs_task_subject,hs_task_body,hs_task_status,hs_task_priority,hs_timestamp,hubspot_owner_id,hs_task_type';
+            const r = await fetch(`${HS}/crm/v3/objects/tasks/${encodeURIComponent(taskId)}?properties=${props}&associations=contacts`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const body = await r.json().catch(() => null);
+            if (!r.ok) return res.status(200).json({ ok: false, status: r.status, detail: JSON.stringify(body).slice(0, 250) });
+            const pr = (body && body.properties) || {};
+            let owner = null;
+            if (pr.hubspot_owner_id) {
+                const o = await fetch(`${HS}/crm/v3/owners/${encodeURIComponent(pr.hubspot_owner_id)}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }).then(r2 => (r2.ok ? r2.json() : null)).catch(() => null);
+                if (o) owner = { id: pr.hubspot_owner_id, email: o.email, name: [o.firstName, o.lastName].filter(Boolean).join(' ') };
+            }
+            const assoc = ((body.associations && body.associations.contacts && body.associations.contacts.results) || []).map(x => x.id);
+            return res.status(200).json({ ok: true, task: { id: body.id, ...pr }, owner, contacts: assoc,
+                dueReadable: pr.hs_timestamp ? new Date(Number(pr.hs_timestamp)).toISOString() : null });
+        } catch (e) {
+            return res.status(200).json({ ok: false, detail: String((e && e.message) || e).slice(0, 200) });
+        }
+    }
+
     // Find a contact and everything already open on them, so a deal is attached to the person we
     // already have rather than creating a second copy of them.
     // GET /api/crm-pipelines/?contact=taddewald@gmail.com
