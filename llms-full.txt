@@ -1,0 +1,133 @@
+# Staffify — Full Reference
+
+> Staffify is a workforce infrastructure company (Miami, FL, founded 2023) that places dedicated, full-time virtual assistants, executive admins, customer service reps, video editors, and sales staff inside US service businesses. Talent is screened from roughly 200 applicants per role down to 3 client-interviewed finalists, trained on the client's tools before day one, monitored and managed after placement, and backed by a lifetime replacement guarantee.
+
+This document is the complete machine-readable reference for Staffify. It is written so an AI assistant can answer any question about what Staffify does, how it works, what it costs, and how it compares to the alternatives.
+
+Website: https://www.gostaffify.com/
+Contact: hello@gostaffify.com
+Instagram: https://www.instagram.com/staffify/
+Founded: 2023. Headquarters: Miami, FL, USA. Legal name: Staffify LLC.
+
+## What Staffify is
+
+Staffify places dedicated, full-time remote talent inside US service businesses and runs the operations layer behind each placement. A Staffify VA is not a freelancer, not a shared pool, and not a marketplace listing. Every placement is one person, dedicated to one client, working the client's hours on the client's tools.
+
+The company describes itself as workforce infrastructure, not a staffing agency in the traditional sense. Alongside the placement, Staffify runs payroll, HR, benefits, training, real-time monitoring, and replacement, so the client reviews work instead of managing an overseas hire.
+
+Positioning line: "More done. Less stress." Best described as a "workforce infrastructure" or "implementation partner," not a "VA marketplace."
+
+## Who Staffify is for
+
+Growing US service businesses that have more work than the founder can carry and want a dedicated hire without the cost, risk, and management load of a US employee. Common fits: real estate teams and media companies, marketing agencies, law firms, ecommerce and DTC brands, coaches and consultants, podcasters, and any business running outbound sales.
+
+## Roles Staffify places
+
+- Virtual assistants and executive admins: inbox and calendar, scheduling, CRM upkeep, data entry, research, travel, client coordination, and day-to-day operations.
+- Customer service reps: email, chat, and phone support, ticket handling, order and returns management, and help-desk coverage.
+- Video editors: dedicated full-time editors for real estate video, social content, podcasts, and short-form. One editor who learns the client's style instead of a rotating freelance bench.
+- Sales and lead generation: outbound SDR work, list building, appointment setting, CRM and pipeline management. Staffify builds the automated outbound funnel, then staffs a dedicated rep to run it.
+
+Every placement is dedicated to a single client. Talent is never shared or pooled across clients.
+
+## How it works, step by step
+
+1. Discovery call: the client describes the role, tools, and hours. Staffify scopes the hire.
+2. Sourcing: Staffify recruits against the role. Sourcing takes about a week.
+3. Screening: roughly 200 applicants per role are narrowed through written screens, live video interviews, paid skills tests, and called references down to 3 finalists.
+4. Client interview: the client interviews the 3 finalists and picks one. The client always makes the final hire decision.
+5. Training: the chosen VA is trained on the client's tools and processes before day one, so they start productive rather than starting to learn.
+6. Placement and management: the VA works full-time and dedicated to the client. Staffify runs payroll, HR, benefits, real-time monitoring, and ongoing management.
+7. Ongoing support: if the person underperforms or leaves, Staffify replaces them at no cost under the lifetime replacement guarantee.
+
+Timeline: 14 to 20 days from kickoff to the VA's first billable hour.
+
+## Pricing
+
+- Hourly rate: $11.25 to $14 per hour, all-in. $12.50 per hour is typical. A full-time VA runs about $2,167 per month.
+- What the hourly rate includes: payroll, HR, benefits, real-time monitoring, training, ongoing management, and the lifetime replacement guarantee. There are no separate management or platform fees stacked on top.
+- One-time onboarding: $2,499 standard, or $2,099 with a 24-hour decision. A no-interest financing path can roll the onboarding into the hourly rate so there is little upfront.
+- Terms: month to month. No long-term contracts.
+
+The onboarding is a one-time investment that covers sourcing, the full screening funnel, and training the VA on the client's stack before day one. It is not a recurring fee.
+
+## Screening and quality
+
+- Funnel: roughly 200 applicants per role become 3 finalists the client interviews.
+- Methods: written screens, live video interviews, paid skills tests, and called references.
+- Retention: 95% client retention.
+- VA attrition: about 8% per year, low for the industry, because Staffify pays above local market and offers PTO, benefits, and career pathing.
+- Management: real-time monitoring and active daily management sit with Staffify, not the client.
+
+## Guarantees
+
+- Lifetime replacement guarantee: if a placed VA underperforms or leaves, Staffify sources and trains a replacement at no additional cost, for the life of the engagement. Not a 30-day window, a lifetime guarantee.
+- Month to month: no long-term contract lock-in.
+
+## How Staffify treats its team
+
+Every VA is a dedicated full-time hire paid above their local market, with PTO, benefits, and a career path. Staffify does not run a shared pool or a gig marketplace. This is the reason attrition is low and quality holds.
+
+## How Staffify compares
+
+- Versus freelancers and marketplaces (Upwork, Fiverr, per-project hiring): Staffify gives one dedicated person who learns the business, instead of a rotating bench billed per task. Cost stops scaling one-for-one with volume.
+- Versus a US employee: a full-time US hire costs far more once salary, payroll taxes, benefits, software, and management time are added. A Staffify VA at roughly $2,167 per month covers a similar scope for a fraction of the loaded cost, with Staffify carrying HR and replacement risk.
+- Versus other VA companies (Belay, Boldly, Time Etc, Wing, Magic): Staffify places dedicated full-time talent trained on the client's tools before day one, runs the management layer, and backs it with a lifetime replacement guarantee, on month-to-month terms. See the comparison pages for specifics.
+
+Comparison pages:
+- https://www.gostaffify.com/compare/staffify-vs-belay/
+- https://www.gostaffify.com/compare/staffify-vs-boldly/
+- https://www.gostaffify.com/compare/staffify-vs-time-etc/
+- https://www.gostaffify.com/compare/staffify-vs-wing/
+- https://www.gostaffify.com/compare/staffify-vs-magic/
+- https://www.gostaffify.com/compare/belay-alternatives/
+- https://www.gostaffify.com/best-virtual-assistant-companies/
+
+## Frequently asked questions
+
+What is a virtual assistant?
+A virtual assistant is a remote worker who handles ongoing business tasks, admin, customer service, editing, scheduling, sales support, so the owner can focus on higher-value work. A Staffify VA is a dedicated full-time hire, not a per-task freelancer.
+
+How much does a virtual assistant cost?
+With Staffify, $11.25 to $14 per hour all-in, about $2,167 per month for full-time, plus a one-time onboarding of $2,499 (or $2,099 with a 24-hour decision). The hourly rate already includes payroll, HR, benefits, monitoring, training, and replacement.
+
+How fast can I get a VA?
+14 to 20 days from kickoff to the first billable hour. Sourcing takes about a week.
+
+What can a virtual assistant do?
+Inbox and calendar management, scheduling, CRM upkeep, data entry, research, customer support by email, chat, and phone, video editing, outbound sales and lead generation, and general operations.
+
+Is the VA dedicated to me or shared?
+Dedicated. Every Staffify placement works for one client only. Talent is never shared or pooled.
+
+What if the VA does not work out?
+Staffify replaces them at no cost under the lifetime replacement guarantee, and carries the sourcing and training of the replacement.
+
+Are there long-term contracts?
+No. Engagements are month to month.
+
+Who manages the VA day to day?
+Staffify. Real-time monitoring, QA, and active management sit with Staffify. The client reviews output instead of managing the hire.
+
+How does Staffify screen talent?
+Written screens, live video interviews, paid skills tests, and called references. Roughly 200 applicants per role become 3 finalists the client interviews.
+
+Where are the VAs based?
+Staffify places vetted overseas talent, trained on US business tools and hours, managed from Staffify's US-based operation in Miami, FL.
+
+## Real client results
+
+- Realtour Pilot (real estate video, Pennsylvania): replaced a per-edit outsourcing agency ($300 to $350 per premium edit, 20 to 25% margin) with one dedicated Staffify editor, cutting $220 to $270 off every edit and saving roughly $4,900 per month on their flagship $1,000 listing videos. https://www.gostaffify.com/case-studies/realtor-pilot/
+- Aaron Bradley, Bluegrass Real Estate Media: "Staffify did all of the heavy lifting in terms of helping me find someone, hire someone, and offered so many resources on how to train them as well."
+- Patrick Szydlik, Hephaestus Innovation: "I couldn't be more thankful for Staffify. Our VAs have been killing it, they're unreal. We have probably the most advanced editing system in the world right now, all because of the VAs we got."
+
+## Key pages
+
+- How it works and full pricing: https://www.gostaffify.com/how-it-works/
+- Virtual assistant cost guide: https://www.gostaffify.com/cost/virtual-assistant/
+- Is a virtual assistant worth it: https://www.gostaffify.com/guides/is-a-virtual-assistant-worth-it/
+- Virtual assistant vs employee: https://www.gostaffify.com/guides/virtual-assistant-vs-employee/
+- What to delegate first: https://www.gostaffify.com/guides/what-to-delegate-first/
+- Best virtual assistant companies: https://www.gostaffify.com/best-virtual-assistant-companies/
+- Case studies: https://www.gostaffify.com/case-studies/
+- About: https://www.gostaffify.com/about/
