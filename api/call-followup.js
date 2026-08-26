@@ -46,7 +46,25 @@ async function findCall(phone) {
             });
         }
     }
-    if (!found.length) return { error: 'no_call_found', linesChecked: lines.length };
+    if (!found.length) {
+        // Which lines exist and what the API actually returns for them, because "no call found"
+        // and "wrong query parameter" look identical from here.
+        const diag = [];
+        for (const line of lines) {
+            const r = await fetch(`${OP}/calls?phoneNumberId=${encodeURIComponent(line.id)}&maxResults=5`, { headers });
+            const txt = await r.text();
+            let parsed = null; try { parsed = JSON.parse(txt); } catch (e) { /* keep the raw */ }
+            diag.push({
+                line: line.name || line.number, id: line.id, status: r.status,
+                returned: parsed && Array.isArray(parsed.data) ? parsed.data.length : null,
+                sample: parsed && parsed.data && parsed.data[0]
+                    ? { id: parsed.data[0].id, at: parsed.data[0].createdAt, participants: parsed.data[0].participants, direction: parsed.data[0].direction }
+                    : undefined,
+                error: !r.ok ? txt.slice(0, 200) : undefined,
+            });
+        }
+        return { error: 'no_call_found', linesChecked: lines.length, lines: lines.map((l) => l.name || l.number), diag };
+    }
     found.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
     const call = found[0];
 
