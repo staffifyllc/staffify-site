@@ -761,12 +761,14 @@
     var hasRole=!!String(L.role||'').trim();
     var role=L.role||'', first=firstNameOfLead(L)||'', onsite=hasRole&&ONSITE_ROLE.test(role);
     var afterOwner = onsite ? 'pivot' : 'rate';
+    // Paul, 2026-08-26: always ask who the right person is. Whoever answers a published business
+    // line is usually not the hirer, and asking them to confirm gets a no. Asking WHO gets a name.
     var openSay = hasRole
-      ? '"Hi'+(first?' '+first:'')+', are you still hiring for the '+role+' role?"'
-      : '"Hi'+(first?' '+first:'')+', quick question. Who handles the admin and client follow-up over there day to day?"';
+      ? '"Hi'+(first?' '+first:'')+', I am calling about the '+role+' position you posted. Who might be the right person to talk to about this position?"'
+      : '"Hi'+(first?' '+first:'')+', who might be the right person to talk to about bringing on admin support over there?"';
     return {
       open:{ step:'Open', say:openSay,
-        note:hasRole?'Light and quick. You are just checking, not selling.'
+        note:hasRole?'You are asking WHO, not whether. A yes or no question to whoever picked up gets a no. Take the name, then ask to be put through.'
                     :'They have not posted a role, so do not imply they have. You are finding out who carries the admin load.',
         opts:[['Yes, still open',afterOwner==='pivot'?'owner':'owner'],['They filled it','filled'],['"Who is this?"','whois'],['Gatekeeper / not them','gate']] },
 
@@ -895,15 +897,15 @@
     var steps = [];
 
     steps.push(hasRole
-      ? { say:'"Hi'+(first?' '+esc(first):'')+', are you still hiring for the '+esc(role)+' role?"',
-          note:'Light and quick. You are just checking, not selling yet.',
+      ? { say:'"Hi'+(first?' '+esc(first):'')+', I am calling about the '+esc(role)+' position you posted. Who might be the right person to talk to about this position?"',
+          note:'Ask WHO, never whether. Most of these numbers are the main line, so the person answering is not the hirer. A name is the win here.',
           ifs:[['Filled','"Got it. What else are you trying to get covered right now?" If nothing: "What did you end up paying for that one?" The number is worth having, and it opens the next call.']] }
       : { say:'"Hi'+(first?' '+esc(first):'')+', quick question. Who handles the admin and client follow-up over there day to day?"',
           note:'No posting behind this one, so do not imply there is. Find out who carries the admin load and whether they are at capacity.',
           ifs:[['"I do"','"That is what I figured. How much of your week goes to it?" Their own number is the whole pitch.'],
                ['"We have someone"','"Are they at capacity?" If yes, that is the opening. If no, thank them and move on.']] });
 
-    steps.push({ say:hasRole?'"Are you the one handling that hire, or is that someone else?"':'"Are you the one who would decide on something like that, or is that someone else?"',
+    steps.push({ say:hasRole?'"Perfect. Are they around, or is there a better time to catch them?"':'"Are you the one who would decide on something like that, or is that someone else?"',
                  note:'Find this out before you pitch. Wrong person, get a name and move on.',
                  ifs:[['Not them','"Who would be the best person to ask about it?" Get a name and the best time.']] });
 
