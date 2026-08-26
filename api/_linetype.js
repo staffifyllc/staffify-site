@@ -53,6 +53,16 @@ export function rejectReason(lead) {
     const phone = norm(lead && lead.phone);
     if (!phone) return 'no phone number on the lead';
 
+    // EXPLICIT OVERRIDE, set per lead by the engine and only for lists Paul named.
+    // Paul, 2026-08-26, on 90 companies with stated vacancies of which 7 had mobiles: "please do
+    // them all... put all the numbers in there". He was shown the evidence and decided to work them.
+    //
+    // This is the SECOND mobile-only gate. The engine has one in lead-gate.js and this is the hub's,
+    // and overriding only the engine's is why 62 leads left the engine and 7 arrived: this one
+    // silently stripped 55 of them. Both have to agree or the rule is unenforceable in one direction
+    // and undebuggable in the other.
+    if (lead && lead.allowNonMobile === true) return null;
+
     const checkedAt = norm(lead && lead.typeCheckedAt);
     const type = norm(lead && lead.phoneType);
 
