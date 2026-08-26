@@ -35,10 +35,19 @@ async function findCall(phone) {
 
     const found = [];
     for (const line of lines) {
-        const u = `${OP}/calls?phoneNumberId=${encodeURIComponent(line.id)}&participants[]=${encodeURIComponent('+1' + want)}&maxResults=20`;
-        const r = await fetch(u, { headers });
-        if (!r.ok) continue;
-        for (const c of ((await r.json()).data || [])) {
+        // OpenPhone is inconsistent about how it wants a repeated query parameter: /messages accepts
+        // participants= and rejects participants[], and the two have swapped before. Try each and
+        // use whichever the API accepts, rather than hardcoding a guess that silently returns nothing.
+        let data = null;
+        for (const enc of ['participants[]', 'participants', 'participants[0]']) {
+            const u = `${OP}/calls?phoneNumberId=${encodeURIComponent(line.id)}&${enc}=${encodeURIComponent('+1' + want)}&maxResults=20`;
+            const r = await fetch(u, { headers });
+            if (!r.ok) continue;
+            const j = await r.json().catch(() => null);
+            if (j && Array.isArray(j.data)) { data = j.data; break; }
+        }
+        if (!data) continue;
+        for (const c of data) {
             found.push({
                 id: c.id, line: line.name || line.number, at: c.createdAt || c.completedAt,
                 direction: c.direction, durationSec: c.duration ?? null, status: c.status,
@@ -51,7 +60,7 @@ async function findCall(phone) {
         // and "wrong query parameter" look identical from here.
         const diag = [];
         for (const line of lines) {
-            const r = await fetch(`${OP}/calls?phoneNumberId=${encodeURIComponent(line.id)}&maxResults=5`, { headers });
+            const r = await fetch(`${OP}/calls?phoneNumberId=${encodeURIComponent(line.id)}&participants[]=${encodeURIComponent('+1' + want)}&maxResults=5`, { headers });
             const txt = await r.text();
             let parsed = null; try { parsed = JSON.parse(txt); } catch (e) { /* keep the raw */ }
             diag.push({
