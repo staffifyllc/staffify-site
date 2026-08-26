@@ -1393,6 +1393,14 @@
         // the card. Escape the parts, join with the entity outside.
         '<div class="sub">'+([personName(L),L.city].filter(Boolean).map(esc).join(' &middot; ')||esc(LABEL[MOTION]+' lead'))+'</div>'+
         (L.siteFault?'<div class="fault"><span>What is wrong with their site</span>'+esc(L.siteFault)+'</div>':'')+
+        // A job posting is the strongest evidence we ever hold on a staffing lead: they said it
+        // publicly, with a number attached. Top of the card, above the script, with the link so a
+        // rep can put eyes on the actual listing before dialling.
+        (L.need?'<div class="fault"><span>Why we are calling</span>'+esc(L.need)+
+          (L.payRange?' &middot; <b>'+esc(L.payRange)+'</b>':'')+
+          (L.postedWhen?' &middot; posted '+esc(L.postedWhen):'')+
+          (L.proofUrl?'<div style="margin-top:6px"><a href="'+esc(siteUrl(L.proofUrl)||L.proofUrl)+'" target="_blank" rel="noopener noreferrer">See their listing &#8599;</a></div>':'')+
+        '</div>':'')+
         (L.priorCall?'<div class="pctag">'+esc(L.badge||'Previously booked a sales call')+(L.lastCall?' &middot; '+esc(L.lastCall):'')+'</div>':'')+
         // Paul: if no touchpoints have been done, mark that. A first-ever call and a fifth
         // attempt are different conversations and the card has to say which.
