@@ -404,7 +404,8 @@
         "csr playbook",
         "customer service procedures"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-08-26T14:50:43Z"
     },
     {
       "slug": "founder-hourly-rate-audit",
