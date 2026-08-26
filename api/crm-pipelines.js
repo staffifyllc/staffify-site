@@ -139,7 +139,14 @@ export default async function handler(req, res) {
             }
             const assoc = ((body.associations && body.associations.contacts && body.associations.contacts.results) || []).map(x => x.id);
             return res.status(200).json({ ok: true, task: { id: body.id, ...pr }, owner, contacts: assoc,
-                dueReadable: pr.hs_timestamp ? new Date(Number(pr.hs_timestamp)).toISOString() : null });
+                // HubSpot returns hs_timestamp as an ISO string on read even though it takes epoch
+                // milliseconds on write, so Number() gives NaN and toISOString throws.
+                dueReadable: (() => {
+                    const v = pr.hs_timestamp;
+                    if (!v) return null;
+                    const d = /^\d+$/.test(String(v)) ? new Date(Number(v)) : new Date(String(v));
+                    return isNaN(d) ? String(v) : d.toISOString();
+                })() });
         } catch (e) {
             return res.status(200).json({ ok: false, detail: String((e && e.message) || e).slice(0, 200) });
         }
