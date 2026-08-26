@@ -1032,6 +1032,12 @@
       .replace(/\[their industry[^\]]*\]/gi, ind || 'local businesses')
       .replace(/\[a business like theirs\]/gi, ind ? 'a ' + singularIndustry(ind) : 'a business like theirs')
       .replace(/\[industry\]/gi, ind || 'local businesses');
+    // The Foundry script refers to "the fault off the card" in several places. Substituting it means
+    // she reads the actual sentence instead of an instruction telling her to go and find one.
+    var fault=String((lead && lead.siteFault) || '').trim();
+    line = line
+      .replace(/\[(?:read )?the fault off the card[^\]]*\]/gi, fault || '[nothing specific on this one, use the clean path]')
+      .replace(/\[fault\]/gi, fault);
     return line.replace(/\[first name\]/gi, first||'there').replace(/\[company\]/gi, lead.company||'your company').replace(/\[role\]/gi, lead.role||'the role').replace(/\[you\]/gi, you);
   }
 
@@ -1337,14 +1343,23 @@
     // The generic training opener ("are you still hiring for the role you posted?") is a cold
     // line and is flatly wrong on someone we already sat down with, so their own wins.
     var ownOpener=Array.isArray(L.opener)?L.opener:[L.opener||''];
-    var opArr=(L.priorCall||!(tr.opener&&tr.opener.length))?ownOpener:tr.opener;
+    // Foundry now carries three openers instead of one, because the three calls are genuinely
+    // different: we found something specific on their site, their site checked out clean, or there
+    // is nobody named to ask for. Reading the wrong one is either a lie or a wasted opening.
+    var foundryOpener=null;
+    if(MOTION==='websites' && !L.priorCall){
+      if(!personName(L) && tr.openerNoName && tr.openerNoName.length) foundryOpener=tr.openerNoName;
+      else if(String(L.siteFault||'').trim() && tr.openerFault && tr.openerFault.length) foundryOpener=tr.openerFault;
+      else if(tr.openerClean && tr.openerClean.length) foundryOpener=tr.openerClean;
+    }
+    var opArr=foundryOpener || ((L.priorCall||!(tr.opener&&tr.opener.length))?ownOpener:tr.opener);
     var opFirst=firstNameOf(L.name);
     var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=deRoof(fillTokens(x,L),L); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
     // The engine writes this line per lead with that lead's real vertical in it, and the dialer was
     // dropping it, so the rep never actually said what we do or who we do it for. It follows the
     // greeting because that is the order it is spoken in.
     // Only when the script did not already cover this beat, otherwise the rep sees it twice.
-    if(L.sayIndustry && !/I (build|design) websites for/i.test(opArr.join(' '))){
+    if(L.sayIndustry && MOTION!=='websites' && !/I (build|design) websites for/i.test(opArr.join(' '))){
       openerLines += '<div class="line">'+esc(sayVertical(fillTokens(L.sayIndustry,L),L))+'</div>';
     }
     var scriptBits='';
@@ -1363,8 +1378,13 @@
          +'Do not offer the monthly until they have said no to $2,995.')
       : tr.price;
     if(priceText) scriptBits+='<div class="blk"><b>Price (only if asked):</b> '+esc(priceText)+'</div>';
-    if(tr.rules&&tr.rules.length) scriptBits+='<div class="blk"><b>Rules:</b>\n- '+tr.rules.map(esc).join('\n- ')+'</div>';
-    if(tr.objections) scriptBits+='<div class="blk"><b>Objections:</b>\n'+esc(tr.objections)+'</div>';
+    if(tr.whoSheIs) scriptBits+='<div class="blk"><b>If they ask who you are:</b> '+esc(sayVertical(fillTokens(tr.whoSheIs,L),L))+'</div>';
+    if(tr.rules&&tr.rules.length) scriptBits+='<div class="blk"><b>Never:</b>\n- '+tr.rules.map(esc).join('\n- ')+'</div>';
+    if(tr.objectionList&&tr.objectionList.length){
+      scriptBits+='<div class="blk"><b>Objections:</b>\n'+tr.objectionList.map(function(o){
+        return esc(o.q)+'\n   '+esc(deRoof(fillTokens(o.a,L),L));
+      }).join('\n\n')+'</div>';
+    } else if(tr.objections) scriptBits+='<div class="blk"><b>Objections:</b>\n'+esc(tr.objections)+'</div>';
 
     app.innerHTML=head+
       '<div class="card">'+
