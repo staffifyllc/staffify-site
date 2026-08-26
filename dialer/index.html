@@ -1359,7 +1359,13 @@
       else if(String(L.siteFault||'').trim() && tr.openerFault && tr.openerFault.length) foundryOpener=tr.openerFault;
       else if(tr.openerClean && tr.openerClean.length) foundryOpener=tr.openerClean;
     }
-    var opArr=foundryOpener || ((L.priorCall||!(tr.opener&&tr.opener.length))?ownOpener:tr.opener);
+    // A lead carrying a real vacancy has an opener written FOR IT, with the role, the pay and how
+    // long the posting has been up. The generic training script cannot know any of that, so it must
+    // not win. It only applies when the lead has nothing specific of its own.
+    // Paul, 2026-08-26: "lets change the script to match the need we've identified".
+    var leadHasOwnPitch = MOTION==='staffing' && !!String(L.role||'').trim() && !!(Array.isArray(L.opener)?L.opener.length:L.opener);
+    var opArr = foundryOpener
+      || (L.priorCall || leadHasOwnPitch || !(tr.opener && tr.opener.length) ? ownOpener : tr.opener);
     var opFirst=firstNameOf(L.name);
     var openerLines=opArr.filter(Boolean).map(function(x,idx){ var ln=deRoof(fillTokens(x,L),L); if(idx===0&&opFirst&&ln.indexOf(opFirst)<0){ ln=ln.replace(/^Hi,\s*this is/i,'Hi '+opFirst+', this is'); } return '<div class="line">'+esc(ln)+'</div>'; }).join('');
     // The engine writes this line per lead with that lead's real vertical in it, and the dialer was
