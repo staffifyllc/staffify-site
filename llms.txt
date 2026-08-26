@@ -35,7 +35,7 @@
 - [Executive admins and virtual assistants](https://www.gostaffify.com/admins/)
 - [Video editors, dedicated full-time](https://www.gostaffify.com/editors/)
 - [Customer service reps](https://www.gostaffify.com/csr/)
-- [Outbound sales and lead generation](https://www.gostaffify.com/campaigns/)
+- [Outbound sales and lead generation](https://www.gostaffify.com/sales/): we build the automated sales funnel, then staff a dedicated rep to run it
 
 ## Industry-specific placements
 
@@ -60,3 +60,8 @@
 
 - [About Staffify, founder story, and how we treat our team](https://www.gostaffify.com/about/)
 - [Case studies with real client results](https://www.gostaffify.com/case-studies/)
+
+## Case studies
+
+- [Realtour Pilot: dedicated video editor saves ~$4,900/month on premium listing videos](https://www.gostaffify.com/case-studies/realtor-pilot/): replaced a per-edit outsourcing agency ($300-350/edit, 20-25% margin) with one dedicated Staffify editor
+- [All case studies](https://www.gostaffify.com/case-studies/)
