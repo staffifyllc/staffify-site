@@ -20,6 +20,14 @@
       "schedule": "20 14 * * *"
     }
   ],
+  "rewrites": [
+    { "source": "/talent", "destination": "https://recruiting.gostaffify.com/talent" },
+    { "source": "/talent/", "destination": "https://recruiting.gostaffify.com/talent" },
+    { "source": "/talent/:path*", "destination": "https://recruiting.gostaffify.com/talent/:path*" },
+    { "source": "/_next/:path*", "destination": "https://recruiting.gostaffify.com/_next/:path*" },
+    { "source": "/api/avatar", "destination": "https://recruiting.gostaffify.com/api/avatar" },
+    { "source": "/api/video-proxy", "destination": "https://recruiting.gostaffify.com/api/video-proxy" }
+  ],
   "redirects": [
     {
       "source": "/services/",
