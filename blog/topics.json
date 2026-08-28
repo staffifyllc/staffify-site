@@ -417,7 +417,8 @@
         "time audit founder",
         "what is my time worth"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-08-28T23:30:40Z"
     },
     {
       "slug": "replace-yourself-90-days",
