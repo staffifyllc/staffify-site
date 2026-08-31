@@ -1580,6 +1580,98 @@
       <p class="dash-note">A snapshot of the live Command Center your VA works out of. Figures illustrative.</p>
     </section>
 
+    <!-- ═══ WHAT WE BUILD: more modules (real client example) ═══ -->
+    <style>
+      .exos-sec{background:rgba(8,8,10,.4);border-top:1px solid rgba(26,189,225,.06)}
+      .seqwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 2px 4px}
+      .seqrow{display:flex;min-width:680px;justify-content:space-between;position:relative;padding-top:2px}
+      .seqrow::before{content:"";position:absolute;top:24px;left:28px;right:28px;height:2px;background:linear-gradient(90deg,#1abde1,#f5a623 38%,#ef6461 62%,#2fd27a);opacity:.4}
+      .seqnode{position:relative;text-align:center;flex:1;min-width:74px}
+      .seqnode .dot{width:48px;height:48px;border-radius:50%;margin:0 auto;display:grid;place-items:center;font-size:12px;font-weight:800;color:#03121a;position:relative;z-index:1;box-shadow:0 0 0 4px #090c11}
+      .seqnode .cnt{font-size:18px;font-weight:800;margin-top:11px;font-variant-numeric:tabular-nums;color:#eef1f4}
+      .seqnode .dy{font-size:10px;color:#6e6e73;margin-top:4px;text-transform:uppercase;letter-spacing:.07em}
+      .seqnode .ch{font-size:10.5px;color:#9ba1ab;margin-top:2px}
+      .seqlegend{display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.05)}
+      .seqlegend span{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#9ba1ab}
+      .seqlegend i{width:9px;height:9px;border-radius:2px}
+      .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      .tier{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:13px;padding:16px 17px}
+      .tier .th{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+      .tier .tn{font-size:15px;font-weight:800;color:#eef1f4}
+      .tier .tc{font-size:10.5px;color:#1abde1;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+      .tier .tw{font-size:12px;color:#6e6e73;margin-bottom:10px}
+      .tier .tg{font-size:12.5px;color:#c7ccd2}
+      .camp{display:flex;align-items:center;gap:14px;padding:13px 4px;border-bottom:1px solid rgba(255,255,255,.05)}
+      .camp:last-child{border-bottom:none}
+      .camp .cn{flex:1 1 40%;min-width:0}
+      .camp .cn b{font-size:14px;color:#eef1f4;font-weight:700}
+      .camp .cn .cs{font-size:11px;color:#6e6e73;margin-top:2px}
+      .camp .ca{flex:1 1 28%;font-size:12.5px;color:#9ba1ab}
+      .camp .cvol{font-size:12.5px;font-weight:700;color:#c7ccd2;font-variant-numeric:tabular-nums;width:60px;text-align:right}
+      .camp .cpill{width:74px;text-align:center;font-size:11px;font-weight:700;letter-spacing:.04em;padding:4px 0;border-radius:999px}
+      .cpill.on{color:#2fd27a;background:rgba(47,210,122,.12);border:1px solid rgba(47,210,122,.25)}
+      .cpill.off{color:#6e7681;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+      @media(max-width:820px){.tiers{grid-template-columns:1fr}.camp .ca{display:none}}
+    </style>
+
+    <section class="section exos-sec">
+      <div class="sv-wrap" style="text-align:center">
+        <div class="section-eyebrow">More than a dashboard</div>
+        <h2 class="section-title">The whole machine, built for you.</h2>
+        <p class="section-sub" style="max-width:720px;margin:0 auto">The command center is the view. Under it we build the sequence engine, the client nurture, and the campaign controls, so your VA runs a system instead of a to-do list. Below is a real client build.</p>
+      </div>
+
+      <div class="dash-frame reveal" style="max-width:1160px">
+        <div class="dbar"><span class="ddot"></span><b>Sequence Engine</b><span class="dupd" style="margin-left:auto">people at each step &middot; any reply stops the rest</span></div>
+        <div class="dbody">
+          <div class="seqwrap">
+            <div class="seqrow">
+              <div class="seqnode"><div class="dot" style="background:#1abde1">in</div><div class="cnt">1,105</div><div class="dy">Day 1</div><div class="ch">LinkedIn</div></div>
+              <div class="seqnode"><div class="dot" style="background:#f5a623">IG</div><div class="cnt">640</div><div class="dy">Day 2</div><div class="ch">Instagram DM</div></div>
+              <div class="seqnode"><div class="dot" style="background:#ef6461">T</div><div class="cnt">486</div><div class="dy">Day 4</div><div class="ch">Text</div></div>
+              <div class="seqnode"><div class="dot" style="background:#2fd27a">&#9742;</div><div class="cnt">372</div><div class="dy">Day 7</div><div class="ch">Call</div></div>
+              <div class="seqnode"><div class="dot" style="background:#f5a623">IG</div><div class="cnt">214</div><div class="dy">Day 11</div><div class="ch">Instagram DM</div></div>
+              <div class="seqnode"><div class="dot" style="background:#2fd27a">&#9742;</div><div class="cnt">148</div><div class="dy">Day 14</div><div class="ch">Call</div></div>
+              <div class="seqnode"><div class="dot" style="background:#ef6461">T</div><div class="cnt">96</div><div class="dy">Day 18</div><div class="ch">Text</div></div>
+              <div class="seqnode"><div class="dot" style="background:#2fd27a">&#9742;</div><div class="cnt">54</div><div class="dy">Day 25</div><div class="ch">Call</div></div>
+            </div>
+          </div>
+          <div class="seqlegend">
+            <span><i style="background:#2fd27a"></i>Call</span>
+            <span><i style="background:#ef6461"></i>Text</span>
+            <span><i style="background:#1abde1"></i>LinkedIn</span>
+            <span><i style="background:#f5a623"></i>Instagram</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="re2" style="max-width:1160px;margin:13px auto 0">
+        <div class="dash-frame reveal" style="max-width:none;margin:0">
+          <div class="dbar"><span class="ddot"></span><b>Client Nurture</b><span class="dupd" style="margin-left:auto">by tier</span></div>
+          <div class="dbody">
+            <div class="tiers">
+              <div class="tier"><div class="th"><span class="tn">VIP</span><span class="tc">2&times;/mo</span></div><div class="tw">Top repeat clients</div><div class="tg">Loyalty and first access</div></div>
+              <div class="tier"><div class="th"><span class="tn">High</span><span class="tc">Monthly</span></div><div class="tw">Regular clients</div><div class="tg">Deepen and upsell</div></div>
+              <div class="tier"><div class="th"><span class="tn">Mid</span><span class="tc">Monthly</span></div><div class="tw">Occasional clients</div><div class="tg">Steady nurture</div></div>
+              <div class="tier"><div class="th"><span class="tn">Entry</span><span class="tc">2 wks</span></div><div class="tw">Smaller clients</div><div class="tg">Re-engage and win the next job</div></div>
+              <div class="tier"><div class="th"><span class="tn">Win-back</span><span class="tc">2 wks</span></div><div class="tw">Lapsed clients</div><div class="tg">Bring them home</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dash-frame reveal" style="max-width:none;margin:0">
+          <div class="dbar"><span class="ddot"></span><b>Campaigns</b><span class="dupd" style="margin-left:auto">pace, pause, resume</span></div>
+          <div class="dbody" style="padding-top:6px">
+            <div class="camp"><div class="cn"><b>AI calls</b><div class="cs">Cold &middot; dialer</div></div><div class="ca">New leads, cell-only</div><div class="cvol">100/day</div><div class="cpill on">Active</div></div>
+            <div class="camp"><div class="cn"><b>Texts</b><div class="cs">Cold &middot; SMS</div></div><div class="ca">New leads, cell-only</div><div class="cvol">50/day</div><div class="cpill on">Active</div></div>
+            <div class="camp"><div class="cn"><b>LinkedIn</b><div class="cs">Cold &middot; connect + DM</div></div><div class="ca">New leads</div><div class="cvol">20/day</div><div class="cpill on">Active</div></div>
+            <div class="camp"><div class="cn"><b>Instagram DM</b><div class="cs">Cold &middot; assisted</div></div><div class="ca">New leads</div><div class="cvol">25/day</div><div class="cpill on">Active</div></div>
+            <div class="camp"><div class="cn"><b>VIP nurture</b><div class="cs">Retention</div></div><div class="ca">Top repeat clients</div><div class="cvol">2&times;/mo</div><div class="cpill off">Paused</div></div>
+          </div>
+        </div>
+      </div>
+      <p class="dash-note">An example of a client system we built and now run. Figures illustrative.</p>
+    </section>
+
     <!-- ═══ HOW IT WORKS ═══ -->
     <section class="section">
       <div class="sv-wrap" style="text-align:center">
