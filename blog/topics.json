@@ -430,7 +430,8 @@
         "90 day delegation plan",
         "owner exit strategy"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-08-31T19:54:44Z"
     },
     {
       "slug": "firing-a-va",
