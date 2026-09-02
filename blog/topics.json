@@ -443,7 +443,8 @@
         "va not working out",
         "va performance management"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-09-02T17:49:00Z"
     },
     {
       "slug": "va-management-tools",
