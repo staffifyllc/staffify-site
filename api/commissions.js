@@ -14,6 +14,7 @@
 
 import { currentRep, adminAuthorized, listReps, readBody, redis } from './_auth.js';
 import { qboConnected, qboQuery } from './_qbo.js';
+import { hoursByClient } from './_hubstaff.js';
 
 const OVERRIDE_KEY = 'commission:overrides';
 const OWNER_KEY = 'commission:owners'; // dealId -> the owner AT THE TIME IT WAS FIRST SEEN CLOSED WON
@@ -241,6 +242,74 @@ async function loadQboPaid() {
     });
 
     return { connected: true, byCust, custById, custByName, custByEmail, truncated: invoices.length >= 1000 || payments.length >= 1000 };
+}
+
+// ---- Residual: $/hour on every hour a VA works under a client the rep closed ----
+//
+// Paul, 2026-09-04: Madison earns $0.50 per hour worked. The canonical plan is $1/hr for six
+// months; hers is half, matching her 20% against the standard 35%.
+//
+// THE CHAIN: Hubstaff time entry -> Hubstaff project (= the client) -> the Closed Won deal for that
+// client -> that deal's owner -> the rep. It only scales if the client-to-deal step is automatic,
+// so names are matched normalised, and anything ambiguous is reported as UNMATCHED rather than
+// guessed. Guessing here pays the wrong rep, which is worse than paying nobody yet.
+const RESIDUAL_MAP_KEY = 'residual:clientmap';   // hubstaff client name -> dealId, set by an admin
+const RESIDUAL_MONTHS = Number(process.env.RESIDUAL_MONTHS || 6);
+
+function normName(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+
+// Deal close date + the residual window. Hours before the deal closed are not the rep's, and the
+// window stops the residual running forever on a client they closed years ago.
+function residualWindow(closeDate) {
+    if (!closeDate) return null;
+    const from = new Date(closeDate + 'T00:00:00Z');
+    if (isNaN(from)) return null;
+    const to = new Date(from); to.setUTCMonth(to.getUTCMonth() + RESIDUAL_MONTHS);
+    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+}
+
+async function loadResidualMap() {
+    try { return (await redis.hgetall(RESIDUAL_MAP_KEY)) || {}; } catch (e) { return {}; }
+}
+
+// One residual line per client that worked hours, attributed to the rep who closed it.
+export async function buildResiduals(deals, repRateByEmail, manualMap, range) {
+    const hs = await hoursByClient(range).catch(e => ({ connected: false, error: String(e).slice(0, 100), clients: [] }));
+    if (!hs.connected) return { connected: false, error: hs.error, hint: hs.hint, lines: [], unmatched: [] };
+
+    // Index the won deals by normalised client and company name, both, since a Hubstaff project is
+    // usually named for the person and the deal is often named for the business, or the reverse.
+    const byName = {};
+    deals.forEach(d => {
+        [d.company, d.client, d.name].filter(Boolean).forEach(n => {
+            const k = normName(n);
+            if (k && !byName[k]) byName[k] = d;
+        });
+    });
+
+    const lines = [], unmatched = [];
+    for (const c of hs.clients) {
+        const forced = manualMap[c.name] || manualMap[normName(c.name)];
+        const deal = forced ? deals.find(d => String(d.dealId) === String(forced)) : byName[normName(c.name)];
+        if (!deal) { unmatched.push({ client: c.name, hours: c.hours, vaCount: c.vaCount }); continue; }
+
+        const repEmail = (deal.ownerEmail || '').toLowerCase();
+        const plan = repRateByEmail[repEmail];
+        const perHour = plan && plan.residualPerHour != null ? Number(plan.residualPerHour) : 0;
+        const win = residualWindow(deal.closeDate);
+        // No rate on file means no residual, and we say so. Silently paying $0 is how this rots.
+        lines.push({
+            client: c.name, dealId: deal.dealId, repEmail,
+            hours: c.hours, vaCount: c.vaCount,
+            perHour, residual: Math.round(c.hours * perHour * 100) / 100,
+            window: win, closeDate: deal.closeDate,
+            note: !repEmail ? 'deal has no owner, so no rep to pay'
+                : !plan ? 'owner is not a registered rep'
+                : !perHour ? 'rep has no residualPerHour on file'
+                : '',
+        });
+    }
+    return { connected: true, lines, unmatched, range, truncated: !!hs.truncated };
 }
 
 // ---- QuickBooks: what we have actually PAID each rep (1099 contractors = Vendors) ----
@@ -612,10 +681,18 @@ export default async function handler(req, res) {
         loadQboPaid().catch(() => ({ connected: false })),
     ]);
     const repRateByEmail = {};
-    reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e) repRateByEmail[e] = { rate: repRate(r), houseRate: repHouseRate(r) }; });
+    reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e) repRateByEmail[e] = { rate: repRate(r), houseRate: repHouseRate(r), residualPerHour: (r.residualPerHour != null && r.residualPerHour !== '') ? Number(r.residualPerHour) : null }; });
 
     // A deal that cannot find its rep earns nobody anything, so say so loudly rather than rendering
     // a confident zero. These are the three ways attribution breaks, in the order they bite.
+    // Residuals: hours worked by VAs under clients these reps closed. Its own failure surface, so a
+    // dead Hubstaff token cannot take the whole commissions page down with it.
+    const residualMap = await loadResidualMap();
+    const today = new Date().toISOString().slice(0, 10);
+    const resStart = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10);
+    const residuals = await buildResiduals(hs.deals || [], repRateByEmail, residualMap, { start: resStart, stop: today })
+        .catch(e => ({ connected: false, error: String(e).slice(0, 120), lines: [], unmatched: [] }));
+
     const unowned = (hs.deals || []).filter(d => !d.ownerEmail);
     const blockers = [];
     if (hs.ownersError) blockers.push({ code: 'owners_scope', detail: hs.ownersError,
@@ -623,6 +700,12 @@ export default async function handler(req, res) {
     if (unowned.length) blockers.push({ code: 'unowned_deals', detail: `${unowned.length} closed-won deal(s) have no HubSpot owner`,
         fix: 'Assign an owner on the deal in HubSpot, or set the rep with an admin override. No owner means no commission for anyone.',
         deals: unowned.slice(0, 20).map(d => ({ dealId: d.dealId, name: d.name, amount: d.amount, closeDate: d.closeDate })) });
+    if (!residuals.connected) blockers.push({ code: 'hubstaff_disconnected', detail: residuals.error || 'Hubstaff is not connected',
+        fix: residuals.hint || 'Generate a Hubstaff personal access token and store it in Redis key hubstaff:refresh_token. Per-hour residuals cannot be tracked until then.' });
+    if (residuals.connected && residuals.unmatched && residuals.unmatched.length) blockers.push({ code: 'unmatched_clients',
+        detail: `${residuals.unmatched.length} Hubstaff client(s) tracked hours but match no Closed Won deal`,
+        fix: 'Map the Hubstaff client name to a deal id in the residual:clientmap hash. Unmatched hours pay no residual to anyone.',
+        clients: residuals.unmatched.slice(0, 20) });
     if (!(qbo && qbo.connected)) blockers.push({ code: 'qbo_disconnected', detail: 'QuickBooks is not connected',
         fix: 'Commissions still calculate, but nothing can be marked paid until QBO is connected at /api/quickbooks-oauth-start/.' });
 
@@ -659,7 +742,7 @@ export default async function handler(req, res) {
         const custList = qbo.connected ? Object.values(qbo.custById || {}).map(c => ({ id: c.id, name: c.name, email: c.email })) : [];
         return res.status(200).json({
             connected: true, view: 'admin', qboConnected: !!qbo.connected, qboError: qbo.error || '',
-            blockers,
+            blockers, residuals,
             truncated: { hubspot: !!hs.truncated, qbo: !!(qbo && qbo.truncated) },
             payoutScan: { vendorsMatched: payouts.vendorsMatched || 0, scanned: payouts.scanned || 0, tagged: payouts.tagged || 0, tag: payouts.tag || 'commission' },
             reps: reps.map(r => ({ email: (r.email || '').toLowerCase(), name: r.name || r.email })),
@@ -679,9 +762,24 @@ export default async function handler(req, res) {
         else { pendingCount++; pendingCommission += l.commission; }
     });
 
+    // This rep's residual: every hour a VA worked under a client they closed.
+    const myResiduals = (residuals.lines || []).filter(l => l.repEmail === meEmail);
+    const residualHours = Math.round(myResiduals.reduce((a, l) => a + l.hours, 0) * 10) / 10;
+    const residualEarned = Math.round(myResiduals.reduce((a, l) => a + l.residual, 0) * 100) / 100;
+
     return res.status(200).json({
         connected: true, view: 'rep', qboConnected: !!qbo.connected,
-        rep: { name: who.name || who.email, email: who.email, rate: repRate(who) },
+        rep: { name: who.name || who.email, email: who.email, rate: repRate(who),
+               residualPerHour: (who.residualPerHour != null && who.residualPerHour !== '') ? Number(who.residualPerHour) : null },
+        // A rep must be able to tell "no hours yet" from "we cannot see the hours". Silently showing
+        // zero for a broken integration is how a rep quietly stops being paid what they are owed.
+        residuals: {
+            connected: !!residuals.connected,
+            problem: residuals.connected ? '' : (residuals.hint || residuals.error || 'Hubstaff is not connected'),
+            hours: residualHours, earned: residualEarned, perHour: (who.residualPerHour != null && who.residualPerHour !== '') ? Number(who.residualPerHour) : null,
+            windowStart: resStart, windowEnd: today,
+            clients: myResiduals.map(l => ({ client: l.client, hours: l.hours, vaCount: l.vaCount, residual: l.residual, note: l.note })),
+        },
         totals: {
             payableCount, payableCommission: round(payableCommission),
             pendingCount, pendingCommission: round(pendingCommission),

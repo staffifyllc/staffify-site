@@ -176,7 +176,16 @@
     var qboOff=(j&&j.qboConnected===false);
     var cards='<div class="cards">'+
       '<div class="kcard"><div class="l">Payable now</div><div class="n grad">'+money(t.payableCommission)+'</div><div class="s">'+(t.payableCount||0)+' invoice'+((t.payableCount===1)?'':'s')+' paid</div></div>'+
-      '<div class="kcard"><div class="l">Pending</div><div class="n">'+money(t.pendingCommission)+'</div><div class="s">'+(t.pendingCount||0)+' awaiting invoice paid</div></div>'+
+      '<div class="kcard"><div class="l">Pending</div><div class="n">'+money(t.pendingCommission)+'</div><div class="s">'+(t.pendingCount||0)+' awaiting payment</div></div>'+
+      // Residual: $/hr on every hour a VA works under a client this rep closed. Shown even at zero,
+      // because a rep needs to see the line exists and whether we can actually read the hours.
+      ((d.residuals&&d.residuals.perHour)
+        ? '<div class="kcard"><div class="l">Hours residual</div><div class="n grad">'+money(d.residuals.earned)+'</div><div class="s">'
+          +(d.residuals.connected
+             ? (d.residuals.hours||0)+' hrs at '+money(d.residuals.perHour)+'/hr'
+             : '<span style="color:#ffb59a">'+esc(d.residuals.problem)+'</span>')
+          +'</div></div>'
+        : '')+
       '<div class="kcard"><div class="l">Paid out</div><div class="n">'+money(t.paidOutCommission)+'</div><div class="s">'+(t.paidOutCount||0)+' settled</div></div>'+
       '</div>';
 

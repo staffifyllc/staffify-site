@@ -103,7 +103,7 @@ export async function listReps() {
 
 // houseRate is optional: the rate a rep earns on leads the company hands them, when their plan splits
 // by lead source (e.g. 20 on house leads, 35 on self-sourced). Omit it and the rep earns `rate` on everything.
-export async function createRep({ email, name, rate, role, houseRate, hubspotOwnerId }) {
+export async function createRep({ email, name, rate, role, houseRate, hubspotOwnerId, residualPerHour }) {
     const e = normEmail(email);
     const rep = {
         email: e,
@@ -118,6 +118,9 @@ export async function createRep({ email, name, rate, role, houseRate, hubspotOwn
     // it 403s and every rep's commission silently computes to zero. Recording the id here gives
     // attribution a second route that does not depend on that scope.
     if (hubspotOwnerId != null && hubspotOwnerId !== '') rep.hubspotOwnerId = String(hubspotOwnerId);
+    // Dollars per hour worked by any VA placed under a client this rep closed. The standard plan is
+    // $1/hr for six months; Madison is on $0.50, matching her 20% against the standard 35%.
+    if (residualPerHour != null && residualPerHour !== '') rep.residualPerHour = String(residualPerHour);
     await redis.hset(`rep:${e}`, rep);
     await redis.sadd('reps', e);
     return rep;
