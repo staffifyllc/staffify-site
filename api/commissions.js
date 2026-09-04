@@ -279,18 +279,33 @@ export async function buildResiduals(deals, repRateByEmail, manualMap, range) {
 
     // Index the won deals by normalised client and company name, both, since a Hubstaff project is
     // usually named for the person and the deal is often named for the business, or the reverse.
+    // Deals are named "Vic Devore - Staffify VA" while the Hubstaff project is just "Vic Devore",
+    // so the whole string never matches. Index the leading segment before a dash or a pipe as well
+    // as the full name. Missing this matched 0 of 36 clients in production while the same data
+    // matched 29 of 32 by hand, which is the difference between every rep being paid and none.
+    const candidates = (v) => {
+        const raw = String(v || '');
+        const head = raw.split(/\s+[-|\u2013\u2014]\s+/)[0];
+        return [raw, head];
+    };
     const byName = {};
     deals.forEach(d => {
         [d.company, d.client, d.name].filter(Boolean).forEach(n => {
-            const k = normName(n);
-            if (k && !byName[k]) byName[k] = d;
+            candidates(n).forEach(c => {
+                const k = normName(c);
+                if (k && k.length > 2 && !byName[k]) byName[k] = d;
+            });
         });
     });
 
     const lines = [], unmatched = [];
     for (const c of hs.clients) {
         const forced = manualMap[c.name] || manualMap[normName(c.name)];
-        const deal = forced ? deals.find(d => String(d.dealId) === String(forced)) : byName[normName(c.name)];
+        // Try the Hubstaff project name whole, then its own leading segment, so "PRSPCTV Media - Kyle
+        // Lux" can find a deal named for either half.
+        const deal = forced
+            ? deals.find(d => String(d.dealId) === String(forced))
+            : (candidates(c.name).map(x => byName[normName(x)]).find(Boolean) || null);
         if (!deal) { unmatched.push({ client: c.name, hours: c.hours, vaCount: c.vaCount }); continue; }
 
         const repEmail = (deal.ownerEmail || '').toLowerCase();
