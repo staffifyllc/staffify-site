@@ -214,7 +214,12 @@ async function loadQboPaid() {
         const amt = Number(p.TotalAmt) || 0;
         c.received += amt;
         const method = (p.PaymentMethodRef && (p.PaymentMethodRef.name || p.PaymentMethodRef.value)) || '';
-        if (CARD_METHOD.test(String(method))) { c.cardPaid += amt; c.cardCount++; }
+        const isCard = CARD_METHOD.test(String(method));
+        if (isCard) { c.cardPaid += amt; c.cardCount++; }
+        // Keep the individual payments. A client on an instalment plan needs to see what EACH payment
+        // earned, and the fixed part of the card fee is charged per transaction, so a cumulative
+        // calculation with one fixed fee quietly under-charges a three-payment deal.
+        (c.payments || (c.payments = [])).push({ date: (p.TxnDate || '').slice(0, 10), amount: amt, method, isCard });
     });
 
     // Money that went back OUT to the client. A refund or a credit memo reverses the commission.
@@ -516,10 +521,30 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     const outstanding = round(Math.max(0, (invTotal || deal.amount) - invReceived));
     const remainingCommission = (flat != null) ? 0 : round(outstanding * rate / 100);
 
+    // Per-payment breakdown, so an instalment deal shows what each payment actually earned rather than
+    // one cumulative number. QBO Payment objects are recorded against the CUSTOMER, not the invoice, so
+    // this is only unambiguous when the customer has a single invoice. With more than one, the payments
+    // cannot be split between deals without walking LinkedTxn, and guessing would misattribute money
+    // between reps. In that case the schedule is omitted rather than approximated.
+    let paymentSchedule = [];
+    const custInvoices = (cust && cust.invoices) ? cust.invoices.length : 0;
+    if (flat == null && cust && Array.isArray(cust.payments) && custInvoices === 1) {
+        paymentSchedule = cust.payments
+            .slice()
+            .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+            .map(pm => {
+                const pFee = pm.isCard ? Math.round((pm.amount * (FEE_PCT / 100) + FEE_FIXED) * 100) / 100 : 0;
+                return {
+                    date: pm.date, amount: round(pm.amount), method: pm.method || (pm.isCard ? 'card' : ''),
+                    fee: pFee, commission: round((pm.amount - pFee) * rate / 100),
+                };
+            });
+    }
+
     return {
         instalment: invTotal > 0 && invBalance > 0 && invReceived > 0,
         invoiceTotal: invTotal, invoiceReceived: invReceived, invoiceBalance: invBalance,
-        outstanding, remainingCommission,
+        outstanding, remainingCommission, paymentSchedule,
         dealId: deal.dealId, client: deal.name, company: deal.company,
         repEmail, repKnown: knownRep,
         ownerEmail: deal.ownerEmail, ownerName: deal.ownerName,

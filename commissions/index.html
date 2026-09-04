@@ -199,6 +199,13 @@
               (d.fee>0?'<div class="cl-sub">'+money(d.gross)+' less '+money(d.fee)+' card fee</div>':'')+'</td>'+
             '<td class="num">'+esc(d.rate)+'%</td>'+
             '<td class="num"><span class="money">'+money(d.commission)+'</span>'+
+              // What each payment earned. On an instalment plan the single cumulative figure hides the
+              // thing the rep actually wants to know, which is what lands with each payment.
+              ((d.paymentSchedule&&d.paymentSchedule.length>1)
+                ? '<div class="cl-sub">'+d.paymentSchedule.map(function(pm){
+                    return niceDate(pm.date)+' &middot; '+money(pm.amount)+' paid '+String.fromCharCode(8594)+' '+money(pm.commission)+(pm.fee>0?' <span style="opacity:.7">(after '+money(pm.fee)+' card fee)</span>':'');
+                  }).join('<br>')+'</div>'
+                : '')+
               (d.instalment&&d.remainingCommission>0?'<div class="cl-sub">'+money(d.remainingCommission)+' more as they pay</div>':'')+
               (d.clawback>0?'<div class="cl-sub" style="color:#ffb59a">'+money(d.clawback)+' reversed, client refunded</div>':'')+'</td>'+
             '<td>'+pill+'</td></tr>';
