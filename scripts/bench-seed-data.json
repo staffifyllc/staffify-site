@@ -1,0 +1,138 @@
+{
+  "_note": "Demo bench profiles for local preview and first seed. Replace with real shortlisted candidates from past searches before going live. Surnames, emails and phones are intentionally absent — add them through /bench/admin/ where they stay server-side.",
+  "_demo": true,
+  "profiles": [
+    {
+      "first_name": "Mariel", "role": "admin", "seniority": "senior", "region": "ph",
+      "country": "Philippines", "timezone": "GMT+8 · overlaps EST to 12pm",
+      "headline": "Runs inbox, calendar and vendor chasing for two founders at once",
+      "summary": "Six years supporting owner-operators in construction and professional services. Owns the calendar outright — books, reschedules, and pushes back on meetings that should be an email. Handles vendor follow-up, expense coding, and the weekly ops report. Comfortable being the person who tells the founder what they forgot.",
+      "years_experience": 6, "english_cefr": "C1", "english_score": "74",
+      "skills": ["Calendar management", "Inbox triage", "Vendor coordination", "Expense reports", "Meeting notes", "Travel booking"],
+      "tools": ["Google Workspace", "Monday.com", "Slack", "QuickBooks", "Notion"],
+      "salary_min": 1400, "salary_max": 1700, "available_from": "Now",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 91 }
+    },
+    {
+      "first_name": "Diego", "role": "sdr", "seniority": "mid", "region": "latam",
+      "country": "Colombia", "timezone": "GMT-5 · full EST overlap",
+      "headline": "Books 12–18 qualified meetings a month on cold outbound",
+      "summary": "Three years of outbound for US software and services companies. Writes his own sequences, works the phone rather than hiding behind email, and keeps the CRM clean without being asked. Neutral accent, comfortable with C-level gatekeepers.",
+      "years_experience": 3, "english_cefr": "C1", "english_score": "71",
+      "skills": ["Cold calling", "Email sequencing", "Discovery calls", "CRM hygiene", "List building"],
+      "tools": ["HubSpot", "Apollo", "SmartLead", "Slack", "Gong"],
+      "salary_min": 1600, "salary_max": 2100, "available_from": "2 weeks",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 87 }
+    },
+    {
+      "first_name": "Jomar", "role": "editor", "seniority": "senior", "region": "ph",
+      "country": "Philippines", "timezone": "GMT+8 · 4h EST overlap",
+      "headline": "Short-form editor — 8 to 12 finished verticals a week",
+      "summary": "Five years cutting for agencies and creators. Fast on hook-first vertical edits with captions, sound design and pacing that holds. Also does long-form YouTube and property walkthroughs. Turns a raw folder into a scheduled post without a shot list.",
+      "years_experience": 5, "english_cefr": "B2", "english_score": "63",
+      "skills": ["Short-form editing", "Captions & subtitles", "Sound design", "Color correction", "Thumbnails"],
+      "tools": ["Premiere Pro", "After Effects", "CapCut", "DaVinci Resolve", "Frame.io"],
+      "salary_min": 1200, "salary_max": 1600, "available_from": "Now",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 94 }
+    },
+    {
+      "first_name": "Andrea", "role": "csr", "seniority": "mid", "region": "latam",
+      "country": "Argentina", "timezone": "GMT-3 · full EST overlap",
+      "headline": "Ecommerce support — email, chat and refunds without escalation",
+      "summary": "Four years handling DTC customer support at volume. Clears 60–90 tickets a day across email and chat, writes macros that actually get used, and de-escalates refund fights before they reach a chargeback. Keeps CSAT above 95%.",
+      "years_experience": 4, "english_cefr": "C1", "english_score": "69",
+      "skills": ["Email support", "Live chat", "Returns & refunds", "Macro writing", "Order management"],
+      "tools": ["Gorgias", "Zendesk", "Shopify", "Slack", "Intercom"],
+      "salary_min": 1300, "salary_max": 1650, "available_from": "Now",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 89 }
+    },
+    {
+      "first_name": "Rhea", "role": "bookkeeper", "seniority": "senior", "region": "ph",
+      "country": "Philippines", "timezone": "GMT+8 · overlaps EST to 11am",
+      "headline": "Closes the month in five days and catches what the owner missed",
+      "summary": "Seven years of US-facing bookkeeping for service businesses. Full-cycle AP/AR, bank and credit card reconciliation, monthly close, and a P&L the owner can actually read. Has cleaned up two years of neglected books more than once.",
+      "years_experience": 7, "english_cefr": "B2", "english_score": "66",
+      "skills": ["Monthly close", "Reconciliation", "AP / AR", "Payroll entry", "Financial reporting"],
+      "tools": ["QuickBooks Online", "Xero", "Bill.com", "Gusto", "Excel"],
+      "salary_min": 1500, "salary_max": 1900, "available_from": "3 weeks",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 92 }
+    },
+    {
+      "first_name": "Kevin", "role": "ops", "seniority": "lead", "region": "ph",
+      "country": "Philippines", "timezone": "GMT+8 · 5h EST overlap",
+      "headline": "Builds the SOP, then manages the three people running it",
+      "summary": "Eight years in operations for agencies and logistics. Documents a process the first time he does it, then hands it off. Has run teams of six. The person you place when the problem is that nothing is written down and everything routes through the owner.",
+      "years_experience": 8, "english_cefr": "C1", "english_score": "76",
+      "skills": ["SOP documentation", "Team management", "Process mapping", "QA & audits", "Reporting"],
+      "tools": ["Monday.com", "Notion", "Hubstaff", "Slack", "Zapier"],
+      "salary_min": 2100, "salary_max": 2600, "available_from": "Now",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 95 }
+    },
+    {
+      "first_name": "Camila", "role": "marketing", "seniority": "mid", "region": "latam",
+      "country": "Mexico", "timezone": "GMT-6 · full EST overlap",
+      "headline": "Runs the content calendar and actually ships the posts",
+      "summary": "Four years running social and email for small brands. Plans the month, writes the copy, schedules everything, and reports on what worked. Handles basic design in Canva and briefs editors on video. Does not need to be chased.",
+      "years_experience": 4, "english_cefr": "C1", "english_score": "72",
+      "skills": ["Content calendar", "Copywriting", "Email marketing", "Community management", "Reporting"],
+      "tools": ["Later", "Canva", "Klaviyo", "Meta Business Suite", "Notion"],
+      "salary_min": 1400, "salary_max": 1800, "available_from": "2 weeks",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 85 }
+    },
+    {
+      "first_name": "Paolo", "role": "admin", "seniority": "mid", "region": "ph",
+      "country": "Philippines", "timezone": "GMT+8 · overlaps EST to 1pm",
+      "headline": "Data entry and CRM cleanup at volume, without drift",
+      "summary": "Three years of high-volume data work for real estate and insurance firms. Fast and accurate on entry, dedupe and enrichment, and flags the pattern when the same error keeps appearing rather than just fixing rows.",
+      "years_experience": 3, "english_cefr": "B2", "english_score": "61",
+      "skills": ["Data entry", "CRM cleanup", "Research", "Deduplication", "Document prep"],
+      "tools": ["Excel", "Google Sheets", "HubSpot", "Airtable", "Dropbox"],
+      "salary_min": 850, "salary_max": 1100, "available_from": "Now",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": false, "id_verified": true, "skills_score": 88 }
+    },
+    {
+      "first_name": "Thandi", "role": "csr", "seniority": "senior", "region": "za",
+      "country": "South Africa", "timezone": "GMT+2 · overlaps EST to 11am",
+      "headline": "Phone-first support for services businesses, UK and US accounts",
+      "summary": "Six years in voice support and account management. Handles inbound calls, scheduling and difficult conversations with a neutral accent that clients read as local. Has trained new hires onto the phones twice.",
+      "years_experience": 6, "english_cefr": "C2", "english_score": "81",
+      "skills": ["Inbound calls", "Appointment setting", "Escalation handling", "Account management", "Training"],
+      "tools": ["Zendesk", "OpenPhone", "HubSpot", "Slack", "Calendly"],
+      "salary_min": 1700, "salary_max": 2200, "available_from": "Now",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 90 }
+    },
+    {
+      "first_name": "Ivan", "role": "editor", "seniority": "mid", "region": "latam",
+      "country": "Peru", "timezone": "GMT-5 · full EST overlap",
+      "headline": "Real estate and property video — same-day turnaround",
+      "summary": "Three years cutting property walkthroughs, agent reels and listing videos. Knows the format cold: pacing, music, lower thirds, branded end cards. Delivers same day on a standard listing edit.",
+      "years_experience": 3, "english_cefr": "B2", "english_score": "64",
+      "skills": ["Property video", "Reels & shorts", "Motion graphics", "Color grading", "Branded templates"],
+      "tools": ["Premiere Pro", "After Effects", "CapCut", "Frame.io", "Dropbox"],
+      "salary_min": 1250, "salary_max": 1550, "available_from": "Now",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 86 }
+    },
+    {
+      "first_name": "Grace", "role": "admin", "seniority": "lead", "region": "ph",
+      "country": "Philippines", "timezone": "GMT+8 · overlaps EST to 12pm",
+      "headline": "Chief of staff work — owns the follow-through, not just the calendar",
+      "summary": "Nine years supporting executives, the last four as the person who runs the weekly leadership meeting and chases every action item out of it. Manages other assistants, handles confidential matters, and builds the reporting the owner reads on Monday.",
+      "years_experience": 9, "english_cefr": "C2", "english_score": "83",
+      "skills": ["Executive support", "Project tracking", "Board & meeting prep", "Team supervision", "Reporting", "Confidential handling"],
+      "tools": ["Google Workspace", "Notion", "Monday.com", "Slack", "Loom"],
+      "salary_min": 2200, "salary_max": 2800, "available_from": "4 weeks",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": true, "skills_score": 96 }
+    },
+    {
+      "first_name": "Sofia", "role": "bookkeeper", "seniority": "mid", "region": "latam",
+      "country": "Colombia", "timezone": "GMT-5 · full EST overlap",
+      "headline": "AP/AR and invoicing for agencies that keep forgetting to bill",
+      "summary": "Four years of bookkeeping for US agencies and contractors. Owns invoicing end to end — raises them on time, chases what is late, and reconciles as she goes so the month-end is not a scramble.",
+      "years_experience": 4, "english_cefr": "B2", "english_score": "65",
+      "skills": ["Invoicing", "Collections", "Reconciliation", "Expense tracking", "Vendor payments"],
+      "tools": ["QuickBooks Online", "Bill.com", "Stripe", "Excel", "Slack"],
+      "salary_min": 1350, "salary_max": 1700, "available_from": "2 weeks",
+      "assessment": { "english_test": true, "skills_test": true, "reference_check": true, "id_verified": false, "skills_score": 84 }
+    }
+  ]
+}

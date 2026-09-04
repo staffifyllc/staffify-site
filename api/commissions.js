@@ -71,16 +71,22 @@ async function batchAssocProp(headers, dealIds, toType, prop) {
 }
 
 // ---- HubSpot: Closed Won deals + their owner and client (paginated) ----
-async function loadHubspotWon() {
+async function loadHubspotWon(ownerIdToRep = {}) {
     const token = process.env.HUBSPOT_TOKEN;
     if (!token) return { configured: false, deals: [] };
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
+    // Owners are NOT optional: the owner's email is the only key that maps a won deal to a rep, so a
+    // silent failure here pays nobody. On 2026-09-04 this call was returning 403 (the private app is
+    // missing crm.objects.owners.read) and the empty map was swallowed, which meant every rep's
+    // commission silently computed to nothing. Capture it and let the caller surface it.
     const owners = {};
+    let ownersError = '';
     try {
         const r = await fetch(`${HS}/crm/v3/owners?limit=200`, { headers });
         if (r.ok) { const j = await r.json(); (j.results || []).forEach(o => { owners[o.id] = { email: (o.email || '').toLowerCase(), name: [o.firstName, o.lastName].filter(Boolean).join(' ').trim() || o.email || '' }; }); }
-    } catch (e) { /* owners optional */ }
+        else ownersError = `owners ${r.status}`;
+    } catch (e) { ownersError = 'owners request failed'; }
 
     // Pipeline -> deal type, so a Foundry website deal is not silently paid the VA rate.
     const pipeType = {};
@@ -129,7 +135,12 @@ async function loadHubspotWon() {
 
     const deals = results.map(d => {
         const p = d.properties || {};
-        const owner = owners[p.hubspot_owner_id] || { email: '', name: p.hubspot_owner_id ? ('owner ' + p.hubspot_owner_id) : '' };
+        // Fall back to the owner id a rep has on file, so commissions still attribute correctly when
+        // the owners scope is missing. Without this the whole page degrades to zero for everyone.
+        const byId = ownerIdToRep[String(p.hubspot_owner_id || '')];
+        const owner = owners[p.hubspot_owner_id]
+            || (byId ? { email: byId.email, name: byId.name || byId.email } : null)
+            || { email: '', name: p.hubspot_owner_id ? ('owner ' + p.hubspot_owner_id) : '' };
         const company = compByDeal[d.id] || p.dealname || '';
         return {
             dealId: d.id,
@@ -145,7 +156,7 @@ async function loadHubspotWon() {
             leadSource: /self|own|rep.?sourced|prospect/i.test(String(p[LEAD_SOURCE_PROP] || '')) ? 'self' : '',
         };
     });
-    return { configured: true, deals, truncated };
+    return { configured: true, deals, truncated, ownersError };
 }
 
 // ---- QuickBooks: paid invoices + money received, grouped by customer ----
@@ -537,15 +548,35 @@ export default async function handler(req, res) {
 
     if (!who && !isAdmin) return res.status(401).json({ error: 'login_required' });
 
-    const [hs, qbo, overrides, reps, ownerSnaps] = await Promise.all([
-        loadHubspotWon().catch(() => ({ configured: true, error: 'hubspot load failed', deals: [] })),
-        loadQboPaid().catch(() => ({ connected: false })),
-        loadOverrides().catch(() => ({})),
+    // Reps load FIRST, because a rep's recorded hubspotOwnerId is what lets a deal find its closer
+    // when the owners API is unavailable. Loading them in parallel with the deals meant the fallback
+    // map was always empty at the moment it was needed.
+    const [reps, overrides, ownerSnaps] = await Promise.all([
         listReps().catch(() => []),
+        loadOverrides().catch(() => ({})),
         loadOwnerSnapshots().catch(() => ({})),
+    ]);
+    const ownerIdToRep = {};
+    reps.forEach(r => { const id = String(r.hubspotOwnerId || '').trim(); if (id) ownerIdToRep[id] = { email: (r.email || '').toLowerCase(), name: r.name || r.email }; });
+
+    const [hs, qbo] = await Promise.all([
+        loadHubspotWon(ownerIdToRep).catch(() => ({ configured: true, error: 'hubspot load failed', deals: [] })),
+        loadQboPaid().catch(() => ({ connected: false })),
     ]);
     const repRateByEmail = {};
     reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e) repRateByEmail[e] = { rate: repRate(r), houseRate: repHouseRate(r) }; });
+
+    // A deal that cannot find its rep earns nobody anything, so say so loudly rather than rendering
+    // a confident zero. These are the three ways attribution breaks, in the order they bite.
+    const unowned = (hs.deals || []).filter(d => !d.ownerEmail);
+    const blockers = [];
+    if (hs.ownersError) blockers.push({ code: 'owners_scope', detail: hs.ownersError,
+        fix: 'The HubSpot private app needs the crm.objects.owners.read scope. Until then a deal can only find its rep through that rep\'s hubspotOwnerId.' });
+    if (unowned.length) blockers.push({ code: 'unowned_deals', detail: `${unowned.length} closed-won deal(s) have no HubSpot owner`,
+        fix: 'Assign an owner on the deal in HubSpot, or set the rep with an admin override. No owner means no commission for anyone.',
+        deals: unowned.slice(0, 20).map(d => ({ dealId: d.dealId, name: d.name, amount: d.amount, closeDate: d.closeDate })) });
+    if (!(qbo && qbo.connected)) blockers.push({ code: 'qbo_disconnected', detail: 'QuickBooks is not connected',
+        fix: 'Commissions still calculate, but nothing can be marked paid until QBO is connected at /api/quickbooks-oauth-start/.' });
 
     if (!hs.configured) return res.status(200).json({ connected: false, source: 'hubspot', message: 'HubSpot is not connected yet, so there are no Closed Won deals to track.' });
     if (hs.error) return res.status(200).json({ connected: true, source: 'hubspot', error: hs.error, hint: hs.hint || '', deals: [] });
@@ -580,6 +611,7 @@ export default async function handler(req, res) {
         const custList = qbo.connected ? Object.values(qbo.custById || {}).map(c => ({ id: c.id, name: c.name, email: c.email })) : [];
         return res.status(200).json({
             connected: true, view: 'admin', qboConnected: !!qbo.connected, qboError: qbo.error || '',
+            blockers,
             truncated: { hubspot: !!hs.truncated, qbo: !!(qbo && qbo.truncated) },
             payoutScan: { vendorsMatched: payouts.vendorsMatched || 0, scanned: payouts.scanned || 0, tagged: payouts.tagged || 0, tag: payouts.tag || 'commission' },
             reps: reps.map(r => ({ email: (r.email || '').toLowerCase(), name: r.name || r.email })),

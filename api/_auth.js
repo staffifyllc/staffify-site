@@ -103,7 +103,7 @@ export async function listReps() {
 
 // houseRate is optional: the rate a rep earns on leads the company hands them, when their plan splits
 // by lead source (e.g. 20 on house leads, 35 on self-sourced). Omit it and the rep earns `rate` on everything.
-export async function createRep({ email, name, rate, role, houseRate }) {
+export async function createRep({ email, name, rate, role, houseRate, hubspotOwnerId }) {
     const e = normEmail(email);
     const rep = {
         email: e,
@@ -113,6 +113,11 @@ export async function createRep({ email, name, rate, role, houseRate }) {
         createdAt: String(Date.now()),
     };
     if (houseRate != null && houseRate !== '') rep.houseRate = String(houseRate);
+    // The rep's HubSpot owner id. Commission attribution keys on the deal owner's EMAIL, which comes
+    // from the HubSpot owners API. That API needs the crm.objects.owners.read scope, and without it
+    // it 403s and every rep's commission silently computes to zero. Recording the id here gives
+    // attribution a second route that does not depend on that scope.
+    if (hubspotOwnerId != null && hubspotOwnerId !== '') rep.hubspotOwnerId = String(hubspotOwnerId);
     await redis.hset(`rep:${e}`, rep);
     await redis.sadd('reps', e);
     return rep;

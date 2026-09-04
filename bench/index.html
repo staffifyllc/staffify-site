@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Bench — Pre-vetted remote talent | Staffify</title>
+<meta name="description" content="Browse pre-vetted executive admins, customer support, editors and bookkeepers. Reserve an interview. We employ them, run payroll, and replace them for as long as your plan is active.">
+<!-- Not indexed until Paul flips this. Remove both lines to go live. -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --c: #1abde1; --c2: #0fa3c5; --c3: #0d82b8; --c4: #1456a4;
+    --black: #000; --near-black: #080808; --card: #0d0d0d;
+    --mid: #3a3a3c; --subtle: #6e6e73; --muted: #a1a1a6;
+    --divider: rgba(255,255,255,0.07); --divider2: rgba(255,255,255,0.12);
+    --white: #fff; --off-white: #f5f5f7;
+    --good: #35c07a; --warn: #e0a83c;
+    --grad: linear-gradient(105deg, #1abde1 0%, #0fa3c5 25%, #0d82b8 55%, #1456a4 100%);
+}
+
+html { scroll-behavior: smooth; background: #000; }
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 17px; line-height: 1.6; color: var(--white);
+    background:
+        radial-gradient(58rem 46rem at 2% 5%, rgba(26,189,225,0.13), transparent 55%),
+        radial-gradient(56rem 58rem at 98% 34%, rgba(20,86,164,0.16), transparent 55%),
+        radial-gradient(64rem 50rem at 4% 82%, rgba(20,86,164,0.10), transparent 58%),
+        #000;
+    background-attachment: fixed;
+    overflow-x: hidden; -webkit-font-smoothing: antialiased;
+}
+body::before {
+    content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image: radial-gradient(circle, rgba(120,200,230,0.05) 1px, transparent 1px);
+    background-size: 46px 46px;
+    -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0.85) 0%, transparent 22%, transparent 78%, rgba(0,0,0,0.85) 100%);
+            mask-image: linear-gradient(90deg, rgba(0,0,0,0.85) 0%, transparent 22%, transparent 78%, rgba(0,0,0,0.85) 100%);
+}
+.g { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; border-radius: 4px; }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- nav ---------- */
+nav {
+    position: sticky; top: 0; z-index: 60;
+    display: flex; align-items: center; gap: 20px;
+    padding: 16px 24px; max-width: 1240px; margin: 0 auto;
+    background: rgba(0,0,0,0.72); backdrop-filter: saturate(150%) blur(14px);
+    border-bottom: 1px solid var(--divider);
+}
+.nav-logo img { height: 26px; width: auto; display: block; }
+.nav-tag {
+    font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--c); padding: 4px 9px; border: 1px solid rgba(26,189,225,.35);
+    border-radius: 999px; white-space: nowrap;
+}
+.nav-spacer { flex: 1; }
+.nav-cta {
+    background: var(--grad); color: #001016; font-weight: 700; font-size: .88rem;
+    padding: 9px 18px; border-radius: 999px; white-space: nowrap;
+}
+
+/* ---------- hero ---------- */
+header.hero { padding: 64px 0 34px; }
+h1 { font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 800; line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; margin-bottom: 18px; }
+.hero p.sub { font-size: clamp(1rem, 2vw, 1.18rem); color: var(--muted); max-width: 40rem; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.pill {
+    font-size: .78rem; font-weight: 600; color: var(--muted);
+    border: 1px solid var(--divider2); border-radius: 999px; padding: 6px 13px;
+    display: inline-flex; align-items: center; gap: 7px;
+}
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+
+/* ---------- layout ---------- */
+.bench-layout { display: grid; grid-template-columns: 232px 1fr; gap: 34px; padding-bottom: 90px; align-items: start; }
+@media (max-width: 900px) { .bench-layout { grid-template-columns: 1fr; gap: 22px; } }
+
+/* ---------- filters ---------- */
+aside.filters { position: sticky; top: 78px; }
+@media (max-width: 900px) { aside.filters { position: static; } }
+.fgroup { border-top: 1px solid var(--divider); padding: 18px 0; }
+.fgroup:first-child { border-top: none; padding-top: 0; }
+.fgroup h3 { font-size: .7rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--subtle); margin-bottom: 12px; }
+.fopt { display: flex; align-items: center; gap: 9px; padding: 5px 0; cursor: pointer; font-size: .9rem; color: var(--muted); }
+.fopt:hover { color: var(--white); }
+.fopt input { accent-color: var(--c); width: 15px; height: 15px; cursor: pointer; flex: none; }
+.fopt .cnt { margin-left: auto; font-size: .78rem; color: var(--subtle); font-variant-numeric: tabular-nums; }
+.fopt input:checked ~ span:first-of-type { color: var(--white); }
+.search {
+    width: 100%; background: var(--card); border: 1px solid var(--divider2);
+    border-radius: 10px; padding: 11px 13px; font-size: .92rem; color: var(--white);
+}
+.search::placeholder { color: var(--subtle); }
+.clearall {
+    background: none; border: 1px solid var(--divider2); border-radius: 999px;
+    padding: 7px 14px; font-size: .8rem; color: var(--muted); cursor: pointer; width: 100%;
+}
+.clearall:hover { color: var(--white); border-color: var(--c); }
+
+/* ---------- results ---------- */
+.resbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.rescount { font-size: .9rem; color: var(--muted); }
+.rescount b { color: var(--white); font-variant-numeric: tabular-nums; }
+.sortsel { background: var(--card); border: 1px solid var(--divider2); border-radius: 8px; padding: 8px 11px; font-size: .85rem; margin-left: auto; cursor: pointer; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); gap: 16px; }
+
+.pcard {
+    background: var(--card); border: 1px solid var(--divider); border-radius: 16px;
+    padding: 20px; cursor: pointer; text-align: left; width: 100%;
+    display: flex; flex-direction: column; gap: 13px;
+    transition: border-color .18s ease, transform .18s ease;
+}
+.pcard:hover { border-color: rgba(26,189,225,.45); transform: translateY(-2px); }
+.pc-top { display: flex; align-items: flex-start; gap: 12px; }
+.avatar {
+    width: 44px; height: 44px; border-radius: 12px; flex: none;
+    background: var(--grad); color: #001016;
+    display: grid; place-items: center; font-weight: 800; font-size: 1.05rem;
+}
+.pc-name { font-weight: 700; font-size: 1.02rem; line-height: 1.25; }
+.pc-loc { font-size: .8rem; color: var(--subtle); margin-top: 2px; }
+.pc-head { font-size: .92rem; color: var(--muted); line-height: 1.45; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .74rem; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid var(--divider); border-radius: 6px; padding: 3px 8px; }
+.chip.more { color: var(--subtle); background: none; }
+.pc-foot { display: flex; align-items: center; gap: 10px; padding-top: 13px; border-top: 1px solid var(--divider); margin-top: auto; }
+.rate { font-weight: 700; font-size: .96rem; font-variant-numeric: tabular-nums; }
+.rate span { font-weight: 400; font-size: .78rem; color: var(--subtle); }
+.verifs { margin-left: auto; display: flex; gap: 5px; }
+.vdot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); opacity: .85; }
+.vdot.off { background: var(--mid); }
+.fresh { font-size: .74rem; color: var(--subtle); display: flex; align-items: center; gap: 6px; }
+.fresh .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--good); }
+.fresh.aging .dot { background: var(--warn); }
+
+.empty, .loading { text-align: center; padding: 70px 20px; color: var(--muted); }
+.empty h3 { font-size: 1.2rem; color: var(--white); margin-bottom: 8px; font-weight: 700; }
+
+/* ---------- drawer ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(4px); z-index: 90; opacity: 0; pointer-events: none; transition: opacity .22s ease; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+.drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%);
+    background: #0a0a0a; border-left: 1px solid var(--divider2); z-index: 100;
+    transform: translateX(100%); transition: transform .26s cubic-bezier(.32,.72,0,1);
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.drawer.on { transform: none; }
+@media (prefers-reduced-motion: reduce) { .drawer, .scrim { transition: none; } }
+.dhead { padding: 22px 26px; border-bottom: 1px solid var(--divider); display: flex; align-items: flex-start; gap: 14px; }
+.dclose { margin-left: auto; background: none; border: 1px solid var(--divider2); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; color: var(--muted); font-size: 1.1rem; line-height: 1; flex: none; }
+.dclose:hover { color: var(--white); border-color: var(--c); }
+.dbody { padding: 24px 26px 30px; overflow-y: auto; flex: 1; }
+.dsec { margin-bottom: 26px; }
+.dsec h4 { font-size: .7rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--subtle); margin-bottom: 11px; }
+.dsec p { color: var(--muted); font-size: .95rem; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 9px 18px; font-size: .92rem; }
+.kv dt { color: var(--subtle); }
+.kv dd { color: var(--white); text-align: right; font-variant-numeric: tabular-nums; }
+.vlist { display: flex; flex-direction: column; gap: 9px; }
+.vrow { display: flex; align-items: center; gap: 10px; font-size: .92rem; color: var(--muted); }
+.vrow .tick { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: .68rem; flex: none; background: rgba(53,192,122,.15); color: var(--good); }
+.vrow.off .tick { background: rgba(255,255,255,.05); color: var(--mid); }
+.dfoot { padding: 18px 26px; border-top: 1px solid var(--divider); background: #0a0a0a; }
+.btn {
+    display: block; width: 100%; text-align: center; background: var(--grad); color: #001016;
+    font-weight: 700; font-size: .98rem; padding: 14px; border: none; border-radius: 12px; cursor: pointer;
+}
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn-ghost { background: none; border: 1px solid var(--divider2); color: var(--muted); font-weight: 600; }
+.btn-ghost:hover { color: var(--white); border-color: var(--c); }
+.dfoot small { display: block; text-align: center; color: var(--subtle); font-size: .76rem; margin-top: 10px; }
+
+/* ---------- reserve form ---------- */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); margin-bottom: 6px; }
+.field input, .field textarea, .field select {
+    width: 100%; background: var(--card); border: 1px solid var(--divider2);
+    border-radius: 10px; padding: 11px 13px; font-size: .94rem;
+}
+.field textarea { min-height: 84px; resize: vertical; }
+.hp { position: absolute; left: -9999px; }
+.formnote { font-size: .84rem; color: var(--subtle); margin-bottom: 18px; line-height: 1.55; }
+.err { color: #ff8b6b; font-size: .86rem; margin-top: 10px; }
+.done { text-align: center; padding: 40px 10px; }
+.done .big { font-size: 2.4rem; margin-bottom: 12px; }
+.done h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+.done p { color: var(--muted); font-size: .95rem; }
+
+.footnote { border-top: 1px solid var(--divider); padding: 26px 0 60px; color: var(--subtle); font-size: .82rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify"></a>
+    <span class="nav-tag">The Bench</span>
+    <span class="nav-spacer"></span>
+    <a href="/how-it-works/" class="nav-cta">How it works</a>
+</nav>
+
+<div class="wrap">
+    <header class="hero">
+        <h1>Browse the people.<br><span class="g">Then let us employ them.</span></h1>
+        <p class="sub">Every person here has been tested, interviewed, and reference-checked by us. Reserve an interview and we handle the offer, payroll, compliance, and replacement — for as long as your plan is active.</p>
+        <div class="hero-meta">
+            <span class="pill"><span class="dot"></span><span id="availCount">Loading</span></span>
+            <span class="pill">Confirmed available this week</span>
+            <span class="pill">You interview free. You pay when you hire.</span>
+        </div>
+    </header>
+
+    <div class="bench-layout">
+        <aside class="filters">
+            <div class="fgroup">
+                <input type="search" class="search" id="q" placeholder="Search skills, tools, roles" autocomplete="off">
+            </div>
+            <div class="fgroup" id="fRole"><h3>Role</h3></div>
+            <div class="fgroup" id="fRegion"><h3>Region</h3></div>
+            <div class="fgroup" id="fSeniority"><h3>Experience</h3></div>
+            <div class="fgroup" id="fRate"><h3>Monthly rate</h3></div>
+            <div class="fgroup"><button class="clearall" id="clearAll" type="button">Clear filters</button></div>
+        </aside>
+
+        <main>
+            <div class="resbar">
+                <span class="rescount" id="resCount">&nbsp;</span>
+                <select class="sortsel" id="sort" aria-label="Sort results">
+                    <option value="fresh">Recently confirmed</option>
+                    <option value="rate-asc">Rate: low to high</option>
+                    <option value="rate-desc">Rate: high to low</option>
+                    <option value="exp">Most experience</option>
+                </select>
+            </div>
+            <div id="results"><div class="loading">Loading the bench…</div></div>
+        </main>
+    </div>
+
+    <p class="footnote">
+        Names are shown as first name only and contact details are never published. Every person listed has given
+        written consent to appear here and can withdraw it at any time. Rates shown are the monthly cost of the
+        person's time; Staffify's placement fee and plan are quoted separately.
+    </p>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Candidate detail">
+    <div class="dhead" id="dHead"></div>
+    <div class="dbody" id="dBody"></div>
+    <div class="dfoot" id="dFoot"></div>
+</aside>
+
+<script>
+(function () {
+    'use strict';
+
+    var state = { all: [], labels: {}, facets: {}, filters: { role: [], region: [], seniority: [], rate: [] }, q: '', sort: 'fresh', current: null };
+
+    var RATE_BANDS = [
+        { id: 'u1000', label: 'Under $1,000', test: function (p) { return p.salary_min < 1000; } },
+        { id: '1000-1500', label: '$1,000 – $1,500', test: function (p) { return p.salary_min >= 1000 && p.salary_min < 1500; } },
+        { id: '1500-2000', label: '$1,500 – $2,000', test: function (p) { return p.salary_min >= 1500 && p.salary_min < 2000; } },
+        { id: 'o2000', label: '$2,000+', test: function (p) { return p.salary_min >= 2000; } }
+    ];
+
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+    var money = function (n) { return '$' + Number(n || 0).toLocaleString('en-US'); };
+    var el = function (id) { return document.getElementById(id); };
+
+    function freshLabel(d) {
+        if (d == null) return '';
+        if (d <= 0) return 'Confirmed today';
+        if (d === 1) return 'Confirmed yesterday';
+        return 'Confirmed ' + d + ' days ago';
+    }
+
+    // ---------- render filters ----------
+    function renderFacet(containerId, key, labelMap, counts) {
+        var box = el(containerId);
+        var h3 = box.querySelector('h3');
+        box.innerHTML = '';
+        box.appendChild(h3);
+        Object.keys(labelMap).forEach(function (k) {
+            var n = counts[k] || 0;
+            if (!n) return;
+            var lab = document.createElement('label');
+            lab.className = 'fopt';
+            lab.innerHTML = '<input type="checkbox" value="' + esc(k) + '"><span>' + esc(labelMap[k]) + '</span><span class="cnt">' + n + '</span>';
+            lab.querySelector('input').addEventListener('change', function (e) {
+                var arr = state.filters[key];
+                var i = arr.indexOf(k);
+                if (e.target.checked) { if (i < 0) arr.push(k); } else if (i >= 0) { arr.splice(i, 1); }
+                render();
+            });
+            box.appendChild(lab);
+        });
+    }
+
+    function renderRateFilter() {
+        var box = el('fRate');
+        var h3 = box.querySelector('h3');
+        box.innerHTML = '';
+        box.appendChild(h3);
+        RATE_BANDS.forEach(function (b) {
+            var n = state.all.filter(b.test).length;
+            if (!n) return;
+            var lab = document.createElement('label');
+            lab.className = 'fopt';
+            lab.innerHTML = '<input type="checkbox" value="' + b.id + '"><span>' + b.label + '</span><span class="cnt">' + n + '</span>';
+            lab.querySelector('input').addEventListener('change', function (e) {
+                var arr = state.filters.rate;
+                var i = arr.indexOf(b.id);
+                if (e.target.checked) { if (i < 0) arr.push(b.id); } else if (i >= 0) { arr.splice(i, 1); }
+                render();
+            });
+            box.appendChild(lab);
+        });
+    }
+
+    // ---------- filter + sort ----------
+    function visible() {
+        var f = state.filters;
+        var q = state.q.trim().toLowerCase();
+        var out = state.all.filter(function (p) {
+            if (f.role.length && f.role.indexOf(p.role) < 0) return false;
+            if (f.region.length && f.region.indexOf(p.region) < 0) return false;
+            if (f.seniority.length && f.seniority.indexOf(p.seniority) < 0) return false;
+            if (f.rate.length) {
+                var hit = RATE_BANDS.some(function (b) { return f.rate.indexOf(b.id) >= 0 && b.test(p); });
+                if (!hit) return false;
+            }
+            if (q) {
+                var hay = [p.first_name, p.headline, p.summary, p.role_label, p.country].concat(p.skills || [], p.tools || []).join(' ').toLowerCase();
+                if (hay.indexOf(q) < 0) return false;
+            }
+            return true;
+        });
+        var s = state.sort;
+        out.sort(function (a, b) {
+            if (s === 'rate-asc') return a.salary_min - b.salary_min;
+            if (s === 'rate-desc') return b.salary_min - a.salary_min;
+            if (s === 'exp') return b.years_experience - a.years_experience;
+            return (a.confirmed_days_ago == null ? 99 : a.confirmed_days_ago) - (b.confirmed_days_ago == null ? 99 : b.confirmed_days_ago);
+        });
+        return out;
+    }
+
+    function card(p) {
+        var v = p.verified || {};
+        var order = ['english_test', 'skills_test', 'reference_check', 'id_verified', 'video_intro'];
+        var dots = order.map(function (k) { return '<span class="vdot' + (v[k] ? '' : ' off') + '"></span>'; }).join('');
+        var skills = (p.skills || []).slice(0, 3).map(function (s) { return '<span class="chip">' + esc(s) + '</span>'; }).join('');
+        var extra = (p.skills || []).length > 3 ? '<span class="chip more">+' + ((p.skills || []).length - 3) + '</span>' : '';
+        var aging = p.confirmed_days_ago != null && p.confirmed_days_ago >= 10 ? ' aging' : '';
+        return '<button class="pcard" data-slug="' + esc(p.slug) + '">'
+            + '<div class="pc-top"><div class="avatar">' + esc((p.first_name || '?').charAt(0).toUpperCase()) + '</div>'
+            + '<div><div class="pc-name">' + esc(p.first_name) + '</div>'
+            + '<div class="pc-loc">' + esc(p.role_label) + ' · ' + esc(p.country || p.region_label) + '</div></div></div>'
+            + '<div class="pc-head">' + esc(p.headline) + '</div>'
+            + '<div class="chips">' + skills + extra + '</div>'
+            + '<div class="fresh' + aging + '"><span class="dot"></span>' + esc(freshLabel(p.confirmed_days_ago)) + '</div>'
+            + '<div class="pc-foot"><span class="rate">' + money(p.salary_min) + '<span> /mo</span></span>'
+            + '<span class="verifs" title="Verification checks passed">' + dots + '</span></div>'
+            + '</button>';
+    }
+
+    function render() {
+        var list = visible();
+        el('resCount').innerHTML = '<b>' + list.length + '</b> ' + (list.length === 1 ? 'person' : 'people') + ' available';
+        var box = el('results');
+        if (!list.length) {
+            box.innerHTML = '<div class="empty"><h3>Nobody matches that yet</h3>'
+                + '<p>Clear a filter, or tell us the role and we will bring you three people inside a week.</p></div>';
+            return;
+        }
+        box.innerHTML = '<div class="grid">' + list.map(card).join('') + '</div>';
+        Array.prototype.forEach.call(box.querySelectorAll('.pcard'), function (b) {
+            b.addEventListener('click', function () { openDrawer(b.getAttribute('data-slug')); });
+        });
+    }
+
+    // ---------- drawer ----------
+    var lastFocus = null;
+
+    function openDrawer(slug) {
+        var p = state.all.filter(function (x) { return x.slug === slug; })[0];
+        if (!p) return;
+        state.current = p;
+        lastFocus = document.activeElement;
+        var v = p.verified || {};
+
+        el('dHead').innerHTML = '<div class="avatar">' + esc((p.first_name || '?').charAt(0).toUpperCase()) + '</div>'
+            + '<div><div class="pc-name" style="font-size:1.2rem">' + esc(p.first_name) + '</div>'
+            + '<div class="pc-loc">' + esc(p.role_label) + ' · ' + esc(p.seniority_label) + ' · ' + esc(p.country || p.region_label) + '</div></div>'
+            + '<button class="dclose" id="dClose" aria-label="Close">&times;</button>';
+
+        var vrow = function (on, label) {
+            return '<div class="vrow' + (on ? '' : ' off') + '"><span class="tick">' + (on ? '&#10003;' : '&mdash;') + '</span>' + label + '</div>';
+        };
+
+        el('dBody').innerHTML =
+            '<div class="dsec"><h4>Summary</h4><p>' + esc(p.summary || p.headline) + '</p></div>'
+            + '<div class="dsec"><h4>At a glance</h4><dl class="kv">'
+            + '<dt>Monthly rate</dt><dd>' + money(p.salary_min) + (p.salary_max > p.salary_min ? ' – ' + money(p.salary_max) : '') + '</dd>'
+            + '<dt>Experience</dt><dd>' + esc(p.years_experience) + ' years</dd>'
+            + '<dt>English</dt><dd>' + esc(p.english_cefr || '—') + (p.english_score ? ' (EF SET ' + esc(p.english_score) + ')' : '') + '</dd>'
+            + (p.skills_score ? '<dt>Skills test</dt><dd>' + esc(p.skills_score) + '%</dd>' : '')
+            + '<dt>Time zone</dt><dd>' + esc(p.timezone || '—') + '</dd>'
+            + '<dt>Available</dt><dd>' + esc(p.available_from || 'Now') + '</dd>'
+            + '</dl></div>'
+            + '<div class="dsec"><h4>Skills</h4><div class="chips">' + (p.skills || []).map(function (s) { return '<span class="chip">' + esc(s) + '</span>'; }).join('') + '</div></div>'
+            + ((p.tools || []).length ? '<div class="dsec"><h4>Tools</h4><div class="chips">' + p.tools.map(function (s) { return '<span class="chip">' + esc(s) + '</span>'; }).join('') + '</div></div>' : '')
+            + '<div class="dsec"><h4>What we verified</h4><div class="vlist">'
+            + vrow(v.english_test, 'English assessment (EF SET)')
+            + vrow(v.skills_test, 'Role-specific skills test')
+            + vrow(v.reference_check, 'Reference check with a prior employer')
+            + vrow(v.id_verified, 'Government ID verified')
+            + vrow(v.video_intro, 'Recorded video introduction')
+            + '</div></div>';
+
+        el('dFoot').innerHTML = '<button class="btn" id="reserveBtn">Reserve an interview</button>'
+            + '<small>Free to interview. You only pay if you hire.</small>';
+        el('reserveBtn').addEventListener('click', showReserve);
+        el('dClose').addEventListener('click', closeDrawer);
+
+        el('scrim').classList.add('on');
+        el('drawer').classList.add('on');
+        document.body.style.overflow = 'hidden';
+        el('dClose').focus();
+        history.replaceState(null, '', '?p=' + encodeURIComponent(slug));
+    }
+
+    function closeDrawer() {
+        el('scrim').classList.remove('on');
+        el('drawer').classList.remove('on');
+        document.body.style.overflow = '';
+        state.current = null;
+        history.replaceState(null, '', location.pathname);
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    // ---------- reserve ----------
+    function showReserve() {
+        var p = state.current;
+        if (!p) return;
+        el('dBody').innerHTML =
+            '<div class="dsec"><h4>Reserve an interview</h4>'
+            + '<p class="formnote">We will confirm ' + esc(p.first_name) + ' is still free, send you two times inside 24 hours, and sit in on the first call. '
+            + 'No fee until you decide to hire.</p>'
+            + '<form id="rForm" novalidate>'
+            + '<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">'
+            + '<div class="field"><label for="rName">Your name</label><input id="rName" name="name" autocomplete="name" required></div>'
+            + '<div class="field"><label for="rEmail">Work email</label><input id="rEmail" name="email" type="email" autocomplete="email" required></div>'
+            + '<div class="field"><label for="rCompany">Company</label><input id="rCompany" name="company" autocomplete="organization"></div>'
+            + '<div class="field"><label for="rTiming">When do you want them starting</label>'
+            + '<select id="rTiming" name="timing"><option>Within 2 weeks</option><option>Within a month</option><option>Next quarter</option><option>Just exploring</option></select></div>'
+            + '<div class="field"><label for="rNotes">What would they be doing</label><textarea id="rNotes" name="notes" placeholder="A couple of lines is plenty."></textarea></div>'
+            + '<div id="rErr"></div>'
+            + '</form></div>';
+        el('dFoot').innerHTML = '<button class="btn" id="rSubmit" form="rForm">Request the interview</button>'
+            + '<button class="btn btn-ghost" id="rBack" style="margin-top:9px">Back to profile</button>';
+        el('rBack').addEventListener('click', function () { openDrawer(p.slug); });
+        el('rForm').addEventListener('submit', submitReserve);
+        el('rSubmit').addEventListener('click', function (e) { e.preventDefault(); submitReserve(e); });
+        el('rName').focus();
+    }
+
+    function submitReserve(e) {
+        e.preventDefault();
+        var form = el('rForm');
+        var p = state.current;
+        if (!form || !p) return;
+        var fd = new FormData(form);
+        var body = { slug: p.slug };
+        fd.forEach(function (v, k) { body[k] = v; });
+
+        var errBox = el('rErr');
+        errBox.innerHTML = '';
+        if (!body.email || body.email.indexOf('@') < 0) { errBox.innerHTML = '<p class="err">A work email is needed so we can send the times.</p>'; return; }
+
+        var btn = el('rSubmit');
+        btn.disabled = true; btn.textContent = 'Sending…';
+
+        fetch('/api/bench-reserve', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) {
+            if (!res.ok) {
+                if (res.j && res.j.error === 'no_longer_available') {
+                    el('dBody').innerHTML = '<div class="done"><div class="big">&#9203;</div><h3>' + esc(p.first_name) + ' was just reserved</h3>'
+                        + '<p>That is the honest answer rather than booking you a call for someone who is taken. Tell us the role and we will bring you three people like them inside a week.</p></div>';
+                    el('dFoot').innerHTML = '<a class="btn" href="/how-it-works/">Tell us the role</a>';
+                    load();
+                    return;
+                }
+                throw new Error('failed');
+            }
+            el('dBody').innerHTML = '<div class="done"><div class="big">&#10003;</div><h3>Reserved</h3>'
+                + '<p>We are confirming ' + esc(p.first_name) + ' now and will email you two interview times within 24 hours.</p></div>';
+            el('dFoot').innerHTML = '<button class="btn btn-ghost" id="dDone">Keep browsing</button>';
+            el('dDone').addEventListener('click', closeDrawer);
+          })
+          .catch(function () {
+            btn.disabled = false; btn.textContent = 'Request the interview';
+            errBox.innerHTML = '<p class="err">That did not send. Try again, or email hello@gostaffify.com and we will set it up by hand.</p>';
+          });
+    }
+
+    // ---------- load ----------
+    function load() {
+        return fetch('/api/bench').then(function (r) { return r.json(); }).then(function (d) {
+            state.all = d.profiles || [];
+            state.labels = d.labels || {};
+            state.facets = d.facets || {};
+            el('availCount').textContent = state.all.length + ' people available now';
+            renderFacet('fRole', 'role', state.labels.roles || {}, state.facets.role || {});
+            renderFacet('fRegion', 'region', state.labels.regions || {}, state.facets.region || {});
+            renderFacet('fSeniority', 'seniority', state.labels.seniority || {}, state.facets.seniority || {});
+            renderRateFilter();
+            render();
+            var pre = new URLSearchParams(location.search).get('p');
+            if (pre) openDrawer(pre);
+        }).catch(function () {
+            el('availCount').textContent = 'Bench unavailable';
+            el('results').innerHTML = '<div class="empty"><h3>The bench did not load</h3>'
+                + '<p>Refresh, or email hello@gostaffify.com and we will send you profiles directly.</p></div>';
+        });
+    }
+
+    el('q').addEventListener('input', function (e) { state.q = e.target.value; render(); });
+    el('sort').addEventListener('change', function (e) { state.sort = e.target.value; render(); });
+    el('clearAll').addEventListener('click', function () {
+        state.filters = { role: [], region: [], seniority: [], rate: [] };
+        state.q = ''; el('q').value = '';
+        Array.prototype.forEach.call(document.querySelectorAll('.fopt input'), function (i) { i.checked = false; });
+        render();
+    });
+    el('scrim').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.current) closeDrawer(); });
+
+    load();
+})();
+</script>
+</body>
+</html>

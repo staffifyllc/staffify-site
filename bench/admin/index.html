@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bench Manager — Staffify</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--c:#1abde1;--card:#0d0d0d;--muted:#a1a1a6;--subtle:#6e6e73;--mid:#3a3a3c;
+--divider:rgba(255,255,255,.07);--divider2:rgba(255,255,255,.12);
+--good:#35c07a;--warn:#e0a83c;--bad:#ff6b4a;
+--grad:linear-gradient(105deg,#1abde1 0%,#0fa3c5 25%,#0d82b8 55%,#1456a4 100%)}
+body{font-family:'Inter',-apple-system,sans-serif;font-size:15px;line-height:1.55;color:#fff;background:#000;-webkit-font-smoothing:antialiased}
+a{color:var(--c);text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--c);outline-offset:2px;border-radius:4px}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 22px 80px}
+header{display:flex;align-items:center;gap:14px;padding-bottom:20px;border-bottom:1px solid var(--divider);margin-bottom:24px;flex-wrap:wrap}
+h1{font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
+.tag{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--c);border:1px solid rgba(26,189,225,.35);border-radius:999px;padding:3px 9px}
+.spacer{flex:1}
+.tokenbox{display:flex;gap:8px;align-items:center}
+input[type=password],input[type=text],input[type=email],input[type=number],select,textarea{background:var(--card);border:1px solid var(--divider2);border-radius:9px;padding:9px 11px;font-size:.9rem;width:100%}
+textarea{min-height:70px;resize:vertical}
+.btn{background:var(--grad);color:#001016;font-weight:700;border:none;border-radius:9px;padding:9px 16px;cursor:pointer;font-size:.88rem;white-space:nowrap}
+.btn.ghost{background:none;border:1px solid var(--divider2);color:var(--muted);font-weight:600}
+.btn.ghost:hover{color:#fff;border-color:var(--c)}
+.btn.sm{padding:5px 11px;font-size:.78rem;border-radius:7px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:22px}
+.stat{background:var(--card);border:1px solid var(--divider);border-radius:12px;padding:14px 16px}
+.stat b{display:block;font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:.74rem;color:var(--subtle);letter-spacing:.06em;text-transform:uppercase}
+.stat.warn b{color:var(--warn)}.stat.bad b{color:var(--bad)}.stat.good b{color:var(--good)}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.scroll{overflow-x:auto;border:1px solid var(--divider);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:900px}
+th{text-align:left;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);font-weight:600;padding:11px 12px;border-bottom:1px solid var(--divider2);background:#080808;position:sticky;top:0}
+td{padding:10px 12px;border-bottom:1px solid var(--divider);color:var(--muted);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+td.nm{color:#fff;font-weight:600}
+.badge{font-size:.7rem;font-weight:600;padding:3px 8px;border-radius:6px;white-space:nowrap;display:inline-block}
+.b-live{background:rgba(53,192,122,.15);color:var(--good)}
+.b-hidden{background:rgba(255,255,255,.06);color:var(--mid)}
+.b-fresh{background:rgba(53,192,122,.13);color:var(--good)}
+.b-aging{background:rgba(224,168,60,.15);color:var(--warn)}
+.b-stale{background:rgba(255,107,74,.15);color:var(--bad)}
+.b-never{background:rgba(255,255,255,.06);color:var(--subtle)}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.msg{padding:11px 14px;border-radius:10px;margin-bottom:16px;font-size:.88rem}
+.msg.err{background:rgba(255,107,74,.12);color:#ff9c82;border:1px solid rgba(255,107,74,.3)}
+.msg.ok{background:rgba(53,192,122,.12);color:#7fe0ab;border:1px solid rgba(53,192,122,.3)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:90;display:none}
+.scrim.on{display:block}
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(720px,94vw);max-height:90vh;overflow-y:auto;background:#0a0a0a;border:1px solid var(--divider2);border-radius:16px;z-index:100;padding:26px;display:none}
+.modal.on{display:block}
+.modal h2{font-size:1.15rem;font-weight:700;margin-bottom:4px}
+.modal p.hint{font-size:.84rem;color:var(--subtle);margin-bottom:20px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+@media(max-width:640px){.fgrid{grid-template-columns:1fr}}
+.f{margin-bottom:13px}
+.f.full{grid-column:1/-1}
+.f label{display:block;font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);margin-bottom:5px}
+.f small{display:block;color:var(--mid);font-size:.75rem;margin-top:4px}
+.checks{display:flex;flex-wrap:wrap;gap:14px;padding-top:4px}
+.checks label{display:flex;align-items:center;gap:7px;font-size:.86rem;color:var(--muted);cursor:pointer}
+.checks input{accent-color:var(--c);width:15px;height:15px}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding-top:18px;margin-top:8px;border-top:1px solid var(--divider)}
+.private{border:1px solid rgba(224,168,60,.3);background:rgba(224,168,60,.06);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:#e8c98a}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+    <h1>Bench Manager</h1><span class="tag">Internal</span>
+    <span class="spacer"></span>
+    <div class="tokenbox">
+        <input type="password" id="token" placeholder="Admin token" style="width:220px" autocomplete="current-password">
+        <button class="btn" id="loadBtn">Load</button>
+        <button class="btn ghost" id="newBtn">Add person</button>
+        <a class="btn ghost" href="/bench/" target="_blank" rel="noopener">View bench</a>
+    </div>
+</header>
+
+<div id="msg"></div>
+<div class="stats" id="stats"></div>
+<div class="scroll"><table>
+    <thead><tr>
+        <th>Name</th><th>Role</th><th>Region</th><th>Rate</th>
+        <th>Status</th><th>Consent</th><th>Confirmed</th><th>On bench</th><th></th>
+    </tr></thead>
+    <tbody id="rows"><tr><td colspan="9" style="text-align:center;padding:40px">Enter the admin token and press Load.</td></tr></tbody>
+</table></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"></div>
+
+<script>
+(function(){
+'use strict';
+var el=function(i){return document.getElementById(i)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})};
+var money=function(n){return '$'+Number(n||0).toLocaleString('en-US')};
+var ROLES={admin:'Executive & Admin',csr:'Customer Support',editor:'Video Editor',bookkeeper:'Bookkeeping',sdr:'Sales Development',marketing:'Marketing & Social',ops:'Operations'};
+var REGIONS={ph:'Philippines',latam:'Latin America',za:'South Africa'};
+var SEN={entry:'Entry',mid:'Mid',senior:'Senior',lead:'Lead'};
+var AVAIL={available:'Available',reserved:'Reserved',placed:'Placed',paused:'Paused'};
+var data=[];
+
+function token(){return el('token').value.trim()}
+function say(t,cls){el('msg').innerHTML=t?'<div class="msg '+cls+'">'+esc(t)+'</div>':''}
+
+function api(method,body){
+    var t=token();
+    if(!t){say('Admin token required.','err');return Promise.reject(new Error('no token'))}
+    var opts={method:method,headers:{'Authorization':'Bearer '+t}};
+    if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body)}
+    return fetch('/api/bench-admin',opts).then(function(r){
+        return r.json().then(function(j){
+            if(!r.ok)throw new Error(j.error||'request failed');
+            return j;
+        });
+    });
+}
+
+function opts(map,sel){return Object.keys(map).map(function(k){return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(map[k])+'</option>'}).join('')}
+
+function load(){
+    say('','');
+    return api('GET').then(function(d){
+        data=d.rows||[];
+        var s=d.summary||{};
+        el('stats').innerHTML=
+             stat(s.live,'On bench','good')
+            +stat(s.total,'Total profiles','')
+            +stat(s.aging,'Aging','warn')
+            +stat(s.stale,'Stale — hidden','bad')
+            +stat(s.never,'Never confirmed','')
+            +stat(s.no_consent,'No consent','bad');
+        renderRows();
+        try{localStorage.setItem('sfy_bench_tok',token())}catch(e){}
+    }).catch(function(e){say('Could not load: '+e.message,'err')});
+}
+function stat(n,label,cls){return '<div class="stat '+cls+'"><b>'+(n==null?'—':n)+'</b><span>'+label+'</span></div>'}
+
+function renderRows(){
+    if(!data.length){el('rows').innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px">No profiles yet. Add the first one.</td></tr>';return}
+    el('rows').innerHTML=data.map(function(r){
+        var cs={fresh:'b-fresh',aging:'b-aging',stale:'b-stale',never:'b-never'}[r.confirm_state]||'b-never';
+        var cl={fresh:'Fresh',aging:r.confirm_days+'d — nudge',stale:r.confirm_days+'d — hidden',never:'Never'}[r.confirm_state];
+        return '<tr>'
+        +'<td class="nm">'+esc(r.name)+'</td>'
+        +'<td>'+esc(ROLES[r.role]||r.role)+'</td>'
+        +'<td>'+esc(REGIONS[r.region]||r.region)+'</td>'
+        +'<td>'+money(r.salary_min)+'</td>'
+        +'<td>'+esc(AVAIL[r.availability]||r.availability)+(r.archived?' · archived':'')+'</td>'
+        +'<td>'+(r.consent_ok?'<span class="badge b-fresh">On file</span>':'<span class="badge b-stale">Missing</span>')+'</td>'
+        +'<td><span class="badge '+cs+'">'+esc(cl)+'</span></td>'
+        +'<td>'+(r.live?'<span class="badge b-live">Live</span>':'<span class="badge b-hidden">Hidden</span>')+'</td>'
+        +'<td><div class="acts">'
+        +'<button class="btn sm ghost" data-act="confirm" data-id="'+esc(r.id)+'">Confirm</button>'
+        +'<button class="btn sm ghost" data-act="edit" data-id="'+esc(r.id)+'">Edit</button>'
+        +(r.consent_ok?'':'<button class="btn sm" data-act="consent" data-id="'+esc(r.id)+'">Record consent</button>')
+        +'</div></td></tr>';
+    }).join('');
+    Array.prototype.forEach.call(el('rows').querySelectorAll('button[data-act]'),function(b){
+        b.addEventListener('click',function(){act(b.getAttribute('data-act'),b.getAttribute('data-id'))});
+    });
+}
+
+function act(a,id){
+    if(a==='confirm'){
+        api('POST',{action:'confirm',id:id}).then(function(){say('Availability re-confirmed. Clock reset to 14 days.','ok');load()})
+            .catch(function(e){say(e.message,'err')});
+    } else if(a==='consent'){
+        var method=prompt('How was consent recorded? (e.g. signed form, email reply, onboarding checkbox)','signed form');
+        if(!method)return;
+        api('POST',{action:'consent',id:id,granted:true,method:method}).then(function(){say('Consent recorded.','ok');load()})
+            .catch(function(e){say(e.message,'err')});
+    } else if(a==='edit'){
+        openForm(data.filter(function(r){return r.id===id})[0]);
+    }
+}
+
+function openForm(row){
+    var isNew=!row;
+    el('modal').innerHTML=
+    '<h2 id="mTitle">'+(isNew?'Add someone to the bench':'Edit profile')+'</h2>'
+    +'<p class="hint">Everything in the private block stays server-side. It is never sent to a browser on the public bench.</p>'
+    +'<form id="pf">'
+    +'<div class="private"><b>Private — internal only.</b> Surname, email and phone are stored so the team can identify the person. They are excluded from the public payload by an allowlist in <code>api/_bench.js</code>.</div>'
+    +'<div class="fgrid">'
+    +f('first_name','First name','text',row?row.name.split(' ')[0]:'','Shown publicly.')
+    +f('last_name','Surname','text','','Never shown publicly.')
+    +f('email','Email','email','','Private.')
+    +f('phone','Phone','text','','Private.')
+    +'<div class="f"><label>Role</label><select name="role">'+opts(ROLES,row&&row.role)+'</select></div>'
+    +'<div class="f"><label>Seniority</label><select name="seniority">'+opts(SEN,row&&row.seniority)+'</select></div>'
+    +'<div class="f"><label>Region</label><select name="region">'+opts(REGIONS,row&&row.region)+'</select></div>'
+    +f('country','Country','text','','e.g. Philippines, Colombia')
+    +f('timezone','Time zone','text','','e.g. GMT+8, overlaps EST to 12pm')
+    +f('years_experience','Years experience','number','')
+    +'<div class="f full"><label>Headline</label><input name="headline" type="text" maxlength="120" value="'+esc(row?row.headline:'')+'"><small>One line on the card. Say what they do, not adjectives.</small></div>'
+    +'<div class="f full"><label>Summary</label><textarea name="summary" maxlength="900"></textarea><small>Shown in the detail panel. No employer names that identify the person.</small></div>'
+    +'<div class="f full"><label>Skills</label><input name="skills" type="text"><small>Comma separated. First three show on the card.</small></div>'
+    +'<div class="f full"><label>Tools</label><input name="tools" type="text"><small>Comma separated. e.g. HubSpot, Monday, QuickBooks</small></div>'
+    +f('english_cefr','English (CEFR)','text',row?'':'','B2, C1, C2')
+    +f('english_score','EF SET score','text','')
+    +f('salary_min','Rate from (USD/mo)','number',row?row.salary_min:'')
+    +f('salary_max','Rate to (USD/mo)','number',row?row.salary_max:'')
+    +'<div class="f"><label>Availability</label><select name="availability">'+opts(AVAIL,row&&row.availability)+'</select></div>'
+    +f('available_from','Available from','text','','e.g. Now, 2 weeks, 1 Oct')
+    +'<div class="f full"><label>Video intro URL</label><input name="video_intro_url" type="text"><small>Unlisted link. Presence of a link ticks the video check.</small></div>'
+    +'<div class="f full"><label>Verified</label><div class="checks">'
+    +'<label><input type="checkbox" name="v_english">English test</label>'
+    +'<label><input type="checkbox" name="v_skills">Skills test</label>'
+    +'<label><input type="checkbox" name="v_ref">Reference check</label>'
+    +'<label><input type="checkbox" name="v_id">ID verified</label>'
+    +'</div></div>'
+    +f('skills_score','Skills test score (%)','number','')
+    +'<div class="f full"><label>Internal notes</label><textarea name="internal_notes" maxlength="2000"></textarea><small>Private. Never leaves the server.</small></div>'
+    +'</div>'
+    +'<div id="fErr"></div>'
+    +'<div class="modal-foot"><button type="button" class="btn ghost" id="mCancel">Cancel</button>'
+    +'<button type="submit" class="btn" id="mSave">'+(isNew?'Add to bench':'Save')+'</button></div>'
+    +'</form>';
+    el('scrim').classList.add('on');el('modal').classList.add('on');
+    el('mCancel').addEventListener('click',close);
+    el('pf').addEventListener('submit',function(e){
+        e.preventDefault();
+        var fd=new FormData(e.target),b={};
+        fd.forEach(function(v,k){b[k]=v});
+        if(row)b.id=row.id;
+        var list=function(s){return String(s||'').split(',').map(function(x){return x.trim()}).filter(Boolean)};
+        var profile={
+            id:b.id,first_name:b.first_name,last_name:b.last_name,email:b.email,phone:b.phone,
+            role:b.role,seniority:b.seniority,region:b.region,country:b.country,timezone:b.timezone,
+            headline:b.headline,summary:b.summary,years_experience:Number(b.years_experience||0),
+            skills:list(b.skills),tools:list(b.tools),
+            english_cefr:b.english_cefr,english_score:b.english_score,
+            salary_min:Number(b.salary_min||0),salary_max:Number(b.salary_max||0),
+            availability:b.availability,available_from:b.available_from,
+            video_intro_url:b.video_intro_url,internal_notes:b.internal_notes,
+            assessment:{english_test:!!b.v_english,skills_test:!!b.v_skills,reference_check:!!b.v_ref,id_verified:!!b.v_id,skills_score:Number(b.skills_score||0)}
+        };
+        if(!profile.first_name){el('fErr').innerHTML='<div class="msg err">First name is required.</div>';return}
+        el('mSave').disabled=true;el('mSave').textContent='Saving…';
+        api('POST',{action:'upsert',profile:profile}).then(function(){
+            close();
+            say('Saved. Remember: a new profile stays hidden until you record consent and press Confirm.','ok');
+            load();
+        }).catch(function(err){
+            el('mSave').disabled=false;el('mSave').textContent='Save';
+            el('fErr').innerHTML='<div class="msg err">'+esc(err.message)+'</div>';
+        });
+    });
+}
+function f(name,label,type,val,hint){
+    return '<div class="f"><label>'+esc(label)+'</label><input name="'+name+'" type="'+type+'" value="'+esc(val||'')+'">'
+        +(hint?'<small>'+esc(hint)+'</small>':'')+'</div>';
+}
+function close(){el('scrim').classList.remove('on');el('modal').classList.remove('on')}
+
+el('loadBtn').addEventListener('click',load);
+el('newBtn').addEventListener('click',function(){openForm(null)});
+el('scrim').addEventListener('click',close);
+el('token').addEventListener('keydown',function(e){if(e.key==='Enter')load()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
+try{var t=localStorage.getItem('sfy_bench_tok');if(t){el('token').value=t;load()}}catch(e){}
+})();
+</script>
+</body>
+</html>
