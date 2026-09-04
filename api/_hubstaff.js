@@ -93,8 +93,30 @@ async function api(path) {
         if (!r2.ok) return { ok: false, error: `http_${r2.status}` };
         return { ok: true, data: await r2.json() };
     }
-    if (!r.ok) return { ok: false, error: `http_${r.status}` };
+    if (!r.ok) {
+        // Carry the body. `http_400` on its own sent me hunting the token when the real cause was a
+        // date range the API refuses, and the two look identical from the outside.
+        const detail = await r.text().catch(() => '');
+        return { ok: false, error: `http_${r.status}`, hint: detail.slice(0, 200) };
+    }
     return { ok: true, data: await r.json() };
+}
+
+// Hubstaff rejects an over-long activities range with a 400. Chunk into windows it will accept and
+// stitch the results, so asking for a quarter does not silently become an error or, worse, a
+// partial answer that reads like a complete one.
+const MAX_WINDOW_DAYS = 30;
+function windows(start, stop) {
+    const out = [];
+    let from = new Date(start + 'T00:00:00Z');
+    const end = new Date(stop + 'T00:00:00Z');
+    while (from <= end) {
+        const to = new Date(from);
+        to.setUTCDate(to.getUTCDate() + MAX_WINDOW_DAYS - 1);
+        out.push({ start: from.toISOString().slice(0, 10), stop: (to > end ? end : to).toISOString().slice(0, 10) });
+        from = new Date(to); from.setUTCDate(from.getUTCDate() + 1);
+    }
+    return out;
 }
 
 // Hours per client between two dates. Hubstaff caps a page, so this follows the cursor rather than
@@ -106,24 +128,26 @@ export async function hoursByClient({ start, stop }) {
     (pr.data.projects || []).forEach(p => { projects[p.id] = p.name; });
 
     const byProject = {};
-    let cursor = '';
     let pages = 0;
-    do {
-        const q = `/organizations/${ORG_ID}/activities/daily?date[start]=${start}&date[stop]=${stop}&page_limit=500${cursor ? `&page_start_id=${cursor}` : ''}`;
-        const a = await api(q);
-        if (!a.ok) return { connected: false, ...a, clients: [] };
-        (a.data.daily_activities || []).forEach(d => {
-            const pid = d.project_id;
-            if (!pid) return;
-            const k = String(pid);
-            const rec = byProject[k] || (byProject[k] = { projectId: pid, name: projects[pid] || `project ${pid}`, seconds: 0, vas: new Set(), days: new Set() });
-            rec.seconds += Number(d.tracked) || 0;
-            if (d.user_id) rec.vas.add(d.user_id);
-            if (d.date) rec.days.add(d.date);
-        });
-        cursor = (a.data.pagination && a.data.pagination.next_page_start_id) || '';
-        pages++;
-    } while (cursor && pages < 40);
+    for (const w of windows(start, stop)) {
+        let cursor = '';
+        do {
+            const q = `/organizations/${ORG_ID}/activities/daily?date[start]=${w.start}&date[stop]=${w.stop}&page_limit=500${cursor ? `&page_start_id=${cursor}` : ''}`;
+            const a = await api(q);
+            if (!a.ok) return { connected: false, ...a, clients: [] };
+            (a.data.daily_activities || []).forEach(d => {
+                const pid = d.project_id;
+                if (!pid) return;
+                const k = String(pid);
+                const rec = byProject[k] || (byProject[k] = { projectId: pid, name: projects[pid] || `project ${pid}`, seconds: 0, vas: new Set(), days: new Set() });
+                rec.seconds += Number(d.tracked) || 0;
+                if (d.user_id) rec.vas.add(d.user_id);
+                if (d.date) rec.days.add(d.date);
+            });
+            cursor = (a.data.pagination && a.data.pagination.next_page_start_id) || '';
+            pages++;
+        } while (cursor && pages < 60);
+    }
 
     const clients = Object.values(byProject)
         .filter(r => !NOT_A_CLIENT.test(String(r.name || '').trim()))
@@ -136,5 +160,5 @@ export async function hoursByClient({ start, stop }) {
         }))
         .sort((a, b) => b.hours - a.hours);
 
-    return { connected: true, clients, truncated: pages >= 40 };
+    return { connected: true, clients, truncated: pages >= 60 };
 }

@@ -711,7 +711,7 @@ export default async function handler(req, res) {
     if (unowned.length) blockers.push({ code: 'unowned_deals', detail: `${unowned.length} closed-won deal(s) have no HubSpot owner`,
         fix: 'Assign an owner on the deal in HubSpot, or set the rep with an admin override. No owner means no commission for anyone.',
         deals: unowned.slice(0, 20).map(d => ({ dealId: d.dealId, name: d.name, amount: d.amount, closeDate: d.closeDate })) });
-    if (!residuals.connected) blockers.push({ code: 'hubstaff_disconnected', detail: residuals.error || 'Hubstaff is not connected',
+    if (!residuals.connected) blockers.push({ code: 'hubstaff_disconnected', detail: (residuals.error || 'Hubstaff is not connected') + (residuals.hint ? ': ' + residuals.hint : ''),
         fix: residuals.hint || 'Generate a Hubstaff personal access token and store it in Redis key hubstaff:refresh_token. Per-hour residuals cannot be tracked until then.' });
     if (residuals.connected && residuals.unmatched && residuals.unmatched.length) blockers.push({ code: 'unmatched_clients',
         detail: `${residuals.unmatched.length} Hubstaff client(s) tracked hours but match no Closed Won deal`,
