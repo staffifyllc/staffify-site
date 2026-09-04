@@ -1,6 +1,7 @@
 // Rep commissions, driven by Paul's trigger:
 //   1) ATTRIBUTION: a deal is Closed Won in HubSpot -> the HubSpot deal OWNER is the rep.
-//   2) EARNED: the client's QuickBooks invoice is marked PAID (Balance == 0) AND real money was received
+//   2) EARNED: commission accrues on money actually RECEIVED against this deal's QuickBooks invoice
+//      (TotalAmt - Balance), so an instalment plan pays the rep as each instalment lands.
 //      (a Payment exists) -> commission is payable. Closed Won alone never pays; the money must land first.
 // So each Closed Won deal is PENDING until its invoice is paid, then PAYABLE, then (admin marks) PAID OUT.
 //
@@ -469,16 +470,29 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     const customerId = (qbo && qbo.connected) ? ((assignment && assignment.custId) || matchCustomer(deal, ov, qbo)) : '';
     const cust = customerId && qbo.byCust ? qbo.byCust[customerId] : null;
     const inv = (assignment && assignment.inv) || null;
-    // Payable requires THIS deal's own invoice to be paid, plus real money received from that client.
-    const invoicePaid = !!(inv && inv.paid && cust && cust.received > 0);
+    // INSTALMENTS (Paul, 2026-09-04). A client paying $2,099 as three $700 instalments earns the rep
+    // commission as each payment lands, not all at once when the last one clears. The old rule was
+    // Balance == 0 or nothing, which would have shown Madison $0 on a deal already a third collected.
+    // An invoice's own TotalAmt and Balance give exact per-invoice attribution, so this needs no walk
+    // of QBO Payment lines. cust.received stays in the guard so a written-off invoice, which can read
+    // Balance 0 with no money in, is never mistaken for a payment.
+    const invTotal = inv ? (Number(inv.total) || 0) : 0;
+    const invBalance = inv ? (Number(inv.balance) || 0) : 0;
+    const invReceived = inv ? Math.max(0, round(Math.min(invTotal, invTotal - invBalance))) : 0;
+    const moneyLanded = !!(cust && cust.received > 0);
+    const invoicePaid = !!(inv && inv.paid && moneyLanded);
+    const invoicePartPaid = !!(inv && invReceived > 0 && moneyLanded);
 
-    const gross = round((ov && ov.amount != null) ? ov.amount : (invoicePaid ? (inv.total || deal.amount) : deal.amount));
+    // Earned on what actually came in. With nothing collected yet the line still shows the full deal
+    // so the rep can see what is coming, and it stays 'pending' until money lands.
+    const gross = round((ov && ov.amount != null) ? ov.amount
+        : (invoicePartPaid ? invReceived : deal.amount));
 
     // Net of processing fees (Paul, 2026-08-14). Only charged when the money actually came in on a
     // card: an ACH or a cheque incurs no processing fee and must not be docked one. An explicit
     // admin amount is taken as already-final and is never reduced again.
     const paidByCard = !!(cust && cust.cardCount > 0);
-    const feeApplies = invoicePaid && paidByCard && !(ov && ov.amount != null) && flatOrPct(dealType) !== 'skip';
+    const feeApplies = invoicePartPaid && paidByCard && !(ov && ov.amount != null) && flatOrPct(dealType) !== 'skip';
     const fee = feeApplies ? Math.round((gross * (FEE_PCT / 100) + FEE_FIXED) * 100) / 100 : 0;
     const base = round(gross - fee);
 
@@ -488,7 +502,8 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     // A refund or chargeback reverses the commission. The rep does not keep a cut of money we gave back.
     const refunded = !!(cust && cust.refunded > 0);
     const paidOut = !!(ov && ov.paidOut);
-    let status = paidOut ? 'paid_out' : (invoicePaid ? 'payable' : 'pending');
+    // Partly collected is payable on the collected part. It is not 'pending': that money is earned.
+    let status = paidOut ? 'paid_out' : (invoicePartPaid ? 'payable' : 'pending');
     let clawback = 0;
     if (refunded && !(ov && ov.keepOnRefund)) {
         clawback = commission;
@@ -496,7 +511,15 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
         status = 'clawed_back';
     }
 
+    // What is still to come on this deal, so a rep sees "earned so far" and "remaining" rather than a
+    // single number that quietly means different things on an instalment deal.
+    const outstanding = round(Math.max(0, (invTotal || deal.amount) - invReceived));
+    const remainingCommission = (flat != null) ? 0 : round(outstanding * rate / 100);
+
     return {
+        instalment: invTotal > 0 && invBalance > 0 && invReceived > 0,
+        invoiceTotal: invTotal, invoiceReceived: invReceived, invoiceBalance: invBalance,
+        outstanding, remainingCommission,
         dealId: deal.dealId, client: deal.name, company: deal.company,
         repEmail, repKnown: knownRep,
         ownerEmail: deal.ownerEmail, ownerName: deal.ownerName,
