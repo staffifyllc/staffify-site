@@ -14,7 +14,7 @@
 
 import { currentRep, adminAuthorized, listReps, readBody, redis } from './_auth.js';
 import { qboConnected, qboQuery } from './_qbo.js';
-import { hoursByClient } from './_hubstaff.js';
+import { hoursByClient, hubstaffStatus } from './_hubstaff.js';
 
 const OVERRIDE_KEY = 'commission:overrides';
 const OWNER_KEY = 'commission:owners'; // dealId -> the owner AT THE TIME IT WAS FIRST SEEN CLOSED WON
@@ -660,7 +660,18 @@ export default async function handler(req, res) {
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
 
     if (req.query.probe === '1') {
-        return res.status(200).json({ qbo: await qboConnected().catch(() => false), hubspot: !!process.env.HUBSPOT_TOKEN });
+        // Named in full on purpose. "hubspot" and "hubstaff" differ by one letter and mean entirely
+        // different systems here: HubSpot is the CRM that says who closed the deal, Hubstaff is the
+        // time tracker that says how many hours a VA worked. Confusing them wastes a debugging pass.
+        const hstaff = await hubstaffStatus().catch(e => ({ connected: false, reason: String(e).slice(0, 120) }));
+        return res.status(200).json({
+            quickbooks_payments: await qboConnected().catch(() => false),
+            hubspot_crm: !!process.env.HUBSPOT_TOKEN,
+            hubstaff_hours: hstaff.connected,
+            hubstaff_reason: hstaff.connected ? '' : (hstaff.reason || ''),
+            qbo: await qboConnected().catch(() => false),   // kept: older callers read these two
+            hubspot: !!process.env.HUBSPOT_TOKEN,
+        });
     }
 
     if (!who && !isAdmin) return res.status(401).json({ error: 'login_required' });

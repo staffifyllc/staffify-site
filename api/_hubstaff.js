@@ -73,6 +73,14 @@ export async function hubstaffConnected() {
     return !!b.ok;
 }
 
+// Same check, but it says WHY when it fails. A boolean false sends whoever is debugging looking for
+// the wrong thing: a missing token, an expired one and a Cloudflare block all read identically.
+export async function hubstaffStatus() {
+    const b = await bearer();
+    if (b.ok) return { connected: true };
+    return { connected: false, reason: b.hint || b.error || 'unknown' };
+}
+
 async function api(path) {
     const b = await bearer();
     if (!b.ok) return { ok: false, ...b };
