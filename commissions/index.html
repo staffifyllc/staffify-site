@@ -181,6 +181,7 @@
     .wrap{padding:20px 16px 70px}
     .hero{grid-template-columns:1fr;gap:16px;margin-bottom:18px}
     .strip{grid-template-columns:1fr 1fr;gap:8px}
+    .strip .kpi:last-child:nth-child(odd){grid-column:1/-1}
     .kpi{min-height:84px;padding:13px 14px} .kpi .n{font-size:22px}
     .pipe{grid-template-columns:1fr 1fr}
     .stage::after{display:none}
@@ -457,6 +458,9 @@
   }
   function exceptionsTab(){
     if(!ADM) return '<div class="skel" style="height:180px"></div>';
+    // A failed admin fetch must never read as "nothing needs attention". That is the exact
+    // zero-versus-failure confusion a financial page cannot afford.
+    if(ADM.error) return '<div class="errbox"><h3>Could not load exceptions</h3><p>'+esc(ADM.error)+' The list below is not empty, it is unavailable.</p><p style="margin-top:8px"><button class="btn small" id="retryAdm">Try again</button></p></div>';
     var b=ADM.blockers||[];
     if(!b.length) return '<div class="empty"><b>Nothing needs attention</b>Every closed deal has an owner, and every integration is connected.</div>';
     var title={owners_scope:'HubSpot owners scope missing',unowned_deals:'Deals with no owner',qbo_disconnected:'QuickBooks not connected',hubstaff_disconnected:'Hubstaff not connected',unmatched_clients:'VA hours with no matching deal'};
@@ -506,6 +510,7 @@
     app.querySelectorAll('tr.row').forEach(function(tr){var t=function(){var id=tr.getAttribute('data-id');OPEN[id]=!OPEN[id];render();};tr.addEventListener('click',t);tr.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();t();}});});
     app.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){var id=b.getAttribute('data-open');TAB='commissions';F={q:'',status:'',range:'all'};OPEN={};OPEN[id]=true;render();var row=app.querySelector('tr.row[data-id="'+id+'"]');if(row)row.scrollIntoView({block:'center',behavior:'smooth'});});});
     var rt=document.getElementById('retry'); if(rt){rt.addEventListener('click',function(){C=null;render();loadData();});}
+    var ra=document.getElementById('retryAdm'); if(ra){ra.addEventListener('click',function(){ADM=null;render();loadAdmin();});}
   }
 
   // ---------- auth + data ----------
@@ -526,8 +531,8 @@
   }
 
   async function loadAdmin(){
-    try{ var r=await fetch('/api/commissions/?view=admin',{cache:'no-store'}); ADM=await r.json(); }
-    catch(e){ ADM={error:'Network error.'}; }
+    try{ var r=await fetch('/api/commissions/?view=admin',{cache:'no-store'}); if(!r.ok) throw new Error('The admin view returned '+r.status+'.'); ADM=await r.json(); }
+    catch(e){ ADM={error:String(e.message||'Network error.')}; }
     render();
   }
   async function loadData(){

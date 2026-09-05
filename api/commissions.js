@@ -752,32 +752,6 @@ export default async function handler(req, res) {
     allocatePayouts(lines, payouts.byRep || {});
     lines.forEach(l => { l.payoutMode = (payouts.autoReps && payouts.autoReps[l.repEmail]) ? 'auto' : 'manual'; });
 
-    // ---- Admin view ----
-    if (req.query.view === 'admin') {
-        if (!isAdmin) return res.status(403).json({ error: 'admin_only' });
-        const counts = {
-            deals: lines.length,
-            payable: lines.filter(l => l.status === 'payable').length,
-            pending: lines.filter(l => l.status === 'pending').length,
-            paidOut: lines.filter(l => l.status === 'paid_out').length,
-            unmapped: lines.filter(l => !l.repKnown).length,
-            unmatched: lines.filter(l => qbo.connected && !l.customerMatched).length,
-            noInvoice: lines.filter(l => qbo.connected && l.customerMatched && !l.invoiceMatched).length,
-            ownerChanged: lines.filter(l => l.ownerChanged).length,
-        };
-        const custList = qbo.connected ? Object.values(qbo.custById || {}).map(c => ({ id: c.id, name: c.name, email: c.email })) : [];
-        return res.status(200).json({
-            connected: true, view: 'admin', qboConnected: !!qbo.connected, qboError: qbo.error || '',
-            blockers, residuals,
-            byRep: ranked,
-            generatedAt: new Date().toISOString(),
-            truncated: { hubspot: !!hs.truncated, qbo: !!(qbo && qbo.truncated) },
-            payoutScan: { vendorsMatched: payouts.vendorsMatched || 0, scanned: payouts.scanned || 0, tagged: payouts.tagged || 0, tag: payouts.tag || 'commission' },
-            reps: reps.map(r => ({ email: (r.email || '').toLowerCase(), name: r.name || r.email })),
-            customers: custList, counts, deals: lines,
-        });
-    }
-
     // ---- Team ranking, and the per-rep roll-up admins see ----
     //
     // Paul, 2026-09-04: he sees everything for every salesperson; a rep sees only their own detail
@@ -830,6 +804,32 @@ export default async function handler(req, res) {
         if (isMe || PEER_EARNINGS) { row.commission = t.commission; row.payable = t.payable; row.residual = t.residual; }
         return row;
     });
+
+    // ---- Admin view ----
+    if (req.query.view === 'admin') {
+        if (!isAdmin) return res.status(403).json({ error: 'admin_only' });
+        const counts = {
+            deals: lines.length,
+            payable: lines.filter(l => l.status === 'payable').length,
+            pending: lines.filter(l => l.status === 'pending').length,
+            paidOut: lines.filter(l => l.status === 'paid_out').length,
+            unmapped: lines.filter(l => !l.repKnown).length,
+            unmatched: lines.filter(l => qbo.connected && !l.customerMatched).length,
+            noInvoice: lines.filter(l => qbo.connected && l.customerMatched && !l.invoiceMatched).length,
+            ownerChanged: lines.filter(l => l.ownerChanged).length,
+        };
+        const custList = qbo.connected ? Object.values(qbo.custById || {}).map(c => ({ id: c.id, name: c.name, email: c.email })) : [];
+        return res.status(200).json({
+            connected: true, view: 'admin', qboConnected: !!qbo.connected, qboError: qbo.error || '',
+            blockers, residuals,
+            byRep: ranked,
+            generatedAt: new Date().toISOString(),
+            truncated: { hubspot: !!hs.truncated, qbo: !!(qbo && qbo.truncated) },
+            payoutScan: { vendorsMatched: payouts.vendorsMatched || 0, scanned: payouts.scanned || 0, tagged: payouts.tagged || 0, tag: payouts.tag || 'commission' },
+            reps: reps.map(r => ({ email: (r.email || '').toLowerCase(), name: r.name || r.email })),
+            customers: custList, counts, deals: lines,
+        });
+    }
 
     // ---- Rep view ----
     if (!who || !who.email) return res.status(401).json({ error: 'login_required' });
