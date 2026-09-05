@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Residuals — Staffify Sales</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green:#1d9e75; --green-hi:#7ef5c2; }
+        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .eyebrow { display:flex; align-items:center; gap:12px; font-size:12px; font-weight:800; letter-spacing:0.3em; color:var(--cyan); text-transform:uppercase; margin-bottom:14px; }
+        .eyebrow::before { content:''; width:30px; height:2px; background:linear-gradient(90deg, var(--cyan), transparent); }
+        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
+        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .topbar img { height:24px; }
+        .nav { display:flex; gap:6px; flex-wrap:wrap; }
+        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
+        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
+        .nav a:hover { color:var(--white); }
+        @media (max-width: 980px) { .topbar { flex-wrap:wrap; } .nav { order:3; flex-basis:100%; justify-content:center; margin-top:6px; } }
+        .tb-right { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); }
+        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; text-decoration:none; }
+        .btn:hover { background:var(--cyan-hi); }
+        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+        .btn-ghost:hover { color:var(--white); }
+        .wrap { max-width:1000px; margin:0 auto; padding:28px; }
+        h1 { font-size:28px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
+        .sub { font-size:14.5px; color:var(--muted); margin-bottom:24px; }
+        .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+        @media (max-width:720px){ .cards { grid-template-columns:1fr; } }
+        .kcard { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:18px 20px; }
+        .kcard .l { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+        .kcard .n { font-size:30px; font-weight:900; letter-spacing:-0.02em; }
+        .kcard .s { font-size:12.5px; color:var(--muted); margin-top:4px; }
+        .panel { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-bottom:18px; }
+        .ph { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+        .ph h2 { font-size:13px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:var(--cyan); }
+        .ph .meta { font-size:12.5px; color:var(--muted); }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        th { text-align:left; font-size:10.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); padding:0 10px 10px; border-bottom:1px solid var(--card-border); }
+        th.num, td.num { text-align:right; }
+        td { padding:12px 10px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:middle; }
+        tr:last-child td { border-bottom:none; }
+        .cl-name { font-weight:700; }
+        .cl-sub { font-size:12px; color:var(--muted); }
+        .pill { font-size:10.5px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+        .pill.paid { color:var(--green-hi); background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
+        .pill.pending { color:#ffd98a; background:rgba(241,196,15,0.12); border:1px solid rgba(241,196,15,0.3); }
+        .pill.done { color:#9ba1ab; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); }
+        .pill.type { color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); }
+        .money { font-weight:800; color:var(--green-hi); }
+        .note { font-size:13px; color:var(--muted); line-height:1.6; }
+        .notice { background:rgba(241,196,15,0.06); border:1px solid rgba(241,196,15,0.25); border-radius:14px; padding:18px 20px; margin-bottom:20px; }
+        .notice h3 { font-size:15px; font-weight:800; color:#ffd98a; margin-bottom:6px; }
+        .notice p { font-size:13.5px; color:#d7dde2; line-height:1.6; }
+        .gate { max-width:440px; margin:60px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
+        .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; }
+        .gate p { font-size:14px; color:var(--muted); margin-bottom:20px; }
+        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+        .gate input:focus { outline:none; border-color:var(--cyan); }
+        .gate .btn { width:100%; padding:13px; font-size:15px; }
+        .gbtn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+                padding:13px; margin-bottom:16px; font-family:inherit; font-size:15px; font-weight:800;
+                color:#1f1f1f; background:#fff; border:1px solid #dadce0; border-radius:10px;
+                text-decoration:none; cursor:pointer; }
+        .gbtn:hover { background:#f7f8f8; }
+        .gbtn svg { flex:0 0 auto; }
+        .or { display:flex; align-items:center; gap:10px; margin:0 0 14px; font-size:12px;
+              color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+        .or::before, .or::after { content:''; flex:1; height:1px; background:var(--card-border); }
+        .err { color:#ff9a8d; font-size:13px; margin-top:10px; min-height:18px; }
+        .empty { color:var(--muted); font-size:14px; padding:24px 4px; text-align:center; }
+        /* admin assign */
+        .adm select, .adm input { font-family:inherit; font-size:13px; color:var(--white); background:rgba(255,255,255,0.05); border:1px solid var(--card-border); border-radius:8px; padding:7px 9px; }
+        .adm input { width:96px; }
+        .adm .save { font-size:12px; font-weight:800; color:#04222b; background:var(--cyan); border:none; border-radius:8px; padding:7px 12px; cursor:pointer; }
+        .adm .save:disabled { opacity:.6; cursor:default; }
+        .adm .sug { font-size:11.5px; color:var(--cyan-hi); }
+        .toggle { font-size:12.5px; color:var(--cyan-hi); cursor:pointer; font-weight:700; background:none; border:none; }
+    </style>
+    <script id="vtag-ai-js" async src="https://r2.leadsy.ai/tag.js" data-pid="17PMqPWtsqz2Rzt3y" data-version="062024"></script>
+</head>
+<body>
+
+<header class="topbar">
+    <img src="/assets/brand/logo-blue.svg" alt="Staffify">
+    <nav class="nav">
+        <a href="/hub/">Hub</a>
+        <a href="/dialer/">Dialer</a>
+        <a href="/scoreboard/">Scoreboard</a>
+        <a href="/pipeline/">Pipeline</a>
+        <a href="/commissions/">Commissions</a>
+        <a href="/residuals/" class="active">Residuals</a>
+        <a href="/training/sales/">Training</a>
+        <a href="https://recruiting.gostaffify.com/dashboard" target="_blank" rel="noopener" style="border:1px solid var(--card-border); margin-left:8px;">Talent Console &#8599;</a>
+    </nav>
+    <div class="tb-right" id="tbRight"></div>
+</header>
+
+<div class="wrap" id="app"><div class="empty">Loading residuals...</div></div>
+
+<script>
+(function(){
+  var ME=null, D=null, ADMIN=false;
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function money(n){ n=Number(n)||0; return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function hrs(n){ return (Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:1})+'h'; }
+  function niceDate(s){ if(!s) return ''; var d=new Date(s+'T00:00:00Z'); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}); }
+  function longDate(s){ if(!s) return ''; var d=new Date(s+'T00:00:00Z'); return d.toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',timeZone:'UTC'}); }
+
+  function pill(status){
+    if(status==='paid')     return '<span class="pill done">Paid</span>';
+    if(status==='owed')     return '<span class="pill paid">Owed</span>';
+    return '<span class="pill pending">Accruing</span>';
+  }
+
+  // One rep's fortnights. This is the table both views are built from.
+  function periodRows(rep, canMark){
+    if(!rep.periods.length) return '<div class="empty">No attributed VA hours in this window yet.</div>';
+    return '<div style="overflow-x:auto"><table><thead><tr>'
+      +'<th>Pay date</th><th>Covers</th><th class="num">Hours</th><th class="num">Amount</th><th>Status</th>'
+      +(canMark?'<th></th>':'')+'</tr></thead><tbody>'
+      +rep.periods.slice().reverse().map(function(p){
+        var ref=p.paidRecord&&p.paidRecord.reference?'<div class="cl-sub">'+esc(p.paidRecord.reference)+'</div>':'';
+        var when=p.paidRecord&&p.paidRecord.paidAt?'<div class="cl-sub">paid '+niceDate(p.paidRecord.paidAt)+'</div>':'';
+        return '<tr>'
+          +'<td><div class="cl-name">'+niceDate(p.payDate)+'</div><div class="cl-sub">'+p.payDate.slice(0,4)+'</div></td>'
+          +'<td>'+niceDate(p.start)+' &ndash; '+niceDate(p.end)+'</td>'
+          +'<td class="num">'+hrs(p.hours)+'</td>'
+          +'<td class="num"><span class="money">'+money(p.amount)+'</span></td>'
+          +'<td>'+pill(p.status)+when+ref+'</td>'
+          +(canMark?'<td class="num">'+(p.status==='accruing'?'<span style="opacity:.4">&mdash;</span>'
+              :'<button class="toggle mark" data-rep="'+esc(rep.repEmail)+'" data-idx="'+p.index+'" data-amt="'+p.amount+'" data-paid="'+(p.status==='paid'?'1':'0')+'">'
+                +(p.status==='paid'?'Undo':'Mark paid')+'</button>')+'</td>':'')
+          +'</tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+
+  function weekRows(rep){
+    if(!rep.weeks.length) return '';
+    var recent=rep.weeks.slice(-10).reverse();
+    return '<div class="panel" style="margin-top:18px"><div class="ph"><h2>By week</h2><span class="meta">most recent first</span></div>'
+      +'<div style="overflow-x:auto"><table><thead><tr><th>Week beginning</th><th class="num">Hours</th><th class="num">Amount</th></tr></thead><tbody>'
+      +recent.map(function(w){
+        return '<tr><td>'+longDate(w.week)+'</td><td class="num">'+hrs(w.hours)+'</td><td class="num"><span class="money">'+money(w.amount)+'</span></td></tr>';
+      }).join('')+'</tbody></table></div></div>';
+  }
+
+  function clientRows(rep){
+    if(!rep.clients||!rep.clients.length) return '';
+    return '<div class="panel" style="margin-top:18px"><div class="ph"><h2>Where the hours come from</h2><span class="meta">'+rep.clients.length+' clients</span></div>'
+      +'<div style="overflow-x:auto"><table><thead><tr><th>Client</th><th class="num">Hours</th><th class="num">Your residual</th></tr></thead><tbody>'
+      +rep.clients.map(function(c){
+        return '<tr><td><div class="cl-name">'+esc(c.client)+'</div></td><td class="num">'+hrs(c.hours)+'</td><td class="num"><span class="money">'+money(c.amount)+'</span></td></tr>';
+      }).join('')+'</tbody></table></div></div>';
+  }
+
+  function rateWarning(rep){
+    if(!rep.note) return '';
+    return '<div class="note" style="border-color:rgba(226,90,60,.35);color:#ffb59a;margin-top:12px">'
+      +esc(rep.note)+'. Hours are being tracked, but nothing can be calculated until that is set, so the amounts above read zero on purpose rather than guessing a rate.</div>';
+  }
+
+  function scheduleBar(d){
+    var s=d.schedule||{};
+    return '<div class="panel" style="margin-bottom:18px"><div class="ph"><h2>Next payout</h2>'
+      +'<span class="meta">every '+(s.everyDays||14)+' days</span></div>'
+      +'<div style="padding:16px 18px">'
+      +'<div style="font-size:26px;font-weight:800" class="grad">'+longDate(s.nextPayDate)+'</div>'
+      +'<div class="cl-sub" style="margin-top:6px">covers '+longDate((s.nextCovers||{}).start)+' through '+longDate((s.nextCovers||{}).end)
+      +'. Work done on the pay date itself falls into the following run.</div></div></div>';
+  }
+
+  function cards(rep){
+    return '<div class="cards">'
+      +'<div class="kcard"><div class="l">Owed now</div><div class="n grad">'+money(rep.owed)+'</div><div class="s">finished periods not yet paid</div></div>'
+      +'<div class="kcard"><div class="l">Accruing</div><div class="n">'+money(rep.accruing)+'</div><div class="s">this fortnight, still running</div></div>'
+      +'<div class="kcard"><div class="l">Paid to date</div><div class="n">'+money(rep.paidToDate)+'</div><div class="s">'+hrs(rep.totalHours)+' tracked</div></div>'
+      +(rep.perHour!=null?'<div class="kcard"><div class="l">Your rate</div><div class="n">'+money(rep.perHour)+'</div><div class="s">per VA hour worked</div></div>':'')
+      +'</div>';
+  }
+
+  function render(){
+    var app=document.getElementById('app'); var d=D;
+    if(!d || d.connected===false){
+      app.innerHTML='<div class="notice"><h3>Hours are not available</h3><p>'+esc((d&&(d.hint||d.error||d.message))||'Hubstaff is not connected.')+'</p>'
+        +'<p class="cl-sub">Nothing is shown rather than a zero, because a zero here is indistinguishable from "nobody worked".</p></div>';
+      return;
+    }
+    var head='<div class="eyebrow">The Money</div><h1>Residuals<span class="grad">.</span></h1>'
+      +'<div class="sub">You earn a set amount for every hour a VA works under a client you closed, for '+(d.residualMonths||6)+' months from the day that deal was won. Hours come from Hubstaff.</div>';
+
+    if(d.view==='rep'){
+      var me=d.me;
+      app.innerHTML=head+scheduleBar(d)+cards(me)+rateWarning(me)
+        +'<div class="panel" style="margin-top:18px"><div class="ph"><h2>Your fortnights</h2><span class="meta">'+me.periods.length+'</span></div>'+periodRows(me,false)+'</div>'
+        +weekRows(me)+clientRows(me);
+      return;
+    }
+
+    // admin
+    var t=d.totals||{};
+    var totalCards='<div class="cards">'
+      +'<div class="kcard"><div class="l">Owed across the team</div><div class="n grad">'+money(t.owed)+'</div><div class="s">ready to pay</div></div>'
+      +'<div class="kcard"><div class="l">Accruing</div><div class="n">'+money(t.accruing)+'</div><div class="s">current fortnight</div></div>'
+      +'<div class="kcard"><div class="l">Paid to date</div><div class="n">'+money(t.paidToDate)+'</div><div class="s">recorded payouts</div></div>'
+      +'</div>';
+    var un=(d.unmatched||[]);
+    var unmatchedNote = un.length
+      ? '<div class="note" style="border-color:rgba(226,90,60,.35);color:#ffb59a;margin-top:14px"><strong>'+un.length+' Hubstaff clients tracked hours but match no Closed Won deal</strong>, so nobody is credited for them: '
+        +un.map(function(u){return esc(u.client)+' ('+hrs(u.hours)+')';}).join(', ')
+        +'. Map each to a deal id in the residual:clientmap hash, or confirm no deal exists.</div>'
+      : '';
+    var oow=(d.outOfWindow||{});
+    var oowNote = oow.hours ? '<div class="note" style="margin-top:10px">'+hrs(oow.hours)+' across '+oow.clients+' clients fall outside the '+(d.residualMonths||6)+'-month window and earn nothing. They are counted here so the totals reconcile rather than quietly disappearing.</div>' : '';
+
+    app.innerHTML=head+scheduleBar(d)+totalCards
+      +(d.reps||[]).map(function(r){
+        return '<div class="panel" style="margin-top:18px"><div class="ph"><h2>'+esc(r.name)+'</h2>'
+          +'<span class="meta">'+(r.perHour!=null?money(r.perHour)+'/hr':'no rate set')+' &middot; owed '+money(r.owed)+' &middot; '+hrs(r.totalHours)+'</span></div>'
+          +periodRows(r,true)+(r.note?'<div class="note" style="color:#ffb59a">'+esc(r.note)+'</div>':'')+'</div>';
+      }).join('')
+      +unmatchedNote+oowNote;
+
+    [].forEach.call(document.querySelectorAll('.mark'),function(b){
+      b.addEventListener('click',async function(){
+        var was=b.textContent; b.textContent='Saving...'; b.disabled=true;
+        var body={repEmail:b.dataset.rep,periodIndex:Number(b.dataset.idx),amount:Number(b.dataset.amt)};
+        if(b.dataset.paid==='1') body.paid=false;
+        var r=await fetch('/api/residuals/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(!r.ok){ b.textContent=was; b.disabled=false; alert('Could not save that. '+r.status); return; }
+        await load();
+      });
+    });
+  }
+
+  async function load(){
+    var app=document.getElementById('app');
+    var meRes=await fetch('/api/auth-me/',{cache:'no-store'});
+    var me=meRes.status===200?await meRes.json():null;
+    ME=me&&me.rep?me.rep:me;
+    ADMIN=!!(ME&&ME.role==='admin');
+    var url='/api/residuals/'+(ADMIN?'?view=admin':'');
+    try{ var r=await fetch(url,{cache:'no-store'}); D=await r.json(); }
+    catch(e){ app.innerHTML='<div class="empty">Could not load. Try refresh.</div>'; return; }
+    if(D&&D.error==='login_required'){ app.innerHTML='<div class="notice"><h3>Sign in</h3><p>Open <a href="/commissions/">Commissions</a> and sign in, then come back.</p></div>'; return; }
+    render();
+  }
+  load();
+})();
+</script>
+</body>
+</html>
