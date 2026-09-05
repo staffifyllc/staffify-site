@@ -73,7 +73,7 @@ async function batchAssocProp(headers, dealIds, toType, prop) {
 }
 
 // ---- HubSpot: Closed Won deals + their owner and client (paginated) ----
-async function loadHubspotWon(ownerIdToRep = {}) {
+export async function loadHubspotWon(ownerIdToRep = {}) {
     const token = process.env.HUBSPOT_TOKEN;
     if (!token) return { configured: false, deals: [] };
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };

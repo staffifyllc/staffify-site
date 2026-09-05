@@ -139,10 +139,16 @@ export async function hoursByClient({ start, stop }) {
                 const pid = d.project_id;
                 if (!pid) return;
                 const k = String(pid);
-                const rec = byProject[k] || (byProject[k] = { projectId: pid, name: projects[pid] || `project ${pid}`, seconds: 0, vas: new Set(), days: new Set() });
+                const rec = byProject[k] || (byProject[k] = { projectId: pid, name: projects[pid] || `project ${pid}`, seconds: 0, vas: new Set(), days: new Set(), byDay: {} });
                 rec.seconds += Number(d.tracked) || 0;
                 if (d.user_id) rec.vas.add(d.user_id);
-                if (d.date) rec.days.add(d.date);
+                if (d.date) {
+                    rec.days.add(d.date);
+                    // Per-day seconds, so hours can be bucketed into pay periods and weeks later.
+                    // Aggregate first and you cannot tell which fortnight the work fell in, and the
+                    // fortnight is what gets paid.
+                    rec.byDay[d.date] = (rec.byDay[d.date] || 0) + (Number(d.tracked) || 0);
+                }
             });
             cursor = (a.data.pagination && a.data.pagination.next_page_start_id) || '';
             pages++;
@@ -157,6 +163,7 @@ export async function hoursByClient({ start, stop }) {
             hours: Math.round((r.seconds / 3600) * 10) / 10,
             vaCount: r.vas.size,
             daysWorked: r.days.size,
+            byDay: r.byDay,
         }))
         .sort((a, b) => b.hours - a.hours);
 
