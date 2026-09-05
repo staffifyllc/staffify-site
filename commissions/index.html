@@ -259,13 +259,16 @@
     var ready=(Number(t.payableCommission)||0)+resOwed;
     var pending=(Number(t.pendingCommission)||0)+resAcc;
     var paid=(Number(t.paidOutCommission)||0)+resPaid;
+    // A residual fortnight only counts as an item when it carries money. With no rate on file every
+    // period is 'owed' at $0, and reporting '8 ready to pay' next to '$0' reads as a broken page.
+    var pn=function(st){return (res.periods||[]).filter(function(p){return p.status===st&&(Number(p.amount)||0)>0;}).length;};
     return {
       total: earnedComm+resOwed+resAcc+resPaid,
-      ready:ready, readyN:(t.payableCount||0)+((res.periods||[]).filter(function(p){return p.status==='owed';}).length),
-      pending:pending, pendingN:(t.pendingCount||0)+((res.periods||[]).filter(function(p){return p.status==='accruing';}).length),
-      paid:paid, paidN:(t.paidOutCount||0)+((res.periods||[]).filter(function(p){return p.status==='paid';}).length),
+      ready:ready, readyN:(t.payableCount||0)+pn('owed'),
+      pending:pending, pendingN:(t.pendingCount||0)+pn('accruing'),
+      paid:paid, paidN:(t.paidOutCount||0)+pn('paid'),
       next:{ date:(R&&R.schedule&&R.schedule.nextPayDate)||null, covers:(R&&R.schedule&&R.schedule.nextCovers)||null, amount:ready,
-             items:deals.filter(function(d){return d.status==='payable';}).length+((res.periods||[]).filter(function(p){return p.status==='owed';}).length) },
+             items:deals.filter(function(d){return d.status==='payable';}).length+pn('owed') },
       deals:deals, res:res
     };
   }
@@ -416,7 +419,7 @@
 
   function payoutsTab(){
     var M=model(), nx=M.next, res=M.res, ready=M.deals.filter(function(d){return d.status==='payable';});
-    var owedP=(res.periods||[]).filter(function(p){return p.status==='owed';});
+    var owedP=(res.periods||[]).filter(function(p){return p.status==='owed'&&(Number(p.amount)||0)>0;});
     var html='<div class="panel"><div class="ph"><h2>Next payout'+(nx.date?' &middot; '+longd(nx.date):'')+'</h2><span class="m">'+money(nx.amount,true)+' estimated</span></div><div class="pl">';
     if(!ready.length&&!owedP.length) html+='<div class="empty"><b>Nothing is confirmed for this payout yet</b>'+(C&&C.qboConnected===false?'Client payments cannot be confirmed until QuickBooks is connected, so no commission can be marked ready.':'Commissions move here once the client pays. Residuals move here when the fortnight closes.')+'</div>';
     ready.forEach(function(d){html+='<button class="prow" data-open="'+esc(d.dealId)+'"><div><div class="d">'+esc(d.client)+'</div><div class="c">Commission &middot; client paid'+(d.paidDate?' '+nice(d.paidDate):'')+'</div></div><div class="a">'+money(d.commission,true)+'</div></button>';});
