@@ -769,12 +769,66 @@ export default async function handler(req, res) {
         return res.status(200).json({
             connected: true, view: 'admin', qboConnected: !!qbo.connected, qboError: qbo.error || '',
             blockers, residuals,
+            byRep: ranked,
             truncated: { hubspot: !!hs.truncated, qbo: !!(qbo && qbo.truncated) },
             payoutScan: { vendorsMatched: payouts.vendorsMatched || 0, scanned: payouts.scanned || 0, tagged: payouts.tagged || 0, tag: payouts.tag || 'commission' },
             reps: reps.map(r => ({ email: (r.email || '').toLowerCase(), name: r.name || r.email })),
             customers: custList, counts, deals: lines,
         });
     }
+
+    // ---- Team ranking, and the per-rep roll-up admins see ----
+    //
+    // Paul, 2026-09-04: he sees everything for every salesperson; a rep sees only their own detail
+    // plus a team ranking.
+    //
+    // ACCESS DECISION, stated so nobody has to guess it later. The ranking a REP sees is built on
+    // PRODUCTION (deals won, revenue closed, hours placed), never on a peer's commission dollars or
+    // their rate. On a sales floor who is winning is public and what each person is paid is not, and
+    // rates differ between reps, so publishing earnings publishes the comp plan. A rep always sees
+    // their OWN money in full. Admins see everyone's money. Flip PEER_EARNINGS to true if that
+    // changes.
+    const PEER_EARNINGS = process.env.COMMISSION_PUBLIC_EARNINGS === 'true';
+
+    const agg = {};
+    const bucket = (email) => agg[email] || (agg[email] = {
+        repEmail: email, name: '', deals: 0, revenue: 0, commission: 0,
+        payable: 0, pending: 0, paidOut: 0, hours: 0, residual: 0,
+    });
+    lines.forEach(l => {
+        if (!l.repEmail) return;
+        const t = bucket(l.repEmail);
+        t.deals++;
+        t.revenue += Number(l.base) || 0;
+        t.commission += Number(l.commission) || 0;
+        if (l.status === 'payable') t.payable += Number(l.commission) || 0;
+        else if (l.status === 'paid_out') t.paidOut += Number(l.commission) || 0;
+        else t.pending += Number(l.commission) || 0;
+    });
+    (residuals.lines || []).forEach(l => {
+        if (!l.repEmail) return;
+        const t = bucket(l.repEmail);
+        t.hours += Number(l.hours) || 0;
+        t.residual += Number(l.residual) || 0;
+    });
+    reps.forEach(r => { const t = agg[(r.email || '').toLowerCase()]; if (t) t.name = r.name || r.email; });
+    // A rep with no closed deals still belongs on the board, at the bottom, rather than vanishing.
+    reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e && !agg[e]) { const t = bucket(e); t.name = r.name || r.email; } });
+
+    const ranked = Object.values(agg)
+        .map(t => ({ ...t, revenue: round(t.revenue), commission: round(t.commission),
+                     payable: round(t.payable), pending: round(t.pending), paidOut: round(t.paidOut),
+                     hours: Math.round(t.hours * 10) / 10, residual: Math.round(t.residual * 100) / 100 }))
+        .sort((a, b) => b.revenue - a.revenue || b.deals - a.deals)
+        .map((t, i) => ({ rank: i + 1, ...t }));
+
+    // What a rep is allowed to see about everyone else.
+    const publicRanking = (meEmail) => ranked.map(t => {
+        const isMe = t.repEmail === meEmail;
+        const row = { rank: t.rank, name: t.name || t.repEmail, deals: t.deals, revenue: t.revenue, hours: t.hours, isMe };
+        if (isMe || PEER_EARNINGS) { row.commission = t.commission; row.payable = t.payable; row.residual = t.residual; }
+        return row;
+    });
 
     // ---- Rep view ----
     if (!who || !who.email) return res.status(401).json({ error: 'login_required' });
@@ -806,6 +860,8 @@ export default async function handler(req, res) {
             windowStart: resStart, windowEnd: today,
             clients: myResiduals.map(l => ({ client: l.client, hours: l.hours, vaCount: l.vaCount, residual: l.residual, note: l.note })),
         },
+        team: publicRanking(meEmail),
+        teamMetric: PEER_EARNINGS ? 'earnings visible' : 'ranked on revenue closed; peer earnings hidden',
         totals: {
             payableCount, payableCommission: round(payableCommission),
             pendingCount, pendingCommission: round(pendingCommission),

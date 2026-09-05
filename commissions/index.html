@@ -225,6 +225,22 @@
     var adminBtn=isAdmin?'<button class="toggle" id="admToggle">'+(ADMIN_OPEN?'Hide deal admin':'Deal admin (attribution + payouts)')+'</button>':'';
     var body=head+cards+
       '<div class="panel"><div class="ph"><h2>Your deals</h2><span class="meta">'+deals.length+' total</span></div>'+rows+qNote+'</div>'+
+      // Team board. Everyone sees where they stand; peer earnings are deliberately not shown.
+      ((j.team&&j.team.length>1)
+        ? '<div class="panel" style="margin-top:22px"><div class="ph"><h2>Team</h2><span class="meta">'+esc(j.teamMetric||'')+'</span></div>'
+          +'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Rep</th><th class="num">Deals won</th><th class="num">Revenue closed</th><th class="num">VA hours</th><th class="num">Your earnings</th></tr></thead><tbody>'
+          +j.team.map(function(m){
+              return '<tr'+(m.isMe?' style="background:rgba(56,189,248,.07)"':'')+'>'
+                +'<td class="num">'+m.rank+'</td>'
+                +'<td><div class="cl-name">'+esc(m.name)+(m.isMe?' <span class="pill type">you</span>':'')+'</div></td>'
+                +'<td class="num">'+(m.deals||0)+'</td>'
+                +'<td class="num">'+money(m.revenue)+'</td>'
+                +'<td class="num">'+(m.hours||0)+'</td>'
+                +'<td class="num">'+(m.commission!=null?'<span class="money">'+money(m.commission)+'</span>':'<span style="opacity:.4">&mdash;</span>')+'</td>'
+                +'</tr>';
+            }).join('')
+          +'</tbody></table></div></div>'
+        : '')+
       '<div class="note">Commission is calculated after card processing fees, so a card payment nets a little less than an ACH or a cheque for the same invoice. If a client is refunded, the commission on that deal is reversed. Shown here: the onboarding commission on deals you closed, earned as the client actually pays, including across instalments. The $1/hr residual, the 40% strong-month accelerator, and the $200 90-day retention bonus are coming next (they need placement hours from the billing side).</div>'+
       (adminBtn?'<div style="margin-top:20px">'+adminBtn+'</div><div id="admPanel"></div>':'');
     app.innerHTML=body;
@@ -266,7 +282,22 @@
           : '<label style="font-size:12px;color:var(--muted);white-space:nowrap"><input type="checkbox" class="a-paid"'+(dl.status==='paid_out'?' checked':'')+(dl.status==='pending'?' disabled':'')+'> paid out</label>'+(dl.payoutMode==='manual'&&dl.status!=='pending'?'<div class="sug">payroll, mark by hand</div>':''))+'</td>'+
         '<td class="num"><button class="save">Save</button>'+resetBtn+'</td></tr>';
     }).join('');
-    panel.innerHTML='<div class="panel"><div class="ph"><h2>Closed Won deals</h2><span class="meta">'+(c.deals||0)+' deals &middot; '+(c.payable||0)+' payable &middot; '+(c.pending||0)+' pending</span></div>'+
+    // Every salesperson's full picture, which is what an admin needs and a rep must not have.
+    var byRep=(d.byRep||[]);
+    var repRoll = byRep.length
+      ? '<div class="panel" style="margin-bottom:18px"><div class="ph"><h2>Every salesperson</h2><span class="meta">'+byRep.length+' reps</span></div>'
+        +'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Rep</th><th class="num">Deals</th><th class="num">Revenue</th><th class="num">Commission</th><th class="num">Payable</th><th class="num">Pending</th><th class="num">Paid out</th><th class="num">VA hrs</th><th class="num">Residual</th></tr></thead><tbody>'
+        +byRep.map(function(m){
+            return '<tr><td class="num">'+m.rank+'</td>'
+              +'<td><div class="cl-name">'+esc(m.name||m.repEmail)+'</div><div class="cl-sub">'+esc(m.repEmail)+'</div></td>'
+              +'<td class="num">'+m.deals+'</td><td class="num">'+money(m.revenue)+'</td>'
+              +'<td class="num"><span class="money">'+money(m.commission)+'</span></td>'
+              +'<td class="num">'+money(m.payable)+'</td><td class="num">'+money(m.pending)+'</td><td class="num">'+money(m.paidOut)+'</td>'
+              +'<td class="num">'+(m.hours||0)+'</td><td class="num">'+money(m.residual)+'</td></tr>';
+          }).join('')
+        +'</tbody></table></div></div>'
+      : '';
+    panel.innerHTML=repRoll+'<div class="panel"><div class="ph"><h2>Closed Won deals</h2><span class="meta">'+(c.deals||0)+' deals &middot; '+(c.payable||0)+' payable &middot; '+(c.pending||0)+' pending</span></div>'+
       qNote+
       ((d.payoutScan&&d.payoutScan.vendorsMatched&&!d.payoutScan.tagged)?'<div class="note" style="margin-bottom:10px">Auto-settle found '+d.payoutScan.scanned+' payment(s) to rep vendors but none tagged as commission, so nothing was settled automatically. Put the word "'+esc(d.payoutScan.tag)+'" in the memo of a commission payment and it settles itself. Base pay and reimbursements are deliberately ignored.</div>':'')+
       ((c.unmapped||c.unmatched)?'<div class="note" style="margin-bottom:10px">'+(c.unmapped?(c.unmapped+' deal(s) have an owner who is not a registered rep. '):'')+(c.unmatched?(c.unmatched+' deal(s) have no QuickBooks customer match. '):'')+'Fix with the dropdowns below.</div>':'')+
