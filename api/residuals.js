@@ -85,7 +85,9 @@ export default async function handler(req, res) {
 
     const [reps, paidRaw] = await Promise.all([
         listReps().catch(() => []),
-        redis.hgetall(PAID_KEY).catch(() => ({})),
+        // hgetall RESOLVES to null when the hash does not exist, so .catch() never fires.
+        // Coalesce, or the first read on a fresh install throws on a null lookup.
+        redis.hgetall(PAID_KEY).then(v => v || {}).catch(() => ({})),
     ]);
     const ownerIdToRep = {};
     reps.forEach(r => {
@@ -100,7 +102,7 @@ export default async function handler(req, res) {
 
     const [hs, manualMap] = await Promise.all([
         loadHubspotWon(ownerIdToRep).catch(() => ({ deals: [] })),
-        redis.hgetall(MAP_KEY).catch(() => ({})),
+        redis.hgetall(MAP_KEY).then(v => v || {}).catch(() => ({})),
     ]);
     const hours = await hoursByClient({ start, stop }).catch(e => ({ connected: false, error: String(e).slice(0, 120), clients: [] }));
     if (!hours.connected) {
