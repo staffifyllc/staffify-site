@@ -543,6 +543,9 @@
     var pr=fetch('/api/residuals/',{cache:'no-store'}).then(function(r){return r.json();}).catch(function(){return {connected:false,error:'Network error loading residuals.'};});
     var out=await Promise.all([pc,pr]); C=out[0]; R=out[1]; LOADED_AT=new Date().toISOString();
     render();
+    // Deep links straight into an admin tab arrived at a skeleton that never resolved, because the
+    // admin fetch only fired on a tab click. Kick it off here too.
+    if((TAB==='team'||TAB==='exceptions')&&isAdmin()&&!ADM) loadAdmin();
   }
   async function load(){
     app.innerHTML=skeleton(); tbRight.innerHTML='';
