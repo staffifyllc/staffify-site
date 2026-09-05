@@ -770,6 +770,7 @@ export default async function handler(req, res) {
             connected: true, view: 'admin', qboConnected: !!qbo.connected, qboError: qbo.error || '',
             blockers, residuals,
             byRep: ranked,
+            generatedAt: new Date().toISOString(),
             truncated: { hubspot: !!hs.truncated, qbo: !!(qbo && qbo.truncated) },
             payoutScan: { vendorsMatched: payouts.vendorsMatched || 0, scanned: payouts.scanned || 0, tagged: payouts.tagged || 0, tag: payouts.tag || 'commission' },
             reps: reps.map(r => ({ email: (r.email || '').toLowerCase(), name: r.name || r.email })),
@@ -867,9 +868,20 @@ export default async function handler(req, res) {
             pendingCount, pendingCommission: round(pendingCommission),
             paidOutCount, paidOutCommission: round(paidOutCommission),
         },
+        // Every field below is already computed on the line; this only stops the rep view dropping
+        // them on the way out. A rep asking "how was $842 reached" needs gross, fee, rate, lead
+        // source and the instalment picture, not just the final number. No economics change here.
         deals: mine.map(l => ({
-            client: l.client, dealType: l.dealType, base: l.base, rate: l.rate, commission: l.commission,
-            status: l.status, closeDate: l.closeDate, paidDate: l.paidDate, invoicePaid: l.invoicePaid, customerMatched: l.customerMatched,
+            dealId: l.dealId, client: l.client, company: l.company, dealType: l.dealType,
+            gross: l.gross, fee: l.fee, base: l.base, rate: l.rate, commission: l.commission,
+            leadSource: l.leadSource, splitPlan: l.splitPlan, flat: l.flat != null ? l.flat : null,
+            clawback: l.clawback || 0, status: l.status, closeDate: l.closeDate, paidDate: l.paidDate,
+            invoicePaid: l.invoicePaid, customerMatched: l.customerMatched,
+            instalment: !!l.instalment, invoiceTotal: l.invoiceTotal, invoiceReceived: l.invoiceReceived,
+            invoiceBalance: l.invoiceBalance, outstanding: l.outstanding, remainingCommission: l.remainingCommission,
+            paymentSchedule: l.paymentSchedule || [],
+            override: l.override ? { amount: l.override.amount, rep: l.override.rep, leadSource: l.override.leadSource, paidOut: !!l.override.paidOut } : null,
         })),
+        generatedAt: new Date().toISOString(),
     });
 }

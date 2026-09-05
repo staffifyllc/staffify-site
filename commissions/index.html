@@ -10,80 +10,199 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green:#1d9e75; --green-hi:#7ef5c2; }
-        .grad { background: linear-gradient(100deg, var(--cyan-hi) 0%, var(--cyan) 45%, var(--cyan-dark) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
-        .eyebrow { display:flex; align-items:center; gap:12px; font-size:12px; font-weight:800; letter-spacing:0.3em; color:var(--cyan); text-transform:uppercase; margin-bottom:14px; }
-        .eyebrow::before { content:''; width:30px; height:2px; background:linear-gradient(90deg, var(--cyan), transparent); }
-        body { font-family:"Inter",-apple-system,sans-serif; background: radial-gradient(1000px 600px at 90% -5%, rgba(26,189,225,0.08), transparent 60%), radial-gradient(800px 600px at -10% 40%, rgba(13,86,164,0.10), transparent 55%), var(--bg); color:var(--white); line-height:1.5; -webkit-font-smoothing:antialiased; min-height:100vh; }
-        .topbar { position:sticky; top:0; z-index:10; background:rgba(5,5,7,0.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--card-border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-        .topbar img { height:24px; }
-        .nav { display:flex; gap:6px; flex-wrap:wrap; }
-        .nav a { font-size:13px; font-weight:700; color:var(--muted); text-decoration:none; padding:8px 14px; border-radius:999px; }
-        .nav a.active { color:var(--cyan-hi); background:rgba(26,189,225,0.10); }
-        .nav a:hover { color:var(--white); }
-        @media (max-width: 980px) { .topbar { flex-wrap:wrap; } .nav { order:3; flex-basis:100%; justify-content:center; margin-top:6px; } }
-        .tb-right { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); }
-        .btn { font-size:13px; font-weight:700; color:#04222b; background:var(--cyan); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; text-decoration:none; }
-        .btn:hover { background:var(--cyan-hi); }
-        .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
-        .btn-ghost:hover { color:var(--white); }
-        .wrap { max-width:1000px; margin:0 auto; padding:28px; }
-        h1 { font-size:28px; font-weight:900; letter-spacing:-0.02em; margin-bottom:4px; }
-        .sub { font-size:14.5px; color:var(--muted); margin-bottom:24px; }
-        .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
-        @media (max-width:720px){ .cards { grid-template-columns:1fr; } }
-        .kcard { background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:18px 20px; }
-        .kcard .l { font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
-        .kcard .n { font-size:30px; font-weight:900; letter-spacing:-0.02em; }
-        .kcard .s { font-size:12.5px; color:var(--muted); margin-top:4px; }
-        .panel { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-bottom:18px; }
-        .ph { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-        .ph h2 { font-size:13px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:var(--cyan); }
-        .ph .meta { font-size:12.5px; color:var(--muted); }
-        table { width:100%; border-collapse:collapse; font-size:14px; }
-        th { text-align:left; font-size:10.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); padding:0 10px 10px; border-bottom:1px solid var(--card-border); }
-        th.num, td.num { text-align:right; }
-        td { padding:12px 10px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:middle; }
-        tr:last-child td { border-bottom:none; }
-        .cl-name { font-weight:700; }
-        .cl-sub { font-size:12px; color:var(--muted); }
-        .pill { font-size:10.5px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; white-space:nowrap; }
-        .pill.paid { color:var(--green-hi); background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
-        .pill.pending { color:#ffd98a; background:rgba(241,196,15,0.12); border:1px solid rgba(241,196,15,0.3); }
-        .pill.done { color:#9ba1ab; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); }
-        .pill.type { color:var(--cyan-hi); background:rgba(26,189,225,0.08); border:1px solid rgba(26,189,225,0.3); }
-        .money { font-weight:800; color:var(--green-hi); }
-        .note { font-size:13px; color:var(--muted); line-height:1.6; }
-        .notice { background:rgba(241,196,15,0.06); border:1px solid rgba(241,196,15,0.25); border-radius:14px; padding:18px 20px; margin-bottom:20px; }
-        .notice h3 { font-size:15px; font-weight:800; color:#ffd98a; margin-bottom:6px; }
-        .notice p { font-size:13.5px; color:#d7dde2; line-height:1.6; }
-        .gate { max-width:440px; margin:60px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
-        .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; }
-        .gate p { font-size:14px; color:var(--muted); margin-bottom:20px; }
-        .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
-        .gate input:focus { outline:none; border-color:var(--cyan); }
-        .gate .btn { width:100%; padding:13px; font-size:15px; }
-        .gbtn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
-                padding:13px; margin-bottom:16px; font-family:inherit; font-size:15px; font-weight:800;
-                color:#1f1f1f; background:#fff; border:1px solid #dadce0; border-radius:10px;
-                text-decoration:none; cursor:pointer; }
-        .gbtn:hover { background:#f7f8f8; }
-        .gbtn svg { flex:0 0 auto; }
-        .or { display:flex; align-items:center; gap:10px; margin:0 0 14px; font-size:12px;
-              color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
-        .or::before, .or::after { content:''; flex:1; height:1px; background:var(--card-border); }
-        .err { color:#ff9a8d; font-size:13px; margin-top:10px; min-height:18px; }
-        .empty { color:var(--muted); font-size:14px; padding:24px 4px; text-align:center; }
-        /* admin assign */
-        .adm select, .adm input { font-family:inherit; font-size:13px; color:var(--white); background:rgba(255,255,255,0.05); border:1px solid var(--card-border); border-radius:8px; padding:7px 9px; }
-        .adm input { width:96px; }
-        .adm .save { font-size:12px; font-weight:800; color:#04222b; background:var(--cyan); border:none; border-radius:8px; padding:7px 12px; cursor:pointer; }
-        .adm .save:disabled { opacity:.6; cursor:default; }
-        .adm .sug { font-size:11.5px; color:var(--cyan-hi); }
-        .toggle { font-size:12.5px; color:var(--cyan-hi); cursor:pointer; font-weight:700; background:none; border:none; }
-    </style>
+    
+<style>
+  /* ---- tokens: the rep OS system, unchanged. Semantic colour is separate from the brand accent. ---- */
+  :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); --green:#1d9e75; --green-hi:#7ef5c2;
+          --ink:#f3f5f7; --sub:#c7cdd3; --faint:#6f7883; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+          --ok:#5fe0b0; --ok-bg:rgba(29,158,117,.14); --warn:#ffcf70; --warn-bg:rgba(241,196,15,.12); --bad:#ff9a8f; --bad-bg:rgba(226,90,60,.14); --info:#8fd6ff; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Inter",-apple-system,sans-serif;background:radial-gradient(1000px 600px at 90% -5%,rgba(26,189,225,.07),transparent 60%),radial-gradient(800px 600px at -10% 40%,rgba(13,86,164,.09),transparent 55%),var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .grad{background:linear-gradient(100deg,var(--cyan-hi) 0%,var(--cyan) 45%,var(--cyan-dark) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+  :focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* topbar, as the rest of the OS */
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(5,5,7,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;align-items:center;gap:14px}
+  .topbar img{height:22px}
+  .nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;-webkit-overflow-scrolling:touch}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:8px 11px;border-radius:8px;white-space:nowrap;min-height:36px;display:inline-flex;align-items:center}
+  .nav a.active{color:var(--white);background:rgba(26,189,225,.12)}
+  .tb-right{margin-left:auto;flex-shrink:0}
+  .btn{font:inherit;font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer;min-height:38px;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:rgba(255,255,255,.3)}
+  .btn.primary{background:linear-gradient(100deg,var(--cyan),var(--cyan-dark));border:0;color:#03141c}
+  .btn.small{padding:6px 10px;min-height:32px;font-size:12px;border-radius:7px}
+  .btn.ghost{border-color:transparent;color:var(--muted)}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 22px 80px}
+
+  /* ---- hierarchy: one number dominates, then four supporting figures, then everything else ---- */
+  .hero{display:grid;grid-template-columns:1.4fr 1fr;gap:28px;align-items:end;margin:8px 0 26px}
+  .eyebrow{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:.24em;color:var(--cyan);text-transform:uppercase;margin-bottom:10px}
+  .eyebrow::before{content:'';width:22px;height:2px;background:linear-gradient(90deg,var(--cyan),transparent)}
+  .hero .big{font-size:clamp(40px,7vw,64px);font-weight:800;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+  .hero .sub{color:var(--muted);font-size:14px;margin-top:10px;max-width:46ch}
+  .hero .sub b{color:var(--sub);font-weight:600}
+  .next{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:18px 20px;cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
+  .next:hover{border-color:rgba(26,189,225,.4)}
+  .next .l{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .next .d{font-size:20px;font-weight:700;margin-top:6px;letter-spacing:-.01em}
+  .next .a{font-size:30px;font-weight:800;letter-spacing:-.03em;margin-top:2px;font-variant-numeric:tabular-nums}
+  .next .s{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .next .est{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warn-bg);padding:2px 7px;border-radius:5px;margin-left:6px;vertical-align:2px}
+
+  .strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:26px}
+  .kpi{background:transparent;border:1px solid var(--line);border-radius:14px;padding:16px 18px;text-align:left;color:inherit;font:inherit;cursor:pointer;min-height:96px}
+  .kpi:hover{border-color:var(--line2);background:var(--card)}
+  .kpi .l{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .kpi .l i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .kpi .n{font-size:26px;font-weight:800;letter-spacing:-.025em;margin-top:8px;font-variant-numeric:tabular-nums}
+  .kpi .c{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .i-ok{background:var(--ok)} .i-warn{background:var(--warn)} .i-paid{background:var(--cyan)}
+
+  /* holdups: the rep's translation of exceptions */
+  .hold{border:1px solid rgba(241,196,15,.3);background:var(--warn-bg);border-radius:14px;padding:16px 18px;margin-bottom:22px}
+  .hold h3{font-size:14px;font-weight:700;color:var(--warn);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .hold ul{list-style:none;display:grid;gap:8px}
+  .hold li{font-size:13.5px;color:var(--sub);display:grid;grid-template-columns:auto 1fr;gap:10px}
+  .hold li b{color:var(--ink);font-weight:600}
+  .hold .fix{color:var(--muted);font-size:12.5px;margin-top:2px}
+
+  /* pipeline */
+  .pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:28px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .stage{padding:14px 16px;border-right:1px solid var(--line);position:relative;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+  .stage:last-child{border-right:0}
+  .stage:hover{background:var(--card)}
+  .stage .t{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .stage .v{font-size:18px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .stage .k{font-size:12px;color:var(--muted)}
+  .stage::after{content:'›';position:absolute;right:-7px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:18px;z-index:1;background:var(--bg);padding:0 3px}
+  .stage:last-child::after{display:none}
+
+  /* tabs */
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto;scrollbar-width:none}
+  .tabs button{font:inherit;font-size:13.5px;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;cursor:pointer;white-space:nowrap;min-height:42px}
+  .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--cyan)}
+  .tabs button .n{font-size:11px;color:var(--faint);margin-left:5px;font-weight:600}
+
+  /* toolbar */
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+  .search{flex:1;min-width:180px;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:0 12px;min-height:38px}
+  .search input{flex:1;background:none;border:0;color:var(--ink);font:inherit;font-size:13.5px;outline:none;min-width:0}
+  .search input::placeholder{color:var(--faint)}
+  .chip{font:inherit;font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;min-height:34px}
+  .chip[aria-pressed="true"]{color:var(--ink);border-color:var(--cyan);background:rgba(26,189,225,.1)}
+  select.range{font:inherit;font-size:12.5px;font-weight:600;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:0 10px;min-height:38px;cursor:pointer}
+  .active-f{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .active-f button{font:inherit;font-size:12px;color:var(--cyan);background:none;border:0;cursor:pointer;text-decoration:underline;padding:4px 0}
+
+  /* table */
+  .tbl{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:rgba(255,255,255,.02)}
+  td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr.row{cursor:pointer}
+  tr.row:hover td{background:rgba(255,255,255,.025)}
+  tr.row[aria-expanded="true"] td{background:rgba(26,189,225,.05)}
+  tr:last-child td{border-bottom:0}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cl{font-weight:600;color:var(--ink)}
+  .cl-s{font-size:12px;color:var(--muted);margin-top:2px}
+  .money{font-weight:700;letter-spacing:-.01em}
+  .st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:7px;white-space:nowrap}
+  .st i{width:7px;height:7px;border-radius:50%}
+  .st.good{color:var(--ok);background:var(--ok-bg)} .st.good i{background:var(--ok)}
+  .st.warn{color:var(--warn);background:var(--warn-bg)} .st.warn i{background:var(--warn)}
+  .st.bad{color:var(--bad);background:var(--bad-bg)} .st.bad i{background:var(--bad)}
+  .st.paid{color:var(--cyan-hi);background:rgba(26,189,225,.12)} .st.paid i{background:var(--cyan)}
+  .caret{color:var(--faint);font-size:12px;transition:transform .15s;display:inline-block}
+  tr.row[aria-expanded="true"] .caret{transform:rotate(90deg)}
+
+  /* detail drawer under a row */
+  tr.detail td{padding:0;border-bottom:1px solid var(--line);background:rgba(255,255,255,.015)}
+  .det{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;padding:18px 20px 20px}
+  .det h4{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .calc{display:grid;gap:0;font-size:13.5px}
+  .calc div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .calc div:last-child{border-bottom:0;border-top:1px solid var(--line2);margin-top:4px;padding-top:10px;font-weight:700;color:var(--ink)}
+  .calc span:first-child{color:var(--sub)}
+  .calc .why{font-size:12px;color:var(--muted);display:block;margin-top:2px;font-weight:400}
+  .tl{display:grid;gap:9px;font-size:13px}
+  .tl div{display:grid;grid-template-columns:76px 1fr;gap:10px;align-items:baseline}
+  .tl time{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+  .tl .ev{color:var(--sub)}
+  .tl .ev b{color:var(--ink);font-weight:600}
+  .explain{font-size:13px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-top:12px}
+  .explain b{color:var(--ink)}
+  .sched{font-size:12.5px;color:var(--sub);margin-top:10px;display:grid;gap:4px}
+  .sched div{display:flex;justify-content:space-between;gap:10px}
+
+  /* panels + payouts */
+  .panel{border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden}
+  .ph{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .ph h2{font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .ph .m{font-size:12px;color:var(--muted)}
+  .pl{padding:6px 0}
+  .prow{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;color:inherit;font:inherit;width:100%;text-align:left}
+  .prow:last-child{border-bottom:0}
+  .prow:hover{background:rgba(255,255,255,.025)}
+  .prow .d{font-weight:600}
+  .prow .c{font-size:12px;color:var(--muted);margin-top:2px}
+  .prow .a{font-weight:700;font-variant-numeric:tabular-nums}
+
+  /* states */
+  .skel{background:linear-gradient(90deg,rgba(255,255,255,.05) 25%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.05) 75%);background-size:200% 100%;animation:sh 1.3s infinite;border-radius:8px}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .empty{padding:36px 20px;text-align:center;color:var(--muted);font-size:14px}
+  .empty b{color:var(--sub);display:block;margin-bottom:4px;font-weight:600}
+  .errbox{border:1px solid rgba(226,90,60,.4);background:var(--bad-bg);border-radius:14px;padding:20px 22px;margin:8px 0 24px}
+  .errbox h3{color:var(--bad);font-size:15px;margin-bottom:6px}
+  .errbox p{color:var(--sub);font-size:13.5px}
+  .fresh{font-size:11.5px;color:var(--faint);text-align:right;margin-top:-8px;margin-bottom:14px}
+  .note{font-size:12.5px;color:var(--muted);padding:12px 4px 0;line-height:1.55}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  /* sign-in */
+  .gate{max-width:420px;margin:60px auto;text-align:center}
+  .gate h2{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+  .gate p{color:var(--muted);font-size:14px;margin-bottom:22px}
+  .gbtn{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1f1f1f;font-weight:600;font-size:14px;border-radius:10px;padding:12px;text-decoration:none;margin-bottom:14px}
+  .or{color:var(--faint);font-size:12px;margin:10px 0}
+  .gate input{width:100%;background:var(--card);border:1px solid var(--line2);color:var(--ink);font:inherit;padding:12px 14px;border-radius:10px;margin-bottom:10px;outline:none}
+  .gate input:focus{border-color:var(--cyan)}
+  .gate .btn{width:100%;justify-content:center}
+  .err{color:var(--bad);font-size:13px;min-height:18px;margin-top:8px}
+
+  /* ---- mobile: not a shrunk desktop. Total stays first, table becomes cards, nav scrolls. ---- */
+  @media (max-width:820px){
+    .wrap{padding:20px 16px 70px}
+    .hero{grid-template-columns:1fr;gap:16px;margin-bottom:18px}
+    .strip{grid-template-columns:1fr 1fr;gap:8px}
+    .kpi{min-height:84px;padding:13px 14px} .kpi .n{font-size:22px}
+    .pipe{grid-template-columns:1fr 1fr}
+    .stage::after{display:none}
+    .stage:nth-child(-n+2){border-bottom:1px solid var(--line)}
+    .stage:nth-child(2){border-right:0}
+    .det{grid-template-columns:1fr;gap:18px;padding:14px 14px 16px}
+    /* table -> cards */
+    table,thead,tbody,tr,td{display:block}
+    thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+    tr.row{padding:12px 14px;border-bottom:1px solid var(--line)}
+    tr.row td{padding:3px 0;border:0;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+    tr.row td::before{content:attr(data-l);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+    tr.row td.first{display:block;margin-bottom:6px} tr.row td.first::before{display:none}
+    tr.row td.first .caret{float:right;margin-top:3px}
+    .num{text-align:left}
+    tr.detail td{display:block;padding:0}
+    .prow{grid-template-columns:1fr auto}
+    .prow .a{grid-column:2}
+  }
+  @media (max-width:420px){ .strip{grid-template-columns:1fr 1fr} .hero .big{font-size:42px} }
+</style>
+
     <script id="vtag-ai-js" async src="https://r2.leadsy.ai/tag.js" data-pid="17PMqPWtsqz2Rzt3y" data-version="062024"></script>
 </head>
 <body>
@@ -96,35 +215,302 @@
         <a href="/scoreboard/">Scoreboard</a>
         <a href="/pipeline/">Pipeline</a>
         <a href="/commissions/" class="active">Commissions</a>
-        <a href="/residuals/">Residuals</a>
         <a href="/training/sales/">Training</a>
         <a href="https://recruiting.gostaffify.com/dashboard" target="_blank" rel="noopener" style="border:1px solid var(--card-border); margin-left:8px;">Talent Console &#8599;</a>
     </nav>
     <div class="tb-right" id="tbRight"></div>
 </header>
 
-<div class="wrap" id="app"></div>
+<div class="wrap" id="app" aria-live="polite"></div>
 
 <script>
 (function(){
-  var app=document.getElementById('app');
-  var tbRight=document.getElementById('tbRight');
-  var ME=null, ADMIN_OPEN=false, ADMIN_DATA=null;
+  var app=document.getElementById('app'), tbRight=document.getElementById('tbRight');
+  var ME=null, C=null, R=null, ADM=null, TAB='overview', F={q:'',status:'',range:'all'}, OPEN={}, LOADED_AT=null;
 
-  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function money(n){ n=Number(n)||0; return '$'+n.toLocaleString(); }
+  // ---------- helpers ----------
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function money(n,cents){n=Number(n)||0;return '$'+n.toLocaleString('en-US',{minimumFractionDigits:cents?2:0,maximumFractionDigits:cents?2:0});}
+  function nice(s){if(!s)return '';var d=new Date(s.slice(0,10)+'T00:00:00Z');return isNaN(d)?'':d.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});}
+  function longd(s){if(!s)return '';var d=new Date(s.slice(0,10)+'T00:00:00Z');return isNaN(d)?'':d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',timeZone:'UTC'});}
+  function ago(iso){if(!iso)return '';var m=Math.round((Date.now()-Date.parse(iso))/60000);return m<1?'just now':(m<60?m+' min ago':Math.round(m/60)+' h ago');}
   function qp(k){return new URLSearchParams(location.search).get(k);}
-  function typeLabel(t){ return t==='website'?'Website':(t==='ai'?'AI automation':'VA placement'); }
-  function niceDate(s){ if(!s) return ''; var d=new Date(s+'T00:00:00'); if(isNaN(d)) return esc(s); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+  function typeLabel(t){return t==='website'?'Website build':(t==='ai'?'AI automation':'VA placement');}
+  function isAdmin(){return !!(ME&&ME.role==='admin');}
 
+  // The backend has four states. These are their honest, human names, with what each one means
+  // and what happens next. When QuickBooks is disconnected, "pending" cannot mean "waiting on the
+  // client", because we cannot see the client, so it gets a different label rather than a lie.
+  function statusInfo(d){
+    var qbo=C&&C.qboConnected;
+    if(d.status==='paid_out') return {k:'paid',label:'Paid',tone:'paid',why:'This commission was included in a payout.',next:''};
+    if(d.status==='clawed_back') return {k:'reversed',label:'Reversed',tone:'bad',why:'The client was refunded, so this commission was reversed. You do not keep a cut of money we gave back.',next:''};
+    if(d.status==='payable') return {k:'ready',label:'Ready to pay',tone:'good',why:'The client has paid'+(d.instalment?' part of the invoice':'')+', so this is earned and waiting for the next payout run.',next:'Included in the next payout.'};
+    if(!qbo) return {k:'unconfirmed',label:'Payment unconfirmed',tone:'warn',why:'Your commission is calculated, but QuickBooks is not connected so we cannot see whether the client has paid the invoice yet.',next:'Updates automatically once QuickBooks is connected.'};
+    return {k:'waiting',label:'Waiting on client',tone:'warn',why:'Your commission is calculated. It becomes payable when the client pays the invoice.',next:'Paid on the next run after the client pays.'};
+  }
+  function stPill(d){var s=statusInfo(d);return '<span class="st '+s.tone+'"><i aria-hidden="true"></i>'+esc(s.label)+'</span>';}
+
+  // ---------- money model, derived only from what the two APIs return ----------
+  function model(){
+    var deals=(C&&C.deals)||[], t=(C&&C.totals)||{}, res=(R&&R.me)||{};
+    var earnedComm=deals.filter(function(d){return d.status!=='clawed_back';}).reduce(function(a,d){return a+(Number(d.commission)||0);},0);
+    var resOwed=Number(res.owed)||0, resAcc=Number(res.accruing)||0, resPaid=Number(res.paidToDate)||0;
+    var ready=(Number(t.payableCommission)||0)+resOwed;
+    var pending=(Number(t.pendingCommission)||0)+resAcc;
+    var paid=(Number(t.paidOutCommission)||0)+resPaid;
+    return {
+      total: earnedComm+resOwed+resAcc+resPaid,
+      ready:ready, readyN:(t.payableCount||0)+((res.periods||[]).filter(function(p){return p.status==='owed';}).length),
+      pending:pending, pendingN:(t.pendingCount||0)+((res.periods||[]).filter(function(p){return p.status==='accruing';}).length),
+      paid:paid, paidN:(t.paidOutCount||0)+((res.periods||[]).filter(function(p){return p.status==='paid';}).length),
+      next:{ date:(R&&R.schedule&&R.schedule.nextPayDate)||null, covers:(R&&R.schedule&&R.schedule.nextCovers)||null, amount:ready,
+             items:deals.filter(function(d){return d.status==='payable';}).length+((res.periods||[]).filter(function(p){return p.status==='owed';}).length) },
+      deals:deals, res:res
+    };
+  }
+
+  // Rep-facing translation of everything that can hold money up. Built from real signals only.
+  function holdups(){
+    var out=[]; var res=(R&&R.me)||{};
+    if(C&&C.qboConnected===false) out.push({what:'We cannot confirm client payments yet',why:'QuickBooks is not connected, so every commission shows as unconfirmed even where the client has already paid.',fix:'Admin: connect QuickBooks. Nothing you need to do.'});
+    if(R&&R.connected===false) out.push({what:'VA hours are not available',why:esc(R.hint||R.error||'Hubstaff is not returning hours.'),fix:'Admin: reconnect Hubstaff.'});
+    if(R&&R.connected&&res.perHour==null&&(res.totalHours||0)>0) out.push({what:'Your residual rate is not set',why:(res.totalHours||0).toLocaleString()+' VA hours are tracked under your clients, but no per-hour rate is on your record, so they show as $0.',fix:'Ask Paul to set your residual rate.'});
+    var reversed=((C&&C.deals)||[]).filter(function(d){return d.status==='clawed_back';});
+    if(reversed.length) out.push({what:reversed.length+' commission'+(reversed.length>1?'s were':' was')+' reversed',why:'A client refund reverses the commission on that deal.',fix:'Open the deal for detail.'});
+    return out;
+  }
+
+  // ---------- filters ----------
+  function inRange(d){
+    if(F.range==='all'||!d.closeDate) return F.range==='all';
+    var c=d.closeDate.slice(0,10), now=new Date(), y=now.getUTCFullYear(), m=now.getUTCMonth();
+    function iso(dt){return dt.toISOString().slice(0,10);}
+    if(F.range==='period'){var cv=R&&R.schedule&&R.schedule.nextCovers;return !!cv&&c>=cv.start&&c<=cv.end;}
+    if(F.range==='month') return c>=iso(new Date(Date.UTC(y,m,1)));
+    if(F.range==='last'){var a=iso(new Date(Date.UTC(y,m-1,1))),b=iso(new Date(Date.UTC(y,m,1)));return c>=a&&c<b;}
+    if(F.range==='quarter') return c>=iso(new Date(Date.UTC(y,Math.floor(m/3)*3,1)));
+    if(F.range==='ytd') return c>=iso(new Date(Date.UTC(y,0,1)));
+    return true;
+  }
+  function filtered(){
+    var q=F.q.toLowerCase();
+    return ((C&&C.deals)||[]).filter(function(d){
+      if(F.status&&statusInfo(d).k!==F.status) return false;
+      if(!inRange(d)) return false;
+      if(q&&!((d.client||'')+' '+(d.company||'')).toLowerCase().includes(q)) return false;
+      return true;
+    }).sort(function(a,b){return String(b.closeDate||'').localeCompare(String(a.closeDate||''));});
+  }
+  function rangeLabel(){return {all:'All time',period:'This pay period',month:'This month',last:'Last month',quarter:'This quarter',ytd:'Year to date'}[F.range];}
+
+  // ---------- pieces ----------
+  function hero(M){
+    var nx=M.next;
+    return '<div class="hero">'
+      +'<div><div class="eyebrow">Total earned &middot; all time</div>'
+      +'<div class="big grad" aria-label="Total earned">'+money(M.total,true)+'</div>'
+      +'<div class="sub">Commission on deals you closed plus residuals on the hours your placed VAs work. <b>'+money(M.ready)+'</b> is confirmed, <b>'+money(M.pending)+'</b> is still pending, <b>'+money(M.paid)+'</b> has been paid.</div></div>'
+      +'<button class="next" data-tab="payouts" aria-label="Next payout, opens the payouts view">'
+      +'<div class="l">Next payout</div>'
+      +(nx.date?'<div class="d">'+longd(nx.date)+'</div>':'<div class="d">No run scheduled</div>')
+      +'<div class="a">'+money(nx.amount,true)+'<span class="est">estimated</span></div>'
+      +'<div class="s">'+(nx.items?nx.items+' item'+(nx.items===1?'':'s')+' ready. ':'Nothing is confirmed for this run yet. ')+'Commission pays on the run after the client pays, so this can grow before the date.</div>'
+      +'</button></div>';
+  }
+  function strip(M){
+    return '<div class="strip" role="group" aria-label="Commission summary">'
+      +'<button class="kpi" data-status="ready" data-tab="commissions"><div class="l"><i class="i-ok"></i>Confirmed</div><div class="n">'+money(M.ready)+'</div><div class="c">'+M.readyN+' ready to pay</div></button>'
+      +'<button class="kpi" data-status="'+(C&&C.qboConnected?'waiting':'unconfirmed')+'" data-tab="commissions"><div class="l"><i class="i-warn"></i>Pending</div><div class="n">'+money(M.pending)+'</div><div class="c">'+M.pendingN+' not yet payable</div></button>'
+      +'<button class="kpi" data-status="paid" data-tab="commissions"><div class="l"><i class="i-paid"></i>Paid</div><div class="n">'+money(M.paid)+'</div><div class="c">'+M.paidN+' paid out</div></button>'
+      +'</div>';
+  }
+  function holdBlock(){
+    var h=holdups(); if(!h.length) return '';
+    return '<section class="hold" aria-label="What is delaying your commission"><h3>What is holding up your money</h3><ul>'
+      +h.map(function(x){return '<li><b>'+esc(x.what)+'</b><span>'+x.why+'<div class="fix">'+esc(x.fix)+'</div></span></li>';}).join('')+'</ul></section>';
+  }
+  function pipeline(M){
+    var d=M.deals, t=(C&&C.totals)||{};
+    var won=d.filter(function(x){return x.status!=='clawed_back';});
+    var wonAmt=won.reduce(function(a,x){return a+(Number(x.commission)||0);},0);
+    var pendLabel=C&&C.qboConnected?'Waiting on client':'Payment unconfirmed';
+    return '<div class="pipe" role="group" aria-label="Where your commission is">'
+      +'<button class="stage" data-status="" data-tab="commissions"><div class="t">Deal won</div><div class="v">'+money(wonAmt)+'</div><div class="k">'+won.length+' deal'+(won.length===1?'':'s')+'</div></button>'
+      +'<button class="stage" data-status="'+(C&&C.qboConnected?'waiting':'unconfirmed')+'" data-tab="commissions"><div class="t">'+pendLabel+'</div><div class="v">'+money(t.pendingCommission||0)+'</div><div class="k">'+(t.pendingCount||0)+'</div></button>'
+      +'<button class="stage" data-status="ready" data-tab="commissions"><div class="t">Ready to pay</div><div class="v">'+money(t.payableCommission||0)+'</div><div class="k">'+(t.payableCount||0)+'</div></button>'
+      +'<button class="stage" data-status="paid" data-tab="commissions"><div class="t">Paid</div><div class="v">'+money(t.paidOutCommission||0)+'</div><div class="k">'+(t.paidOutCount||0)+'</div></button>'
+      +'</div>';
+  }
+  function tabs(){
+    var n=((C&&C.deals)||[]).length;
+    var b=function(id,label,count){return '<button role="tab" data-tab="'+id+'" aria-selected="'+(TAB===id)+'">'+label+(count!=null?'<span class="n">'+count+'</span>':'')+'</button>';};
+    return '<div class="tabs" role="tablist">'+b('overview','Overview')+b('commissions','Commissions',n)+b('payouts','Payouts')+(isAdmin()?b('team','Team')+b('exceptions','Exceptions'):'')+'</div>';
+  }
+
+  // ---------- commission detail: the "why is this number what it is" view ----------
+  function detail(d){
+    var s=statusInfo(d), rows=[];
+    var basis=d.instalment?'Collected so far':'Deal value';
+    if(d.flat!=null){
+      rows.push(['Deal value',money(d.gross,true),'']);
+      rows.push(['Commission rule','Flat '+money(d.flat,true),typeLabel(d.dealType)+' pays a fixed amount, not a percentage.']);
+      rows.push(['Your commission',money(d.commission,true),'']);
+    } else {
+      rows.push([basis,money(d.gross,true),d.instalment?money(d.invoiceReceived,true)+' of '+money(d.invoiceTotal,true)+' collected; commission accrues as each payment lands.':'']);
+      if(d.fee>0) rows.push(['Card processing fee','&minus;'+money(d.fee,true),'2.9% + $0.30 on card payments. ACH and cheque carry no fee.']);
+      rows.push(['Commission basis',money(d.base,true),'']);
+      rows.push(['Your rate',esc(d.rate)+'%',d.splitPlan?(d.leadSource==='self'?'Self-sourced lead, your full rate.':'Company-provided lead, your house rate.'):typeLabel(d.dealType)]);
+      if(d.clawback>0) rows.push(['Reversed','&minus;'+money(d.clawback,true),'Client refunded.']);
+      rows.push(['Your commission',money(d.commission,true),'']);
+    }
+    if(d.override&&d.override.amount!=null) rows.splice(rows.length-1,0,['Admin adjustment','set to '+money(d.override.amount,true),'An admin set this amount directly.']);
+
+    // Only events the system actually recorded. There is no event log, so this is closeDate,
+    // paidDate and the payout flag. Nothing is inferred to fill gaps.
+    var ev=[];
+    if(d.closeDate) ev.push([d.closeDate,'<b>Deal won</b> in HubSpot']);
+    if(d.paidDate) ev.push([d.paidDate,'<b>Client payment received</b>'+(d.instalment?' (partial)':'')]);
+    (d.paymentSchedule||[]).forEach(function(p){ if(p.date) ev.push([p.date,'<b>'+money(p.amount,true)+' paid</b> by client &rarr; '+money(p.commission,true)+' to you'+(p.fee>0?' after '+money(p.fee,true)+' card fee':'')]); });
+    if(d.status==='paid_out') ev.push(['','<b>Paid out</b> to you']);
+    if(d.status==='clawed_back') ev.push(['','<b>Reversed</b>, client refunded']);
+
+    return '<div class="det">'
+      +'<div><h4>How '+money(d.commission,true)+' was reached</h4><div class="calc">'
+      +rows.map(function(r){return '<div><span>'+r[0]+(r[2]?'<span class="why">'+r[2]+'</span>':'')+'</span><span>'+r[1]+'</span></div>';}).join('')+'</div>'
+      +(d.instalment&&d.remainingCommission>0?'<div class="sched"><div><span>Still to be collected</span><span>'+money(d.outstanding,true)+'</span></div><div><span>Commission still to come</span><span>'+money(d.remainingCommission,true)+'</span></div></div>':'')
+      +'</div>'
+      +'<div><h4>Status</h4>'+stPill(d)+'<div class="explain"><b>'+esc(s.why)+'</b>'+(s.next?'<br>'+esc(s.next):'')+'</div>'
+      +'<h4 style="margin-top:16px">What happened</h4>'
+      +(ev.length?'<div class="tl">'+ev.map(function(e){return '<div><time>'+(e[0]?nice(e[0]):'&mdash;')+'</time><span class="ev">'+e[1]+'</span></div>';}).join('')+'</div>':'<div class="note">No events recorded yet.</div>')
+      +'</div></div>';
+  }
+
+  function commissionsTab(){
+    var rows=filtered(), all=(C&&C.deals)||[];
+    var chips=[['','All'],['ready','Ready'],[C&&C.qboConnected?'waiting':'unconfirmed','Pending'],['paid','Paid'],['reversed','Reversed']];
+    var bar='<div class="bar">'
+      +'<label class="search"><span class="sr">Search deals</span><span aria-hidden="true" style="color:var(--faint)">&#9906;</span><input id="q" type="search" placeholder="Search by client or company" value="'+esc(F.q)+'"></label>'
+      +chips.map(function(c){return '<button class="chip" data-st="'+c[0]+'" aria-pressed="'+(F.status===c[0])+'">'+c[1]+'</button>';}).join('')
+      +'<label><span class="sr">Time range</span><select class="range" id="range">'+['all','period','month','last','quarter','ytd'].map(function(k){return '<option value="'+k+'"'+(F.range===k?' selected':'')+'>'+({all:'All time',period:'This pay period',month:'This month',last:'Last month',quarter:'This quarter',ytd:'Year to date'}[k])+'</option>';}).join('')+'</select></label>'
+      +'</div>';
+    var active=[];
+    if(F.q) active.push('"'+esc(F.q)+'"'); if(F.status) active.push(statusInfoLabel(F.status)); if(F.range!=='all') active.push(rangeLabel());
+    var af=active.length?'<div class="active-f">Showing '+rows.length+' of '+all.length+' &middot; '+active.join(' &middot; ')+' <button id="clear">Clear filters</button></div>':'<div class="active-f">Showing all '+all.length+' &middot; '+rangeLabel()+'</div>';
+    if(!all.length) return bar+'<div class="empty"><b>No commissions yet</b>When a deal you own is marked Closed Won in HubSpot, it lands here.</div>';
+    if(!rows.length) return bar+af+'<div class="empty"><b>Nothing matches</b>'+(F.range!=='all'?'You have no commissions with a close date in '+rangeLabel().toLowerCase()+'.':'Try a different status or search.')+'</div>';
+    var body=rows.map(function(d,i){
+      var id=d.dealId||('r'+i), open=!!OPEN[id];
+      return '<tr class="row" data-id="'+esc(id)+'" role="button" tabindex="0" aria-expanded="'+open+'">'
+        +'<td class="first" data-l="Deal"><div class="cl">'+esc(d.client)+' <span class="caret" aria-hidden="true">&#9656;</span></div><div class="cl-s">'+typeLabel(d.dealType)+(d.instalment?' &middot; paying in instalments':'')+'</div></td>'
+        +'<td data-l="Closed">'+nice(d.closeDate)+'</td>'
+        +'<td class="num" data-l="Deal value">'+money(d.gross)+'</td>'
+        +'<td class="num" data-l="Rate">'+(d.flat!=null?'flat':esc(d.rate)+'%')+'</td>'
+        +'<td class="num" data-l="Your commission"><span class="money">'+money(d.commission,true)+'</span>'+(d.instalment&&d.remainingCommission>0?'<div class="cl-s">+'+money(d.remainingCommission,true)+' to come</div>':'')+'</td>'
+        +'<td data-l="Status">'+stPill(d)+'</td></tr>'
+        +(open?'<tr class="detail"><td colspan="6">'+detail(d)+'</td></tr>':'');
+    }).join('');
+    return bar+af+'<div class="tbl"><table><thead><tr><th>Deal</th><th>Closed</th><th class="num">Deal value</th><th class="num">Rate</th><th class="num">Your commission</th><th>Status</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  }
+  function statusInfoLabel(k){return {ready:'Ready to pay',waiting:'Waiting on client',unconfirmed:'Payment unconfirmed',paid:'Paid',reversed:'Reversed'}[k]||k;}
+
+  function payoutsTab(){
+    var M=model(), nx=M.next, res=M.res, ready=M.deals.filter(function(d){return d.status==='payable';});
+    var owedP=(res.periods||[]).filter(function(p){return p.status==='owed';});
+    var html='<div class="panel"><div class="ph"><h2>Next payout'+(nx.date?' &middot; '+longd(nx.date):'')+'</h2><span class="m">'+money(nx.amount,true)+' estimated</span></div><div class="pl">';
+    if(!ready.length&&!owedP.length) html+='<div class="empty"><b>Nothing is confirmed for this payout yet</b>'+(C&&C.qboConnected===false?'Client payments cannot be confirmed until QuickBooks is connected, so no commission can be marked ready.':'Commissions move here once the client pays. Residuals move here when the fortnight closes.')+'</div>';
+    ready.forEach(function(d){html+='<button class="prow" data-open="'+esc(d.dealId)+'"><div><div class="d">'+esc(d.client)+'</div><div class="c">Commission &middot; client paid'+(d.paidDate?' '+nice(d.paidDate):'')+'</div></div><div class="a">'+money(d.commission,true)+'</div></button>';});
+    owedP.forEach(function(p){html+='<div class="prow" style="cursor:default"><div><div class="d">VA hours residual</div><div class="c">'+nice(p.start)+' &ndash; '+nice(p.end)+' &middot; '+(p.hours||0)+' h at '+money(res.perHour||0,true)+'/hr</div></div><div class="a">'+money(p.amount,true)+'</div></div>';});
+    html+='</div></div>';
+    // residual fortnights
+    if(R&&R.connected&&(res.periods||[]).length){
+      html+='<div class="panel"><div class="ph"><h2>Residual fortnights</h2><span class="m">paid every '+((R.schedule||{}).everyDays||14)+' days</span></div><div class="pl">';
+      res.periods.slice().reverse().forEach(function(p){
+        var lab=p.status==='paid'?'Paid'+(p.paidRecord&&p.paidRecord.paidAt?' '+nice(p.paidRecord.paidAt):''):(p.status==='owed'?'Ready, pays '+nice(p.payDate):'Accruing, pays '+nice(p.payDate));
+        var tone=p.status==='paid'?'paid':(p.status==='owed'?'good':'warn');
+        html+='<div class="prow" style="cursor:default"><div><div class="d">'+nice(p.start)+' &ndash; '+nice(p.end)+'</div><div class="c">'+(p.hours||0)+' h</div></div><span class="st '+tone+'"><i aria-hidden="true"></i>'+lab+'</span><div class="a">'+money(p.amount,true)+'</div></div>';
+      });
+      html+='</div></div>';
+    } else if(R&&R.connected===false){
+      html+='<div class="errbox"><h3>VA hours unavailable</h3><p>'+esc(R.hint||R.error||'Hubstaff is not returning hours.')+' Residuals cannot be shown until it is reconnected. This is not a zero.</p></div>';
+    }
+    // paid history from commissions
+    var paidD=M.deals.filter(function(d){return d.status==='paid_out';});
+    html+='<div class="panel"><div class="ph"><h2>Paid</h2><span class="m">'+paidD.length+' commission'+(paidD.length===1?'':'s')+'</span></div><div class="pl">';
+    if(!paidD.length) html+='<div class="empty"><b>No commission has been paid out yet</b>Once a payout run includes one of your commissions, it appears here with the date.</div>';
+    paidD.forEach(function(d){html+='<button class="prow" data-open="'+esc(d.dealId)+'"><div><div class="d">'+esc(d.client)+'</div><div class="c">'+(d.paidDate?'client paid '+nice(d.paidDate):'')+'</div></div><div class="a">'+money(d.commission,true)+'</div></button>';});
+    html+='</div></div>';
+    return html;
+  }
+
+  // ---------- admin ----------
+  function teamTab(){
+    if(!ADM) return '<div class="skel" style="height:180px"></div>';
+    if(ADM.error) return '<div class="errbox"><h3>Could not load the team view</h3><p>'+esc(ADM.error)+'</p></div>';
+    var reps=ADM.byRep||[];
+    return '<div class="tbl"><table><thead><tr><th>Rep</th><th class="num">Deals</th><th class="num">Revenue</th><th class="num">Commission</th><th class="num">Ready</th><th class="num">Pending</th><th class="num">Paid</th><th class="num">VA hrs</th><th class="num">Residual</th></tr></thead><tbody>'
+      +reps.map(function(m){return '<tr><td class="first" data-l="Rep"><div class="cl">'+esc(m.name||m.repEmail)+'</div><div class="cl-s">'+esc(m.repEmail)+'</div></td><td class="num" data-l="Deals">'+m.deals+'</td><td class="num" data-l="Revenue">'+money(m.revenue)+'</td><td class="num" data-l="Commission"><span class="money">'+money(m.commission)+'</span></td><td class="num" data-l="Ready">'+money(m.payable)+'</td><td class="num" data-l="Pending">'+money(m.pending)+'</td><td class="num" data-l="Paid">'+money(m.paidOut)+'</td><td class="num" data-l="VA hrs">'+(m.hours||0)+'</td><td class="num" data-l="Residual">'+money(m.residual,true)+'</td></tr>';}).join('')
+      +'</tbody></table></div><div class="note">Liability across the team: <b>'+money(reps.reduce(function(a,m){return a+(m.payable||0);},0))+'</b> ready to pay, <b>'+money(reps.reduce(function(a,m){return a+(m.pending||0);},0))+'</b> pending.</div>';
+  }
+  function exceptionsTab(){
+    if(!ADM) return '<div class="skel" style="height:180px"></div>';
+    var b=ADM.blockers||[];
+    if(!b.length) return '<div class="empty"><b>Nothing needs attention</b>Every closed deal has an owner, and every integration is connected.</div>';
+    var title={owners_scope:'HubSpot owners scope missing',unowned_deals:'Deals with no owner',qbo_disconnected:'QuickBooks not connected',hubstaff_disconnected:'Hubstaff not connected',unmatched_clients:'VA hours with no matching deal'};
+    return b.map(function(x){
+      var list='';
+      if(x.deals) list='<div class="tl" style="margin-top:10px">'+x.deals.map(function(d){return '<div><time>'+nice(d.closeDate)+'</time><span class="ev"><b>'+esc(d.name)+'</b> &middot; '+money(d.amount)+' &middot; deal '+esc(d.dealId)+'</span></div>';}).join('')+'</div>';
+      if(x.clients) list='<div class="tl" style="margin-top:10px">'+x.clients.map(function(c){return '<div><time>'+(c.hours||0)+' h</time><span class="ev"><b>'+esc(c.client)+'</b></span></div>';}).join('')+'</div>';
+      return '<div class="hold" style="margin-bottom:12px"><h3>'+esc(title[x.code]||x.code)+'</h3><div style="font-size:13.5px;color:var(--sub)">'+esc(x.detail)+'</div><div class="fix" style="margin-top:6px;color:var(--muted);font-size:12.5px">'+esc(x.fix||'')+'</div>'+list+'</div>';
+    }).join('');
+  }
+
+  // ---------- render ----------
+  function render(){
+    if(!C){ app.innerHTML=skeleton(); return; }
+    if(C.error&&C.error!=='login_required'){ app.innerHTML=head()+'<div class="errbox"><h3>We could not load your commissions</h3><p>'+esc(C.error)+(C.hint?' '+esc(C.hint):'')+'</p><p style="margin-top:8px"><button class="btn small" id="retry">Try again</button></p></div>'; wire(); return; }
+    if(C.connected===false){ app.innerHTML=head()+'<div class="errbox"><h3>Commission data is not connected</h3><p>'+esc(C.message||'HubSpot is not connected, so there are no closed deals to show.')+' Nothing here is a zero; the data source is off.</p></div>'; return; }
+    var M=model();
+    var html=head()+hero(M)+strip(M)+holdBlock()+(TAB==='overview'?pipeline(M):'')+tabs();
+    if(TAB==='overview') html+=overviewBody(M);
+    else if(TAB==='commissions') html+=commissionsTab();
+    else if(TAB==='payouts') html+=payoutsTab();
+    else if(TAB==='team') html+=teamTab();
+    else if(TAB==='exceptions') html+=exceptionsTab();
+    html+='<div class="fresh">Updated '+ago(LOADED_AT)+(C.generatedAt?' &middot; figures from HubSpot'+(C.qboConnected?', QuickBooks':'')+(R&&R.connected?', Hubstaff':''):'')+'</div>';
+    app.innerHTML=html; wire();
+  }
+  function overviewBody(M){
+    var recent=M.deals.slice().sort(function(a,b){return String(b.closeDate||'').localeCompare(String(a.closeDate||''));}).slice(0,5);
+    if(!recent.length) return '<div class="empty"><b>No commissions yet</b>When a deal you own is marked Closed Won in HubSpot, it lands here.</div>';
+    return '<div class="panel"><div class="ph"><h2>Recent deals</h2><button class="btn ghost small" data-tab="commissions">See all '+M.deals.length+' &rarr;</button></div><div class="pl">'
+      +recent.map(function(d){return '<button class="prow" data-open="'+esc(d.dealId)+'"><div><div class="d">'+esc(d.client)+'</div><div class="c">won '+nice(d.closeDate)+' &middot; '+typeLabel(d.dealType)+'</div></div>'+stPill(d)+'<div class="a">'+money(d.commission,true)+'</div></button>';}).join('')
+      +'</div></div>';
+  }
+  function head(){var first=((ME&&ME.name)||'').split(' ')[0]||'there';return '<div class="eyebrow" style="margin-bottom:4px">Commissions</div><h1 style="font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--sub);margin-bottom:18px">'+esc(first)+'\'s earnings</h1>';}
+  function skeleton(){
+    return head()+'<div class="hero"><div><div class="skel" style="height:14px;width:140px;margin-bottom:14px"></div><div class="skel" style="height:64px;width:280px"></div><div class="skel" style="height:14px;width:320px;margin-top:14px"></div></div><div class="skel" style="height:130px"></div></div>'
+      +'<div class="strip"><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div></div>'
+      +'<div class="skel" style="height:76px;margin-bottom:28px"></div><div class="skel" style="height:220px"></div>';
+  }
+
+  function wire(){
+    app.querySelectorAll('[data-tab]').forEach(function(b){b.addEventListener('click',function(){var st=b.getAttribute('data-status');if(st!=null){F.status=st;}TAB=b.getAttribute('data-tab');if((TAB==='team'||TAB==='exceptions')&&!ADM)loadAdmin();render();window.scrollTo({top:0,behavior:'smooth'});});});
+    app.querySelectorAll('.chip').forEach(function(b){b.addEventListener('click',function(){F.status=b.getAttribute('data-st');render();});});
+    var q=document.getElementById('q'); if(q){q.addEventListener('input',function(){F.q=q.value;var pos=q.selectionStart;render();var q2=document.getElementById('q');if(q2){q2.focus();q2.setSelectionRange(pos,pos);}});}
+    var rg=document.getElementById('range'); if(rg){rg.addEventListener('change',function(){F.range=rg.value;render();});}
+    var cl=document.getElementById('clear'); if(cl){cl.addEventListener('click',function(){F={q:'',status:'',range:'all'};render();});}
+    app.querySelectorAll('tr.row').forEach(function(tr){var t=function(){var id=tr.getAttribute('data-id');OPEN[id]=!OPEN[id];render();};tr.addEventListener('click',t);tr.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();t();}});});
+    app.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){var id=b.getAttribute('data-open');TAB='commissions';F={q:'',status:'',range:'all'};OPEN={};OPEN[id]=true;render();var row=app.querySelector('tr.row[data-id="'+id+'"]');if(row)row.scrollIntoView({block:'center',behavior:'smooth'});});});
+    var rt=document.getElementById('retry'); if(rt){rt.addEventListener('click',function(){C=null;render();loadData();});}
+  }
+
+  // ---------- auth + data ----------
   function showSignIn(msg){
     tbRight.innerHTML='';
     app.innerHTML='<div class="gate"><h2>Your commissions</h2><p>Sign in with your work email. We send a one-time link, no password.</p>'+
-      '<a class="gbtn" href="/api/auth-google-start">'+'<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">'+'<path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.63z"/>'+'<path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>'+'<path fill="#FBBC05" d="M3.97 10.73a5.4 5.4 0 0 1 0-3.46V4.94H.96a9 9 0 0 0 0 8.12l3.01-2.33z"/>'+'<path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.42 0 9 0A9 9 0 0 0 .96 4.94l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>'+'</svg>Continue with Google</a>'+
-      '<div class="or">or</div>'+
-      '<input id="em" type="email" placeholder="you@example.com" autocomplete="email">'+
-            '<button class="btn" id="go">Email me a sign-in link</button>'+
-      '<div class="err" id="err">'+(msg||'')+'</div></div>';
+      '<a class="gbtn" href="/api/auth-google-start"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.63z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.73a5.4 5.4 0 0 1 0-3.46V4.94H.96a9 9 0 0 0 0 8.12l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.42 0 9 0A9 9 0 0 0 .96 4.94l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>Continue with Google</a>'+
+      '<div class="or">or</div><input id="em" type="email" placeholder="you@example.com" autocomplete="email"><button class="btn primary" id="go">Email me a sign-in link</button><div class="err" id="err">'+(msg||'')+'</div></div>';
     document.getElementById('go').onclick=send;
     document.getElementById('em').addEventListener('keydown',function(e){if(e.key==='Enter')send();});
   }
@@ -136,195 +522,29 @@
     app.innerHTML='<div class="gate"><h2>Check your email</h2><p>If '+esc(email)+' is set up as a rep, a sign-in link is on its way. It works once and expires in 20 minutes.</p></div>';
   }
 
+  async function loadAdmin(){
+    try{ var r=await fetch('/api/commissions/?view=admin',{cache:'no-store'}); ADM=await r.json(); }
+    catch(e){ ADM={error:'Network error.'}; }
+    render();
+  }
+  async function loadData(){
+    LOADED_AT=null;
+    // Two sources, fetched together. Residuals are on a separate endpoint so a slow Hubstaff can
+    // never hold up the commission figures; if it fails, the page still renders with an honest gap.
+    var pc=fetch('/api/commissions/',{cache:'no-store'}).then(function(r){return r.json();}).catch(function(){return {error:'Network error loading commissions.'};});
+    var pr=fetch('/api/residuals/',{cache:'no-store'}).then(function(r){return r.json();}).catch(function(){return {connected:false,error:'Network error loading residuals.'};});
+    var out=await Promise.all([pc,pr]); C=out[0]; R=out[1]; LOADED_AT=new Date().toISOString();
+    render();
+  }
   async function load(){
-    app.innerHTML='<div class="empty">Loading your commissions...</div>';
-    tbRight.innerHTML='';
-    var meRes;
-    try{ meRes=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showSignIn('Network error.'); return; }
+    app.innerHTML=skeleton(); tbRight.innerHTML='';
+    var meRes; try{ meRes=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showSignIn('Network error.'); return; }
     if(meRes.status!==200){ var m=qp('e'); showSignIn(m==='expired'?'That link expired. Request a new one.':(m==='norep'?'That account is not set up as a rep yet.':'')); return; }
     ME=(await meRes.json()).rep;
-    loadCommissions();
+    tbRight.innerHTML='<a class="btn ghost small" href="/api/auth-logout" style="text-decoration:none">Sign out</a>';
+    var t=qp('tab'); if(t&&['overview','commissions','payouts','team','exceptions'].includes(t)) TAB=t;
+    loadData();
   }
-
-  async function loadCommissions(){
-    tbRight.innerHTML='<a class="btn btn-ghost" href="/api/auth-logout" style="text-decoration:none">Sign out</a>';
-    app.innerHTML='<div class="empty">Loading your commissions...</div>';
-    var j;
-    try{ var r=await fetch('/api/commissions/',{cache:'no-store'}); j=await r.json(); }
-    catch(e){ app.innerHTML='<div class="empty">Could not load. Try refresh.</div>'; return; }
-    render(j);
-  }
-
-  function render(j){
-    var first=((ME&&ME.name)||'').split(' ')[0]||'there';
-    var isAdmin=ME&&ME.role==='admin';
-    var head='<div class="eyebrow">The Money</div><h1>Your commissions, <span class="grad">'+esc(first)+'</span></h1>'+
-      '<div class="sub">A deal is yours the moment it is Closed Won in HubSpot. Commission is earned on money the client has actually paid, so a client paying in instalments earns you your cut as each payment lands. QuickBooks is the source of truth.'+(ME&&ME.rate?' &middot; your rate '+esc(ME.rate)+'%':'')+'</div>';
-
-    if(j && j.connected===false){
-      app.innerHTML=head+
-        '<div class="notice"><h3>Not connected yet</h3><p>'+esc(j.message||'Once HubSpot is connected, your Closed Won deals show up here automatically.')+'</p></div>'+
-        '<div class="note">When it is live you will see, per deal: the amount, your rate, your commission, and whether the invoice has been paid yet. Residuals, the strong-month accelerator, and the 90-day bonus come next.</div>';
-      return;
-    }
-    if(j && j.error){
-      app.innerHTML=head+'<div class="notice"><h3>HubSpot hiccup</h3><p>'+esc(j.error)+'</p>'+(j.hint?'<p class="note">'+esc(j.hint)+'</p>':'')+'</div>';
-      return;
-    }
-
-    var t=(j&&j.totals)||{};
-    var deals=(j&&j.deals)||[];
-    var qboOff=(j&&j.qboConnected===false);
-    var cards='<div class="cards">'+
-      '<div class="kcard"><div class="l">Payable now</div><div class="n grad">'+money(t.payableCommission)+'</div><div class="s">'+(t.payableCount||0)+' invoice'+((t.payableCount===1)?'':'s')+' paid</div></div>'+
-      '<div class="kcard"><div class="l">Pending</div><div class="n">'+money(t.pendingCommission)+'</div><div class="s">'+(t.pendingCount||0)+' awaiting payment</div></div>'+
-      // Residual: $/hr on every hour a VA works under a client this rep closed. Shown even at zero,
-      // because a rep needs to see the line exists and whether we can actually read the hours.
-      ((j.residuals&&j.residuals.perHour)
-        ? '<div class="kcard"><div class="l">Hours residual</div><div class="n grad">'+money(j.residuals.earned)+'</div><div class="s">'
-          +(j.residuals.connected
-             ? (j.residuals.hours||0)+' hrs at '+money(j.residuals.perHour)+'/hr'
-             : '<span style="color:#ffb59a">'+esc(j.residuals.problem)+'</span>')
-          +'</div></div>'
-        : '')+
-      '<div class="kcard"><div class="l">Paid out</div><div class="n">'+money(t.paidOutCommission)+'</div><div class="s">'+(t.paidOutCount||0)+' settled</div></div>'+
-      '</div>';
-
-    var rows;
-    if(!deals.length){
-      rows='<div class="empty">No Closed Won deals attributed to you yet. When you win one in HubSpot, it lands here.</div>';
-    } else {
-      rows='<div style="overflow-x:auto"><table><thead><tr><th>Client</th><th>Type</th><th class="num">Deal</th><th class="num">Rate</th><th class="num">Your commission</th><th>Status</th></tr></thead><tbody>'+
-        deals.map(function(d){
-          var pill=d.status==='payable'?'<span class="pill paid">Payable</span>'
-                  :(d.status==='paid_out'?'<span class="pill done">Paid out</span>'
-                  :(d.status==='clawed_back'?'<span class="pill pending" style="color:#ffb59a;background:rgba(226,90,60,.12);border-color:rgba(226,90,60,.35)">Clawed back</span>'
-                  :'<span class="pill pending">Pending</span>'));
-          var sub=(d.status==='payable'&&d.paidDate)?'<div class="cl-sub">invoice paid '+niceDate(d.paidDate)+'</div>':(d.closeDate?'<div class="cl-sub">won '+niceDate(d.closeDate)+'</div>':'');
-          // An instalment deal is not underpaid, it is part collected. Say so, or the row reads as a shortfall.
-          if(d.instalment){ sub+='<div class="cl-sub">'+money(d.invoiceReceived)+' of '+money(d.invoiceTotal)+' collected &middot; '+money(d.outstanding)+' still to come</div>'; }
-          return '<tr><td><div class="cl-name">'+esc(d.client)+'</div>'+sub+'</td>'+
-            '<td><span class="pill type">'+esc(typeLabel(d.dealType))+'</span></td>'+
-            '<td class="num">'+money(d.base)+
-              (d.fee>0?'<div class="cl-sub">'+money(d.gross)+' less '+money(d.fee)+' card fee</div>':'')+'</td>'+
-            '<td class="num">'+esc(d.rate)+'%</td>'+
-            '<td class="num"><span class="money">'+money(d.commission)+'</span>'+
-              // What each payment earned. On an instalment plan the single cumulative figure hides the
-              // thing the rep actually wants to know, which is what lands with each payment.
-              ((d.paymentSchedule&&d.paymentSchedule.length>1)
-                ? '<div class="cl-sub">'+d.paymentSchedule.map(function(pm){
-                    return niceDate(pm.date)+' &middot; '+money(pm.amount)+' paid '+String.fromCharCode(8594)+' '+money(pm.commission)+(pm.fee>0?' <span style="opacity:.7">(after '+money(pm.fee)+' card fee)</span>':'');
-                  }).join('<br>')+'</div>'
-                : '')+
-              (d.instalment&&d.remainingCommission>0?'<div class="cl-sub">'+money(d.remainingCommission)+' more as they pay</div>':'')+
-              (d.clawback>0?'<div class="cl-sub" style="color:#ffb59a">'+money(d.clawback)+' reversed, client refunded</div>':'')+'</td>'+
-            '<td>'+pill+'</td></tr>';
-        }).join('')+'</tbody></table></div>';
-    }
-
-    var qNote=qboOff?'<div class="note" style="margin-top:12px">QuickBooks is not connected yet, so every deal shows as Pending. Once it is authorized, paid invoices flip deals to Payable automatically.</div>':'';
-    var adminBtn=isAdmin?'<button class="toggle" id="admToggle">'+(ADMIN_OPEN?'Hide deal admin':'Deal admin (attribution + payouts)')+'</button>':'';
-    var body=head+cards+
-      '<div class="panel"><div class="ph"><h2>Your deals</h2><span class="meta">'+deals.length+' total</span></div>'+rows+qNote+'</div>'+
-      // Team board. Everyone sees where they stand; peer earnings are deliberately not shown.
-      ((j.team&&j.team.length>1)
-        ? '<div class="panel" style="margin-top:22px"><div class="ph"><h2>Team</h2><span class="meta">'+esc(j.teamMetric||'')+'</span></div>'
-          +'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Rep</th><th class="num">Deals won</th><th class="num">Revenue closed</th><th class="num">VA hours</th><th class="num">Your earnings</th></tr></thead><tbody>'
-          +j.team.map(function(m){
-              return '<tr'+(m.isMe?' style="background:rgba(56,189,248,.07)"':'')+'>'
-                +'<td class="num">'+m.rank+'</td>'
-                +'<td><div class="cl-name">'+esc(m.name)+(m.isMe?' <span class="pill type">you</span>':'')+'</div></td>'
-                +'<td class="num">'+(m.deals||0)+'</td>'
-                +'<td class="num">'+money(m.revenue)+'</td>'
-                +'<td class="num">'+(m.hours||0)+'</td>'
-                +'<td class="num">'+(m.commission!=null?'<span class="money">'+money(m.commission)+'</span>':'<span style="opacity:.4">&mdash;</span>')+'</td>'
-                +'</tr>';
-            }).join('')
-          +'</tbody></table></div></div>'
-        : '')+
-      '<div class="note">Commission is calculated after card processing fees, so a card payment nets a little less than an ACH or a cheque for the same invoice. If a client is refunded, the commission on that deal is reversed. Shown here: the onboarding commission on deals you closed, earned as the client actually pays, including across instalments. The $1/hr residual, the 40% strong-month accelerator, and the $200 90-day retention bonus are coming next (they need placement hours from the billing side).</div>'+
-      (adminBtn?'<div style="margin-top:20px">'+adminBtn+'</div><div id="admPanel"></div>':'');
-    app.innerHTML=body;
-    if(isAdmin){ document.getElementById('admToggle').onclick=function(){ ADMIN_OPEN=!ADMIN_OPEN; if(ADMIN_OPEN) loadAdmin(); else { ADMIN_DATA=null; render(j); } document.getElementById('admToggle').textContent=ADMIN_OPEN?'Hide deal admin':'Deal admin (attribution + payouts)'; }; if(ADMIN_OPEN) renderAdmin(); }
-  }
-
-  async function loadAdmin(){
-    var panel=document.getElementById('admPanel'); if(panel) panel.innerHTML='<div class="empty">Loading Closed Won deals...</div>';
-    try{ var r=await fetch('/api/commissions/?view=admin',{cache:'no-store'}); ADMIN_DATA=await r.json(); }
-    catch(e){ if(panel) panel.innerHTML='<div class="empty">Could not load admin view.</div>'; return; }
-    renderAdmin();
-  }
-
-  function renderAdmin(){
-    var panel=document.getElementById('admPanel'); if(!panel||!ADMIN_DATA) return;
-    var d=ADMIN_DATA;
-    if(d.connected===false){ panel.innerHTML='<div class="notice"><h3>Connect HubSpot first</h3><p>'+esc(d.message||'Once HubSpot is connected, Closed Won deals show here to attribute and pay out.')+'</p></div>'; return; }
-    if(d.error){ panel.innerHTML='<div class="notice"><h3>HubSpot hiccup</h3><p>'+esc(d.error)+'</p>'+(d.hint?'<p class="note">'+esc(d.hint)+'</p>':'')+'</div>'; return; }
-    var reps=d.reps||[]; var customers=d.customers||[]; var deals=d.deals||[]; var c=d.counts||{};
-    var repOpts=function(sel){ return '<option value="">Owner (auto)</option>'+reps.map(function(r){return '<option value="'+esc(r.email)+'"'+(sel===r.email?' selected':'')+'>'+esc(r.name)+'</option>';}).join(''); };
-    var typeOpts=function(sel){ return ['va','website','ai'].map(function(tp){return '<option value="'+tp+'"'+(sel===tp?' selected':'')+'>'+typeLabel(tp)+'</option>';}).join(''); };
-    var custOpts=function(sel){ return '<option value="">Auto-match</option>'+customers.map(function(cu){return '<option value="'+esc(cu.id)+'"'+(sel===cu.id?' selected':'')+'>'+esc(cu.name||cu.email||cu.id)+'</option>';}).join(''); };
-    var qNote=(d.qboConnected===false)?'<div class="note" style="margin-bottom:10px">QuickBooks is not connected yet, so every deal stays Pending and payouts are locked. Connect it and paid invoices flip deals to Payable automatically.'+(d.qboError?' ('+esc(d.qboError)+')':'')+'</div>':'';
-    var rows=deals.map(function(dl){
-      var ov=dl.override||{};
-      var warn=(!dl.repKnown)?'<div class="sug">owner not a rep: '+esc(dl.closerName||dl.closerEmail||dl.ownerName||dl.ownerEmail||'unknown')+'</div>':((d.qboConnected&&!dl.customerMatched)?'<div class="sug">no QuickBooks match</div>':'');
-      if(dl.ownerChanged) warn+='<div class="sug">credited to the closer '+esc(dl.closerName||dl.closerEmail)+' (HubSpot owner is now '+esc(dl.ownerName||dl.ownerEmail)+')</div>';
-      var statusPill=dl.status==='payable'?'<span class="pill paid">Payable</span>':(dl.status==='paid_out'?'<span class="pill done">Paid out</span>':'<span class="pill pending">Pending</span>');
-      var amtVal=(ov.amount!=null)?esc(ov.amount):'';
-      var resetBtn=dl.override?'<button class="reset" style="margin-left:6px;font-size:12px;background:transparent;border:1px solid var(--card-border);color:var(--muted);border-radius:8px;padding:6px 10px;cursor:pointer">Reset</button>':'';
-      return '<tr class="adm" data-id="'+esc(dl.dealId)+'">'+
-        '<td><div class="cl-name">'+esc(dl.client)+'</div><div class="cl-sub">won '+(dl.closeDate?niceDate(dl.closeDate):'')+' &middot; '+statusPill+'</div>'+warn+'</td>'+
-        '<td><select class="a-rep">'+repOpts(ov.rep||'')+'</select></td>'+
-        '<td><select class="a-type">'+typeOpts(ov.dealType||dl.dealType||'va')+'</select></td>'+
-        '<td class="num"><input class="a-amt" type="number" value="'+amtVal+'" placeholder="'+esc(dl.base||0)+'"></td>'+
-        '<td><select class="a-cust">'+custOpts(ov.customerId||'')+'</select></td>'+
-        '<td class="num">'+(dl.payoutAuto
-          ? '<span class="pill done" title="Matched to a payment in QuickBooks">auto &middot; QB</span>'
-          : '<label style="font-size:12px;color:var(--muted);white-space:nowrap"><input type="checkbox" class="a-paid"'+(dl.status==='paid_out'?' checked':'')+(dl.status==='pending'?' disabled':'')+'> paid out</label>'+(dl.payoutMode==='manual'&&dl.status!=='pending'?'<div class="sug">payroll, mark by hand</div>':''))+'</td>'+
-        '<td class="num"><button class="save">Save</button>'+resetBtn+'</td></tr>';
-    }).join('');
-    // Every salesperson's full picture, which is what an admin needs and a rep must not have.
-    var byRep=(d.byRep||[]);
-    var repRoll = byRep.length
-      ? '<div class="panel" style="margin-bottom:18px"><div class="ph"><h2>Every salesperson</h2><span class="meta">'+byRep.length+' reps</span></div>'
-        +'<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Rep</th><th class="num">Deals</th><th class="num">Revenue</th><th class="num">Commission</th><th class="num">Payable</th><th class="num">Pending</th><th class="num">Paid out</th><th class="num">VA hrs</th><th class="num">Residual</th></tr></thead><tbody>'
-        +byRep.map(function(m){
-            return '<tr><td class="num">'+m.rank+'</td>'
-              +'<td><div class="cl-name">'+esc(m.name||m.repEmail)+'</div><div class="cl-sub">'+esc(m.repEmail)+'</div></td>'
-              +'<td class="num">'+m.deals+'</td><td class="num">'+money(m.revenue)+'</td>'
-              +'<td class="num"><span class="money">'+money(m.commission)+'</span></td>'
-              +'<td class="num">'+money(m.payable)+'</td><td class="num">'+money(m.pending)+'</td><td class="num">'+money(m.paidOut)+'</td>'
-              +'<td class="num">'+(m.hours||0)+'</td><td class="num">'+money(m.residual)+'</td></tr>';
-          }).join('')
-        +'</tbody></table></div></div>'
-      : '';
-    panel.innerHTML=repRoll+'<div class="panel"><div class="ph"><h2>Closed Won deals</h2><span class="meta">'+(c.deals||0)+' deals &middot; '+(c.payable||0)+' payable &middot; '+(c.pending||0)+' pending</span></div>'+
-      qNote+
-      ((d.payoutScan&&d.payoutScan.vendorsMatched&&!d.payoutScan.tagged)?'<div class="note" style="margin-bottom:10px">Auto-settle found '+d.payoutScan.scanned+' payment(s) to rep vendors but none tagged as commission, so nothing was settled automatically. Put the word "'+esc(d.payoutScan.tag)+'" in the memo of a commission payment and it settles itself. Base pay and reimbursements are deliberately ignored.</div>':'')+
-      ((c.unmapped||c.unmatched)?'<div class="note" style="margin-bottom:10px">'+(c.unmapped?(c.unmapped+' deal(s) have an owner who is not a registered rep. '):'')+(c.unmatched?(c.unmatched+' deal(s) have no QuickBooks customer match. '):'')+'Fix with the dropdowns below.</div>':'')+
-      (deals.length?'<div style="overflow-x:auto"><table><thead><tr><th>Deal</th><th>Rep</th><th>Type</th><th class="num">Amount</th><th>QB customer</th><th>Payout</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">No Closed Won deals in HubSpot yet.</div>')+
-      ((d.truncated&&(d.truncated.hubspot||d.truncated.qbo))?'<div class="note" style="margin-top:12px">Showing the most recent records only. Tell me if you need the full history paged in.</div>':'')+'</div>';
-    Array.prototype.forEach.call(panel.querySelectorAll('.save'),function(btn){
-      btn.onclick=function(){
-        var tr=btn.closest('tr');
-        var paidBox=tr.querySelector('.a-paid');
-        saveDeal({ dealId:tr.getAttribute('data-id'), rep:tr.querySelector('.a-rep').value, dealType:tr.querySelector('.a-type').value, amount:tr.querySelector('.a-amt').value, customerId:tr.querySelector('.a-cust').value, paidOut:!!(paidBox&&paidBox.checked) }, btn);
-      };
-    });
-    Array.prototype.forEach.call(panel.querySelectorAll('.reset'),function(btn){
-      btn.onclick=function(){ var tr=btn.closest('tr'); saveDeal({ dealId:tr.getAttribute('data-id'), clear:true }, btn); };
-    });
-  }
-
-  async function saveDeal(payload, btn){
-    var old=btn.textContent; btn.disabled=true; btn.textContent='Saving...';
-    try{
-      var r=await fetch('/api/commissions/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      if(!r.ok){ btn.textContent='Error'; setTimeout(function(){btn.disabled=false;btn.textContent=old;},1400); return; }
-      btn.textContent='Saved'; setTimeout(function(){btn.disabled=false;btn.textContent=old; loadAdmin();},1000);
-    }catch(e){ btn.disabled=false; btn.textContent=old; }
-  }
-
   load();
 })();
 </script>
