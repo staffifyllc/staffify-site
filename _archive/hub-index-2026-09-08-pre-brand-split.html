@@ -61,37 +61,6 @@
         .cols { display:grid; grid-template-columns:1.15fr 0.85fr; gap:22px; align-items:start; }
         @media (max-width:900px){ .cols { grid-template-columns:1fr; } }
         .panel { background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:20px 22px; margin-bottom:18px; }
-        /* --- Start-your-day lanes. One per business; they never share content. --- */
-        .lanes { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:20px 0 22px; }
-        @media (max-width:900px){ .lanes { grid-template-columns:1fr; } }
-        .lane { background:var(--card); border:1px solid var(--card-border); border-radius:18px; overflow:hidden; }
-        .lane.sf { border-top:3px solid #1abde1; }
-        .lane.fd { border-top:3px solid #f0a13a; }
-        .lane-h { padding:18px 22px 14px; border-bottom:1px solid var(--card-border); }
-        .lane-n { font-size:19px; font-weight:800; letter-spacing:-0.01em; display:flex; align-items:center; gap:9px; }
-        .lane-n .dot { width:9px; height:9px; border-radius:50%; flex:none; }
-        .lane.sf .dot { background:#1abde1; } .lane.fd .dot { background:#f0a13a; }
-        .lane-w { font-size:13px; color:var(--muted); margin-top:5px; line-height:1.5; }
-        .lane-b { padding:6px 22px 18px; }
-        .step { display:grid; grid-template-columns:26px 1fr; gap:12px; padding:13px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
-        .step:last-child { border-bottom:0; }
-        .step-n { width:24px; height:24px; border-radius:50%; background:rgba(255,255,255,0.06); border:1px solid var(--card-border);
-                  font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px; }
-        .lane.sf .step-n { color:#8fe6fb; } .lane.fd .step-n { color:#ffcf8a; }
-        .step-t { font-size:14.5px; font-weight:650; line-height:1.4; }
-        .step-d { font-size:13px; color:var(--muted); margin-top:3px; line-height:1.55; }
-        .step-a { display:flex; flex-wrap:wrap; gap:8px; margin-top:9px; align-items:center; }
-        .sbtn { font:inherit; font-size:12.5px; font-weight:650; padding:7px 12px; border-radius:9px; text-decoration:none;
-                border:1px solid var(--card-border); background:rgba(255,255,255,0.04); color:var(--white); cursor:pointer;
-                display:inline-flex; align-items:center; gap:6px; min-height:34px; }
-        .sbtn:hover { border-color:rgba(255,255,255,0.3); }
-        .sbtn.go { background:linear-gradient(100deg,#1abde1,#0d82b8); border:0; color:#03141c; }
-        .lane.fd .sbtn.go { background:linear-gradient(100deg,#f5b95f,#d8842a); color:#241203; }
-        .sbtn.done { background:rgba(29,158,117,0.16); border-color:rgba(29,158,117,0.4); color:#7ef5c2; }
-        .qcount { font-size:12px; color:var(--muted); } .qcount b { color:var(--white); font-weight:700; }
-        .lane-f { padding:12px 22px; border-top:1px solid var(--card-border); background:rgba(255,255,255,0.02);
-                  display:flex; flex-wrap:wrap; gap:14px; font-size:12.5px; }
-        .lane-f a { color:var(--muted); text-decoration:none; } .lane-f a:hover { color:var(--white); }
         .ph { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:14px; }
         .ph h2 { font-size:13px; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:var(--cyan); }
         .ph .meta { font-size:12.5px; color:var(--muted); }
@@ -360,66 +329,6 @@
       return '<div class="mod"><span class="num">'+m[0]+'</span><span class="t"><a href="/training/sales/">'+esc(m[1])+'</a></span><span class="st '+cls+'">'+lbl+'</span></div>';
     }).join('');
 
-    // Start your day: one lane per business. Foundry's routine is Paul's, 2026-09-08: open LinkedIn,
-    // launch Claude in the Chrome extension, paste the prospecting script, work what it returns.
-    // The lanes never share content: separate queues, separate scripts, separate links.
-    var allLeads = (ld && ld.leads) ? ld.leads : [];
-    var sfLeads = allLeads.filter(function(l){ return l.motion === 'staffing'; });
-    var fdLeads = allLeads.filter(function(l){ return l.motion === 'websites'; });
-    function step(n, title, desc, actions){
-      return '<div class="step"><div class="step-n">' + n + '</div><div>'
-        + '<div class="step-t">' + title + '</div>'
-        + (desc ? '<div class="step-d">' + desc + '</div>' : '')
-        + (actions ? '<div class="step-a">' + actions + '</div>' : '') + '</div></div>';
-    }
-    function slink(href, label, primary, blank){
-      return '<a class="sbtn' + (primary ? ' go' : '') + '" href="' + href + '"'
-        + (blank ? ' target="_blank" rel="noopener"' : '') + '>' + label + '</a>';
-    }
-    var foundryLane =
-      '<div class="lane fd"><div class="lane-h">'
-        + '<div class="lane-n"><span class="dot"></span>Foundry</div>'
-        + '<div class="lane-w">Websites and AI visibility. You prospect on LinkedIn with Claude, it finds a real problem on their site, and you send the message.</div>'
-      + '</div><div class="lane-b">'
-      + step(1, 'Open LinkedIn', 'Sales Navigator if you have it, the normal feed if you do not.',
-             slink('https://www.linkedin.com/sales/search/people', 'Sales Navigator', false, true)
-             + slink('https://www.linkedin.com/feed/', 'LinkedIn', false, true))
-      + step(2, 'Launch Claude in your browser',
-             'Click the Claude icon in your Chrome toolbar so it can see the page you are on. Install it once and it stays.',
-             slink('https://chromewebstore.google.com/detail/claude/fmkfmbfemphkllcmhbbggnnjbnnpjenj', 'Get the Chrome extension', false, true))
-      + step(3, 'Paste the Foundry script into Claude',
-             'This is the whole job description for the agent. Paste it once at the start of your day, then leave it running.',
-             '<button class="sbtn go" id="copyFoundry">Copy the Foundry script</button>'
-             + slink('/assets/prompts/foundry-prospecting.txt', 'Read it first', false, true))
-      + step(4, 'Work what it brings back',
-             'Claude finds the prospect, checks their site and drafts the message. You approve and send. Everything it writes has to be something it actually saw on their site.',
-             slink('/dialer/?brand=websites', 'Foundry call queue', true)
-             + '<span class="qcount"><b>' + fdLeads.length + '</b> warm now</span>')
-      + '</div><div class="lane-f">'
-        + '<a href="/pitch/">Pitch deck</a><a href="/how-it-works/">Pricing and process</a><a href="/pipeline/">Your bookings</a>'
-      + '</div></div>';
-    var staffifyLane =
-      '<div class="lane sf"><div class="lane-h">'
-        + '<div class="lane-n"><span class="dot"></span>Staffify</div>'
-        + '<div class="lane-w">Placing vetted remote staff. The engine finds businesses that just posted a job, emails them first, then hands you the call.</div>'
-      + '</div><div class="lane-b">'
-      + step(1, 'Check who replied overnight',
-             'Anyone who answered an email is the warmest thing you will touch today. Start here, always.',
-             slink('/campaigns/', 'Open replies', true)
-             + '<span class="qcount"><b>' + sfLeads.length + '</b> warm now</span>')
-      + step(2, 'Work the call queue',
-             'These businesses posted a role and already got an email from us. Open by name and ask whether the seat is still open.',
-             slink('/dialer/?brand=staffing', 'Staffify call queue', false)
-             + slink('/training/sales/remote-hiring/', 'The script', false))
-      + step(3, 'Confirm the role, then book',
-             'Your job on the call is to confirm the opening is real and book fifteen minutes. You are not closing the placement on the phone.',
-             slink('/how-it-works/', 'Pricing and guarantee', false))
-      + step(4, 'Log the outcome', 'Every call gets a disposition. An unlogged call is a call nobody can follow up.',
-             slink('/pipeline/', 'Your bookings', false))
-      + '</div><div class="lane-f">'
-        + '<a href="/training/sales/">Training</a><a href="/commissions/">Your commissions</a><a href="/scoreboard/">Scoreboard</a>'
-      + '</div></div>';
-
     var tools=TOOLS.map(function(t){
       return '<a class="tool" href="'+t[0]+'" target="_blank" rel="noopener"><div class="tt">'+esc(t[1])+'</div><div class="td">'+esc(t[2])+'</div></a>';
     }).join('');
@@ -428,7 +337,6 @@
       lookupBox()+
       '<div class="eyebrow">Sales Hub</div><h1>Welcome back, <span class="grad">'+esc(first)+'</span></h1>'+
       '<div class="sub">'+upCount+' upcoming call'+(upCount===1?'':'s')+' &middot; '+leadCount+' warm lead'+(leadCount===1?'':'s')+(isAdmin?' &middot; '+appList.length+' applicant'+(appList.length===1?'':'s'):'')+' &middot; '+esc(ME.rate||'35')+'% commission</div>'+
-      '<div class="lanes">'+staffifyLane+foundryLane+'</div>'+
       '<div class="cols">'+
         '<div>'+
           '<div class="panel"><div class="ph"><h2>Warm leads</h2><span class="meta">Live &middot; from the engine</span></div>'+leadRows(ld)+'</div>'+
@@ -450,19 +358,6 @@
         StaffifyClosePlan.run({mode:'prep',transcript:l.transcript||'',name:l.name||'',company:l.company||'',grade:g,phone:l.phone||''}, document.getElementById('cp-'+b.getAttribute('data-cp')), b);
       };
     });
-    var cf=document.getElementById('copyFoundry');
-    if(cf) cf.onclick=async function(){
-      // Never leave a rep believing they copied something they did not.
-      try{
-        var r=await fetch('/assets/prompts/foundry-prospecting.txt',{cache:'no-store'});
-        if(!r.ok) throw new Error('http '+r.status);
-        await navigator.clipboard.writeText(await r.text());
-        cf.textContent='Copied. Now paste it into Claude'; cf.classList.add('done');
-      }catch(e){
-        cf.textContent='Could not copy, opening it instead';
-        window.open('/assets/prompts/foundry-prospecting.txt','_blank','noopener');
-      }
-    };
     wireLookup();
   }
 
