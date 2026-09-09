@@ -12,7 +12,7 @@
 // Commission = base * rate, where rate = dealType: va -> the rep's rate (default 35), website -> 30, ai -> 10.
 // base = the paid invoice amount once paid, else the HubSpot deal amount as an estimate (admin can pin it, incl 0).
 
-import { currentRep, adminAuthorized, listReps, readBody, redis } from './_auth.js';
+import { currentRep, openIdentity, adminAuthorized, listReps, readBody, redis } from './_auth.js';
 import { qboConnected, qboQuery } from './_qbo.js';
 import { hoursByClient, hubstaffStatus } from './_hubstaff.js';
 
@@ -647,8 +647,23 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
-    const who = await currentRep(req).catch(() => null);
-    const isAdmin = (who && who.role === 'admin') || adminAuthorized(req);
+    // IDENTITY ON READS IS OPEN, EXACTLY LIKE EVERY OTHER REP PAGE.
+    //
+    // This endpoint still demanded a session cookie via currentRep, long after the rep OS was made
+    // login-free and moved to openIdentity. Nothing in the product sets that cookie any more, so
+    // BOTH the rep view and the admin view returned 401 login_required in production and the Team
+    // tab rendered "Could not load the team view / Failed to fetch". The page was not broken. It
+    // was asking for a door that had been removed.
+    //
+    // Writes are untouched: the POST override path below still requires the admin token.
+    const session = await currentRep(req).catch(() => null);
+    const who = req.method === 'GET' ? await openIdentity(req).catch(() => null) : session;
+    // Paul is the owner. His address identifies him on a shared link with no session, which is how
+    // he actually opens this page.
+    const OWNER_EMAILS = new Set(['hello@gostaffify.com', 'paul@gostaffify.com']);
+    const isAdmin = (who && who.role === 'admin')
+        || (who && OWNER_EMAILS.has(String(who.email || '').toLowerCase()))
+        || adminAuthorized(req);
 
     // ---- POST: admin overrides one deal ----
     if (req.method === 'POST') {
@@ -689,6 +704,8 @@ export default async function handler(req, res) {
         });
     }
 
+    // A GET can no longer 401: openIdentity always resolves to at least a Guest, and a page that
+    // cannot say who you are should show you an empty rep view, never an error box.
     if (!who && !isAdmin) return res.status(401).json({ error: 'login_required' });
 
     // Reps load FIRST, because a rep's recorded hubspotOwnerId is what lets a deal find its closer

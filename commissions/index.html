@@ -202,6 +202,20 @@
     .prow .a{grid-column:2}
   }
   @media (max-width:420px){ .strip{grid-template-columns:1fr 1fr} .hero .big{font-size:42px} }
+
+  .band4{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 18px}
+  @media(min-width:760px){.band4{grid-template-columns:repeat(4,1fr)}}
+  .band4 .kpi{background:var(--card,#131b21);border:1px solid var(--line,#24313a);border-radius:10px;padding:14px 15px}
+  .band4 .kpi b{display:block;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .band4 .kpi span{display:block;font-size:12px;opacity:.65;margin-top:7px;line-height:1.35}
+  .band4 .kpi.warn{border-color:#a8481f}
+  .band4 .kpi.warn b{color:#de8b5c;font-size:20px}
+  h3.sec{font-size:13px;letter-spacing:.09em;text-transform:uppercase;opacity:.6;margin:26px 0 10px;font-weight:600}
+  .rankdot{display:inline-block;min-width:19px;height:19px;line-height:19px;text-align:center;border-radius:5px;background:#1abde1;color:#04202a;font-size:11px;font-weight:800;margin-right:8px}
+  .rankdot.dim{background:#24313a;color:#8895a0}
+  .att{margin:0;padding-left:18px}
+  .att li{font-size:14px;line-height:1.55;margin-bottom:9px;opacity:.9}
+  tr.reprow:hover{background:rgba(255,255,255,0.03)}
 </style>
 
     <script id="vtag-ai-js" async src="https://r2.leadsy.ai/tag.js" data-pid="17PMqPWtsqz2Rzt3y" data-version="062024"></script>
@@ -448,13 +462,73 @@
   }
 
   // ---------- admin ----------
+  // THE OWNER VIEW. One table that connects effort to output to revenue to commission.
+  //
+  // The commission columns are deliberately NOT labelled "earned". Every one of the 42 closed-won
+  // deals is calculated but unpayable, because QuickBooks is disconnected and nothing can confirm
+  // the customer actually paid. Calling $327,112 "earned" with "$0 next payout" beside it is the
+  // question this page kept provoking. CALCULATED is what the number is: commission the rules
+  // produce from closed-won deals. VERIFIED is what a payment confirmation would make it.
   function teamTab(){
     if(!ADM) return '<div class="skel" style="height:180px"></div>';
-    if(ADM.error) return '<div class="errbox"><h3>Could not load the team view</h3><p>'+esc(ADM.error)+'</p></div>';
-    var reps=ADM.byRep||[];
-    return '<div class="tbl"><table><thead><tr><th>Rep</th><th class="num">Deals</th><th class="num">Revenue</th><th class="num">Commission</th><th class="num">Ready</th><th class="num">Pending</th><th class="num">Paid</th><th class="num">VA hrs</th><th class="num">Residual</th></tr></thead><tbody>'
-      +reps.map(function(m){return '<tr><td class="first" data-l="Rep"><div class="cl">'+esc(m.name||m.repEmail)+'</div><div class="cl-s">'+esc(m.repEmail)+'</div></td><td class="num" data-l="Deals">'+m.deals+'</td><td class="num" data-l="Revenue">'+money(m.revenue)+'</td><td class="num" data-l="Commission"><span class="money">'+money(m.commission)+'</span></td><td class="num" data-l="Ready">'+money(m.payable)+'</td><td class="num" data-l="Pending">'+money(m.pending)+'</td><td class="num" data-l="Paid">'+money(m.paidOut)+'</td><td class="num" data-l="VA hrs">'+(m.hours||0)+'</td><td class="num" data-l="Residual">'+money(m.residual,true)+'</td></tr>';}).join('')
-      +'</tbody></table></div><div class="note">Liability across the team: <b>'+money(reps.reduce(function(a,m){return a+(m.payable||0);},0))+'</b> ready to pay, <b>'+money(reps.reduce(function(a,m){return a+(m.pending||0);},0))+'</b> pending.</div>';
+    if(ADM.error) return '<div class="errbox"><h3>Team data is temporarily unavailable</h3><p>'+esc(ADM.error)+'</p><p style="margin-top:8px"><button class="btn small" id="retryAdm">Try again</button></p></div>';
+    var reps=(ADM.byRep||[]).slice();
+    if(!reps.length) return '<div class="note">No reps are configured yet.</div>';
+
+    var qbo = !!ADM.qboConnected;
+    var tCalc=0,tVer=0,tPaid=0,tRev=0,tDeals=0;
+    reps.forEach(function(m){ tCalc+=(m.commission||0); tVer+=(m.payable||0); tPaid+=(m.paidOut||0); tRev+=(m.revenue||0); tDeals+=(m.deals||0); });
+
+    // Efficiency only where the inputs are real. Revenue per deal is the one ratio every row can
+    // support today; hours come from Hubstaff and only exist for people with VAs under them, so a
+    // per-hour figure is shown only when hours are actually present.
+    function eff(m){
+      var out=[];
+      if(m.deals) out.push(money(Math.round((m.revenue||0)/m.deals))+' / deal');
+      if(m.hours>0) out.push('$'+Math.round((m.revenue||0)/m.hours)+' / hr');
+      return out.join('  ·  ') || '<span class="cl-s">no closed deals</span>';
+    }
+
+    var band='<div class="band4">'
+      +'<div class="kpi"><b>'+money(tRev)+'</b><span>revenue closed, all time</span></div>'
+      +'<div class="kpi"><b>'+money(tCalc)+'</b><span>commission calculated</span></div>'
+      +'<div class="kpi'+(qbo?'':' warn')+'"><b>'+(qbo?money(tVer):'unverified')+'</b><span>'+(qbo?'verified payable':'payment verification unavailable')+'</span></div>'
+      +'<div class="kpi"><b>'+money(tPaid)+'</b><span>actually paid out</span></div>'
+      +'</div>';
+
+    var rows=reps.map(function(m,i){
+      var share = tCalc>0 ? Math.round((m.commission||0)/tCalc*100) : 0;
+      return '<tr class="reprow" data-rep="'+esc(m.repEmail)+'">'
+        +'<td class="first" data-l="Rep"><div class="cl">'+(i===0?'<span class="rankdot">'+(i+1)+'</span>':'<span class="rankdot dim">'+(i+1)+'</span>')+esc(m.name||m.repEmail)+'</div><div class="cl-s">'+esc(m.repEmail)+'</div></td>'
+        +'<td class="num" data-l="Deals won">'+(m.deals||0)+'</td>'
+        +'<td class="num" data-l="Revenue">'+money(m.revenue)+'</td>'
+        +'<td class="num" data-l="Efficiency"><span class="cl-s">'+eff(m)+'</span></td>'
+        +'<td class="num" data-l="Commission calculated"><span class="money">'+money(m.commission)+'</span><div class="cl-s">'+share+'% of team</div></td>'
+        +'<td class="num" data-l="Verified payable">'+(qbo?money(m.payable):'<span class="cl-s">unverified</span>')+'</td>'
+        +'<td class="num" data-l="Paid">'+money(m.paidOut)+'</td>'
+        +'<td class="num" data-l="VA hours">'+(m.hours>0?m.hours:'<span class="cl-s">none</span>')+'</td>'
+        +'</tr>';
+    }).join('');
+
+    // MANAGEMENT ATTENTION, derived only from conditions the data actually proves.
+    var att=[];
+    if(!qbo) att.push('Nothing on this page can be paid. QuickBooks is disconnected, so no customer payment can be confirmed and all '+money(tCalc)+' stays calculated rather than payable.');
+    (ADM.blockers||[]).forEach(function(b){ if(b.code!=='qbo_disconnected') att.push(esc(b.detail)+'  <span class="cl-s">'+esc(b.fix||'')+'</span>'); });
+    reps.forEach(function(m){
+      if((m.hours||0)>200 && (m.deals||0)===0) att.push(esc(m.name)+' has '+m.hours+' VA hours under management and no closed deals.');
+      if((m.deals||0)>0 && (m.revenue||0)===0) att.push(esc(m.name)+' has '+m.deals+' closed deal(s) recording zero revenue, so their commission cannot be right.');
+    });
+    var attention = att.length
+      ? '<h3 class="sec">Needs attention</h3><ul class="att">'+att.map(function(a){return '<li>'+a+'</li>';}).join('')+'</ul>'
+      : '';
+
+    return band
+      +'<h3 class="sec">Team performance</h3>'
+      +'<div class="tbl"><table><thead><tr><th>Rep</th><th class="num">Deals won</th><th class="num">Revenue</th><th class="num">Efficiency</th><th class="num">Commission calculated</th><th class="num">Verified payable</th><th class="num">Paid</th><th class="num">VA hours</th></tr></thead><tbody>'
+      +rows+'</tbody></table></div>'
+      +'<div class="note">'+tDeals+' closed-won deals across '+reps.length+' people. '
+      +(qbo ? money(tVer)+' is verified and ready to pay.' : 'Verification is unavailable, so none of this is payable yet.')+'</div>'
+      +attention;
   }
   function exceptionsTab(){
     if(!ADM) return '<div class="skel" style="height:180px"></div>';
