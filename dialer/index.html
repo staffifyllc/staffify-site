@@ -77,6 +77,10 @@
                   border:1px dashed var(--card-border); border-radius:12px; text-align:center; }
         .emailbtn { display:block; width:100%; margin-top:10px; background:rgba(26,189,225,0.12); color:#7fd8ee; border:1px solid rgba(26,189,225,0.45); border-radius:12px; padding:13px; font:inherit; font-weight:800; font-size:15px; cursor:pointer; }
         .emailbtn:hover { background:rgba(26,189,225,0.2); }
+        .mailpref { display:flex; align-items:center; justify-content:center; gap:7px; flex-wrap:wrap;
+                    margin-top:7px; font-size:12px; color:var(--muted); }
+        .mailpref select { font:inherit; font-size:12px; color:var(--muted); background:rgba(255,255,255,0.04);
+                    border:1px solid var(--card-border); border-radius:8px; padding:3px 7px; cursor:pointer; }
         .fresh { display:inline-block; margin-top:8px; background:rgba(45,190,120,0.12); color:#5fd39a; border:1px solid rgba(45,190,120,0.4); border-radius:999px; font-size:11.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:4px 11px; }
         .touched { display:block; margin-top:8px; background:rgba(255,255,255,0.04); color:#c8cfd6; border:1px solid var(--card-border); border-radius:10px; font-size:13px; padding:8px 12px; }
         .pctag { display:inline-block; margin-top:8px; background:rgba(255,193,7,0.12); color:#ffc94d; border:1px solid rgba(255,193,7,0.35); border-radius:999px; font-size:11.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:4px 11px; }
@@ -1048,6 +1052,35 @@
     return line.replace(/\[first name\]/gi, first||'there').replace(/\[company\]/gi, lead.company||'your company').replace(/\[role\]/gi, lead.role||'the role').replace(/\[you\]/gi, you);
   }
 
+  // WHICH MAIL APP THE COMPOSE BUTTON OPENS.
+  // A plain mailto: hands off to whatever the operating system has registered, which on these Macs is
+  // Apple Mail. The team sends from Front, so the draft was landing in the wrong app every time.
+  // Front documents three ways in (help.front.com/t/y7249s):
+  //   front-web     https://app.frontapp.com/compose?mailto=<encoded mailto>   works everywhere, no setup
+  //   front-desktop mailto-frontapp:...   opens the Front desktop app, no setup, but needs it installed
+  //   default       mailto:...           the old behaviour, for anyone not on Front
+  // front-web is the default because it is the only one that cannot silently do nothing: an unhandled
+  // custom scheme fails invisibly, and a rep staring at a button that appears dead will just stop using it.
+  // Front's plain-text body parameter is `text`; `body` is treated as HTML and would eat the line breaks.
+  function mailClient(){ try{ return localStorage.getItem('sfy_mailclient') || 'front-web'; }catch(e){ return 'front-web'; } }
+  function mailClientSet(v){ try{ localStorage.setItem('sfy_mailclient', v); }catch(e){} }
+  function composeUrl(to, subject, bodyText){
+    var addr = String(to||'').trim();
+    var sub = encodeURIComponent(subject||'');
+    var txt = encodeURIComponent(bodyText||'');
+    var who = mailClient();
+    if(who === 'front-desktop') return 'mailto-frontapp:'+addr+'?subject='+sub+'&text='+txt;
+    if(who === 'default')       return 'mailto:'+addr+'?subject='+sub+'&body='+txt;
+    return 'https://app.frontapp.com/compose?mailto='+encodeURIComponent('mailto:'+addr+'?subject='+sub+'&text='+txt);
+  }
+  // window.open on a custom scheme is unreliable and can leave an orphaned blank tab. A real anchor
+  // click is what browsers actually honour for scheme handoff.
+  function openCompose(url){
+    if(/^https:/.test(url)){ window.open(url,'_blank','noopener'); return; }
+    var a=document.createElement('a'); a.href=url; a.style.display='none';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ a.remove(); }, 0);
+  }
+
   function repGet(){try{var r=JSON.parse(localStorage.getItem('sfy_rep')||'null');if(r&&r.name)return r;}catch(e){}return null;}
   function repSet(n){n=(n||'').trim();if(!n)return null;var em=n.toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/(^\.|\.$)/g,'')+'@rep.local';var r={name:n,email:em};try{localStorage.setItem('sfy_rep',JSON.stringify(r));}catch(x){}return r;}
   function nameChip(){var r=repGet();return '<button class="btn btn-ghost" id="nm">'+(r?('Hi, '+esc(r.name.split(' ')[0])):'Set your name')+'</button>';}
@@ -1438,7 +1471,12 @@
         (L.email
           ? (emailIsBad(L)
               ? '<div class="nomail">Email is dead on this one. It failed verification, so call or text instead.</div>'
-              : '<button class="emailbtn" id="emailbtn">Email them &middot; '+esc(L.email)+'</button>')
+              : '<button class="emailbtn" id="emailbtn">Email them &middot; '+esc(L.email)+'</button>'
+                +'<div class="mailpref"><span>Opens in</span><select id="mailpref">'
+                +'<option value="front-web">Front (browser)</option>'
+                +'<option value="front-desktop">Front (desktop app)</option>'
+                +'<option value="default">My default mail app</option>'
+                +'</select></div>')
           : '')+
         sentBlock(L)+
         bookBlock(L)+
@@ -1589,7 +1627,7 @@
         +(L.siteFault?L.siteFault+'\n\n':'')
         +'We build sites for '+(L.industry||'businesses like yours')+', and I can run a free AI-visibility audit that shows whether ChatGPT and Google actually surface you when someone nearby goes looking. No cost and no commitment.\n\n'
         +'Want me to send it over?\n\nPaul\nFoundry';
-      window.open('mailto:'+encodeURIComponent(L.email)+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body),'_blank');
+      openCompose(composeUrl(L.email, sub, body));
       eb.textContent='Email opened';
       markActed(L,'emailed');
       // This email pitches the audit, so it is a real touch and belongs in the CRM. It records an
@@ -1608,6 +1646,17 @@
       var count=function(){ if(cnt) cnt.textContent=ta.value.length+' / 480'; };
       ta.addEventListener('input', count); count();
       if(rs) rs.onclick=function(){ if(L0){ ta.value=textPreview(L0); count(); toast('Back to the default.'); } };
+    })();
+    (function(){
+      var mp=document.getElementById('mailpref');
+      if(!mp) return;
+      mp.value=mailClient();
+      mp.onchange=function(){
+        mailClientSet(mp.value);
+        toast(mp.value==='default' ? 'Emails will open in your default mail app.'
+             : mp.value==='front-desktop' ? 'Emails will open in the Front desktop app.'
+             : 'Emails will open in Front in your browser.');
+      };
     })();
     var tb=document.getElementById('txtbtn');
     if(tb) tb.onclick=function(){
