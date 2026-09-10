@@ -67,3 +67,83 @@
   /* expose for manual/one-off use */
   window.staffifyTrack = track;
 })();
+
+/* Staffify — lead behavior tracking
+ * Emails carry a lead id (?lid=). We store it, strip it from the address bar,
+ * and report what that person does on the site to our own collector. No
+ * third party, no cookies for anonymous visitors: with no id, this does
+ * nothing at all.
+ * -------------------------------------------------------------------- */
+(function () {
+  var ENDPOINT = 'https://staffify-rsvp.vercel.app/api/track';
+  var KEY = 'sf_lid';
+  var YEAR = 60 * 60 * 24 * 365;
+
+  function store(lid) {
+    try { localStorage.setItem(KEY, lid); } catch (e) {}
+    try { document.cookie = KEY + '=' + lid + ';path=/;max-age=' + YEAR + ';samesite=lax'; } catch (e) {}
+  }
+  function read() {
+    try { var v = localStorage.getItem(KEY); if (v) return v; } catch (e) {}
+    var m = document.cookie.match(/(?:^|;\s*)sf_lid=([^;]+)/);
+    return m ? m[1] : null;
+  }
+
+  /* pick the id off the link, then clean the URL so it is not visible or shareable */
+  try {
+    var params = new URLSearchParams(location.search);
+    var fromUrl = params.get('lid');
+    if (fromUrl && /^[A-Za-z0-9_-]{6,32}$/.test(fromUrl)) {
+      store(fromUrl);
+      params.delete('lid');
+      var q = params.toString();
+      history.replaceState({}, '', location.pathname + (q ? '?' + q : '') + location.hash);
+    }
+  } catch (e) {}
+
+  var LID = read();
+  if (!LID) return;              /* anonymous visitor: track nothing */
+
+  function send(event, meta) {
+    var payload = JSON.stringify({
+      lid: LID,
+      event: event,
+      page: location.href,
+      referrer: document.referrer || null,
+      meta: meta || null
+    });
+    try { if (navigator.sendBeacon && navigator.sendBeacon(ENDPOINT, payload)) return; } catch (e) {}
+    try { fetch(ENDPOINT, { method: 'POST', body: payload, keepalive: true, headers: { 'Content-Type': 'text/plain' } }); } catch (e) {}
+  }
+
+  send('pageview', { title: document.title });
+
+  /* clicks that leave the site or start a conversation */
+  document.addEventListener('click', function (ev) {
+    var a = ev.target && ev.target.closest ? ev.target.closest('a') : null;
+    if (!a || !a.href) return;
+    var href = a.href;
+    var kind = /calendly\.com/i.test(href) ? 'booking'
+             : /^mailto:/i.test(href) ? 'email'
+             : /^tel:/i.test(href) ? 'phone'
+             : (a.host && a.host !== location.host) ? 'outbound' : null;
+    if (!kind) return;           /* internal links show up as the next pageview */
+    send('click', { kind: kind, href: href, text: (a.textContent || '').trim().slice(0, 80) });
+  }, true);
+
+  /* how far down the page they actually got */
+  var depths = {};
+  window.addEventListener('scroll', function () {
+    var h = document.documentElement;
+    var pct = (h.scrollTop + window.innerHeight) / (h.scrollHeight || 1) * 100;
+    [50, 90].forEach(function (mark) {
+      if (pct >= mark && !depths[mark]) { depths[mark] = 1; send('scroll', { depth: mark }); }
+    });
+  }, { passive: true });
+
+  /* time on page, sent as they leave */
+  var start = Date.now();
+  window.addEventListener('pagehide', function () {
+    send('time', { seconds: Math.round((Date.now() - start) / 1000) });
+  });
+})();
