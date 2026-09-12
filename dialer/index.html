@@ -1062,20 +1062,15 @@
   // front-web is the default because it is the only one that cannot silently do nothing: an unhandled
   // custom scheme fails invisibly, and a rep staring at a button that appears dead will just stop using it.
   // Front's plain-text body parameter is `text`; `body` is treated as HTML and would eat the line breaks.
-  function mailClient(){ try{ return localStorage.getItem('sfy_mailclient') || 'front-web'; }catch(e){ return 'front-web'; } }
-  function mailClientSet(v){ try{ localStorage.setItem('sfy_mailclient', v); }catch(e){} }
+  // The shared helper owns this now (assets/js/mail-client.js). Two copies of the same logic is
+  // how the hub ended up on Front while the dialer drifted, and how Gmail got added to neither.
+  function mailClient(){ return (window.sfyMail && window.sfyMail.get()) || 'front-web'; }
   function composeUrl(to, subject, bodyText){
-    var addr = String(to||'').trim();
-    var sub = encodeURIComponent(subject||'');
-    var txt = encodeURIComponent(bodyText||'');
-    var who = mailClient();
-    if(who === 'front-desktop') return 'mailto-frontapp:'+addr+'?subject='+sub+'&text='+txt;
-    if(who === 'default')       return 'mailto:'+addr+'?subject='+sub+'&body='+txt;
-    return 'https://app.frontapp.com/compose?mailto='+encodeURIComponent('mailto:'+addr+'?subject='+sub+'&text='+txt);
+    if (window.sfyMail) return window.sfyMail.compose(to, subject, bodyText);
+    return 'mailto:'+String(to||'').trim()+'?subject='+encodeURIComponent(subject||'')+'&body='+encodeURIComponent(bodyText||'');
   }
-  // window.open on a custom scheme is unreliable and can leave an orphaned blank tab. A real anchor
-  // click is what browsers actually honour for scheme handoff.
   function openCompose(url){
+    if(!url) return;                       // 'default': the OS handler already has it
     if(/^https:/.test(url)){ window.open(url,'_blank','noopener'); return; }
     var a=document.createElement('a'); a.href=url; a.style.display='none';
     document.body.appendChild(a); a.click(); setTimeout(function(){ a.remove(); }, 0);

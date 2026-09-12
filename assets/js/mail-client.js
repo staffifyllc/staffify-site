@@ -1,53 +1,124 @@
-/* Send through Front, not Apple Mail.
+/* Open a draft in the mail client the rep actually uses.
  *
  * Paul, 2026-09-08: "we are using FRONT app to send emails, its right now opening the default mail app".
- * A mailto: link hands off to whatever the operating system registered, which on these Macs is Apple Mail.
- * Front documents three ways in (help.front.com/t/y7249s):
+ * Paul, 2026-09-12: "the emailing button should be wired to the users gmail ... ideally front, as thats
+ * what we currently use, but its through gmail that these emails are getting sent."
+ *
+ * A mailto: link hands off to whatever the operating system registered, which on these Macs is Apple
+ * Mail, which nobody here uses. Four targets, in the order they are worth trying:
+ *
  *   front-web      https://app.frontapp.com/compose?mailto=<encoded mailto>   works anywhere, no setup
- *   front-desktop  mailto-frontapp:...                                        needs the desktop app installed
- *   default        mailto:...                                                 the OS handler
+ *   gmail          https://mail.google.com/mail/u/<n>/?view=cm&fs=1&to=…      the account underneath Front
+ *   front-desktop  mailto-frontapp:…                                          needs the Front desktop app
+ *   default        mailto:…                                                   the OS handler, Apple Mail here
  *
- * This rewrites every mailto link on the page at click time. It reads the same 'sfy_mailclient' key the
- * dialer's compose button writes, so a rep sets it once and both obey it.
+ * front-web is the default because it is the only one that cannot silently do nothing: an unhandled
+ * custom scheme fails invisibly, and a rep staring at a dead button just stops using it.
  *
- * Front's plain-text body parameter is `text`. Its `body` is treated as HTML, which would swallow the
- * line breaks, so any body carried on the link is moved across to `text`.
+ * Front's plain-text body parameter is `text`; its `body` is treated as HTML and eats line breaks.
+ * Gmail's are `su` and `body`. Getting this wrong produces a draft with the whole message on one line.
  *
- * Only load this on rep tools. On a public marketing page a visitor's own mail app is the correct target.
+ * Only load this on rep tools. On a public marketing page a visitor's own mail app is correct.
  */
 (function () {
   'use strict';
-  function pref() {
-    try { return localStorage.getItem('sfy_mailclient') || 'front-web'; } catch (e) { return 'front-web'; }
-  }
+  var KEY = 'sfy_mailclient';
+  var GMAIL_USER_KEY = 'sfy_gmail_user';   // which Google account, for anyone signed into several
 
-  function rewrite(href) {
-    var who = pref();
-    if (who === 'default') return null;                 // leave it to the operating system
-    var rest = href.replace(/^mailto:/i, '');
+  var OPTIONS = [
+    ['front-web', 'Front (browser)'],
+    ['gmail', 'Gmail'],
+    ['front-desktop', 'Front (desktop app)'],
+    ['default', 'System default'],
+  ];
+
+  function get() { try { return localStorage.getItem(KEY) || 'front-web'; } catch (e) { return 'front-web'; } }
+  function set(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
+  function gmailUser() { try { return localStorage.getItem(GMAIL_USER_KEY) || '0'; } catch (e) { return '0'; } }
+
+  /** Split a mailto: href into its address and its query, whatever shape it arrived in. */
+  function parse(href) {
+    var rest = String(href || '').replace(/^mailto:/i, '');
     var cut = rest.indexOf('?');
-    var addr = cut === -1 ? rest : rest.slice(0, cut);
+    var addr = decodeURIComponent(cut === -1 ? rest : rest.slice(0, cut));
     var qs = cut === -1 ? '' : rest.slice(cut + 1);
-
-    // Front wants plain text under `text`. Carry anything already on the link across unchanged.
-    if (qs) qs = qs.replace(/(^|&)body=/, '$1text=');
-
-    if (who === 'front-desktop') return 'mailto-frontapp:' + addr + (qs ? '?' + qs : '');
-    return 'https://app.frontapp.com/compose?mailto=' +
-      encodeURIComponent('mailto:' + addr + (qs ? '?' + qs : ''));
+    var out = { to: addr, subject: '', body: '' };
+    qs.split('&').forEach(function (pair) {
+      var i = pair.indexOf('=');
+      if (i === -1) return;
+      var k = pair.slice(0, i).toLowerCase();
+      var v = decodeURIComponent(pair.slice(i + 1).replace(/\+/g, ' '));
+      if (k === 'subject' || k === 'su') out.subject = v;
+      else if (k === 'body' || k === 'text') out.body = v;
+    });
+    return out;
   }
 
+  /** Build the compose URL for the rep's chosen client. Returns null to leave it to the OS. */
+  function compose(to, subject, body, who) {
+    who = who || get();
+    var addr = String(to || '').trim();
+    var sub = encodeURIComponent(subject || '');
+    var txt = encodeURIComponent(body || '');
+    if (who === 'default') return null;
+    if (who === 'gmail') {
+      // Gmail uses su/body, and /u/<n>/ picks the account when several are signed in.
+      return 'https://mail.google.com/mail/u/' + encodeURIComponent(gmailUser()) +
+        '/?view=cm&fs=1&to=' + encodeURIComponent(addr) + '&su=' + sub + '&body=' + txt;
+    }
+    var inner = 'mailto:' + addr + '?subject=' + sub + '&text=' + txt;   // Front wants `text`
+    if (who === 'front-desktop') return 'mailto-frontapp:' + addr + '?subject=' + sub + '&text=' + txt;
+    return 'https://app.frontapp.com/compose?mailto=' + encodeURIComponent(inner);
+  }
+
+  /** Open a compose URL. A custom scheme needs a real anchor click; window.open orphans a blank tab. */
+  function open_(url) {
+    if (!url) return false;
+    if (url.indexOf('https:') === 0) { window.open(url, '_blank', 'noopener'); return true; }
+    var a = document.createElement('a');
+    a.href = url; a.style.display = 'none';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { a.remove(); }, 0);
+    return true;
+  }
+
+  // Every mailto link on the page is rewritten at click time, so a page does not have to know
+  // anything about this to benefit from it.
   document.addEventListener('click', function (ev) {
     var a = ev.target && ev.target.closest ? ev.target.closest('a[href^="mailto:"]') : null;
     if (!a) return;
-    var url = rewrite(a.getAttribute('href') || '');
-    if (!url) return;
+    var m = parse(a.getAttribute('href') || '');
+    var url = compose(m.to, m.subject, m.body);
+    if (!url) return;                       // 'default': let the operating system have it
     ev.preventDefault();
-    if (url.indexOf('https:') === 0) { window.open(url, '_blank', 'noopener'); return; }
-    // A custom scheme needs a real anchor click. window.open can leave an orphaned blank tab behind.
-    var t = document.createElement('a');
-    t.href = url; t.style.display = 'none';
-    document.body.appendChild(t); t.click();
-    setTimeout(function () { t.remove(); }, 0);
+    open_(url);
   }, true);
+
+  /**
+   * Render a picker into any element with [data-mail-client-picker]. Until 2026-09-12 the setter
+   * existed but nothing ever called it, so the only way to change clients was the devtools console.
+   */
+  function mountPickers() {
+    var hosts = document.querySelectorAll('[data-mail-client-picker]');
+    Array.prototype.forEach.call(hosts, function (host) {
+      if (host.dataset.mounted) return;
+      host.dataset.mounted = '1';
+      var sel = document.createElement('select');
+      sel.setAttribute('aria-label', 'Which app opens email drafts');
+      OPTIONS.forEach(function (o) {
+        var op = document.createElement('option');
+        op.value = o[0]; op.textContent = o[1];
+        if (o[0] === get()) op.selected = true;
+        sel.appendChild(op);
+      });
+      sel.addEventListener('change', function () { set(sel.value); });
+      host.appendChild(sel);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountPickers);
+  else mountPickers();
+  // Rep tools render their panels from JS after data loads, so a picker can appear late.
+  new MutationObserver(mountPickers).observe(document.documentElement, { childList: true, subtree: true });
+
+  window.sfyMail = { get: get, set: set, compose: compose, open: open_, options: OPTIONS, parse: parse };
 })();

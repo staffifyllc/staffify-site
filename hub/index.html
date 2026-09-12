@@ -140,7 +140,11 @@
         .or::before, .or::after { content:''; flex:1; height:1px; background:var(--card-border); }
         .err { color:#ff9a8d; font-size:13px; margin-top:10px; min-height:18px; }
         .empty { color:var(--muted); font-size:13.5px; padding:16px 0; }
-    </style>
+      .mailpick{font-size:12px;color:var(--muted,#8b95a7);display:inline-flex;align-items:center;gap:6px}
+  .mailpick select{font:inherit;color:inherit;background:transparent;border:1px solid rgba(255,255,255,.16);
+    border-radius:6px;padding:2px 6px;cursor:pointer}
+  .mailpick select option{color:#111}
+</style>
     <script id="vtag-ai-js" async src="https://r2.leadsy.ai/tag.js" data-pid="17PMqPWtsqz2Rzt3y" data-version="062024"></script>
 </head>
 <body>
@@ -162,7 +166,7 @@
 <div class="wrap" id="app"></div>
 
 <script src="/assets/js/close-plan.js"></script>
-<script src="/assets/js/mail-client.js"></script>
+<script src="/assets/js/mail-client.js?v=2"></script>
 <script>
 (function(){
   var app=document.getElementById('app');
@@ -448,7 +452,12 @@
         '</div>'+
         '<div>'+
           '<div class="panel"><div class="ph"><h2>The playbook</h2><a href="/training/sales/">Open training &#8594;</a></div>'+mods+'</div>'+
-          '<div class="panel"><div class="ph"><h2>Your toolkit</h2></div><div class="tools">'+tools+'</div></div>'+
+          '<div class="panel"><div class="ph"><h2>Your toolkit</h2>'+
+            // Until 2026-09-12 the mail-client setter existed and nothing called it, so the only
+            // way off Apple Mail was the devtools console. Paul opens drafts in Front, which sends
+            // through Gmail underneath, and neither was reachable from the page.
+            '<span class="mailpick">Email opens in <span data-mail-client-picker></span></span>'+
+          '</div><div class="tools">'+tools+'</div></div>'+
         '</div>'+
       '</div>';
 
