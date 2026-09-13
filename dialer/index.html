@@ -1065,12 +1065,26 @@
   // The shared helper owns this now (assets/js/mail-client.js). Two copies of the same logic is
   // how the hub ended up on Front while the dialer drifted, and how Gmail got added to neither.
   function mailClient(){ return (window.sfyMail && window.sfyMail.get()) || 'front-web'; }
+  function mailClientSet(v){
+    if (window.sfyMail) { window.sfyMail.set(v); return; }
+    try { localStorage.setItem('sfy_mailclient', v); } catch (e) {}
+  }
+  // One list, owned by the shared helper, so the dialer and the hub can never offer different
+  // clients again. Gmail was missing here entirely, which is what Paul was looking at.
+  function mailOptionsHtml(){
+    var opts = (window.sfyMail && window.sfyMail.options) ||
+      [['front-web','Front (browser)'],['gmail','Gmail'],['front-desktop','Front (desktop app)'],['default','My default mail app']];
+    return opts.map(function(o){
+      return '<option value="'+o[0]+'">'+o[1]+'</option>';
+    }).join('');
+  }
   function composeUrl(to, subject, bodyText){
     if (window.sfyMail) return window.sfyMail.compose(to, subject, bodyText);
     return 'mailto:'+String(to||'').trim()+'?subject='+encodeURIComponent(subject||'')+'&body='+encodeURIComponent(bodyText||'');
   }
-  function openCompose(url){
+  function openCompose(url, fallback){
     if(!url) return;                       // 'default': the OS handler already has it
+    if(window.sfyMail){ window.sfyMail.open(url, { fallback: fallback }); return; }
     if(/^https:/.test(url)){ window.open(url,'_blank','noopener'); return; }
     var a=document.createElement('a'); a.href=url; a.style.display='none';
     document.body.appendChild(a); a.click(); setTimeout(function(){ a.remove(); }, 0);
@@ -1468,9 +1482,7 @@
               ? '<div class="nomail">Email is dead on this one. It failed verification, so call or text instead.</div>'
               : '<button class="emailbtn" id="emailbtn">Email them &middot; '+esc(L.email)+'</button>'
                 +'<div class="mailpref"><span>Opens in</span><select id="mailpref">'
-                +'<option value="front-web">Front (browser)</option>'
-                +'<option value="front-desktop">Front (desktop app)</option>'
-                +'<option value="default">My default mail app</option>'
+                + mailOptionsHtml()
                 +'</select></div>')
           : '')+
         sentBlock(L)+
@@ -1622,7 +1634,10 @@
         +(L.siteFault?L.siteFault+'\n\n':'')
         +'We build sites for '+(L.industry||'businesses like yours')+', and I can run a free AI-visibility audit that shows whether ChatGPT and Google actually surface you when someone nearby goes looking. No cost and no commitment.\n\n'
         +'Want me to send it over?\n\nPaul\nFoundry';
-      openCompose(composeUrl(L.email, sub, body));
+      // Front desktop can silently no-op, so hand the browser version across as the fallback.
+      var fb = mailClient()==='front-desktop' && window.sfyMail
+        ? window.sfyMail.compose(L.email, sub, body, 'front-web') : null;
+      openCompose(composeUrl(L.email, sub, body), fb);
       eb.textContent='Email opened';
       markActed(L,'emailed');
       // This email pitches the audit, so it is a real touch and belongs in the CRM. It records an
@@ -1648,9 +1663,9 @@
       mp.value=mailClient();
       mp.onchange=function(){
         mailClientSet(mp.value);
-        toast(mp.value==='default' ? 'Emails will open in your default mail app.'
-             : mp.value==='front-desktop' ? 'Emails will open in the Front desktop app.'
-             : 'Emails will open in Front in your browser.');
+        var opts=(window.sfyMail && window.sfyMail.options)||[];
+        var label=(opts.find?opts.find(function(o){return o[0]===mp.value;}):null);
+        toast('Emails will open in '+(label?label[1]:mp.value)+'.');
       };
     })();
     var tb=document.getElementById('txtbtn');

@@ -71,14 +71,41 @@
     return 'https://app.frontapp.com/compose?mailto=' + encodeURIComponent(inner);
   }
 
-  /** Open a compose URL. A custom scheme needs a real anchor click; window.open orphans a blank tab. */
-  function open_(url) {
+  /**
+   * Open a compose URL. A custom scheme needs a real anchor click; window.open orphans a blank tab.
+   *
+   * A CUSTOM SCHEME CAN FAIL SILENTLY, which is what "Front (desktop app)" did to Paul on
+   * 2026-09-12: if nothing on the machine is registered for mailto-frontapp: the click does
+   * nothing at all, or the OS quietly hands it to Apple Mail. Either way the rep sees a button
+   * that appears dead and stops trusting it.
+   *
+   * There is no API that reports whether a scheme was handled. The one reliable signal is focus:
+   * a successful handoff moves the OS to another app, so this page loses focus. Still focused a
+   * moment later means nothing caught it, so fall through to the browser version and say so.
+   */
+  function open_(url, opts) {
     if (!url) return false;
     if (url.indexOf('https:') === 0) { window.open(url, '_blank', 'noopener'); return true; }
+    var fallback = opts && opts.fallback;
+    var handedOff = false;
+    function noteHandoff() { handedOff = true; }
+    window.addEventListener('blur', noteHandoff, { once: true });
+    document.addEventListener('visibilitychange', noteHandoff, { once: true });
+
     var a = document.createElement('a');
     a.href = url; a.style.display = 'none';
     document.body.appendChild(a); a.click();
     setTimeout(function () { a.remove(); }, 0);
+
+    if (fallback) {
+      setTimeout(function () {
+        window.removeEventListener('blur', noteHandoff);
+        if (handedOff || document.hidden) return;      // the app took it, nothing to do
+        // Nothing caught the scheme. Open the browser version rather than leaving them stuck.
+        window.open(fallback, '_blank', 'noopener');
+        if (window.sfyMail && window.sfyMail.onFallback) window.sfyMail.onFallback();
+      }, 1500);
+    }
     return true;
   }
 
@@ -91,7 +118,9 @@
     var url = compose(m.to, m.subject, m.body);
     if (!url) return;                       // 'default': let the operating system have it
     ev.preventDefault();
-    open_(url);
+    // If the desktop app is not registered, land in Front in the browser rather than nowhere.
+    var fb = get() === 'front-desktop' ? compose(m.to, m.subject, m.body, 'front-web') : null;
+    open_(url, { fallback: fb });
   }, true);
 
   /**
