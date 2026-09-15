@@ -1682,6 +1682,7 @@
           if(j&&j.sent){ toast('Text sent. Next up.'); retireLead(L,'texted'); }
           else if(j&&j.reason==='already_texted'){ toast('Already texted. Moving on.'); retireLead(L,'already_texted'); }
           else if(j&&j.reason==='opted_out'){ toast('They opted out, so nothing was sent.'); retireLead(L,'opted_out'); }
+          else if(j&&j.reason&&/consent/i.test(j.reason)){ tb.textContent='Texting off'; toast(j.reason); }
           else if(j&&j.error==='not_configured'){ tb.disabled=false; tb.textContent='Text them'; toast('OpenPhone is not connected.'); }
           else if(j&&j.error==='unsupportable_claim'){ tb.disabled=false; tb.textContent='Text them'; toast(j.detail||'That claim cannot go out.'); }
           else if(j&&j.error==='too_long'){ tb.disabled=false; tb.textContent='Text them'; toast('Too long for one text: '+j.was+' of '+j.limit+' characters.'); }

@@ -82,6 +82,12 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method_not_allowed' });
 
+    // RETIRED 2026-09-15. This texted a lead after a no-answer ("Hey {first}, it's {rep}. Just tried you..."),
+    // with no consent from the person being texted. Paul: "Proceed with consent-based OpenPhone texting. Do not
+    // build or enable cold SMS." Quo prohibits messaging without consent. Texts now go only to people who asked
+    // for one, through the Staffify automation line (campaign-dashboard /api/sms-lane).
+    return res.status(200).json({ ok: true, sent: false, reason: 'Texting now needs the person\'s consent first. No-answer texts are off.' });
+
     const who = await openIdentity(req).catch(() => null);
     const b = readBody(req);
     const to = e164(b.phone);
