@@ -144,6 +144,15 @@
   .mailpick select{font:inherit;color:inherit;background:transparent;border:1px solid rgba(255,255,255,.16);
     border-radius:6px;padding:2px 6px;cursor:pointer}
   .mailpick select option{color:#111}
+  /* Hub views: Sales Live (the owner control tower) and My day (the rep home). */
+  .viewtabs{display:flex;gap:6px;margin:0 0 6px;border-bottom:1px solid var(--card-border)}
+  .viewtabs button{font:inherit;font-size:14px;font-weight:700;color:var(--muted);background:none;border:0;
+    border-bottom:2px solid transparent;padding:10px 14px;margin-bottom:-1px;cursor:pointer}
+  .viewtabs button[aria-selected="true"]{color:var(--white);border-bottom-color:var(--cyan)}
+  .viewtabs button:hover{color:var(--white)}
+  .viewtabs button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:6px}
+  .wrap.wide{max-width:1400px}
+  @media (max-width:560px){ .wrap{padding:18px 16px} }
 </style>
     <script id="vtag-ai-js" async src="https://r2.leadsy.ai/tag.js" data-pid="17PMqPWtsqz2Rzt3y" data-version="062024"></script>
 </head>
@@ -166,6 +175,7 @@
 <div class="wrap" id="app"></div>
 
 <script src="/assets/js/close-plan.js"></script>
+<script src="/assets/js/sales-live.js?v=1"></script>
 <script src="/assets/js/mail-client.js?v=2"></script>
 <script>
 (function(){
@@ -439,7 +449,15 @@
       return '<a class="tool" href="'+t[0]+'" target="_blank" rel="noopener"><div class="tt">'+esc(t[1])+'</div><div class="td">'+esc(t[2])+'</div></a>';
     }).join('');
 
+    // Sales Live is the owner control tower (Paul, 2026-09-15: "it has to go here"). Admins open on it,
+    // reps open on their day; the last choice is remembered in this browser, and ?view=live|day links in.
     app.innerHTML=
+      '<div class="viewtabs" role="tablist" aria-label="Hub views">'+
+        '<button type="button" role="tab" id="vt-live" data-view="live" aria-controls="v-live">Sales Live</button>'+
+        '<button type="button" role="tab" id="vt-day" data-view="day" aria-controls="v-day">My day</button>'+
+      '</div>'+
+      '<div id="v-live" role="tabpanel" aria-labelledby="vt-live" style="padding-top:18px"></div>'+
+      '<div id="v-day" role="tabpanel" aria-labelledby="vt-day" style="padding-top:22px">'+
       lookupBox()+
       '<div class="eyebrow">Sales Hub</div><h1>Welcome back, <span class="grad">'+esc(first)+'</span></h1>'+
       '<div class="sub">'+upCount+' upcoming call'+(upCount===1?'':'s')+' &middot; '+leadCount+' warm lead'+(leadCount===1?'':'s')+(isAdmin?' &middot; '+appList.length+' applicant'+(appList.length===1?'':'s'):'')+' &middot; '+esc(ME.rate||'35')+'% commission</div>'+
@@ -459,7 +477,9 @@
             '<span class="mailpick">Email opens in <span data-mail-client-picker></span></span>'+
           '</div><div class="tools">'+tools+'</div></div>'+
         '</div>'+
+      '</div>'+
       '</div>';
+    wireViews(isAdmin);
 
     LEADS = (ld && ld.leads) ? ld.leads.slice(0,12) : [];
     Array.prototype.forEach.call(app.querySelectorAll('.cp-btn'), function(b){
@@ -484,6 +504,36 @@
       }
     };
     wireLookup();
+  }
+
+  function wireViews(isAdmin){
+    var views=['live','day'];
+    var pick=qp('view');
+    if(views.indexOf(pick)<0){ try{ pick=localStorage.getItem('sfy_hub_view'); }catch(e){ pick=null; } }
+    if(views.indexOf(pick)<0) pick=isAdmin?'live':'day';
+    function show(v, focus){
+      views.forEach(function(x){
+        var b=document.getElementById('vt-'+x), panel=document.getElementById('v-'+x), on=(x===v);
+        b.setAttribute('aria-selected', on?'true':'false'); b.tabIndex=on?0:-1; panel.hidden=!on;
+      });
+      if(focus) document.getElementById('vt-'+v).focus();
+      try{ localStorage.setItem('sfy_hub_view', v); }catch(e){}
+      app.classList.toggle('wide', v==='live');
+      if(window.StaffifySalesLive){
+        if(v==='live') window.StaffifySalesLive.mount(document.getElementById('v-live'));
+        else window.StaffifySalesLive.unmount();
+      } else if(v==='live') {
+        document.getElementById('v-live').innerHTML='<div class="empty">Sales Live did not load. Refresh the page.</div>';
+      }
+    }
+    var list=app.querySelector('.viewtabs');
+    list.addEventListener('click', function(e){ var b=e.target.closest('[data-view]'); if(b) show(b.getAttribute('data-view')); });
+    list.addEventListener('keydown', function(e){
+      var cur=views.indexOf(list.querySelector('[aria-selected="true"]').getAttribute('data-view'));
+      var nx=e.key==='ArrowRight'?views[(cur+1)%views.length]:e.key==='ArrowLeft'?views[(cur+views.length-1)%views.length]:null;
+      if(nx){ e.preventDefault(); show(nx, true); }
+    });
+    show(pick);
   }
 
   load();
