@@ -72,6 +72,6 @@ export default async function handler(req, res) {
 
     const sid = await createSession(email);
     setSessionCookie(res, sid);
-    res.writeHead(302, { Location: '/hub/' });
+    res.writeHead(302, { Location: rep.role === 'admin' ? '/hub/' : '/my-day/' });
     return res.end();
 }
