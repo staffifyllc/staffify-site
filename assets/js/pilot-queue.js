@@ -102,9 +102,21 @@
     return '<span class="pq-unk" title="' + esc(why || 'not reported') + '">Unknown</span>';
   }
 
+  // Three arms, and the interface has to say so, because the whole point of the third one is that
+  // "they answered the phone once" and "Paul knows them" are different facts.
+  var ARM = {
+    warm:    { label: 'Warm',    who: 'Paul knows them: met, introduced, or worked together' },
+    engaged: { label: 'Engaged', who: 'they responded to our outreach before, which is not the same as knowing us' },
+    cold:    { label: 'Cold',    who: 'no prior response from anyone there' },
+  };
+  var ARM_ORDER = { warm: 0, engaged: 1, cold: 2 };
+  var armLabel = function (k) { return (ARM[k] || { label: k || 'Unknown' }).label; };
+
   function armBlock(a) {
     if (!a) return '';
     var rows = [
+      ['Owed an answer', a.owedAnAnswer], ['Times floated, never confirmed', a.tentativeTimesUnconfirmed],
+      ['Held for review', a.heldForReview], 'sep',
       ['Selected', a.selected], ['Contacted', a.contacted], ['Replied', a.replied],
       ['Conversations', a.conversations], 'sep',
       ['Role map promised', a.roleMapsPromised], ['Role map actually sent', a.roleMapsSent], 'sep',
@@ -115,8 +127,9 @@
       ['Reported wins, payment unverified', a.reportedWinsPendingPayment], 'sep',
       ['Upcoming calls', a.upcomingMeetings], ['Open actions', a.openActions], ['Overdue', a.overdueActions]
     ];
-    var html = '<div class="pq-arm"><h4>' + (a.arm === 'warm' ? 'Warm' : 'Cold') +
-      '<span class="who">' + (a.arm === 'warm' ? 'we have spoken, been introduced, or worked together' : 'no prior relationship') + '</span></h4><dl class="pq-rows">';
+    var meta = ARM[a.arm] || { label: a.arm || 'Unknown', who: '' };
+    var html = '<div class="pq-arm"><h4>' + esc(meta.label) +
+      '<span class="who">' + esc(meta.who) + '</span></h4><dl class="pq-rows">';
     rows.forEach(function (r) {
       if (r === 'sep') { html += '<div class="sep"></div>'; return; }
       html += '<dt>' + esc(r[0]) + '</dt><dd>' + num(r[1]) + '</dd>';
@@ -140,7 +153,13 @@
       return;
     }
     var r = c.report;
-    el.innerHTML = head + '<div class="pq-arms">' + (r.arms || []).map(armBlock).join('') + '</div>' +
+    var armsHtml = (r.arms || []).map(armBlock).join('');
+    var empty = (r.arms || []).filter(function (a) { return a.selected && a.selected.value === 0; })
+      .map(function (a) { return armLabel(a.arm); });
+    el.innerHTML = head + '<div class="pq-arms">' + armsHtml + '</div>' +
+      (empty.length ? '<div class="pq-note">' + esc(empty.join(' and ')) +
+        (empty.length === 1 ? ' is empty. That is the number, not a gap in the data.' : ' are empty. Those are the numbers, not gaps in the data.') +
+        '</div>' : '') +
       '<div class="pq-note"><b>Tests excluded:</b> ' + num(r.testRecordsExcluded) + '. ' +
       (r.overclaimed && r.overclaimed.length
         ? '<span class="pq-gap"><b>' + r.overclaimed.length + ' record(s) claim a stage the evidence does not support:</b> ' +
@@ -158,7 +177,7 @@
       NO_NEED: 'No need', DECLINED: 'Declined', SUPPRESSED: 'Suppressed' };
     var html = head + '<div class="pq-arms">';
     (c.report.arms || []).forEach(function (a) {
-      html += '<div class="pq-arm"><h4>' + (a.arm === 'warm' ? 'Warm' : 'Cold') + '</h4><dl class="pq-rows">';
+      html += '<div class="pq-arm"><h4>' + esc(armLabel(a.arm)) + '</h4><dl class="pq-rows">';
       Object.keys(labels).forEach(function (k) {
         var n = (a.answers && a.answers[k]) || 0;
         html += '<dt>' + labels[k] + '</dt><dd' + (n === 0 ? ' class="z"' : '') + '>' + n + '</dd>';
@@ -172,10 +191,30 @@
     el.innerHTML = html;
   }
 
+  // What each action is called on screen, and how urgently it reads. A debt we owe someone outranks
+  // anything we want to say to them, so it is drawn first and drawn loudest.
+  var ACTION = {
+    REVIEW_BEFORE_CONTACT:   { label: 'Read this first', tone: 'st-warn', rank: 0 },
+    ANSWER_THEIR_REQUEST:    { label: 'They asked, we never answered', tone: 'st-late', rank: 1 },
+    RECONFIRM_TENTATIVE_TIME:{ label: 'Time floated, never confirmed', tone: 'st-late', rank: 2 },
+    SEND_ROLE_MAP:           { label: 'Role map promised', tone: 'st-late', rank: 3 },
+    PROPOSAL_DECISION:       { label: 'Proposal out, no decision', tone: 'st-do', rank: 4 },
+    AFTER_THE_CALL:          { label: 'Call held, nothing sent', tone: 'st-do', rank: 5 },
+    RECORD_OUTCOME:          { label: 'Was it held?', tone: 'st-do', rank: 6 },
+    CONFIRM_BOOKING:         { label: 'Agreed, not calendared', tone: 'st-do', rank: 7 },
+    OFFER_TIME:              { label: 'They want a time', tone: 'st-do', rank: 8 },
+    REVISIT:                 { label: 'They asked us to come back', tone: 'st-do', rank: 9 },
+    REPLY:                   { label: 'They wrote back', tone: 'st-do', rank: 10 },
+    FIRST_MESSAGE:           { label: 'Not contacted yet', tone: 'st-idle', rank: 20 },
+    FOLLOW_UP:               { label: 'No reply yet', tone: 'st-idle', rank: 21 },
+  };
+  var actionRank = function (a) { return a ? ((ACTION[a.kind] || {}).rank === undefined ? 15 : ACTION[a.kind].rank) : 99; };
+
   function actionChip(a) {
     if (!a) return '<span class="st st-ok">Nothing owed</span>';
-    return '<span class="st ' + (a.overdue ? 'st-late' : 'st-do') + '">' +
-      esc(a.overdue ? 'Overdue' : a.kind.replace(/_/g, ' ').toLowerCase()) + '</span>';
+    var m = ACTION[a.kind] || { label: a.kind.replace(/_/g, ' ').toLowerCase(), tone: 'st-do' };
+    return '<span class="st ' + (a.overdue ? 'st-late' : m.tone) + '">' +
+      esc(a.overdue ? 'Overdue: ' + m.label : m.label) + '</span>';
   }
 
   function contactLine(r) {
@@ -193,7 +232,7 @@
       esc(r.company || r.person || r.id) +
       (r.person && r.company ? ' <i style="color:#9ba1ab;font-weight:500;font-style:normal">' + esc(r.person) + '</i>' : '') +
       '</b>' + actionChip(a) + '</div>' +
-      '<div class="pq-meta">' + esc(r.arm) + ' &middot; ' + esc(r.stage.replace(/_/g, ' ').toLowerCase()) +
+      '<div class="pq-meta">' + esc(armLabel(r.arm)) + ' &middot; ' + esc(r.stage.replace(/_/g, ' ').toLowerCase()) +
       ' &middot; ' + esc(r.owner) + (r.touches ? ' &middot; ' + r.touches + ' touch' + (r.touches === 1 ? '' : 'es') : '') +
       (a && a.dueAt ? ' &middot; due ' + esc(when(a.dueAt)) : '') +
       (r.followUpAllowed ? '' : ' &middot; <span style="color:#f5b83d">follow-up stopped</span>') + '</div>' +
@@ -322,8 +361,10 @@
       el.innerHTML = head + '<div class="pq-empty">No owners staged yet.</div>';
       return;
     }
-    var order = { warm: 0, cold: 1 };
-    var recs = c.records.slice().sort(function (x, y) { return (order[x.arm] || 9) - (order[y.arm] || 9); });
+    var recs = c.records.slice().sort(function (x, y) {
+      var d = (ARM_ORDER[x.arm] === undefined ? 9 : ARM_ORDER[x.arm]) - (ARM_ORDER[y.arm] === undefined ? 9 : ARM_ORDER[y.arm]);
+      return d || String(x.company || '').localeCompare(String(y.company || ''));
+    });
     el.innerHTML = head +
       (c.partial ? '<div class="pq-msg bad">' + esc(c.partial.missing) + ' record(s) are listed in this cohort but could not be read. What follows is partial.</div>' : '') +
       recs.map(function (r) { return cohortCard(r, true); }).join('');
@@ -360,9 +401,12 @@
       });
     }
     items.sort(function (a, b) {
-      var ao = a.kind === 'cohort' && a.r.nextAction && a.r.nextAction.overdue ? 0 : 1;
-      var bo = b.kind === 'cohort' && b.r.nextAction && b.r.nextAction.overdue ? 0 : 1;
-      return ao - bo;
+      var rank = function (it) {
+        if (it.kind === 'request') return 4;                       // an inbound ask sits near the top
+        var act = it.r.nextAction;
+        return (act && act.overdue ? -1 : 0) + actionRank(act);
+      };
+      return rank(a) - rank(b);
     });
     if (!items.length) {
       el.innerHTML = head + warnings + '<div class="pq-empty">' +
