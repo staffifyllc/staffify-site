@@ -319,7 +319,7 @@ footer a { color: var(--ink-mute); }
     if (!name) { show('bad', 'Your name, so I know who I am writing back to.'); f.name.focus(); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) { show('bad', 'That email does not look right. I cannot send the role map without it.'); f.email.focus(); return; }
     btn.disabled = true; btn.textContent = 'Sending';
-    fetch('/api/role-map-request', {
+    fetch('/api/role-map-request/', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name, email: email, company: f.company.value.trim(),
         pain: f.pain.value.trim(), times: f.times.value.trim(), website: f.website.value,

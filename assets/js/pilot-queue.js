@@ -280,7 +280,7 @@
       t[parts[parts.length - 1]] = v;
     });
     busy = true; btn.disabled = true;
-    fetch('/api/pilot-queue', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scope: 'cohort', id: id, update: update, rev: rev }) })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
@@ -389,7 +389,7 @@
     if (busy) return;
     busy = true; if (btn) btn.disabled = true;
     var body = { scope: 'request', id: id, set: Object.assign({ state: state }, extra || {}) };
-    fetch('/api/pilot-queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         busy = false;
@@ -523,7 +523,7 @@
   }
 
   function load() {
-    fetch('/api/pilot-queue', { cache: 'no-store' })
+    fetch('/api/pilot-queue/', { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (!j || j.ok !== true) throw new Error((j && j.error) || 'no answer');
