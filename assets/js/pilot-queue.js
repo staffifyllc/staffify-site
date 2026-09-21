@@ -888,7 +888,9 @@
         (x.company ? ' <i style="color:#9ba1ab;font-weight:500;font-style:normal">' + esc(x.company) + '</i>' : '') +
         '</b><span class="st ' + (done ? 'st-idle' : x.state === 'REQUESTED' ? 'st-do' : 'st-warn') + '">' + esc(x.stateLabel) + '</span></div>' +
         '<div class="pq-meta">' + esc(x.email) + ' &middot; ' + esc(when(x.createdAt)) +
-        ' &middot; ' + esc((x.origin && x.origin.kind) === 'cohort' ? 'opened from the cohort' : 'came in from the page') +
+        ' &middot; ' + esc((x.origin && x.origin.kind) === 'cohort' ? 'opened from the cohort'
+          : (x.origin && x.origin.kind) === 'direct_booking' ? 'booked the call directly'
+          : 'came in from the page') +
         (x.attribution ? ' &middot; ' + esc(x.attribution) : '') +
         (x.submissions > 1 ? ' &middot; asked ' + x.submissions + ' times, one record' : '') + '</div>' +
         ((x.origin && x.origin.evidence) ? '<div class="pq-meta">Why: ' + esc(x.origin.evidence) + '</div>' : '') +
@@ -920,10 +922,10 @@
   function renderRequests() {
     var el = q('#pq-req');
     var items = (DATA && DATA.requests && DATA.requests.items) || [];
-    var inbound = items.filter(function (x) { return (x.origin && x.origin.kind) !== 'cohort'; }).length;
-    var promoted = items.length - inbound;
-    var head = '<h3>Live opportunities <small>' + inbound + ' from the page, ' + promoted +
-      ' opened from the cohort. Counted apart.</small></h3>';
+    var by = function (k) { return items.filter(function (x) { return ((x.origin && x.origin.kind) || 'inbound') === k; }).length; };
+    var inbound = by('inbound'), promoted = by('cohort'), booked = by('direct_booking');
+    var head = '<h3>Live opportunities <small>' + inbound + ' from the page, ' + booked +
+      ' booked the call directly, ' + promoted + ' opened from the cohort. Counted apart.</small></h3>';
     var rq = DATA && DATA.requests;
     if (!rq || rq.status === 'UNKNOWN') {
       el.innerHTML = head + '<div class="pq-msg bad">The request store did not answer. This is unknown, not zero requests.</div>';

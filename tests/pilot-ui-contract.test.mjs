@@ -69,7 +69,10 @@ test('the request list does not label a promoted cohort record as an inbound req
     assert.ok(!/arm: 'inbound',\n\s*\}\)\);/.test(API), 'the arm must come from the record');
     assert.match(API, /arm: r\.arm \|\| 'inbound'/);
     assert.match(UI, /opened from the cohort/);
-    assert.match(UI, /from the page, ' \+ promoted/, 'inbound and promoted have to be counted apart');
+    assert.match(UI, /booked the call directly/, 'a direct booking is labelled as one');
+    // Three origins, counted apart: the form, a direct booking, and a promoted cohort record.
+    assert.match(UI, /from the page, ' \+ booked \+/, 'the three origins are counted apart');
+    assert.match(UI, /by\('direct_booking'\)/);
 });
 
 test('payment-link reads the request before it writes anything', () => {

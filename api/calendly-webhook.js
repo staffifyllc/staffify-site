@@ -16,6 +16,7 @@ import { Redis } from '@upstash/redis';
 import crypto from 'node:crypto';
 import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
 import { applyBookingEvent } from './_booking-match.js';
+import { enqueueSync } from './_pilot-sync.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -300,7 +301,7 @@ export default async function handler(req, res) {
     // the generic nurture below is appropriate: somebody already in a thread with Paul is not a cold
     // visitor and must not be dropped into a sequence written for one.
     let pilot = { applied: false, matched: false };
-    try { pilot = await applyBookingEvent(event, { redis }); }
+    try { pilot = await applyBookingEvent(event, { redis, enqueueSync }); }
     catch (e) { pilot = { applied: false, retryable: true, reason: 'the pilot match threw' }; }
     // Asking Calendly to send it again is the whole point of a 5xx here.
     if (pilot.retryable) return res.status(503).json({ ok: false, error: pilot.reason, retry: true });
@@ -310,7 +311,9 @@ export default async function handler(req, res) {
     }
     if (pilot.matched) {
         // Recorded against their request, and deliberately given no automated email.
-        return res.status(200).json({ ok: true, pilot, nurture: 'suppressed: inbound role-map request' });
+        return res.status(200).json({ ok: true, pilot,
+            nurture: pilot.created ? 'suppressed: booked the media-owner call directly'
+                : 'suppressed: inbound role-map request' });
     }
 
     const p = event.payload || {};

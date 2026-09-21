@@ -228,3 +228,19 @@ test('the same cohort record drawn twice keeps each card its own form', () => {
     assert.equal((html.match(/data-startopp="hs-1"/g) || []).length, 2);
     assert.match(readFileSync(new URL('../assets/js/pilot-queue.js', import.meta.url), 'utf8'), /function inCard\(/);
 });
+
+test('a direct booking is labelled as one, never as a form submission', () => {
+    const src = readFileSync(new URL('../assets/js/pilot-queue.js', import.meta.url), 'utf8');
+    const win = {};
+    new Function('window', 'document', src)(win, { getElementById: () => null, head: { appendChild() {} }, createElement: () => ({ style: {} }) });
+    const ui = win.StaffifyPilotQueue;
+    const rec = { id: 'pilot:req:d', name: 'Dana', company: '', email: 'd@e.com', state: 'BOOKED',
+        stateLabel: 'On a calendar', createdAt: '2026-09-21T12:00:00Z', submissions: 1,
+        notify: { state: 'delivered' }, crm: { state: 'pending' }, payment: {}, booking: {}, draft: {},
+        origin: { kind: 'direct_booking', evidence: 'booked "Media Owner Workflow Chat" directly', submittedForm: false } };
+    ui._setData({ requests: { items: [rec] } });
+    const html = ui._requestCard(rec);
+    assert.match(html, /booked the call directly/);
+    assert.ok(!html.includes('came in from the page'));
+    assert.match(html, /booked &quot;Media Owner Workflow Chat&quot; directly/, 'the evidence is shown, escaped');
+});
