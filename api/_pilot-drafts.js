@@ -24,6 +24,10 @@ export const PRICING = Object.freeze({
         + 'additional recruiting or replacement charge, under the lifetime replacement guarantee.',
 });
 
+// The 15-minute event, and nothing else. Offering a different link after promising 15 minutes is
+// the exact mismatch this pilot exists to stop.
+export const BOOKING_URL = 'https://calendly.com/go-staffify/media-owner-workflow-chat';
+
 const firstName = (r) => String(r.name || '').trim().split(/\s+/)[0] || 'there';
 const theirWords = (r) => String(r.pain || '').trim();
 
@@ -44,6 +48,9 @@ export function replyDraft(r) {
         'I will send back what a second person could take over, what has to stay with you, how the review would work, '
         + 'an hours estimate with the assumptions shown, and what it costs at those hours. If there is not enough there '
         + 'to hand over, I will tell you that instead.',
+        '',
+        'If it is easier to say than to type, here is fifteen minutes: ' + BOOKING_URL,
+        'No prep, and nothing to watch beforehand. Either way you get the role map.',
         '',
         'Paul',
     ].join('\n');

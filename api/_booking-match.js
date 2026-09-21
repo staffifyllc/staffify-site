@@ -27,9 +27,30 @@ import { createHash } from 'node:crypto';
 export const hashEmail = (s) => createHash('sha256').update(String(s).toLowerCase()).digest('hex').slice(0, 24);
 export const requestIdFor = (email) => `pilot:req:${hashEmail(email)}`;
 
-/** Event types a media-owner booking may come from. Empty means unconfigured, which is not a pass. */
-export const expectedEventTypes = () => String(process.env.PILOT_EVENT_TYPES || '')
-    .split(',').map((s) => s.trim()).filter(Boolean);
+// THE ONE EVENT THIS PILOT BOOKS.
+//
+// Created in Calendly on 2026-09-21 and verified through the API: 15 minutes, active, public,
+// instant booking, Google Meet, a single optional question, no prep and no video gate. It exists
+// because every other event on the account belongs to a different offer, and pointing media owners
+// at an agency lead-generation questionnaire or a 30-minute qualification form was the mismatch this
+// whole piece of work set out to remove.
+//
+// The URI ships in the code rather than only in an environment variable, because a booking arriving
+// against an unrecognised event type is held for review, and a config gap would quietly hold every
+// one of them. PILOT_EVENT_TYPES still overrides if the event is ever rebuilt.
+export const PILOT_EVENT = Object.freeze({
+    uri: 'https://api.calendly.com/event_types/39fabd35-909a-46aa-996c-abb025e5192f',
+    url: 'https://calendly.com/go-staffify/media-owner-workflow-chat',
+    name: 'Media Owner Workflow Chat',
+    minutes: 15,
+});
+
+/** Event types a media-owner booking may come from. */
+export const expectedEventTypes = () => {
+    const configured = String(process.env.PILOT_EVENT_TYPES || '')
+        .split(',').map((s) => s.trim()).filter(Boolean);
+    return configured.length ? configured : [PILOT_EVENT.uri, PILOT_EVENT.name];
+};
 
 /** Records that a late booking event must never disturb. */
 export const FINISHED_STATES = new Set(['CLOSED', 'HELD']);

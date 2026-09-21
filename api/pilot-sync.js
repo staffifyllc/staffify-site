@@ -8,7 +8,7 @@
 import { requireAccess, adminAuthorized, redis, readBody, listReps } from './_auth.js';
 import { drainSync, enqueueSync, syncRequest, syncHealth } from './_pilot-sync.js';
 import { lookupContact, findOrCreateContact, fillBlankContactProps, logNote, upsertDeal, createTask, linkToContact, repOwnerId, portalId } from './_hubspot.js';
-import { clientCheck } from './_client-guard.js';
+import { clientCheck, guardHealth, refreshClients } from './_client-guard.js';
 import { isOptedOut } from './_optout.js';
 
 const PAUL = process.env.PILOT_OWNER_NAME || 'Paul Chareth';
@@ -56,7 +56,18 @@ export default async function handler(req, res) {
     }
 
     if (!adminAuthorized(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    // Keep the live customer list warm. Without it the guard answers unknown and every inbound
+    // request sits pending, which is a config gap dressed up as caution. This runs on the schedule
+    // that already exists, with the credentials that already exist, and sends nothing.
+    let clients = await guardHealth();
+    if (!clients.hubspot || clients.hubspot.ageHours >= 12) {
+        const r = await refreshClients();
+        clients = await guardHealth();
+        clients.refreshed = r.ok ? { emails: r.emails, companies: r.companies, at: r.at } : { failed: r.why };
+    }
+
     const out = await drainSync(deps(), { limit: Number(req.query.limit) || 10 });
     const health = await syncHealth(redis);
-    return res.status(200).json({ ok: true, ...out, health });
+    return res.status(200).json({ ok: true, ...out, health, clientGuard: clients });
 }

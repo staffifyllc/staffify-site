@@ -102,6 +102,12 @@ button { font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 700; co
   border: none; border-radius: 999px; padding: 13px 28px; margin-top: 22px; cursor: pointer; }
 button:hover { background: var(--c4); }
 button[disabled] { opacity: 0.5; cursor: default; }
+.orbook { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 22px 0 6px;
+  padding: 18px 20px; border: 1px solid var(--rule2); border-radius: 14px; background: var(--tint); }
+.bookcta { font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 700; color: #fff; background: var(--ink);
+  border-radius: 999px; padding: 11px 22px; text-decoration: none; white-space: nowrap; }
+.bookcta:hover { background: var(--c4); }
+.orbook span { font-family: 'Inter', sans-serif; font-size: 13.5px; color: var(--ink-mute); }
 .formnote { font-family: 'Inter', sans-serif; font-size: 13.5px; color: var(--ink-mute); margin-top: 14px; line-height: 1.6; }
 .result { font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.6; margin-top: 18px; padding: 15px 17px;
   border-radius: 12px; display: none; }
@@ -274,8 +280,11 @@ footer a { color: var(--ink-mute); }
   <p>Tell me what still comes back to you and I will write up what a second person could take over, what stays
   with you, how the review would work, an honest hours estimate with the assumptions shown, and the cost at
   those hours. If the answer is that there is not enough there to hand over, that will be in it too.</p>
-  <p>No call is required to get it. If it would be easier to talk, I will hold 15 minutes and confirm a time
-  with you by email myself.</p>
+  <p>No call is required to get it. If it is easier to say than to type, there is a fifteen minute slot
+  below. Nothing to prepare, nothing to watch first, and you get the role map either way.</p>
+
+  <p class="orbook"><a class="bookcta" href="https://calendly.com/go-staffify/media-owner-workflow-chat?utm_source=real-estate-media&amp;utm_content=owner-page">Book fifteen minutes with Paul</a>
+  <span>Or fill this in and he will write back.</span></p>
 
   <form id="rmForm" novalidate>
     <label for="rm-name">Your name</label>
@@ -362,8 +371,8 @@ footer a { color: var(--ink-mute); }
         try { if (window.staffifyRequestSubmitted) window.staffifyRequestSubmitted({ form: 'role_map_request' }); } catch (e) {}
         show('ok', (res.j.message || 'Got it. Paul will write back himself, usually within one business day. Nothing is booked.')
           + ' He will read what you wrote and reply with the role map: what a second person could take over, what stays '
-          + 'with you, an hours estimate with the assumptions shown, and the cost at those hours. If it would be easier '
-          + 'to talk, say so in your reply and he will offer you a time. Nothing goes on a calendar until you agree one.');
+          + 'with you, an hours estimate with the assumptions shown, and the cost at those hours. '
+          + 'If you would rather talk it through, there is a fifteen minute slot above and nothing to prepare for it.');
       })
       .catch(function (err) {
         btn.disabled = false; btn.textContent = 'Send this to Paul';
