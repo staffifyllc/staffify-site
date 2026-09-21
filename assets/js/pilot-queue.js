@@ -282,11 +282,12 @@
     ['notes', 'Notes', 'area']
   ];
 
-  function openLogForm(id) {
-    var rec = (DATA.cohort.records || []).find(function (x) { return x.id === id; });
+  function openLogForm(id, btn) {
+    var rec = ((DATA.cohort && DATA.cohort.records) || []).find(function (x) { return x.id === id; });
     if (!rec) return;
-    var form = root.querySelector('[data-cform="' + id + '"]');
-    var msg = root.querySelector('[data-cmsg="' + id + '"]');
+    var form = inCard(btn, '[data-cform="' + id + '"]');
+    var msg = inCard(btn, '[data-cmsg="' + id + '"]');
+    if (!form || !msg) return;
     msg.style.display = 'none';
     if (form.style.display === 'grid') { form.style.display = 'none'; form.innerHTML = ''; return; }
     var val = function (path) {
@@ -346,10 +347,43 @@
       });
   }
 
-  function wireLogButtons() {
+  // ONE wiring pass, run after every section has drawn.
+  //
+  // This used to live inside renderRequests, after its early return for an empty list, and
+  // renderPeople drew afterwards. So with no inbound requests nothing was bound at all, and the
+  // cohort's Start opportunity button did nothing when clicked. A control that renders and does not
+  // respond is worse than one that is missing.
+  function wireAll() {
     Array.prototype.forEach.call(root.querySelectorAll('[data-log]'), function (b) {
-      b.onclick = function () { openLogForm(b.getAttribute('data-log')); };
+      b.onclick = function () { openLogForm(b.getAttribute('data-log'), b); };
     });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-startopp]'), function (b) {
+      b.onclick = function () {
+        var recs = (DATA.cohort && DATA.cohort.records) || [];
+        var rec = recs.find(function (x) { return x.id === b.getAttribute('data-startopp'); });
+        if (rec) startOpportunity(rec, b);
+      };
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-draftkind]'), function (b) {
+      b.onclick = function () { openDraft(b.getAttribute('data-draftid'), b.getAttribute('data-draftkind'), b); };
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-payopen]'), function (b) {
+      b.onclick = function () { paymentPanel(b.getAttribute('data-payopen'), b); };
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-sync]'), function (b) {
+      b.onclick = function () {
+        b.disabled = true; b.textContent = 'Queued';
+        fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scope: 'sync', id: b.getAttribute('data-sync') }) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { b.textContent = j && j.ok ? 'Queued' : ((j && j.error) || 'Failed'); setTimeout(load, 1200); })
+          .catch(function () { b.disabled = false; b.textContent = 'Sync now'; });
+      };
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-retry]'), function (b) {
+      b.onclick = function () { retryAlert(b.getAttribute('data-retry'), b); };
+    });
+    wireRequestStageButtons();
   }
 
   function renderPeople() {
@@ -372,7 +406,6 @@
     el.innerHTML = head +
       (c.partial ? '<div class="pq-msg bad">' + esc(c.partial.missing) + ' record(s) are listed in this cohort but could not be read. What follows is partial.</div>' : '') +
       recs.map(function (r) { return cohortCard(r, true); }).join('');
-    wireLogButtons();
   }
 
   function renderDo() {
@@ -430,7 +463,6 @@
       }
       return cohortCard(it.r, false);
     }).join('');
-    wireLogButtons();
   }
 
   function setRequest(id, state, extra, btn) {
@@ -580,6 +612,15 @@
     ],
     reply: [],
   };
+
+  // The same cohort record is drawn twice, once in the waiting list and once in the batch, so every
+  // lookup has to start from the button that was pressed. root.querySelector would find the first
+  // copy on the page, which is usually not the card somebody clicked.
+  function card(el) { return (el && el.closest) ? el.closest('.pq-item') : null; }
+  function inCard(el, sel) {
+    var c = card(el);
+    return (c && c.querySelector(sel)) || (root && root.querySelector(sel));
+  }
 
   function draftBox(id) { return root.querySelector('[data-draft="' + id + '"]'); }
 
@@ -776,8 +817,8 @@
   }
 
   // ---- promote a cohort owner into the same linked journey, without faking a form submission ----
-  function startOpportunity(rec) {
-    var box = root.querySelector('[data-start="' + rec.id + '"]');
+  function startOpportunity(rec, btn) {
+    var box = inCard(btn, '[data-start="' + rec.id + '"]');
     if (!box) return;
     if (box.style.display === 'grid') { box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = 'grid';
@@ -898,15 +939,14 @@
     'calendar reference, and role map sent needs the name of what you actually sent. Closing needs their words ' +
     'unless the answer is no response.</div>';
 
-    wireRequestTools();
-    Array.prototype.forEach.call(el.querySelectorAll('[data-retry]'), function (b) {
-      b.onclick = function () { retryAlert(b.getAttribute('data-retry'), b); };
-    });
-    Array.prototype.forEach.call(el.querySelectorAll('[data-req] .pq-btn'), function (b) {
+  }
+
+  function wireRequestStageButtons() {
+    Array.prototype.forEach.call(root.querySelectorAll('[data-req] .pq-btn'), function (b) {
       b.onclick = function () {
         var id = b.parentNode.getAttribute('data-req'), a = b.getAttribute('data-a');
-        var form = el.querySelector('[data-form="' + id + '"]');
-        var msg = el.querySelector('[data-msg="' + id + '"]');
+        var form = inCard(b, '[data-form="' + id + '"]');
+        var msg = inCard(b, '[data-msg="' + id + '"]');
         msg.style.display = 'none';
         if (a === 'ANSWERED') { setRequest(id, 'ANSWERED', { answeredAt: new Date().toISOString() }, b); return; }
         var fields = a === 'ROLE_MAP_SENT' ? [['roleMapArtifact', 'What did you send? (file name or subject line)', 'input']]
@@ -975,6 +1015,9 @@
       (c && c.cohort ? esc(c.cohort) + ' &middot; ' : '') + n + ' inbound request' + (n === 1 ? '' : 's') +
       ' &middot; automated prospect calling is off for this pilot';
     renderHealth(); renderDo(); renderRequests(); renderPeople(); renderReport(); renderAnswers(); renderDrafts();
+    // Bind AFTER every section exists. Binding inside a section meant an early return for an empty
+    // list left later sections' controls dead, which is how Start opportunity rendered and did nothing.
+    wireAll();
   }
 
   function load() {
@@ -1004,5 +1047,6 @@
 
   window.StaffifyPilotQueue = { mount: mount, unmount: unmount,
     // Exposed so a test can render the real templates rather than assert on their source text.
-    _requestCard: requestCard, _cohortCard: cohortCard, _setData: function (d) { DATA = d; } };
+    _requestCard: requestCard, _cohortCard: cohortCard, _setData: function (d) { DATA = d; },
+    _renderInto: function (el) { root = el; render(); } };
 })();

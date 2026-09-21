@@ -123,3 +123,108 @@ test('a cohort card offers to start an opportunity only when it has an address',
     assert.match(ui._cohortCard(withEmail, true), /data-startopp=/);
     assert.ok(!/data-startopp=/.test(ui._cohortCard({ ...withEmail, email: '' }, true)));
 });
+
+// ---------- the controls actually get bound ----------
+//
+// Start opportunity rendered and did nothing when there were no inbound requests, because the
+// binding pass lived inside renderRequests, after its early return, and the cohort section drew
+// afterwards. A control that renders and does not respond is worse than one that is missing, and no
+// source-text assertion catches it, so this drives the real render and checks for handlers.
+
+function fakeDom() {
+    const made = [];
+    function el(attrs = {}) {
+        const node = {
+            attrs, onclick: null, children: [], parent: null, className: '', style: {}, hidden: false,
+            textContent: '', disabled: false,
+            get innerHTML() { return this._html || ''; },
+            set innerHTML(html) {
+                this._html = html;
+                this.children = [];
+                // Every element carrying a data- attribute becomes a node, and each one sits inside
+                // the nearest preceding pq-item so closest() can find its own card.
+                const re = /<(\w+)([^>]*?)data-([a-zA-Z]+)="([^"]*)"([^>]*)>/g;
+                let m, cardIdx = -1;
+                const cards = [];
+                for (const c of html.matchAll(/class="pq-item"/g)) cards.push(c.index);
+                while ((m = re.exec(html))) {
+                    const node2 = el({ ['data-' + m[3]]: m[4] });
+                    node2.tag = m[1];
+                    node2.index = m.index;
+                    cardIdx = cards.filter((c) => c < m.index).length - 1;
+                    node2.cardIndex = cardIdx;
+                    node2.parent = this;
+                    node2.closest = function () { return { querySelector: (sel) => this.root.querySelector(sel, node2.cardIndex) }; }.bind({ root: this });
+                    this.children.push(node2);
+                    made.push(node2);
+                }
+            },
+            querySelectorAll(sel) {
+                const m = /\[data-([a-zA-Z]+)(?:="([^"]*)")?\]/.exec(sel);
+                if (!m) return [];
+                return this.children.filter((c) => c.attrs['data-' + m[1]] !== undefined
+                    && (m[2] === undefined || c.attrs['data-' + m[1]] === m[2]));
+            },
+            querySelector(sel, cardIndex) {
+                const all = this.querySelectorAll(sel);
+                if (cardIndex === undefined) return all[0] || null;
+                return all.find((c) => c.cardIndex === cardIndex) || all[0] || null;
+            },
+            classList: { add() {}, remove() {}, toggle() {} },
+            addEventListener() {},
+        };
+        return node;
+    }
+    const root = el();
+    const byId = { 'pq-health': el(), 'pq-do': el(), 'pq-req': el(), 'pq-people': el(),
+        'pq-report': el(), 'pq-answers': el(), 'pq-drafts': el(), 'pq-sub': el(), 'pq-refresh': el() };
+    // The section elements are looked up through root.querySelector('#id'), so intercept that.
+    const rootQuery = root.querySelector.bind(root);
+    root.querySelector = function (sel, idx) {
+        if (sel && sel[0] === '#') return byId[sel.slice(1)] || el();
+        return rootQuery(sel, idx);
+    };
+    root.querySelectorAll = function (sel) {
+        // Across every section, the way the real root does once the sections are inside it.
+        return Object.values(byId).flatMap((s) => s.querySelectorAll(sel));
+    };
+    return { root, byId, made, el };
+}
+
+test('with no inbound requests, the cohort Start opportunity button is still bound', () => {
+    const src = readFileSync(new URL('../assets/js/pilot-queue.js', import.meta.url), 'utf8');
+    const win = {};
+    const doc = { getElementById: () => null, head: { appendChild() {} }, createElement: () => ({ style: {} }) };
+    new Function('window', 'document', src)(win, doc);
+    const ui = win.StaffifyPilotQueue;
+
+    const dom = fakeDom();
+    const cohortRec = { id: 'hs-247868774313', arm: 'engaged', company: 'Listings In Motion', person: 'Chris',
+        email: 'info@listingsinmotion.com', stage: 'CONTACTED', owner: 'Paul', evidenceGaps: [],
+        nextAction: { kind: 'ANSWER_THEIR_REQUEST', text: 'They asked for samples.' } };
+    // The exact shape that broke: zero inbound requests, a cohort with records.
+    ui._setData({
+        requests: { status: 'DATA', items: [] },
+        cohort: { ok: true, status: 'DATA', records: [cohortRec], report: null, drafts: null },
+        health: {},
+    });
+    ui._renderInto(dom.root);
+
+    const buttons = dom.root.querySelectorAll('[data-startopp]');
+    assert.ok(buttons.length > 0, 'the button renders');
+    for (const b of buttons) assert.equal(typeof b.onclick, 'function', 'and every copy of it responds');
+});
+
+test('the same cohort record drawn twice keeps each card its own form', () => {
+    const src = readFileSync(new URL('../assets/js/pilot-queue.js', import.meta.url), 'utf8');
+    const win = {};
+    new Function('window', 'document', src)(win, { getElementById: () => null, head: { appendChild() {} }, createElement: () => ({ style: {} }) });
+    const ui = win.StaffifyPilotQueue;
+    const rec = { id: 'hs-1', arm: 'engaged', company: 'Acme', person: 'Sam', email: 's@a.com',
+        stage: 'SELECTED', owner: 'Paul', evidenceGaps: [], nextAction: { kind: 'FIRST_MESSAGE', text: 'x' } };
+    const html = ui._cohortCard(rec, true) + ui._cohortCard(rec, false);
+    // Two cards, two forms, two buttons: the lookup has to be card-local or the wrong panel opens.
+    assert.equal((html.match(/data-start="hs-1"/g) || []).length, 2);
+    assert.equal((html.match(/data-startopp="hs-1"/g) || []).length, 2);
+    assert.match(readFileSync(new URL('../assets/js/pilot-queue.js', import.meta.url), 'utf8'), /function inCard\(/);
+});
