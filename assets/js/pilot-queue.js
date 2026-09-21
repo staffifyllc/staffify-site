@@ -247,7 +247,10 @@
       (r.evidenceGaps && r.evidenceGaps.length
         ? '<div class="pq-act pq-gap">Claims ' + esc(r.claimedStage || '') + ' but missing: ' +
           esc(r.evidenceGaps.map(function (g) { return g.missing; }).join('; ')) + '</div>' : '') +
-      '<div class="pq-btns"><button type="button" class="pq-btn go" data-log="' + esc(r.id) + '">Log what happened</button></div>' +
+      '<div class="pq-btns"><button type="button" class="pq-btn go" data-log="' + esc(r.id) + '">Log what happened</button>' +
+      (r.email ? '<button type="button" class="pq-btn" data-startopp="' + esc(r.id) + '">Start opportunity</button>' : '') +
+      '</div>' +
+      '<div class="pq-form" data-start="' + esc(r.id) + '" style="display:none"></div>' +
       '<div class="pq-msg" data-cmsg="' + esc(r.id) + '" style="display:none"></div>' +
       '<div class="pq-form" data-cform="' + esc(r.id) + '" style="display:none"></div></div>';
   }
@@ -512,6 +515,10 @@
     line('CRM sync (HubSpot)', h.hubspot && h.hubspot.configured, '');
     line('Payment evidence (QuickBooks)', h.quickbooks && h.quickbooks.configured, h.quickbooks && h.quickbooks.note);
     line('Booking events (Calendly)', h.calendly && h.calendly.configured, h.calendly && h.calendly.note);
+    var hp = h.hubspotPortal || {};
+    rows.push('<dt>HubSpot account</dt><dd>' + (hp.configured ? esc('portal ' + hp.portalId) :
+      '<span class="pq-unk" title="' + esc(hp.note || '') + '">Unknown</span>') +
+      (hp.note ? '<div style="font-weight:400;color:#f5b83d;font-size:12px;max-width:44ch;text-align:right">' + esc(hp.note) + '</div>' : '') + '</dd>');
     line('Pilot task owner', h.owner && h.owner.configured, h.owner && h.owner.note);
     line('Request alerts by email', h.email && h.email.configured, '');
     line('Request alerts to Slack', h.slack && h.slack.configured, '');
@@ -556,36 +563,255 @@
         esc(p.formerReference) + '), cleared because: ' + esc(p.formerClearedWhy) + '</div>' : '') + '</div>';
   }
 
-  function openDraft(id, kind, btn) {
-    var box = root.querySelector('[data-draft="' + id + '"]');
+  // The structured pieces a role map or a proposal cannot honestly be written without. These feed
+  // the generator, get saved on the record, and decide whether the send action is allowed to open.
+  var DRAFT_FIELDS = {
+    roleMap: [
+      ['tasks', 'What a second person takes over, with how often'],
+      ['hours', 'Hours a week'],
+      ['assumption', 'The assumption the hours rest on'],
+      ['successMeasure', 'What good looks like in month one, and the baseline'],
+      ['nextStep', 'Next step: who, what, by when'],
+    ],
+    proposal: [
+      ['role', 'Role title'],
+      ['hours', 'Hours a week'],
+      ['level', 'Level: C-List, B-List or A-List'],
+    ],
+    reply: [],
+  };
+
+  function draftBox(id) { return root.querySelector('[data-draft="' + id + '"]'); }
+
+  function renderDraft(id, kind, j) {
+    var box = draftBox(id);
+    var d = j.draft;
+    var fields = DRAFT_FIELDS[kind] || [];
+    var ready = d.ready !== false;
+    box.style.display = 'grid';
+    box.innerHTML =
+      '<div class="pq-msg ' + (ready ? 'ok' : 'bad') + '">This is a draft. Nothing has been sent and nothing is marked sent.' +
+        (ready ? '' : ' It is not ready to send: ' + esc((d.needs || []).join('; ')) + '.') + '</div>' +
+      (d.operatorNotes ? '<div class="pq-then">' + esc(d.operatorNotes.join(' ')) + '</div>' : '') +
+      fields.map(function (f) {
+        var v = (j.values && j.values[f[0]]) || '';
+        return '<label>' + esc(f[1]) + '</label><input type="text" data-dfield="' + esc(f[0]) + '" value="' + esc(v) + '">';
+      }).join('') +
+      (fields.length ? '<div class="pq-btns"><button type="button" class="pq-btn" data-drebuild="1">Rebuild with these</button></div>' : '') +
+      '<label>Subject</label><input type="text" data-dsub="1" value="' + esc(d.subject) + '">' +
+      '<label>Body, edit before you send</label><textarea style="min-height:260px" data-dbody="1">' + esc(d.body) + '</textarea>' +
+      '<div class="pq-btns">' +
+        '<button type="button" class="pq-btn go" data-dsave="1">Save draft</button>' +
+        (ready
+          ? '<button type="button" class="pq-btn" data-dmail="1">Open in your mail client</button>'
+          : '<button type="button" class="pq-btn" disabled title="fill the fields above first">Open in your mail client</button>') +
+        '<button type="button" class="pq-btn" data-dcopy="1">Copy</button>' +
+        '<button type="button" class="pq-btn" data-dclose="1">Close</button>' +
+      '</div>' +
+      '<div class="pq-msg" data-dmsg="1" style="display:none"></div>';
+
+    var msg = box.querySelector('[data-dmsg]');
+    var current = function () {
+      var o = { subject: box.querySelector('[data-dsub]').value, body: box.querySelector('[data-dbody]').value };
+      Array.prototype.forEach.call(box.querySelectorAll('[data-dfield]'), function (i) { o[i.getAttribute('data-dfield')] = i.value.trim(); });
+      return o;
+    };
+    box.querySelector('[data-dclose]').onclick = function () { box.style.display = 'none'; box.innerHTML = ''; };
+    box.querySelector('[data-dcopy]').onclick = function (ev) {
+      navigator.clipboard.writeText(current().body)
+        .then(function () { ev.target.textContent = 'Copied'; })
+        .catch(function () { ev.target.textContent = 'Could not copy'; });
+    };
+    var rebuild = box.querySelector('[data-drebuild]');
+    if (rebuild) rebuild.onclick = function (ev) { openDraft(id, kind, ev.target, current()); };
+    var mail = box.querySelector('[data-dmail]');
+    if (mail) mail.onclick = function () {
+      // Built at click time from the textarea, so an edit is never silently dropped.
+      var c = current();
+      window.location.href = 'mailto:' + encodeURIComponent(j.to || '') +
+        '?subject=' + encodeURIComponent(c.subject) + '&body=' + encodeURIComponent(c.body);
+    };
+    box.querySelector('[data-dsave]').onclick = function (ev) {
+      ev.target.disabled = true;
+      var c = current();
+      fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ scope: 'save-draft', id: id, kind: kind }, c)) })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          ev.target.disabled = false;
+          msg.style.display = 'block';
+          msg.className = 'pq-msg ' + (res && res.ok ? 'ok' : 'bad');
+          msg.textContent = res && res.ok ? 'Saved. It will still be here after a refresh.' : ((res && res.error) || 'that did not save');
+          if (res && res.ok) {
+            // Keep the in-memory copy in step, or closing and reopening before the next load would
+            // show the generated draft again and quietly discard what was just saved.
+            var items = (DATA.requests && DATA.requests.items) || [];
+            var rec = items.find(function (y) { return y.id === id; });
+            if (rec) {
+              rec.draft = rec.draft || {};
+              rec.draft.kind = kind;
+              rec.draft.subject = c.subject;
+              rec.draft.body = c.body;
+              rec.draft.savedAt = res.savedAt || new Date().toISOString();
+              Object.keys(c).forEach(function (k) { if (k !== 'subject' && k !== 'body') rec.draft[k] = c[k]; });
+            }
+          }
+        })
+        .catch(function () { ev.target.disabled = false; msg.style.display = 'block'; msg.className = 'pq-msg bad'; msg.textContent = 'that did not save'; });
+    };
+  }
+
+  function openDraft(id, kind, btn, options) {
+    var box = draftBox(id);
     if (!box) return;
     btn.disabled = true;
     fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scope: 'draft', id: id, kind: kind }) })
+      body: JSON.stringify({ scope: 'draft', id: id, kind: kind, options: options || {} }) })
       .then(function (r) { return r.json(); })
       .then(function (j) {
         btn.disabled = false;
-        if (!j || !j.ok) { box.style.display = 'grid'; box.innerHTML = '<div class="pq-msg bad">' + esc((j && j.error) || 'could not build that draft') + '</div>'; return; }
-        var d = j.draft;
-        box.style.display = 'grid';
-        box.innerHTML =
-          '<div class="pq-msg ok">This is a draft. Nothing has been sent and nothing is marked sent.' +
-          (d.needs && d.needs.length ? ' It is not ready: ' + esc(d.needs.join('; ')) + '.' : '') + '</div>' +
-          (d.operatorNotes ? '<div class="pq-then">' + esc(d.operatorNotes.join(' ')) + '</div>' : '') +
-          '<label>Subject</label><input type="text" value="' + esc(d.subject) + '" data-dsub="1">' +
-          '<label>Body, edit before you send</label><textarea style="min-height:260px" data-dbody="1">' + esc(d.body) + '</textarea>' +
-          '<div class="pq-btns">' +
-          '<a class="pq-btn go" href="' + esc(j.mailto) + '">Open in your mail client</a>' +
-          '<button type="button" class="pq-btn" data-dcopy="1">Copy</button>' +
-          '<button type="button" class="pq-btn" data-dclose="1">Close</button></div>';
-        box.querySelector('[data-dclose]').onclick = function () { box.style.display = 'none'; box.innerHTML = ''; };
-        box.querySelector('[data-dcopy]').onclick = function (ev) {
-          var t = box.querySelector('[data-dbody]').value;
-          navigator.clipboard.writeText(t).then(function () { ev.target.textContent = 'Copied'; })
-            .catch(function () { ev.target.textContent = 'Could not copy'; });
-        };
+        if (!j || !j.ok) {
+          box.style.display = 'grid';
+          box.innerHTML = '<div class="pq-msg bad">' + esc((j && j.error) || 'could not build that draft') + '</div>';
+          return;
+        }
+        var rec = ((DATA.requests && DATA.requests.items) || []).find(function (x) { return x.id === id; }) || {};
+        // Saved values come back from the record, so reopening shows what was typed last time.
+        j.values = Object.assign({}, rec.draft || {}, options || {});
+        j.to = rec.email || '';
+        // A saved body wins over a freshly generated one unless this was an explicit rebuild.
+        if (!options && rec.draft && rec.draft.body && rec.draft.kind === kind) {
+          j.draft = Object.assign({}, j.draft, { subject: rec.draft.subject || j.draft.subject, body: rec.draft.body });
+        }
+        renderDraft(id, kind, j);
       })
       .catch(function () { btn.disabled = false; });
+  }
+
+  // ---- payment: candidates to review, one to link, and a refresh that can clear a stale verdict --
+  function paymentPanel(id, btn) {
+    var box = root.querySelector('[data-pay="' + id + '"]');
+    if (!box) return;
+    if (box.style.display === 'grid') { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = 'grid';
+    box.innerHTML = '<div class="pq-empty">Reading QuickBooks</div>';
+    fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'payment-candidates', id: id }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) { box.innerHTML = '<div class="pq-msg bad">' + esc((j && j.error) || 'could not read QuickBooks') + '</div>'; return; }
+        var c = j.candidates || {};
+        // A verdict that was verified and has since been voided has to be re-checkable, and that
+        // cannot depend on candidate discovery finding anything today.
+        var rec = ((DATA.requests && DATA.requests.items) || []).find(function (y) { return y.id === id; }) || {};
+        var linked = rec.payment && rec.payment.invoiceId
+          ? '<div class="pq-item"><div class="pq-h"><b>Currently linked: invoice ' + esc(rec.payment.invoiceId) + '</b>' +
+            '<span class="st ' + (rec.payment.reference ? 'st-ok' : 'st-warn') + '">' +
+            esc(rec.payment.reference ? 'verified paid' : (rec.payment.status || 'not verified')) + '</span></div>' +
+            (rec.payment.why ? '<div class="pq-meta">' + esc(rec.payment.why) + '</div>' : '') +
+            (rec.payment.formerReference ? '<div class="pq-act pq-gap">Previously verified, then cleared: ' +
+              esc(rec.payment.formerClearedWhy || '') + '</div>' : '') +
+            '<div class="pq-btns"><button type="button" class="pq-btn go" data-refresh="1">Re-check this invoice</button>' +
+            '<button type="button" class="pq-btn" data-unlink="1">Unlink</button></div></div>'
+          : '';
+        var wireLinked = function () {
+          var rb = box.querySelector('[data-refresh]');
+          if (rb) rb.onclick = function () { linkInvoice(id, rec.payment.realm || '', rec.payment.customerId || '', rec.payment.invoiceId, rb, box); };
+          var ub = box.querySelector('[data-unlink]');
+          if (ub) ub.onclick = function () { linkInvoice(id, '', '', '', ub, box, true); };
+        };
+        if (c.status !== 'candidates') {
+          box.innerHTML = linked +
+            '<div class="pq-msg bad">' + esc(c.status) + ': ' + esc(c.why || '') + '</div>' +
+            '<div class="pq-msg" data-paymsg="1" style="display:none"></div>';
+          wireLinked();
+          return;
+        }
+        box.innerHTML = linked + '<div class="pq-msg ok">' + esc(c.why) + '</div>' +
+          c.candidates.map(function (x, i) {
+            return '<div class="pq-item"><div class="pq-h"><b>' + esc(x.customerName) + ' &middot; invoice ' +
+              esc(x.invoiceNumber || x.invoiceId) + '</b><span class="st ' + (x.strength === 'strong' ? 'st-do' : 'st-warn') + '">' +
+              esc(x.strength + ' match by ' + x.customerMatch) + '</span></div>' +
+              '<div class="pq-meta">' + esc(x.txnDate) + ' &middot; total ' + esc(String(x.total)) +
+              ' &middot; balance ' + esc(x.balanceKnown ? String(x.balance) : 'not reported') + '</div>' +
+              (x.predatesRequest ? '<div class="pq-act pq-gap">' + esc(x.note) + '</div>' : '') +
+              '<div class="pq-btns"><button type="button" class="pq-btn go" data-link="' + i + '">Link this invoice</button></div></div>';
+          }).join('') +
+          '<div class="pq-msg" data-paymsg="1" style="display:none"></div>';
+        wireLinked();
+        var msg = box.querySelector('[data-paymsg]');
+        Array.prototype.forEach.call(box.querySelectorAll('[data-link]'), function (b) {
+          b.onclick = function () {
+            var x = c.candidates[Number(b.getAttribute('data-link'))];
+            linkInvoice(id, c.realm, x.customerId, x.invoiceId, b, box);
+          };
+        });
+      })
+      .catch(function () { box.innerHTML = '<div class="pq-msg bad">QuickBooks did not answer</div>'; });
+  }
+
+  function linkInvoice(id, realm, customerId, invoiceId, btn, box, unlink) {
+    var msg = box.querySelector('[data-paymsg]');
+    btn.disabled = true;
+    var label = btn.textContent;
+    btn.textContent = unlink ? 'Unlinking' : 'Checking';
+    fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'payment-link', id: id, realm: realm, customerId: customerId,
+        invoiceId: invoiceId, unlink: !!unlink }) })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        btn.disabled = false; btn.textContent = label;
+        if (msg) {
+          msg.style.display = 'block';
+          var v = res && res.verdict;
+          msg.className = 'pq-msg ' + (res && res.recordedReference ? 'ok' : 'bad');
+          msg.textContent = !res || !res.ok ? ((res && res.error) || 'that did not verify')
+            : unlink ? 'Unlinked. Nothing is recorded as paid.'
+            : (v.status === 'paid' ? 'Verified paid. ' + v.why : v.status + ': ' + (v.why || 'not recorded as paid')) +
+              (res.clearedPrevious ? ' A previously verified payment was cleared and kept as history.' : '');
+        }
+        setTimeout(load, 1200);
+      })
+      .catch(function () { btn.disabled = false; btn.textContent = label; });
+  }
+
+  // ---- promote a cohort owner into the same linked journey, without faking a form submission ----
+  function startOpportunity(rec) {
+    var box = root.querySelector('[data-start="' + rec.id + '"]');
+    if (!box) return;
+    if (box.style.display === 'grid') { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = 'grid';
+    box.innerHTML =
+      '<div class="pq-msg ok">This opens an opportunity from the cohort. It does not pretend they filled in the form, ' +
+      'and it sends nothing.</div>' +
+      '<label>Their email</label><input type="text" data-sf="email" value="' + esc(rec.email || '') + '">' +
+      '<label>What actually happened, one line. This is the evidence.</label>' +
+      '<input type="text" data-sf="how" placeholder="Replied to my email on 22 Sep asking what it would cost">' +
+      '<label>What they said, their words (optional)</label><textarea data-sf="pain"></textarea>' +
+      '<div class="pq-btns"><button type="button" class="pq-btn go" data-sgo="1">Open the opportunity</button>' +
+      '<button type="button" class="pq-btn" data-sx="1">Cancel</button></div>' +
+      '<div class="pq-msg" data-smsg="1" style="display:none"></div>';
+    var msg = box.querySelector('[data-smsg]');
+    box.querySelector('[data-sx]').onclick = function () { box.style.display = 'none'; box.innerHTML = ''; };
+    box.querySelector('[data-sgo]').onclick = function (ev) {
+      var v = {};
+      Array.prototype.forEach.call(box.querySelectorAll('[data-sf]'), function (i) { v[i.getAttribute('data-sf')] = i.value.trim(); });
+      if (!v.how) { msg.style.display = 'block'; msg.className = 'pq-msg bad'; msg.textContent = 'Say what happened. Without it there is no evidence for this being an opportunity.'; return; }
+      ev.target.disabled = true;
+      fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'start-opportunity', cohortId: rec.id, email: v.email, how: v.how,
+          pain: v.pain, name: rec.person, company: rec.company }) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          ev.target.disabled = false;
+          msg.style.display = 'block';
+          msg.className = 'pq-msg ' + (j && j.ok ? 'ok' : 'bad');
+          msg.textContent = !j || !j.ok ? ((j && j.error) || 'that did not open')
+            : 'Opened. ' + (j.queued ? 'Queued for the CRM.' : 'Not queued: ' + (j.queueError || 'unknown'));
+          if (j && j.ok) setTimeout(load, 1200);
+        })
+        .catch(function () { ev.target.disabled = false; msg.style.display = 'block'; msg.className = 'pq-msg bad'; msg.textContent = 'that did not open'; });
+    };
   }
 
   function wireRequestTools() {
@@ -602,11 +828,60 @@
     Array.prototype.forEach.call(root.querySelectorAll('[data-draftkind]'), function (b) {
       b.onclick = function () { openDraft(b.getAttribute('data-draftid'), b.getAttribute('data-draftkind'), b); };
     });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-payopen]'), function (b) {
+      b.onclick = function () { paymentPanel(b.getAttribute('data-payopen'), b); };
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-startopp]'), function (b) {
+      b.onclick = function () {
+        var recs = (DATA.cohort && DATA.cohort.records) || [];
+        var rec = recs.find(function (x) { return x.id === b.getAttribute('data-startopp'); });
+        if (rec) startOpportunity(rec);
+      };
+    });
+  }
+
+  function requestCard(x) {
+      var done = x.state === 'HELD' || x.state === 'CLOSED';
+      return '<div class="pq-item"><div class="pq-h"><b>' + esc(x.name) +
+        (x.company ? ' <i style="color:#9ba1ab;font-weight:500;font-style:normal">' + esc(x.company) + '</i>' : '') +
+        '</b><span class="st ' + (done ? 'st-idle' : x.state === 'REQUESTED' ? 'st-do' : 'st-warn') + '">' + esc(x.stateLabel) + '</span></div>' +
+        '<div class="pq-meta">' + esc(x.email) + ' &middot; ' + esc(when(x.createdAt)) +
+        ' &middot; ' + esc((x.origin && x.origin.kind) === 'cohort' ? 'opened from the cohort' : 'came in from the page') +
+        (x.attribution ? ' &middot; ' + esc(x.attribution) : '') +
+        (x.submissions > 1 ? ' &middot; asked ' + x.submissions + ' times, one record' : '') + '</div>' +
+        ((x.origin && x.origin.evidence) ? '<div class="pq-meta">Why: ' + esc(x.origin.evidence) + '</div>' : '') +
+        (x.pain ? '<div class="pq-said"><b>What still comes back to them</b>' + esc(x.pain) + '</div>' : '') +
+        (x.times ? '<div class="pq-act"><i>They would talk:</i> ' + esc(x.times) + '</div>' : '') +
+        (x.newSubmissionAfterClose ? '<div class="pq-act pq-gap">They submitted again after you closed this, on ' +
+          esc(when(x.newSubmissionAfterClose)) + '. The record was not reopened.</div>' : '') +
+        notifyLine(x) +
+        crmLine(x) + paymentLine(x) +
+        '<div class="pq-btns">' +
+          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="reply">Draft the reply</button>' +
+          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="roleMap">Draft the role map</button>' +
+          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="proposal">Draft the proposal</button>' +
+          '<button type="button" class="pq-btn" data-payopen="' + esc(x.id) + '">Payment evidence</button>' +
+        '</div>' +
+        '<div class="pq-form" data-draft="' + esc(x.id) + '" style="display:none"></div>' +
+        '<div class="pq-form" data-pay="' + esc(x.id) + '" style="display:none"></div>' +
+        '<div class="pq-btns" data-req="' + esc(x.id) + '">' +
+          (x.state === 'REQUESTED' ? '<button type="button" class="pq-btn go" data-a="ANSWERED">I replied</button>' : '') +
+          (!x.roleMapSentAt ? '<button type="button" class="pq-btn" data-a="ROLE_MAP_SENT">Role map sent</button>' : '') +
+          (!x.agreedFor ? '<button type="button" class="pq-btn" data-a="TIME_AGREED">Time agreed</button>' : '') +
+          (x.agreedFor && !x.bookingRef ? '<button type="button" class="pq-btn" data-a="BOOKED">Put it on a calendar</button>' : '') +
+          (x.bookingRef && !x.heldAt ? '<button type="button" class="pq-btn" data-a="HELD">It was held</button>' : '') +
+          '<button type="button" class="pq-btn" data-a="CLOSED">Close with what they said</button>' +
+        '</div><div class="pq-msg" data-msg="' + esc(x.id) + '" style="display:none"></div>' +
+        '<div class="pq-form" data-form="' + esc(x.id) + '" style="display:none"></div></div>';
   }
 
   function renderRequests() {
     var el = q('#pq-req');
-    var head = '<h3>Requests from the page <small>inbound, never counted as warm or cold</small></h3>';
+    var items = (DATA && DATA.requests && DATA.requests.items) || [];
+    var inbound = items.filter(function (x) { return (x.origin && x.origin.kind) !== 'cohort'; }).length;
+    var promoted = items.length - inbound;
+    var head = '<h3>Live opportunities <small>' + inbound + ' from the page, ' + promoted +
+      ' opened from the cohort. Counted apart.</small></h3>';
     var rq = DATA && DATA.requests;
     if (!rq || rq.status === 'UNKNOWN') {
       el.innerHTML = head + '<div class="pq-msg bad">The request store did not answer. This is unknown, not zero requests.</div>';
@@ -618,35 +893,7 @@
       el.innerHTML = head + partial + (partial ? '' : '<div class="pq-empty">No role-map requests yet.</div>');
       return;
     }
-    el.innerHTML = head + partial + rq.items.map(function (x) {
-      var done = x.state === 'HELD' || x.state === 'CLOSED';
-      return '<div class="pq-item"><div class="pq-h"><b>' + esc(x.name) +
-        (x.company ? ' <i style="color:#9ba1ab;font-weight:500;font-style:normal">' + esc(x.company) + '</i>' : '') +
-        '</b><span class="st ' + (done ? 'st-idle' : x.state === 'REQUESTED' ? 'st-do' : 'st-warn') + '">' + esc(x.stateLabel) + '</span></div>' +
-        '<div class="pq-meta">' + esc(x.email) + ' &middot; ' + esc(when(x.createdAt)) +
-        (x.submissions > 1 ? ' &middot; asked ' + x.submissions + ' times, one record' : '') + '</div>' +
-        (x.pain ? '<div class="pq-said"><b>What still comes back to them</b>' + esc(x.pain) + '</div>' : '') +
-        (x.times ? '<div class="pq-act"><i>They would talk:</i> ' + esc(x.times) + '</div>' : '') +
-        (x.newSubmissionAfterClose ? '<div class="pq-act pq-gap">They submitted again after you closed this, on ' +
-          esc(when(x.newSubmissionAfterClose)) + '. The record was not reopened.</div>' : '') +
-        notifyLine(x) +
-        crmLine(x) + paymentLine(x) +
-        '<div class="pq-btns">' +
-          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="reply">Draft the reply</button>' +
-          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="roleMap">Draft the role map</button>' +
-          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="proposal">Draft the proposal</button>' +
-        '</div>' +
-        '<div class="pq-form" data-draft="' + esc(x.id) + '" style="display:none"></div>' +
-        '<div class="pq-btns" data-req="' + esc(x.id) + '">' +
-          (x.state === 'REQUESTED' ? '<button type="button" class="pq-btn go" data-a="ANSWERED">I replied</button>' : '') +
-          (!x.roleMapSentAt ? '<button type="button" class="pq-btn" data-a="ROLE_MAP_SENT">Role map sent</button>' : '') +
-          (!x.agreedFor ? '<button type="button" class="pq-btn" data-a="TIME_AGREED">Time agreed</button>' : '') +
-          (x.agreedFor && !x.bookingRef ? '<button type="button" class="pq-btn" data-a="BOOKED">Put it on a calendar</button>' : '') +
-          (x.bookingRef && !x.heldAt ? '<button type="button" class="pq-btn" data-a="HELD">It was held</button>' : '') +
-          '<button type="button" class="pq-btn" data-a="CLOSED">Close with what they said</button>' +
-        '</div><div class="pq-msg" data-msg="' + esc(x.id) + '" style="display:none"></div>' +
-        '<div class="pq-form" data-form="' + esc(x.id) + '" style="display:none"></div></div>';
-    }).join('') +
+    el.innerHTML = head + partial + rq.items.map(requestCard).join('') +
     '<div class="pq-note"><b>A request is not a booking.</b> Nothing here is on a calendar until you paste the ' +
     'calendar reference, and role map sent needs the name of what you actually sent. Closing needs their words ' +
     'unless the answer is no response.</div>';
@@ -755,5 +1002,7 @@
   }
   function unmount() { root = null; DATA = null; }
 
-  window.StaffifyPilotQueue = { mount: mount, unmount: unmount };
+  window.StaffifyPilotQueue = { mount: mount, unmount: unmount,
+    // Exposed so a test can render the real templates rather than assert on their source text.
+    _requestCard: requestCard, _cohortCard: cohortCard, _setData: function (d) { DATA = d; } };
 })();

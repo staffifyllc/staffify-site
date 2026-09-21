@@ -7,7 +7,7 @@
 //   POST { id }                        signed-in: push one request to the front and work it now
 import { requireAccess, adminAuthorized, redis, readBody, listReps } from './_auth.js';
 import { drainSync, enqueueSync, syncRequest, syncHealth } from './_pilot-sync.js';
-import { lookupContact, findOrCreateContact, fillBlankContactProps, logNote, upsertDeal, createTask, linkToContact, repOwnerId } from './_hubspot.js';
+import { lookupContact, findOrCreateContact, fillBlankContactProps, logNote, upsertDeal, createTask, linkToContact, repOwnerId, portalId } from './_hubspot.js';
 import { clientCheck } from './_client-guard.js';
 import { isOptedOut } from './_optout.js';
 
@@ -23,8 +23,20 @@ function deps() {
         // roster lookup cannot resolve an id on its own. PILOT_OWNER_ID short-circuits that with the
         // id straight from the portal. Without either, createTask refuses rather than making a task
         // nobody owns and calling it Paul's.
-        ownerId: async () => process.env.PILOT_OWNER_ID
-            || (await repOwnerId(PAUL, process.env.PILOT_OWNER_EMAIL || '', { redis, listReps })),
+        ownerId: async () => {
+            const want = process.env.PILOT_OWNER_ID || '';
+            if (want) {
+                // An owner id belongs to one portal. If it was set for a different account, it is not
+                // an owner here, and a task filed against it would be assigned to nobody real.
+                const expect = process.env.PILOT_OWNER_PORTAL || '';
+                if (expect) {
+                    const p = await portalId().catch(() => ({ ok: false }));
+                    if (p.ok && p.portalId !== expect) return '';
+                }
+                return want;
+            }
+            return repOwnerId(PAUL, process.env.PILOT_OWNER_EMAIL || '', { redis, listReps });
+        },
         now: Date.now,
     };
 }

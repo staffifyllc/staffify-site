@@ -19,10 +19,27 @@
 // A company-name match is deliberately NOT 'client'. Normalising strips llc, inc, media, studios,
 // group and productions, which is what makes "Coral Cove Media LLC" match "coral cove", and also
 // what would make two unrelated businesses collide. That is a flag for a person, not a verdict.
-import { redis } from './_auth.js';
+import { createHash } from 'node:crypto';
+import SHIPPED from './_client-snapshot.json' with { type: 'json' };
+
+// Redis is loaded on demand rather than at import time. Importing _auth.js pulls in the Upstash
+// client, which is not present outside the deployment, and a guard whose behaviour cannot be
+// executed in a test is a guard nobody has actually checked.
+let _redis = null;
+async function store(deps) {
+    if (deps && deps.redis) return deps.redis;
+    if (_redis) return _redis;
+    ({ redis: _redis } = await import('./_auth.js'));
+    return _redis;
+}
 
 const HS_CACHE = 'clients:hubspot:cache';        // this module's own live pull
 const SNAPSHOT = 'clients:snapshot';             // uploaded by the local guard: roster + CSV + HubSpot
+// The talent console roster and the active-clients CSV are not reachable from a serverless function,
+// so the union the local guard computes ships with the code as a hashed snapshot. Hashed, because a
+// client list in a repository is a client list that leaks, and the guard only ever asks whether a
+// given address is one of them. An uploaded snapshot takes precedence when it is fresher.
+const hashOf = (v) => createHash('sha256').update(String(v).toLowerCase().trim()).digest('hex').slice(0, 32);
 const CACHE_TTL_SECONDS = 24 * 3600;
 const SNAPSHOT_MAX_AGE_HOURS = 24 * 8;           // the local guard warns at 7 days; we refuse at 8
 const STALE_WARN_HOURS = 36;
@@ -69,30 +86,42 @@ async function fetchCustomers(fetchImpl = fetch) {
 }
 
 export async function refreshClients(deps = {}) {
-    const store = deps.redis || redis;
+    const kv = await store(deps);
     const got = await fetchCustomers(deps.fetch);
     if (!got.ok) return { ok: false, why: got.why };
     const doc = { ts: new Date().toISOString(), emails: got.emails, companies: got.companies };
-    try { await store.set(HS_CACHE, JSON.stringify(doc), { ex: CACHE_TTL_SECONDS }); }
+    try { await kv.set(HS_CACHE, JSON.stringify(doc), { ex: CACHE_TTL_SECONDS }); }
     catch (e) { return { ok: false, why: 'the customer list was read but could not be cached' }; }
     return { ok: true, emails: got.emails.length, companies: got.companies.length, at: doc.ts };
 }
 
+/** The uploaded snapshot if it is fresher than the shipped one, otherwise what shipped with the code. */
+async function bestSnapshot(kv) {
+    // Reads the KEY. An earlier edit replaced this call with bestSnapshot(store) itself, which is an
+    // infinite recursion on every guard call, which is to say on every inbound request.
+    const uploaded = await readJson(kv, SNAPSHOT);
+    if (uploaded === undefined) return undefined;            // the read itself failed
+    const shipped = SHIPPED && Array.isArray(SHIPPED.emails) ? SHIPPED : null;
+    if (!uploaded) return shipped;
+    if (!shipped) return uploaded;
+    return Date.parse(uploaded.ts) >= Date.parse(shipped.ts) ? uploaded : shipped;
+}
+
 /** Store the union the local guard computed. Called by the admin upload endpoint. */
 export async function putSnapshot(doc, deps = {}) {
-    const store = deps.redis || redis;
+    const kv = await store(deps);
     const emails = [...new Set((doc.emails || []).map((e) => String(e).toLowerCase()))];
     const companies = [...new Set((doc.companies || []).map((c) => String(c)))];
     if (!emails.length) return { ok: false, why: 'an empty snapshot would open every path at once' };
     const body = { ts: new Date().toISOString(), emails, companies, sources: doc.sources || [] };
-    try { await store.set(SNAPSHOT, JSON.stringify(body)); }
+    try { await kv.set(SNAPSHOT, JSON.stringify(body)); }
     catch (e) { return { ok: false, why: 'the snapshot could not be stored' }; }
     return { ok: true, emails: emails.length, companies: companies.length, at: body.ts };
 }
 
-async function readJson(store, key) {
+async function readJson(kv, key) {
     try {
-        const raw = await store.get(key);
+        const raw = await kv.get(key);
         if (!raw) return null;
         const doc = typeof raw === 'string' ? JSON.parse(raw) : raw;
         return (doc && Array.isArray(doc.emails)) ? doc : null;
@@ -106,14 +135,14 @@ const ageHours = (ts) => (Date.now() - Date.parse(ts)) / 3600000;
  * deps lets tests inject their own store and refresher without touching Redis.
  */
 export async function clientCheck({ email, company }, deps = {}) {
-    const store = deps.redis || redis;
+    const kv = await store(deps);
     const refresh = deps.refreshClients || refreshClients;
 
-    const snap = await readJson(store, SNAPSHOT);
-    let hsDoc = await readJson(store, HS_CACHE);
+    const snap = await bestSnapshot(kv);
+    let hsDoc = await readJson(kv, HS_CACHE);
     if (hsDoc === null) {
         const r = await refresh(deps);
-        if (r.ok) hsDoc = await readJson(store, HS_CACHE);
+        if (r.ok) hsDoc = await readJson(kv, HS_CACHE);
         else hsDoc = undefined;
     }
 
@@ -129,11 +158,11 @@ export async function clientCheck({ email, company }, deps = {}) {
     const companies = new Set([...(hsDoc && hsDoc.companies || []), ...(snap && snap.companies || [])]);
 
     const e = String(email || '').toLowerCase().trim();
-    if (e && emails.has(e)) {
+    if (e && (emails.has(e) || emails.has(hashOf(e)))) {
         return { status: 'client', reason: 'already a client', matched: 'email', sources: sourceList(hsDoc, snap) };
     }
     const n = normCompany(company);
-    if (n.length >= 4 && companies.has(n)) {
+    if (n.length >= 4 && (companies.has(n) || companies.has(hashOf(n)))) {
         // Deliberately not a verdict. Normalisation is lossy and this has to be looked at.
         return { status: 'possible', matched: 'company',
             reason: `the company name normalises to "${n}", which matches an existing client. Check before treating this as a prospect.`,
@@ -155,13 +184,13 @@ function sourceList(hsDoc, snap) {
 
 /** For the health panel: every source, how old, and whether the guard can currently answer. */
 export async function guardHealth(deps = {}) {
-    const store = deps.redis || redis;
-    const snap = await readJson(store, SNAPSHOT);
-    const hsDoc = await readJson(store, HS_CACHE);
+    const kv = await store(deps);
+    const snap = await bestSnapshot(kv);
+    const hsDoc = await readJson(kv, HS_CACHE);
     const problems = [];
     if (!token()) problems.push('HUBSPOT_TOKEN is not set');
     if (!hsDoc) problems.push('no live HubSpot customer cache');
-    if (!snap) problems.push('no shared client snapshot has been uploaded');
+    if (!snap) problems.push('no shared client snapshot is available');
     else if (ageHours(snap.ts) > SNAPSHOT_MAX_AGE_HOURS) problems.push(`the shared snapshot is ${Math.round(ageHours(snap.ts) / 24)} days old`);
     return {
         canAnswer: problems.length === 0,

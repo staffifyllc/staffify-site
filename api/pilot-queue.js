@@ -21,7 +21,7 @@ import { guardHealth } from './_client-guard.js';
 import { DRAFTS, mailto } from './_pilot-drafts.js';
 import { findPaymentCandidates, verifyLinkedPayment, isVerifiedPaid } from './_pilot-payment.js';
 import { qboConnected, qboQuery, getRealmId } from './_qbo.js';
-import { configured as hubspotConfigured } from './_hubspot.js';
+import { configured as hubspotConfigured, portalId } from './_hubspot.js';
 import { notifyEmail, notifySlack } from './_notify-request.js';
 
 const ENGINE = 'https://campaign-dashboard-green.vercel.app/api/pilot-cohort';
@@ -84,13 +84,21 @@ async function loadRequests(limit = 60) {
                     reviewReason: r.bookingReviewReason || '', eventName: r.bookingEventName || '',
                     rescheduledFrom: r.bookingRescheduledFrom || '' },
                 payment: { reference: r.paymentReference || '', status: r.paymentStatus || '', why: r.paymentWhy || '',
+                    realm: r.paymentRealm || '', customerId: r.paymentCustomerId || '',
                     checkedAt: r.paymentCheckedAt || null, verifiedAt: r.paymentVerifiedAt || null,
                     formerReference: r.paymentFormerReference || '', formerClearedWhy: r.paymentFormerClearedWhy || '',
                     invoiceId: r.paymentInvoiceId || '', linkedBy: r.paymentLinkedBy || '' },
                 origin: { kind: r.origin || 'inbound', cohortId: r.originCohortId || '', evidence: r.originEvidence || '',
                     submittedForm: r.submittedForm !== 'false' },
+                // Saved drafts, so an edit survives a refresh and the mail client gets what was typed.
+                draft: { subject: r.draftSubject || '', body: r.draftBody || '', kind: r.draftKind || '',
+                    savedAt: r.draftSavedAt || null, savedBy: r.draftSavedBy || '',
+                    role: r.draft_role || '', hours: r.draft_hours || '', level: r.draft_level || '',
+                    tasks: r.draft_tasks || '', assumption: r.draft_assumption || '',
+                    successMeasure: r.draft_successMeasure || '', nextStep: r.draft_nextStep || '' },
                 attribution: [r.utmSource, r.utmMedium, r.utmCampaign, r.utmContent].filter(Boolean).join(' / '),
-                arm: 'inbound',
+                // A promoted cohort record is not an inbound request and must not be labelled as one.
+                arm: r.arm || 'inbound',
             }));
         return unreadable
             ? { status: 'PARTIAL', items, unreadable, why: `${unreadable} request(s) in the index could not be read` }
@@ -142,9 +150,35 @@ export default async function handler(req, res) {
             let rec = null;
             try { rec = await redis.hgetall(id); } catch (e) { return res.status(503).json({ ok: false, error: 'could not read that request' }); }
             if (!rec || !rec.email) return res.status(404).json({ ok: false, error: 'no such request' });
-            const draft = DRAFTS[kind](rec, b.options || {});
+            // Saved structured fields first, then anything the operator just typed on top.
+            const saved = {};
+            for (const f of ['role', 'hours', 'level', 'tasks', 'assumption', 'successMeasure', 'nextStep']) {
+                if (rec['draft_' + f]) saved[f] = rec['draft_' + f];
+            }
+            const draft = DRAFTS[kind]({ ...rec }, { ...saved, ...(b.options || {}) });
             return res.status(200).json({ ok: true, draft, mailto: mailto(rec.email, draft),
                 note: 'This is a draft. Nothing has been sent and nothing was marked sent.' });
+        }
+
+        if (scope === 'save-draft') {
+            const id = STR(b.id, 200);
+            if (!/^pilot:req:[A-Za-z0-9]+$/.test(id)) return res.status(400).json({ ok: false, error: 'not a request id' });
+            let rec = null;
+            try { rec = await redis.hgetall(id); } catch (e) { return res.status(503).json({ ok: false, error: 'could not read that request, so nothing was saved' }); }
+            if (!rec || !rec.email) return res.status(404).json({ ok: false, error: 'no such request' });
+            const patch = { draftSavedAt: new Date().toISOString(), draftSavedBy: STR((who && who.name) || 'operator', 60) };
+            if (b.subject !== undefined) patch.draftSubject = STR(b.subject, 250);
+            if (b.body !== undefined) patch.draftBody = STR(b.body, 12000);
+            if (b.kind !== undefined) patch.draftKind = STR(b.kind, 20);
+            // The structured pieces a role map and a proposal cannot be written without. Saved on the
+            // record so the next render starts from them instead of from brackets.
+            for (const f of ['role', 'hours', 'level', 'tasks', 'assumption', 'successMeasure', 'nextStep']) {
+                if (b[f] !== undefined) patch['draft_' + f] = STR(b[f], 2000);
+            }
+            try { await redis.hset(id, patch); }
+            catch (e) { return res.status(503).json({ ok: false, error: 'that draft did not save, so it is still only on your screen' }); }
+            return res.status(200).json({ ok: true, savedAt: patch.draftSavedAt,
+                note: 'Saved as a draft. Nothing has been sent and nothing is marked sent.' });
         }
 
         if (scope === 'sync') {
@@ -207,19 +241,29 @@ export default async function handler(req, res) {
             const id = STR(b.id, 200);
             if (!/^pilot:req:[A-Za-z0-9]+$/.test(id)) return res.status(400).json({ ok: false, error: 'not a request id' });
             const link = { realm: STR(b.realm, 40), customerId: STR(b.customerId, 40), invoiceId: STR(b.invoiceId, 40) };
-            if (!link.customerId || !link.invoiceId) return res.status(400).json({ ok: false, error: 'a link needs a customer and an invoice' });
-            const v = await verifyLinkedPayment(link, { qboConnected, qboQuery, getRealmId });
+            const unlink = b.unlink === true;
+            if (!unlink && (!link.customerId || !link.invoiceId)) {
+                return res.status(400).json({ ok: false, error: 'a link needs a customer and an invoice' });
+            }
+            // Read before writing. hset on an id that does not exist would create an empty hash that
+            // looks like a request and is not one.
+            let existing = null;
+            try { existing = await redis.hgetall(id); }
+            catch (e) { return res.status(503).json({ ok: false, error: 'could not read that request, so nothing was written' }); }
+            if (!existing || !existing.email) return res.status(404).json({ ok: false, error: 'no such request' });
+            const v = unlink
+                ? { status: 'needs-link', why: 'the link was removed, so nothing is recorded as paid' }
+                : await verifyLinkedPayment(link, { qboConnected, qboQuery, getRealmId });
             const patch = {
                 paymentStatus: v.status, paymentWhy: v.why || '', paymentCheckedAt: new Date().toISOString(),
-                paymentCustomerId: link.customerId, paymentInvoiceId: link.invoiceId, paymentRealm: link.realm || '',
+                paymentCustomerId: unlink ? '' : link.customerId, paymentInvoiceId: unlink ? '' : link.invoiceId,
+                paymentRealm: unlink ? '' : (link.realm || ''),
                 paymentLinkedBy: STR((who && who.name) || 'operator', 60),
             };
             // Only a verified paid verdict may ever write a reference. A later non-paid refresh
             // clears the live one and keeps the old one visible as history, so a payment that was
             // verified and then voided does not vanish without trace.
-            let rec = null;
-            try { rec = await redis.hgetall(id); } catch (e) { rec = null; }
-            const had = rec && rec.paymentReference;
+            const had = existing.paymentReference;
             if (isVerifiedPaid(v)) {
                 patch.paymentReference = v.reference;
                 patch.paymentVerifiedAt = new Date().toISOString();
@@ -244,13 +288,14 @@ export default async function handler(req, res) {
             const out = await retryAlert(id, { redis, notifyEmail, notifySlack, now: Date.now });
             return res.status(out.ok ? 200 : 502).json(out);
         }
-        return res.status(400).json({ ok: false, error: 'scope must be cohort, request, draft, sync, start-opportunity, payment-candidates, payment-link or retry-alert' });
+        return res.status(400).json({ ok: false, error: 'scope must be cohort, request, draft, save-draft, sync, start-opportunity, payment-candidates, payment-link or retry-alert' });
     }
 
     const [cohort, requests, sync, guard, qbo] = await Promise.all([
         engine(''), loadRequests(), syncHealth(redis), guardHealth(),
         qboConnected().then((ok) => ({ ok })).catch(() => ({ ok: false })),
     ]);
+    const portal = await portalId().catch(() => ({ ok: false, why: 'the portal could not be read' }));
     const cb = cohort.body || {};
     // Integration health, stated as configured or not rather than implied by silence.
     const health = {
@@ -264,6 +309,13 @@ export default async function handler(req, res) {
             note: process.env.CALENDLY_WEBHOOK_SIGNING_KEY
                 ? (process.env.PILOT_EVENT_TYPES ? '' : 'PILOT_EVENT_TYPES is not set, so bookings are held for review rather than counted')
                 : 'no signing key, so booking events are rejected' },
+        hubspotPortal: { configured: !!portal.ok, portalId: portal.portalId || '',
+            label: 'HubSpot account this site writes to',
+            note: portal.ok
+                ? (process.env.PILOT_OWNER_PORTAL && process.env.PILOT_OWNER_PORTAL !== portal.portalId
+                    ? `PILOT_OWNER_ID was set for portal ${process.env.PILOT_OWNER_PORTAL}, which is not this one. An owner id from another account is meaningless here.`
+                    : '')
+                : (portal.why || '') },
         owner: { configured: !!process.env.PILOT_OWNER_ID,
             label: 'pilot task owner',
             note: process.env.PILOT_OWNER_ID ? '' :

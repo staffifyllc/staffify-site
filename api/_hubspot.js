@@ -450,4 +450,22 @@ export async function repOwnerId(rep, repEmail, deps = {}) {
     return id;
 }
 
+/**
+ * Which HubSpot account this token actually belongs to.
+ *
+ * An owner id from one portal is meaningless in another, and one was offered from account 7858857
+ * (paul@flylisted.com) for a site whose token is on 51666712. Assigning it would have filed Staffify
+ * tasks against a Flylisted owner id, so the portal is read and shown rather than assumed.
+ */
+let _portal = null;
+export async function portalId() {
+    if (_portal !== null) return _portal;
+    if (!token()) return (_portal = { ok: false, why: 'no token' });
+    const r = await hs('/account-info/v3/details', { method: 'GET' });
+    _portal = r.ok && r.body && r.body.portalId
+        ? { ok: true, portalId: String(r.body.portalId) }
+        : { ok: false, why: `could not read the account (${r.status})` };
+    return _portal;
+}
+
 export function configured() { return !!token(); }
