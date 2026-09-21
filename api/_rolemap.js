@@ -189,8 +189,19 @@ export function parseRequest(body = {}) {
         company: clean(body.company, 120),
         pain: clean(body.pain, 1200),
         times: clean(body.times, 200),
-        source: clean(body.source, 60) || 'real-estate-media',
+        source: clean(body.utmSource, 60) || clean(body.source, 60) || 'real-estate-media',
         path: clean(body.path, 120) || '/real-estate-media/',
+        // Full attribution, captured once at the form and carried all the way into the CRM note and
+        // the deal. Before this the form kept utm_source and dropped everything else, so a booking
+        // could never be traced back to what brought them.
+        utmSource: clean(body.utmSource, 60),
+        utmMedium: clean(body.utmMedium, 60),
+        utmCampaign: clean(body.utmCampaign, 80),
+        utmContent: clean(body.utmContent, 80),
+        utmTerm: clean(body.utmTerm, 80),
+        referrer: clean(body.referrer, 200),
+        landingPath: clean(body.landingPath, 160),
+        lid: clean(body.lid, 60),
     };
 }
 
@@ -216,6 +227,12 @@ export async function saveRequest(input, deps) {
         id, email: input.email, createdAt: at, arm: 'inbound', isTest: 'false',
         name: input.name, company: input.company, pain: input.pain, times: input.times,
         source: input.source, path: input.path, state: 'REQUESTED',
+        // Attribution belongs to the first submission. A later one appends rather than rewriting it,
+        // so the campaign that actually earned the inquiry is the one on the record.
+        utmSource: input.utmSource, utmMedium: input.utmMedium, utmCampaign: input.utmCampaign,
+        utmContent: input.utmContent, utmTerm: input.utmTerm,
+        referrer: input.referrer, landingPath: input.landingPath, lid: input.lid,
+        syncState: 'pending', owner: 'Paul',
     };
     try {
         for (const [k, v] of Object.entries(firstWrite)) await redis.hsetnx(id, k, v);
@@ -228,6 +245,14 @@ export async function saveRequest(input, deps) {
     } catch (e) {
         // Nothing is claimed, so a retry starts from a clean slate and still alerts.
         return { saved: false, created: false, alerted: false, error: 'store' };
+    }
+
+    // The data is down, so the inquiry cannot be lost. The CRM sync is queued rather than run here:
+    // a HubSpot outage must delay the link, never the acknowledgement the person is waiting on.
+    let queued = false;
+    if (deps.enqueueSync) {
+        const q = await deps.enqueueSync(redis, id);
+        queued = !!(q && q.ok);
     }
 
     // The data is down. Only now is the first alert claimed, and only one caller can win it.
@@ -273,7 +298,7 @@ export async function saveRequest(input, deps) {
     const after = { ...existing, ...patch };
     const state = notifyState(after);
     return {
-        saved: true, created, reopened, attempted, inFlight, settled,
+        saved: true, created, reopened, attempted, inFlight, settled, queuedForCrm: queued,
         // If a send succeeded and we could not write that down, the stored state is behind reality and
         // saying otherwise would be a lie. The caller is told, so it can be reported rather than hidden.
         notifyState: recorded ? state : 'uncertain',

@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 import { redis, readBody } from './_auth.js';
 import { notifyEmail, notifySlack } from './_notify-request.js';
 import { parseRequest, saveRequest, withinRate, PUBLIC_MESSAGE } from './_rolemap.js';
+import { enqueueSync } from './_pilot-sync.js';
 
 const ALLOWED_ORIGINS = ['https://www.gostaffify.com', 'https://gostaffify.com', 'http://localhost:3000'];
 const hash = (s) => createHash('sha256').update(String(s).toLowerCase()).digest('hex').slice(0, 24);
@@ -36,7 +37,7 @@ export default async function handler(req, res) {
         return res.status(429).json({ ok: false, error: 'That is a few too many in an hour. Email hello@gostaffify.com instead.' });
     }
 
-    const out = await saveRequest(parsed, { redis, hash, now: Date.now, notifyEmail, notifySlack });
+    const out = await saveRequest(parsed, { redis, hash, now: Date.now, notifyEmail, notifySlack, enqueueSync });
     if (!out.saved) {
         return res.status(503).json({ ok: false, error: 'We could not record that. Email hello@gostaffify.com and it reaches the same place.' });
     }

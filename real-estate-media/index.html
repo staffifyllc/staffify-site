@@ -312,6 +312,33 @@ footer a { color: var(--ink-mute); }
 
 <script>
 (function () {
+  // Everything that brought them here, captured once, so a booking six weeks from now can still be
+  // traced back to the campaign that earned it. Previously only utm_source was kept.
+  function readStoredLid() {
+    try { var v = localStorage.getItem('sf_lid'); if (v) return v; } catch (e) {}
+    var m = document.cookie.match(/(?:^|;\s*)sf_lid=([^;]+)/);
+    return m ? m[1] : '';
+  }
+  function attribution() {
+    var q = new URLSearchParams(location.search);
+    var keep = {};
+    try { keep = JSON.parse(sessionStorage.getItem('sf_attr') || '{}') || {}; } catch (e) { keep = {}; }
+    var a = {
+      utmSource: q.get('utm_source') || keep.utmSource || '',
+      utmMedium: q.get('utm_medium') || keep.utmMedium || '',
+      utmCampaign: q.get('utm_campaign') || keep.utmCampaign || '',
+      utmContent: q.get('utm_content') || keep.utmContent || '',
+      utmTerm: q.get('utm_term') || keep.utmTerm || '',
+      // analytics.js strips lid from the address bar, so read its stored copy as well as the URL.
+      lid: q.get('lid') || keep.lid || readStoredLid() || '',
+      referrer: keep.referrer || document.referrer || '',
+      landingPath: keep.landingPath || location.pathname
+    };
+    try { sessionStorage.setItem('sf_attr', JSON.stringify(a)); } catch (e) { /* private window */ }
+    return a;
+  }
+  attribution();
+
   var f = document.getElementById('rmForm'), btn = document.getElementById('rmBtn'), out = document.getElementById('rmResult');
   var sent = false;
   function show(kind, msg) { out.className = 'result ' + kind; out.textContent = msg; }
@@ -324,14 +351,19 @@ footer a { color: var(--ink-mute); }
     btn.disabled = true; btn.textContent = 'Sending';
     fetch('/api/role-map-request/', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, email: email, company: f.company.value.trim(),
+      body: JSON.stringify(Object.assign({ name: name, email: email, company: f.company.value.trim(),
         pain: f.pain.value.trim(), times: f.times.value.trim(), website: f.website.value,
-        source: (new URLSearchParams(location.search)).get('utm_source') || '', path: location.pathname })
+        path: location.pathname }, attribution()))
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         if (!res.ok || !res.j || res.j.ok !== true) throw new Error((res.j && res.j.error) || 'that did not go through');
         sent = true; btn.textContent = 'Sent';
-        show('ok', res.j.message || 'Got it. Paul will write back himself, usually within one business day. Nothing is booked.');
+        // Only now, with the request durably stored, is this a submitted request.
+        try { if (window.staffifyRequestSubmitted) window.staffifyRequestSubmitted({ form: 'role_map_request' }); } catch (e) {}
+        show('ok', (res.j.message || 'Got it. Paul will write back himself, usually within one business day. Nothing is booked.')
+          + ' He will read what you wrote and reply with the role map: what a second person could take over, what stays '
+          + 'with you, an hours estimate with the assumptions shown, and the cost at those hours. If it would be easier '
+          + 'to talk, say so in your reply and he will offer you a time. Nothing goes on a calendar until you agree one.');
       })
       .catch(function (err) {
         btn.disabled = false; btn.textContent = 'Send this to Paul';

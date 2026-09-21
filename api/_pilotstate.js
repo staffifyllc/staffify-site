@@ -10,6 +10,10 @@ export const REQUEST_STATES = Object.freeze({
     TIME_AGREED:    { needs: ['agreedFor'], label: 'Time agreed, not booked' },
     BOOKED:         { needs: ['agreedFor', 'bookingRef'], label: 'On a calendar' },
     HELD:           { needs: ['bookingRef', 'heldAt'], label: 'Call held' },
+    // A cancellation is its own answer. Dropping back to TIME_AGREED would leave a time on the
+    // record that nobody is holding any more, which reads as a meeting that is still happening.
+    CANCELED:       { needs: ['bookingCanceledAt'], label: 'Booking canceled, needs a new time' },
+    BOOKING_REVIEW: { needs: ['bookingReviewReason'], label: 'Booking needs review before it counts' },
     CLOSED:         { needs: ['answerKind'], label: 'Closed' },
 });
 

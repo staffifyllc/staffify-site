@@ -78,6 +78,7 @@
   var MARKUP = [
     '<div class="pq-top"><div><h2>Founder pilot</h2><div class="sub" id="pq-sub">Loading</div></div>',
     '<button type="button" class="pq-btn" id="pq-refresh">Refresh</button></div>',
+    '<section class="pq-card" id="pq-health"><h3>Integration health</h3></section>',
     '<section class="pq-card" id="pq-do"><h3>What is waiting on you</h3></section>',
     '<section class="pq-card" id="pq-req"><h3>Requests from the page <small>inbound, never counted as warm or cold</small></h3></section>',
     '<section class="pq-card" id="pq-people"><h3>The batch <small>every owner, and what you know about them</small></h3></section>',
@@ -495,6 +496,114 @@
       .catch(function () { busy = false; btn.disabled = false; btn.textContent = 'Try the alert again'; });
   }
 
+
+  // ---- integration health: configured or not, said out loud ----------------------------------
+  function renderHealth() {
+    var el = q('#pq-health');
+    var h = DATA && DATA.health;
+    var head = '<h3>Integration health</h3>';
+    if (!h) { el.innerHTML = head + '<div class="pq-empty">Health could not be read.</div>'; return; }
+    var rows = [];
+    var line = function (label, ok, detail) {
+      rows.push('<dt>' + esc(label) + '</dt><dd class="' + (ok ? '' : 'z') + '">' +
+        (ok ? 'configured' : '<span style="color:#f5b83d">not configured</span>') +
+        (detail ? '<div style="font-weight:400;color:#6e6e73;font-size:12px;max-width:44ch;text-align:right">' + esc(detail) + '</div>' : '') + '</dd>');
+    };
+    line('CRM sync (HubSpot)', h.hubspot && h.hubspot.configured, '');
+    line('Payment evidence (QuickBooks)', h.quickbooks && h.quickbooks.configured, h.quickbooks && h.quickbooks.note);
+    line('Booking events (Calendly)', h.calendly && h.calendly.configured, h.calendly && h.calendly.note);
+    line('Pilot task owner', h.owner && h.owner.configured, h.owner && h.owner.note);
+    line('Request alerts by email', h.email && h.email.configured, '');
+    line('Request alerts to Slack', h.slack && h.slack.configured, '');
+    var g = h.clientGuard || {};
+    line('Client guard', g.canAnswer, (g.problems && g.problems.length ? g.problems.join('; ') : '')
+      + (g.snapshot ? ' shared snapshot ' + g.snapshot.emails + ' emails, ' + g.snapshot.ageHours + 'h old' : ''));
+    var sync = h.crmSync || {};
+    rows.push('<dt>CRM sync queue</dt><dd>' + (sync.ok
+      ? esc(sync.queued + ' queued, ' + sync.dueNow + ' due now')
+      : '<span class="pq-unk" title="' + esc(sync.why || '') + '">Unknown</span>') + '</dd>');
+    el.innerHTML = head + '<dl class="pq-rows">' + rows.join('') + '</dl>' +
+      '<div class="pq-note">Anything marked not configured is switched off, not quietly failing. ' +
+      'Nothing is ever shown as booked or paid from a source that is not connected.</div>';
+  }
+
+  // ---- what the CRM link actually did ---------------------------------------------------------
+  function crmLine(x) {
+    var c = x.crm || {};
+    var label = { ok: 'In the CRM', partial: 'Partly in the CRM', pending: 'Waiting to sync',
+      failed: 'Sync failed', skipped: 'Not synced', 'needs-reconcile': 'Needs a person to check HubSpot' };
+    var tone = c.state === 'ok' ? 'st-ok' : c.state === 'pending' ? 'st-idle' : 'st-warn';
+    var bits = [];
+    if (c.contactId) bits.push('contact ' + esc(c.contactId));
+    if (c.dealId) bits.push('deal ' + esc(c.dealId));
+    if (c.taskId) bits.push('task due ' + esc(when(c.dueAt)));
+    if (c.dealSkipped) bits.push('no deal: ' + esc(c.dealSkipped));
+    if (c.isClient) bits.push('EXISTING CLIENT, do not pitch');
+    return '<div class="pq-act"><span class="st ' + tone + '">' + esc(label[c.state] || c.state || 'unknown') + '</span> ' +
+      esc(bits.join(' · ')) +
+      (c.error ? '<div class="pq-gap" style="margin-top:5px">' + esc(c.error) + '</div>' : '') +
+      (c.needsReview ? '<div class="pq-gap" style="margin-top:5px">Held for review: ' + esc(c.reason || c.error || '') + '</div>' : '') +
+      ' <button type="button" class="pq-btn" data-sync="' + esc(x.id) + '">Sync now</button></div>';
+  }
+
+  function paymentLine(x) {
+    var p = x.payment || {};
+    if (!p.status && !p.reference) return '';
+    var ok = !!p.reference;
+    return '<div class="pq-act"><span class="st ' + (ok ? 'st-ok' : 'st-idle') + '">' +
+      esc(ok ? 'Paid, verified' : 'Payment: ' + p.status) + '</span> ' + esc(p.why || '') +
+      (p.formerReference ? '<div class="pq-gap" style="margin-top:5px">Previously verified as paid (' +
+        esc(p.formerReference) + '), cleared because: ' + esc(p.formerClearedWhy) + '</div>' : '') + '</div>';
+  }
+
+  function openDraft(id, kind, btn) {
+    var box = root.querySelector('[data-draft="' + id + '"]');
+    if (!box) return;
+    btn.disabled = true;
+    fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'draft', id: id, kind: kind }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        btn.disabled = false;
+        if (!j || !j.ok) { box.style.display = 'grid'; box.innerHTML = '<div class="pq-msg bad">' + esc((j && j.error) || 'could not build that draft') + '</div>'; return; }
+        var d = j.draft;
+        box.style.display = 'grid';
+        box.innerHTML =
+          '<div class="pq-msg ok">This is a draft. Nothing has been sent and nothing is marked sent.' +
+          (d.needs && d.needs.length ? ' It is not ready: ' + esc(d.needs.join('; ')) + '.' : '') + '</div>' +
+          (d.operatorNotes ? '<div class="pq-then">' + esc(d.operatorNotes.join(' ')) + '</div>' : '') +
+          '<label>Subject</label><input type="text" value="' + esc(d.subject) + '" data-dsub="1">' +
+          '<label>Body, edit before you send</label><textarea style="min-height:260px" data-dbody="1">' + esc(d.body) + '</textarea>' +
+          '<div class="pq-btns">' +
+          '<a class="pq-btn go" href="' + esc(j.mailto) + '">Open in your mail client</a>' +
+          '<button type="button" class="pq-btn" data-dcopy="1">Copy</button>' +
+          '<button type="button" class="pq-btn" data-dclose="1">Close</button></div>';
+        box.querySelector('[data-dclose]').onclick = function () { box.style.display = 'none'; box.innerHTML = ''; };
+        box.querySelector('[data-dcopy]').onclick = function (ev) {
+          var t = box.querySelector('[data-dbody]').value;
+          navigator.clipboard.writeText(t).then(function () { ev.target.textContent = 'Copied'; })
+            .catch(function () { ev.target.textContent = 'Could not copy'; });
+        };
+      })
+      .catch(function () { btn.disabled = false; });
+  }
+
+  function wireRequestTools() {
+    Array.prototype.forEach.call(root.querySelectorAll('[data-sync]'), function (b) {
+      b.onclick = function () {
+        b.disabled = true; b.textContent = 'Queued';
+        fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scope: 'sync', id: b.getAttribute('data-sync') }) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { b.textContent = j && j.ok ? 'Queued' : ((j && j.error) || 'Failed'); setTimeout(load, 1200); })
+          .catch(function () { b.disabled = false; b.textContent = 'Sync now'; });
+      };
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-draftkind]'), function (b) {
+      b.onclick = function () { openDraft(b.getAttribute('data-draftid'), b.getAttribute('data-draftkind'), b); };
+    });
+  }
+
   function renderRequests() {
     var el = q('#pq-req');
     var head = '<h3>Requests from the page <small>inbound, never counted as warm or cold</small></h3>';
@@ -521,6 +630,13 @@
         (x.newSubmissionAfterClose ? '<div class="pq-act pq-gap">They submitted again after you closed this, on ' +
           esc(when(x.newSubmissionAfterClose)) + '. The record was not reopened.</div>' : '') +
         notifyLine(x) +
+        crmLine(x) + paymentLine(x) +
+        '<div class="pq-btns">' +
+          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="reply">Draft the reply</button>' +
+          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="roleMap">Draft the role map</button>' +
+          '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="proposal">Draft the proposal</button>' +
+        '</div>' +
+        '<div class="pq-form" data-draft="' + esc(x.id) + '" style="display:none"></div>' +
         '<div class="pq-btns" data-req="' + esc(x.id) + '">' +
           (x.state === 'REQUESTED' ? '<button type="button" class="pq-btn go" data-a="ANSWERED">I replied</button>' : '') +
           (!x.roleMapSentAt ? '<button type="button" class="pq-btn" data-a="ROLE_MAP_SENT">Role map sent</button>' : '') +
@@ -535,6 +651,7 @@
     'calendar reference, and role map sent needs the name of what you actually sent. Closing needs their words ' +
     'unless the answer is no response.</div>';
 
+    wireRequestTools();
     Array.prototype.forEach.call(el.querySelectorAll('[data-retry]'), function (b) {
       b.onclick = function () { retryAlert(b.getAttribute('data-retry'), b); };
     });
@@ -610,7 +727,7 @@
     q('#pq-sub').innerHTML = 'Paul conducts these conversations himself. ' +
       (c && c.cohort ? esc(c.cohort) + ' &middot; ' : '') + n + ' inbound request' + (n === 1 ? '' : 's') +
       ' &middot; automated prospect calling is off for this pilot';
-    renderDo(); renderRequests(); renderPeople(); renderReport(); renderAnswers(); renderDrafts();
+    renderHealth(); renderDo(); renderRequests(); renderPeople(); renderReport(); renderAnswers(); renderDrafts();
   }
 
   function load() {

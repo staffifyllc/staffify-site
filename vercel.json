@@ -18,6 +18,10 @@
     {
       "path": "/api/cron-softyes-nurture",
       "schedule": "20 14 * * *"
+    },
+    {
+      "path": "/api/pilot-sync",
+      "schedule": "*/10 * * * *"
     }
   ],
   "rewrites": [

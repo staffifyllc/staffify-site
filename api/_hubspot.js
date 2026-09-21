@@ -76,6 +76,100 @@ export async function findOrCreateContact({ phone, email, firstname, lastname, c
     return { ok: false, reason: 'create_failed', status: c.status, detail: c.raw };
 }
 
+// A SEARCH THAT FAILED IS NOT A SEARCH THAT FOUND NOTHING.
+//
+// findOrCreateContact above treats any non-auth search error as "no hit" and goes on to create. For
+// a dialer that is a reasonable trade. For an inbound sync it is how you end up with two contacts
+// for the same person every time HubSpot has a bad minute, so this one reports the three states
+// apart and the caller decides.
+//
+//   { status: 'found', id }   { status: 'absent' }   { status: 'failed', why }
+export async function lookupContact({ phone, email }) {
+    if (!token()) return { status: 'failed', why: 'no_token' };
+    const p = e164(phone), d = digits(phone);
+    const queries = [];
+    if (d) queries.push({ filterGroups: [
+        { filters: [{ propertyName: 'phone', operator: 'EQ', value: p }] },
+        { filters: [{ propertyName: 'mobilephone', operator: 'EQ', value: p }] },
+    ] });
+    if (email) queries.push({ filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: String(email).toLowerCase() }] }] });
+    if (!queries.length) return { status: 'failed', why: 'no identifier to search on' };
+    for (const q of queries) {
+        const r = await hs('/crm/v3/objects/contacts/search', {
+            method: 'POST',
+            body: JSON.stringify({ ...q, properties: ['firstname', 'lastname', 'phone', 'email', 'company'], limit: 1 }),
+        });
+        if (!r.ok) return { status: 'failed', why: `HubSpot answered ${r.status}`, detail: r.raw };
+        const hit = r.body && r.body.results && r.body.results[0];
+        if (hit) return { status: 'found', id: hit.id, properties: hit.properties || {} };
+    }
+    return { status: 'absent' };
+}
+
+/** Read the fields we must never trample: who owns them, what they already are, and their status. */
+export async function contactGuardProps(contactId) {
+    if (!token() || !contactId) return { ok: false, reason: 'skip' };
+    const r = await hs(`/crm/v3/objects/contacts/${contactId}?properties=lifecyclestage,hubspot_owner_id,hs_lead_status,email,company,firstname,lastname`, { method: 'GET' });
+    if (!r.ok) return { ok: false, reason: 'read_failed', status: r.status, detail: r.raw };
+    return { ok: true, properties: (r.body && r.body.properties) || {} };
+}
+
+/**
+ * Set properties on a contact WITHOUT overwriting anything already there. Used by the inbound sync,
+ * which must be able to fill in a blank company without ever changing a customer's lifecycle stage
+ * or reassigning somebody's owner.
+ */
+export async function fillBlankContactProps(contactId, wanted = {}) {
+    const cur = await contactGuardProps(contactId);
+    if (!cur.ok) return { ok: false, reason: cur.reason, detail: cur.detail || '' };
+    const props = {};
+    for (const [k, v] of Object.entries(wanted)) {
+        if (v === undefined || v === null || String(v).trim() === '') continue;
+        if (String(cur.properties[k] || '').trim() !== '') continue;      // already set, leave it
+        props[k] = v;
+    }
+    if (!Object.keys(props).length) return { ok: true, filled: [], skipped: Object.keys(wanted) };
+    const r = await hs(`/crm/v3/objects/contacts/${contactId}`, { method: 'PATCH', body: JSON.stringify({ properties: props }) });
+    return r.ok ? { ok: true, filled: Object.keys(props) } : { ok: false, reason: 'patch_failed', status: r.status, detail: r.raw };
+}
+
+/**
+ * A task with an owner and a due time, so an inbound request is somebody's job by a certain hour
+ * rather than a row in a queue nobody is accountable for.
+ */
+export async function createTask({ contactId, subject, body, dueAt, ownerId, priority = 'HIGH' }) {
+    if (!token()) return { ok: false, reason: 'no_token' };
+    // A task nobody owns is not somebody's job. Refusing here is visible; creating an unowned task
+    // and calling it assigned is not, and that is the failure this whole queue exists to prevent.
+    if (!ownerId) {
+        return { ok: false, reason: 'no_owner', status: 400,
+            detail: 'no HubSpot owner could be resolved, so the task was not created. Map the pilot owner to a HubSpot owner id.' };
+    }
+    const props = {
+        hs_task_subject: String(subject || 'Follow up').slice(0, 250),
+        hs_task_body: String(body || '').slice(0, 4000),
+        hs_task_status: 'NOT_STARTED',
+        hs_task_type: 'TODO',
+        hs_task_priority: priority,
+        hs_timestamp: dueAt || Date.now(),
+    };
+    if (ownerId) props.hubspot_owner_id = String(ownerId);
+    const r = await hs('/crm/v3/objects/tasks', { method: 'POST', body: JSON.stringify({ properties: props }) });
+    if (!r.ok) return { ok: false, reason: 'task_failed', status: r.status, detail: r.raw };
+    // The task exists now. If linking it to the contact fails, that is a linking problem, and the
+    // caller gets the id so it can retry the link rather than create a second task.
+    const linked = await associate('tasks', r.body.id, 'contacts', contactId);
+    return { ok: true, id: r.body.id, linked, ...(linked ? {} : { linkError: 'the task was created but not linked to the contact' }) };
+}
+
+/** Retry only the association, for an object that already exists. */
+export async function linkToContact(fromType, fromId, contactId) {
+    if (!token()) return { ok: false, reason: 'no_token' };
+    if (!fromId || !contactId) return { ok: false, reason: 'missing_ids' };
+    const ok = await associate(fromType, fromId, 'contacts', contactId);
+    return ok ? { ok: true } : { ok: false, reason: 'associate_failed' };
+}
+
 // Associate using the "default" endpoint so we never hard-code association type ids.
 async function associate(fromType, fromId, toType, toId) {
     if (!fromId || !toId) return false;
@@ -124,8 +218,8 @@ export async function logNote({ contactId, body, at }) {
         body: JSON.stringify({ properties: { hs_timestamp: at || Date.now(), hs_note_body: (body || '').slice(0, 4000) } }),
     });
     if (!r.ok) return { ok: false, reason: 'note_failed', status: r.status, detail: r.raw };
-    await associate('notes', r.body.id, 'contacts', contactId);
-    return { ok: true, id: r.body.id };
+    const linked = await associate('notes', r.body.id, 'contacts', contactId);
+    return { ok: true, id: r.body.id, linked, ...(linked ? {} : { linkError: 'the note was created but not linked to the contact' }) };
 }
 
 // ---- Lead status ------------------------------------------------------------
@@ -216,13 +310,22 @@ export async function upsertDeal({ contactId, company, role, ownerId, motion, am
     // deliberately left alone: someone who was Lost last quarter and is being pitched again should get
     // a fresh deal rather than having their closed one quietly reopened.
     const assoc = await hs(`/crm/v4/objects/contacts/${contactId}/associations/deals`, { method: 'GET' });
-    const ids = (assoc.ok && assoc.body && assoc.body.results || [])
+    // "No open deal" has to be established, not inferred from a read that failed. Creating on a
+    // failed association read is how one prospect ends up with three deals after a bad minute.
+    if (!assoc.ok) {
+        return { ok: false, reason: 'deal_lookup_failed', status: assoc.status, detail: assoc.raw,
+            note: 'could not read existing deals, so nothing was created' };
+    }
+    const ids = ((assoc.body && assoc.body.results) || [])
         .map(a => a.toObjectId || a.id).filter(Boolean).slice(0, 25);
 
     let open = null;
     for (const id of ids) {
         const d = await hs(`/crm/v3/objects/deals/${id}?properties=dealstage,pipeline,hs_is_closed_won,hs_is_closed,hubspot_owner_id`, { method: 'GET' });
-        if (!d.ok || !d.body) continue;
+        // A deal we could not read might be the open one. Stop rather than create a second.
+        if (!d.ok) return { ok: false, reason: 'deal_read_failed', status: d.status, detail: d.raw,
+            note: `could not read existing deal ${id}, so nothing was created` };
+        if (!d.body) continue;
         const pr = d.body.properties || {};
         if (String(pr.pipeline) !== String(pipe.id)) continue;
         const k = stageKey(pipe, pr.dealstage);

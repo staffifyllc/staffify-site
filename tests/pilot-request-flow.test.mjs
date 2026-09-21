@@ -96,7 +96,7 @@ test('page to queue to closed, with every gate doing its job', async () => {
 test('an unknown answer and an unknown state are both refused', () => {
     assert.equal(validateTransition({}, 'WON', {}).ok, false);
     assert.equal(validateTransition({}, 'CLOSED', { answerKind: 'NOT_INTERESTED_PROBABLY' }).ok, false);
-    assert.deepEqual(Object.keys(REQUEST_STATES).length, 7);
+    assert.deepEqual(Object.keys(REQUEST_STATES).length, 9, 'plus CANCELED and BOOKING_REVIEW');
 });
 
 test('saving the same state twice leaves one record and one state', async () => {

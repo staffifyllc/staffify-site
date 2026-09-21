@@ -43,11 +43,41 @@
     try { if (window.va) window.va('event', { name: name }); } catch (e) {}          // Vercel — works now
     try { if (window.gtag && CFG.GA4_ID) window.gtag('event', name, meta || {}); } catch (e) {} // GA4
   }
-  function fireDiscoveryCall() {
-    track('book_discovery_call', { event_category: 'cta', event_label: 'calendly' });
+  /* CLICKING A LINK IS NOT A BOOKING.
+   *
+   * This used to fire book_discovery_call, generate_lead, a Google Ads conversion and a Meta
+   * Schedule the moment somebody clicked a Calendly link. Most of those clicks never became a
+   * booking, so every downstream number was inflated and no campaign could be judged.
+   *
+   * Three stages now, and each one means what it says:
+   *   booking_link_clicked   they clicked. Intent, not outcome. No conversion, no lead.
+   *   request_submitted      the form came back successful and the request is stored.
+   *   booked / paid          only ever from a verified provider event, server side, never here.
+   */
+  function fireBookingLinkClick() {
+    track('booking_link_clicked', { event_category: 'cta', event_label: 'calendly' });
+  }
+
+  /* Called by a page ONLY after the server has confirmed the request is durably stored. */
+  function fireRequestSubmitted(meta) {
+    // Never the email, never their free text. Marketing platforms get the stage and nothing personal.
+    var safe = { event_category: 'form', event_label: (meta && meta.form) || 'role_map_request' };
+    track('request_submitted', safe);
     try { if (window.gtag && CFG.GA4_ID) window.gtag('event', 'generate_lead', { value: 1, currency: 'USD' }); } catch (e) {}
     try { if (window.gtag && CFG.ADS_ID && CFG.ADS_DISCOVERY_LABEL) window.gtag('event', 'conversion', { send_to: CFG.ADS_ID + '/' + CFG.ADS_DISCOVERY_LABEL }); } catch (e) {}
-    try { if (window.fbq && CFG.META_PIXEL_ID) window.fbq('track', 'Schedule'); } catch (e) {}
+    try { if (window.fbq && CFG.META_PIXEL_ID) window.fbq('track', 'Lead'); } catch (e) {}
+  }
+
+  /* What is actually switched on, so an empty id reads as unconfigured rather than as silence. */
+  function analyticsStatus() {
+    return {
+      vercel: !!window.va,
+      ga4: CFG.GA4_ID ? 'configured' : 'unconfigured: GA4_ID is empty, so no GA4 event is sent',
+      googleAds: CFG.ADS_ID
+        ? (CFG.ADS_DISCOVERY_LABEL ? 'configured' : 'unconfigured: ADS_DISCOVERY_LABEL is empty, so no Ads conversion is sent')
+        : 'unconfigured: ADS_ID is empty',
+      meta: CFG.META_PIXEL_ID ? 'configured' : 'unconfigured: META_PIXEL_ID is empty, so no Meta event is sent',
+    };
   }
   function fireApply() {
     track('apply_click', { event_category: 'cta', event_label: 'va_application' });
@@ -59,13 +89,15 @@
     var a = ev.target && ev.target.closest ? ev.target.closest('a') : null;
     if (!a) return;
     var href = (a.getAttribute('href') || '').toLowerCase();
-    if (href.indexOf('calendly.com') !== -1) { fireDiscoveryCall(); return; }
+    if (href.indexOf('calendly.com') !== -1) { fireBookingLinkClick(); return; }
     if (href.indexOf('mailto:') === 0)        { track('email_click', { event_label: href.replace('mailto:', '') }); return; }
     if (href.indexOf('/apply') !== -1)        { fireApply(); return; }
   }, true);
 
   /* expose for manual/one-off use */
   window.staffifyTrack = track;
+  window.staffifyRequestSubmitted = fireRequestSubmitted;
+  window.staffifyAnalyticsStatus = analyticsStatus;
 })();
 
 /* Staffify — lead behavior tracking
