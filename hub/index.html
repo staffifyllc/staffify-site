@@ -156,6 +156,7 @@
     <img src="/assets/brand/logo-blue.svg" alt="Staffify">
     <nav class="nav">
         <a href="/hub/" id="navHub">Hub</a>
+        <a href="/pilot/" id="navPilot">Pilot</a>
         <a href="/my-day/" id="navDay">My Day</a>
         <a href="/dialer/">Dialer</a>
         <a href="/scoreboard/">Scoreboard</a>
@@ -170,7 +171,8 @@
 <div class="wrap" id="app"></div>
 
 <script src="/assets/js/close-plan.js"></script>
-<script src="/assets/js/sales-live.js?v=4"></script>
+<script src="/assets/js/sales-live.js?v=5"></script>
+<script src="/assets/js/pilot-queue.js?v=1"></script>
 <script src="/assets/js/mail-client.js?v=2"></script>
 <script>
 (function(){
@@ -448,6 +450,7 @@
     // tower; /my-day/ (a rewrite to this file) is the rep's day. The URL decides which one renders.
     app.innerHTML=
       '<div id="v-live" hidden></div>'+
+      '<div id="v-pilot" hidden></div>'+
       '<div id="v-day" hidden>'+
       lookupBox()+
       '<div class="eyebrow">Sales Hub</div><h1>Welcome back, <span class="grad">'+esc(first)+'</span></h1>'+
@@ -498,14 +501,23 @@
   }
 
   function wireViews(){
-    var day = /^\/my-day\/?$/.test(location.pathname) || qp('view')==='day';
+    // One file, three pages in the top nav: /hub/ is Sales Live, /pilot/ is the founder pilot work
+    // queue, /my-day/ is the rep's day. Both extra routes are rewrites to this file.
+    var pilot = /^\/pilot\/?$/.test(location.pathname);
+    var day = !pilot && (/^\/my-day\/?$/.test(location.pathname) || qp('view')==='day');
     if (qp('view')==='day' && !/^\/my-day/.test(location.pathname)) { location.replace('/my-day/'); return; }
     document.getElementById('v-day').hidden = !day;
-    document.getElementById('v-live').hidden = day;
-    document.getElementById(day ? 'navDay' : 'navHub').classList.add('active');
-    document.title = day ? 'My Day — Staffify' : 'Sales Live — Staffify';
+    document.getElementById('v-pilot').hidden = !pilot;
+    document.getElementById('v-live').hidden = day || pilot;
+    document.getElementById(pilot ? 'navPilot' : day ? 'navDay' : 'navHub').classList.add('active');
+    document.title = pilot ? 'Founder pilot — Staffify' : day ? 'My Day — Staffify' : 'Sales Live — Staffify';
     app.classList.toggle('wide', !day);
     if (day) return;
+    if (pilot) {
+      if (window.StaffifyPilotQueue) window.StaffifyPilotQueue.mount(document.getElementById('v-pilot'));
+      else document.getElementById('v-pilot').innerHTML='<div class="empty">The pilot queue did not load. Refresh the page.</div>';
+      return;
+    }
     if (window.StaffifySalesLive) window.StaffifySalesLive.mount(document.getElementById('v-live'));
     else document.getElementById('v-live').innerHTML='<div class="empty">Sales Live did not load. Refresh the page.</div>';
   }
