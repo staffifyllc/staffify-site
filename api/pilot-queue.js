@@ -14,6 +14,8 @@
 // owners' own words about their businesses and must never be public.
 import { requireAccess, redis, readBody } from './_auth.js';
 import { REQUEST_STATES, ANSWER_KINDS, validateTransition } from './_pilotstate.js';
+import { notifyState, retryAlert } from './_rolemap.js';
+import { notifyEmail, notifySlack } from './_notify-request.js';
 
 const ENGINE = 'https://campaign-dashboard-green.vercel.app/api/pilot-cohort';
 
@@ -60,7 +62,10 @@ async function loadRequests(limit = 60) {
                 createdAt: r.createdAt || null, updatedAt: r.updatedAt || null,
                 lastSubmissionAt: r.lastSubmissionAt || null,
                 newSubmissionAfterClose: r.newSubmissionAfterClose || null,
-                notifyEmail: r.notifyEmail || '', notifySlack: r.notifySlack || '', notifyAt: r.notifyAt || null,
+                // Each channel on its own. "Nobody was alerted" is only true when neither got through.
+                notify: { email: r.notifyEmail || '', slack: r.notifySlack || '',
+                    emailAt: r.notifyEmailAt || null, slackAt: r.notifySlackAt || null,
+                    state: notifyState(r), reopenAlert: r.reopenAlert || '' },
                 arm: 'inbound',
             }));
         return unreadable
@@ -104,7 +109,14 @@ export default async function handler(req, res) {
             }
             return res.status(200).json({ ok: true, id, state: check.patch.state, label: REQUEST_STATES[check.patch.state].label });
         }
-        return res.status(400).json({ ok: false, error: 'scope must be cohort or request' });
+        if (scope === 'retry-alert') {
+            const id = STR(b.id, 200);
+            if (!/^pilot:req:[A-Za-z0-9]+$/.test(id)) return res.status(400).json({ ok: false, error: 'not a request id' });
+            // Only the channels that never got through are tried again, so a delivery cannot be doubled.
+            const out = await retryAlert(id, { redis, notifyEmail, notifySlack, now: Date.now });
+            return res.status(out.ok ? 200 : 502).json(out);
+        }
+        return res.status(400).json({ ok: false, error: 'scope must be cohort, request or retry-alert' });
     }
 
     const [cohort, requests] = await Promise.all([engine(''), loadRequests()]);

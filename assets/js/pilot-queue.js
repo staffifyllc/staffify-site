@@ -405,6 +405,52 @@
       .catch(function () { busy = false; if (btn) btn.disabled = false; });
   }
 
+  // "Nobody was alerted" is only true when neither channel got through. One channel succeeding is a
+  // different fact and says so, with the failed one named.
+  function notifyLine(x) {
+    var n = x.notify || {};
+    if (n.state === 'delivered') return '';
+    var say = function (v) {
+      if (!v) return 'not attempted';
+      return v.indexOf('unknown: ') === 0 ? 'unknown (' + esc(v.slice(9)) + ')' : esc(v);
+    };
+    var detail = 'Email ' + say(n.email) + ', Slack ' + say(n.slack) + '.';
+    var head =
+      n.state === 'partial'   ? 'One channel got through, one did not. ' + detail
+      : n.state === 'uncertain' ? 'We do not know whether this alert went out. ' + detail
+      : n.state === 'pending'   ? 'No alert has been attempted for this yet.'
+      : 'Saved, but no alert was delivered. ' + detail;
+    var warn = (n.state === 'uncertain' || (n.slack || '').indexOf('unknown: ') === 0)
+      ? ' Retrying Slack after an uncertain result may post a second message, because Slack has no duplicate protection. The email is safe to retry for 24 hours.'
+      : '';
+    return '<div class="pq-act pq-gap">' + head + warn +
+      ' <button type="button" class="pq-btn" data-retry="' + esc(x.id) + '" style="margin-left:6px">Try the alert again</button></div>';
+  }
+
+  function retryAlert(id, btn) {
+    if (busy) return;
+    busy = true; btn.disabled = true; btn.textContent = 'Sending';
+    fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'retry-alert', id: id }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        busy = false;
+        var msg = root.querySelector('[data-msg="' + id + '"]');
+        if (msg) {
+          msg.style.display = 'block';
+          msg.className = 'pq-msg ' + (j && j.ok && j.state === 'delivered' ? 'ok' : 'bad');
+          msg.textContent = !j || !j.ok ? ((j && j.error) || 'the retry did not go through')
+            : j.attempted && j.attempted.length
+              ? 'Tried ' + j.attempted.join(' and ') + '. Now: ' + j.state + '.'
+                + (j.resultsRecorded === false ? ' The result could not be written down, so what is stored may be behind.' : '')
+                + (j.caution ? ' ' + j.caution + '.' : '')
+              : (j.note || 'nothing needed sending');
+        }
+        load();
+      })
+      .catch(function () { busy = false; btn.disabled = false; btn.textContent = 'Try the alert again'; });
+  }
+
   function renderRequests() {
     var el = q('#pq-req');
     var head = '<h3>Requests from the page <small>inbound, never counted as warm or cold</small></h3>';
@@ -430,9 +476,7 @@
         (x.times ? '<div class="pq-act"><i>They would talk:</i> ' + esc(x.times) + '</div>' : '') +
         (x.newSubmissionAfterClose ? '<div class="pq-act pq-gap">They submitted again after you closed this, on ' +
           esc(when(x.newSubmissionAfterClose)) + '. The record was not reopened.</div>' : '') +
-        ((x.notifyEmail && x.notifyEmail !== 'ok') || (x.notifySlack && x.notifySlack !== 'ok')
-          ? '<div class="pq-act pq-gap">Saved, but nobody was alerted: email ' + esc(x.notifyEmail || 'unknown') +
-            ', Slack ' + esc(x.notifySlack || 'unknown') + '.</div>' : '') +
+        notifyLine(x) +
         '<div class="pq-btns" data-req="' + esc(x.id) + '">' +
           (x.state === 'REQUESTED' ? '<button type="button" class="pq-btn go" data-a="ANSWERED">I replied</button>' : '') +
           (!x.roleMapSentAt ? '<button type="button" class="pq-btn" data-a="ROLE_MAP_SENT">Role map sent</button>' : '') +
@@ -447,6 +491,9 @@
     'calendar reference, and role map sent needs the name of what you actually sent. Closing needs their words ' +
     'unless the answer is no response.</div>';
 
+    Array.prototype.forEach.call(el.querySelectorAll('[data-retry]'), function (b) {
+      b.onclick = function () { retryAlert(b.getAttribute('data-retry'), b); };
+    });
     Array.prototype.forEach.call(el.querySelectorAll('[data-req] .pq-btn'), function (b) {
       b.onclick = function () {
         var id = b.parentNode.getAttribute('data-req'), a = b.getAttribute('data-a');
