@@ -16,6 +16,7 @@ import { createHash } from 'node:crypto';
 import { requireAccess, redis, readBody } from './_auth.js';
 import { REQUEST_STATES, ANSWER_KINDS, validateTransition } from './_pilotstate.js';
 import { notifyState, retryAlert } from './_rolemap.js';
+import { expectedEventTypes, PILOT_EVENT } from './_booking-match.js';
 import { syncHealth, enqueueSync } from './_pilot-sync.js';
 import { guardHealth } from './_client-guard.js';
 import { DRAFTS, mailto } from './_pilot-drafts.js';
@@ -304,11 +305,26 @@ export default async function handler(req, res) {
         crmSync: sync,
         quickbooks: { configured: !!qbo.ok, label: 'payment evidence',
             note: qbo.ok ? '' : 'not connected, so no request can be shown as paid from here' },
-        calendly: { configured: !!process.env.CALENDLY_WEBHOOK_SIGNING_KEY,
-            eventTypes: String(process.env.PILOT_EVENT_TYPES || '').split(',').filter(Boolean).length,
-            note: process.env.CALENDLY_WEBHOOK_SIGNING_KEY
-                ? (process.env.PILOT_EVENT_TYPES ? '' : 'PILOT_EVENT_TYPES is not set, so bookings are held for review rather than counted')
-                : 'no signing key, so booking events are rejected' },
+        // Health has to ask the same question the matcher asks. Reading the environment variable
+        // directly said "not set" while the matcher was happily counting bookings against the
+        // shipped default, so the panel was reporting a problem that did not exist.
+        calendly: (() => {
+            const types = expectedEventTypes();
+            const fromEnv = !!String(process.env.PILOT_EVENT_TYPES || '').trim();
+            const signed = !!process.env.CALENDLY_WEBHOOK_SIGNING_KEY;
+            return {
+                configured: signed && types.length > 0,
+                eventTypes: types.length,
+                eventName: PILOT_EVENT.name, eventUrl: PILOT_EVENT.url, eventMinutes: PILOT_EVENT.minutes,
+                source: fromEnv ? 'PILOT_EVENT_TYPES' : 'shipped with the code',
+                note: !signed
+                    ? 'no signing key, so booking events are rejected'
+                    : !types.length
+                        ? 'no event type is recognised, so every booking is held for review rather than counted'
+                        : `counting bookings on ${PILOT_EVENT.name}, ${PILOT_EVENT.minutes} minutes`
+                          + (fromEnv ? ', from PILOT_EVENT_TYPES' : ''),
+            };
+        })(),
         hubspotPortal: { configured: !!portal.ok, portalId: portal.portalId || '',
             label: 'HubSpot account this site writes to',
             note: portal.ok

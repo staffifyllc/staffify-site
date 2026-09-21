@@ -546,7 +546,8 @@
     };
     line('CRM sync (HubSpot)', h.hubspot && h.hubspot.configured, '');
     line('Payment evidence (QuickBooks)', h.quickbooks && h.quickbooks.configured, h.quickbooks && h.quickbooks.note);
-    line('Booking events (Calendly)', h.calendly && h.calendly.configured, h.calendly && h.calendly.note);
+    line('Booking events (Calendly)', h.calendly && h.calendly.configured,
+      (h.calendly && h.calendly.note) + (h.calendly && h.calendly.source ? ' (' + h.calendly.source + ')' : ''));
     var hp = h.hubspotPortal || {};
     rows.push('<dt>HubSpot account</dt><dd>' + (hp.configured ? esc('portal ' + hp.portalId) :
       '<span class="pq-unk" title="' + esc(hp.note || '') + '">Unknown</span>') +

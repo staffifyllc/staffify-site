@@ -89,3 +89,11 @@ test('save-draft also reads first, so it cannot invent a record', () => {
     assert.ok(block.indexOf('redis.hgetall') < block.indexOf('redis.hset'));
     assert.match(block, /no such request/);
 });
+
+test('health asks the matcher, not the environment, which event types count', () => {
+    const block = API.slice(API.indexOf('calendly:'), API.indexOf('email: {'));
+    assert.match(block, /expectedEventTypes\(\)/, 'health must call the same function the matcher uses');
+    assert.ok(!/PILOT_EVENT_TYPES \? '' :/.test(block), 'it must not decide from the env var alone');
+    // And the note has to reflect the shipped default rather than calling it unset.
+    assert.match(block, /counting bookings on/);
+});
