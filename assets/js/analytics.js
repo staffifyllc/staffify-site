@@ -56,7 +56,7 @@
    */
   function fireBookingLinkClick(a) {
     var cta = '';
-    try { var m = /utm_content=([^&]+)/.exec((a && a.getAttribute('href')) || ''); if (m) cta = decodeURIComponent(m[1]).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); } catch (e) {}
+    try { var m = /utm_content=([^&]+)/.exec((a && a.getAttribute('href')) || ''); if (m) { cta = decodeURIComponent(m[1]); if (!/^[a-zA-Z0-9_.~-]{1,100}$/.test(cta)) cta = ''; } } catch (e) {}
     track('booking_link_clicked', { event_category: 'cta', event_label: 'calendly', page: location.pathname, cta: cta });
   }
 
