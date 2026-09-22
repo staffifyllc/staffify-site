@@ -1794,11 +1794,11 @@
             </div>
             <div>
                 <form class="soft-yes-form" id="softYesForm" novalidate>
-                    <input type="email" name="email" id="softYesEmail" placeholder="you@example.com" required autocomplete="email">
+                    <input type="email" name="email" id="softYesEmail" aria-label="Email address" aria-describedby="softYesMicro" placeholder="you@example.com" required autocomplete="email">
                     <button type="submit" id="softYesBtn">Send me the list</button>
                 </form>
                 <p class="soft-yes-microcopy" id="softYesMicro">One email. No spam. Unsubscribe in one click.</p>
-                <div class="soft-yes-success" id="softYesSuccess">✓ Check your inbox in 30 seconds. The list is on the way.</div>
+                <div class="soft-yes-success" id="softYesSuccess" role="status" aria-live="polite">✓ Request received. Please check your inbox for the list.</div>
             </div>
         </div>
     </section>
