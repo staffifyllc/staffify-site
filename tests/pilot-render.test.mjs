@@ -93,7 +93,7 @@ test('the stage buttons are visible, not hidden behind a display:none wrapper', 
     // The only hidden containers are the panels that open on demand.
     const hidden = [...html.matchAll(/<div[^>]*display:none[^>]*>/g)].map((m) => m[0]);
     for (const tagStr of hidden) {
-        assert.match(tagStr, /data-(draft|pay|form|msg)=/, `something unexpected is hidden: ${tagStr}`);
+        assert.match(tagStr, /data-(draft|pay|form|msg|fulmsg|ful)=/, `something unexpected is hidden: ${tagStr}`);
     }
 });
 
@@ -243,4 +243,30 @@ test('a direct booking is labelled as one, never as a form submission', () => {
     assert.match(html, /booked the call directly/);
     assert.ok(!html.includes('came in from the page'));
     assert.match(html, /booked &quot;Media Owner Workflow Chat&quot; directly/, 'the evidence is shown, escaped');
+});
+
+
+test('the fulfilment step buttons are visible, not hidden behind a panel', () => {
+    const ui = loadUI();
+    const rec = { ...REQ, fulfilment: { state: '', balance: {}, next: { step: 'TERMS_ACCEPTED' } } };
+    ui._setData({ requests: { items: [rec] } });
+    const html = ui._requestCard(rec);
+    assert.ok(html.includes('data-fulstep="TERMS_ACCEPTED"'), 'the first fulfilment step has no button');
+    const idx = html.indexOf('data-fulstep=');
+    const container = html.lastIndexOf('<div', idx);
+    const tag = html.slice(container, idx + 20);
+    assert.ok(!/display:\s*none/.test(tag), `the fulfilment actions are inside a hidden container: ${tag}`);
+});
+
+test('an activated deferred owner is never rendered as paid', () => {
+    const ui = loadUI();
+    const rec = { ...REQ, fulfilment: {
+        state: 'ACTIVATED', acceptedTermsKind: 'DEFERRED', owner: 'Paul',
+        balance: { kind: 'DEFERRED', cashPaid: false, deferredOutstandingCents: 249900, fullyPaid: false },
+        next: { step: 'FIRST_VALUE', dueAt: '2026-11-01', overdue: false },
+    } };
+    ui._setData({ requests: { items: [rec] } });
+    const html = ui._requestCard(rec);
+    assert.match(html, /NOT fully paid/);
+    assert.match(html, /2499\.00/);
 });

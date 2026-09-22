@@ -370,6 +370,10 @@
     Array.prototype.forEach.call(root.querySelectorAll('[data-payopen]'), function (b) {
       b.onclick = function () { paymentPanel(b.getAttribute('data-payopen'), b); };
     });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-fulstep]'), function (b) {
+      if (b.hasAttribute('data-fulsave')) return;
+      b.onclick = function () { openFulfilment(b.getAttribute('data-ful'), b.getAttribute('data-fulstep'), b); };
+    });
     Array.prototype.forEach.call(root.querySelectorAll('[data-sync]'), function (b) {
       b.onclick = function () {
         b.disabled = true; b.textContent = 'Queued';
@@ -882,6 +886,170 @@
     });
   }
 
+
+  // AFTER THEY SAY YES. Cash and deferred are shown as different things, because they are.
+  // "Paid" for a deferred owner would be a lie: they are activated and still carrying the balance.
+  var FUL_ORDER = ['TERMS_ACCEPTED', 'ACTIVATED', 'FIRST_VALUE', 'REVIEW_30'];
+  var FUL_LABEL = { TERMS_ACCEPTED: 'Terms accepted', ACTIVATED: 'Activated',
+    FIRST_VALUE: 'First deliverable accepted', REVIEW_30: '30-day review done' };
+
+  function money(c) {
+    var n = Number(c);
+    return isFinite(n) ? '$' + (n / 100).toFixed(2) : 'unknown';
+  }
+
+  function fulfilmentLine(x) {
+    var f = x.fulfilment || {};
+    var bal = f.balance || {};
+    var nx = f.next || {};
+    if (!f.state && !f.acceptedTermsKind) {
+      return '<div class="pq-act pq-gap"><i>After they say yes:</i> nothing recorded. ' +
+        'Start with the terms they accepted.</div>';
+    }
+    var money_line = bal.kind === 'DEFERRED'
+      ? 'Deferred. ' + (bal.deferredOutstandingCents === null
+          ? 'Carried balance was never recorded, so what they owe is unknown.'
+          : (bal.deferredOutstandingCents > 0
+              ? 'Still carrying ' + money(bal.deferredOutstandingCents) + ' on the rate. NOT fully paid.'
+              : 'Carried balance cleared.'))
+      : bal.kind === 'CASH_UPFRONT'
+        ? (bal.cashPaid ? 'Paid upfront, verified against QuickBooks.'
+                        : 'Upfront terms, no verified payment linked. Not paid.')
+        : 'No terms accepted yet.';
+    var steps = FUL_ORDER.map(function (k) {
+      var idx = FUL_ORDER.indexOf(f.state);
+      var doneStep = idx >= FUL_ORDER.indexOf(k) && idx >= 0;
+      return '<span style="color:' + (doneStep ? '#7fd18b' : '#6b7280') + '">' +
+        (doneStep ? '\u2713 ' : '\u00b7 ') + esc(FUL_LABEL[k]) + '</span>';
+    }).join(' &nbsp; ');
+    var dueTxt = '';
+    if (nx.step) {
+      dueTxt = '<div class="pq-meta">Next: ' + esc(FUL_LABEL[nx.step] || nx.step) +
+        (f.owner ? ', ' + esc(f.owner) : ', nobody assigned') +
+        (nx.dueAt ? ', due ' + esc(nx.dueAt) : '') +
+        (nx.overdue ? ' <b style="color:#ff8f8f">overdue</b>' : '') + '</div>';
+    }
+    return '<div class="pq-act pq-gap"><i>After they say yes:</i> ' + steps + '</div>' +
+      '<div class="pq-meta">' + esc(money_line) + '</div>' + dueTxt +
+      (f.firstValueRef ? '<div class="pq-meta">First value: ' + esc(f.firstValueRef) +
+        ', accepted by ' + esc(f.firstValueAcceptedBy) + ' on ' + esc(f.firstValueAt) + '</div>' : '') +
+      (f.reviewResult ? '<div class="pq-meta">30-day review: ' + esc(f.reviewResult) + '</div>' : '');
+  }
+
+  function fulfilmentButtons(x) {
+    var f = x.fulfilment || {};
+    var idx = FUL_ORDER.indexOf(f.state);
+    var out = [];
+    FUL_ORDER.forEach(function (k, i) {
+      // The next step, plus the ability to correct the one just recorded. Never a jump ahead.
+      if (i === idx + 1 || i === idx) {
+        out.push('<button type="button" class="pq-btn' + (i === idx + 1 ? ' go' : '') +
+          '" data-ful="' + esc(x.id) + '" data-fulstep="' + k + '">' +
+          (i === idx ? 'Correct: ' : '') + esc(FUL_LABEL[k]) + '</button>');
+      }
+    });
+    return out.length ? '<div class="pq-btns">' + out.join('') + '</div>' : '';
+  }
+
+  function fulfilmentForm(id, step) {
+    var items = (DATA && DATA.requests && DATA.requests.items) || [];
+    var rec = items.find(function (r) { return r.id === id; }) || {};
+    var f = rec.fulfilment || {};
+    var kind = f.acceptedTermsKind || '';
+    var fields = [];
+    if (step === 'TERMS_ACCEPTED') {
+      fields = [
+        ['acceptedTermsKind', 'CASH_UPFRONT or DEFERRED', 'input', kind || 'CASH_UPFRONT'],
+        ['acceptedAmountCents', 'Onboarding amount they agreed, in cents (249900 = $2,499)', 'input', f.acceptedAmountCents || '249900'],
+        ['carryPerHour', 'Deferred only: the per-hour carry agreed (e.g. 2)', 'input', f.carryPerHour || ''],
+        ['acceptedBy', 'Who accepted, on their side', 'input', f.acceptedBy || ''],
+        ['acceptedAt', 'When they accepted (ISO date)', 'input', f.acceptedAt || new Date().toISOString().slice(0, 10)],
+        ['acceptedWords', 'What they said, pasted', 'textarea', f.acceptedWords || ''],
+      ];
+    } else if (step === 'ACTIVATED') {
+      fields = kind === 'DEFERRED' ? [
+        ['placementStartedAt', 'The day the placement actually started', 'input', f.placementStartedAt || ''],
+        ['placementRef', 'Who started (name or seat reference)', 'input', f.placementRef || ''],
+        ['placementEvidence', 'What they are doing, in a line', 'textarea', f.placementEvidence || ''],
+      ] : [
+        ['activationReference', 'Verified QuickBooks reference (leave blank to use the linked payment)', 'input', f.activationReference || ''],
+        ['activatedAt', 'When it settled (ISO date, optional)', 'input', f.activatedAt || ''],
+      ];
+    } else if (step === 'FIRST_VALUE') {
+      fields = [
+        ['firstValueAt', 'When the client accepted it', 'input', f.firstValueAt || new Date().toISOString().slice(0, 10)],
+        ['firstValueRef', 'The deliverable they accepted (link, file, job number)', 'input', f.firstValueRef || ''],
+        ['firstValueAcceptedBy', 'Who on their side accepted it', 'input', f.firstValueAcceptedBy || ''],
+        ['firstValueWords', 'Anything they said about it (optional)', 'textarea', f.firstValueWords || ''],
+      ];
+    } else {
+      fields = [
+        ['reviewAt', 'When you asked them', 'input', f.reviewAt || new Date().toISOString().slice(0, 10)],
+        ['reviewResult', 'WORKING, MIXED, NOT_WORKING, ENDED or NO_ANSWER', 'input', f.reviewResult || ''],
+        ['reviewEvidence', 'Their words, pasted (not needed for NO_ANSWER)', 'textarea', f.reviewEvidence || ''],
+      ];
+    }
+    // Owner and due date belong to every open step.
+    fields.push(['fulfilmentOwner', 'Who owns this on our side', 'input', f.owner || (DATA.you && DATA.you.name) || '']);
+    if (step !== 'REVIEW_30') {
+      fields.push(['nextDueAt', 'When the next thing is due', 'input', f.nextDueAt || '']);
+      fields.push(['nextAction', 'What that next thing is (optional)', 'input', f.nextAction || '']);
+    }
+    var note = step === 'ACTIVATED' && kind === 'DEFERRED'
+      ? '<div class="pq-note">Activating deferred terms does <b>not</b> mean they have paid. ' +
+        'The carried balance stays owed and is shown separately.</div>'
+      : step === 'FIRST_VALUE'
+        ? '<div class="pq-note">Sending work is not first value. This is the first thing they <b>accepted</b>.</div>'
+        : '';
+    return note + fields.map(function (f2) {
+      var v = String(f2[3] === undefined || f2[3] === null ? '' : f2[3]);
+      return '<label>' + esc(f2[1]) + (f2[2] === 'textarea'
+        ? '<textarea data-f="' + f2[0] + '" rows="3">' + esc(v) + '</textarea>'
+        : '<input data-f="' + f2[0] + '" value="' + esc(v) + '">') + '</label>';
+    }).join('') +
+      '<div class="pq-btns"><button type="button" class="pq-btn go" data-fulsave="' + esc(id) +
+      '" data-fulstep="' + esc(step) + '">Record it</button>' +
+      '<button type="button" class="pq-btn" data-fulcancel="1">Cancel</button></div>';
+  }
+
+  function openFulfilment(id, step, btn) {
+    var box = inCard(btn, '[data-ful="' + id + '"]');
+    if (!box) return;
+    if (box.style.display === 'block' && box.getAttribute('data-step') === step) { box.style.display = 'none'; return; }
+    box.setAttribute('data-step', step);
+    box.innerHTML = fulfilmentForm(id, step);
+    box.style.display = 'block';
+    var cancel = box.querySelector('[data-fulcancel]');
+    if (cancel) cancel.onclick = function () { box.style.display = 'none'; };
+    var save = box.querySelector('[data-fulsave]');
+    if (save) save.onclick = function () { saveFulfilment(id, step, box, save); };
+  }
+
+  function saveFulfilment(id, step, box, btn) {
+    if (busy) return;
+    var set = {};
+    Array.prototype.forEach.call(box.querySelectorAll('[data-f]'), function (el) {
+      var v = el.value.trim();
+      if (v) set[el.getAttribute('data-f')] = v;
+    });
+    busy = true; btn.disabled = true;
+    fetch('/api/pilot-queue/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'fulfilment', id: id, state: step, set: set }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        busy = false; btn.disabled = false;
+        if (!res.ok || !res.j.ok) {
+          var m = inCard(btn, '[data-fulmsg="' + id + '"]');
+          if (m) { m.style.display = 'block'; m.className = 'pq-msg bad';
+            m.textContent = (res.j && res.j.error ? res.j.error : 'that did not save') +
+              (res.j && res.j.hint ? ' ' + res.j.hint : ''); }
+          return;
+        }
+        load();
+      })
+      .catch(function () { busy = false; btn.disabled = false; });
+  }
+
   function requestCard(x) {
       var done = x.state === 'HELD' || x.state === 'CLOSED';
       return '<div class="pq-item"><div class="pq-h"><b>' + esc(x.name) +
@@ -899,7 +1067,7 @@
         (x.newSubmissionAfterClose ? '<div class="pq-act pq-gap">They submitted again after you closed this, on ' +
           esc(when(x.newSubmissionAfterClose)) + '. The record was not reopened.</div>' : '') +
         notifyLine(x) +
-        crmLine(x) + paymentLine(x) +
+        crmLine(x) + paymentLine(x) + fulfilmentLine(x) +
         '<div class="pq-btns">' +
           '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="reply">Draft the reply</button>' +
           '<button type="button" class="pq-btn" data-draftid="' + esc(x.id) + '" data-draftkind="roleMap">Draft the role map</button>' +
@@ -908,6 +1076,9 @@
         '</div>' +
         '<div class="pq-form" data-draft="' + esc(x.id) + '" style="display:none"></div>' +
         '<div class="pq-form" data-pay="' + esc(x.id) + '" style="display:none"></div>' +
+        fulfilmentButtons(x) +
+        '<div class="pq-form" data-ful="' + esc(x.id) + '" style="display:none"></div>' +
+        '<div class="pq-msg" data-fulmsg="' + esc(x.id) + '" style="display:none"></div>' +
         '<div class="pq-btns" data-req="' + esc(x.id) + '">' +
           (x.state === 'REQUESTED' ? '<button type="button" class="pq-btn go" data-a="ANSWERED">I replied</button>' : '') +
           (!x.roleMapSentAt ? '<button type="button" class="pq-btn" data-a="ROLE_MAP_SENT">Role map sent</button>' : '') +

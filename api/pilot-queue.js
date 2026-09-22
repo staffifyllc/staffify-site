@@ -21,6 +21,7 @@ import { syncHealth, enqueueSync } from './_pilot-sync.js';
 import { guardHealth } from './_client-guard.js';
 import { DRAFTS, mailto } from './_pilot-drafts.js';
 import { findPaymentCandidates, verifyLinkedPayment, isVerifiedPaid } from './_pilot-payment.js';
+import { validateFulfilment, balanceOf, fulfilmentNext, FULFILMENT_STATES, REVIEW_RESULTS } from './_pilot-fulfilment.js';
 import { qboConnected, qboQuery, getRealmId } from './_qbo.js';
 import { configured as hubspotConfigured, portalId } from './_hubspot.js';
 import { notifyEmail, notifySlack } from './_notify-request.js';
@@ -91,6 +92,21 @@ async function loadRequests(limit = 60) {
                     invoiceId: r.paymentInvoiceId || '', linkedBy: r.paymentLinkedBy || '' },
                 origin: { kind: r.origin || 'inbound', cohortId: r.originCohortId || '', evidence: r.originEvidence || '',
                     submittedForm: r.submittedForm !== 'false' },
+                // What happens after they say yes, with cash and deferred kept apart.
+                fulfilment: { state: r.fulfilmentState || '', owner: r.fulfilmentOwner || '',
+                    nextDueAt: r.nextDueAt || '', nextAction: r.nextAction || '',
+                    updatedAt: r.fulfilmentUpdatedAt || null, by: r.fulfilmentBy || '',
+                    acceptedTermsKind: r.acceptedTermsKind || '', acceptedWords: r.acceptedWords || '',
+                    acceptedBy: r.acceptedBy || '', acceptedAt: r.acceptedAt || '',
+                    acceptedAmountCents: r.acceptedAmountCents || '', carryPerHour: r.carryPerHour || '',
+                    activationKind: r.activationKind || '', activatedAt: r.activatedAt || '',
+                    activationReference: r.activationReference || '',
+                    placementStartedAt: r.placementStartedAt || '', placementRef: r.placementRef || '',
+                    placementEvidence: r.placementEvidence || '',
+                    firstValueAt: r.firstValueAt || '', firstValueRef: r.firstValueRef || '',
+                    firstValueAcceptedBy: r.firstValueAcceptedBy || '', firstValueWords: r.firstValueWords || '',
+                    reviewAt: r.reviewAt || '', reviewResult: r.reviewResult || '', reviewEvidence: r.reviewEvidence || '',
+                    balance: balanceOf(r), next: fulfilmentNext(r) },
                 // Saved drafts, so an edit survives a refresh and the mail client gets what was typed.
                 draft: { subject: r.draftSubject || '', body: r.draftBody || '', kind: r.draftKind || '',
                     savedAt: r.draftSavedAt || null, savedBy: r.draftSavedBy || '',
@@ -282,6 +298,32 @@ export default async function handler(req, res) {
                 clearedPrevious: !isVerifiedPaid(v) && !!had });
         }
 
+        // WHAT HAPPENS AFTER THEY SAY YES. Four steps, each refusing without its evidence.
+        // Reads before writing, and applies only the validated patch, so an update can neither
+        // invent a record nor quietly erase evidence somebody else recorded.
+        if (scope === 'fulfilment') {
+            const id = STR(b.id, 200);
+            if (!/^pilot:req:[A-Za-z0-9]+$/.test(id)) return res.status(400).json({ ok: false, error: 'not a request id' });
+            const state = STR(b.state, 30).toUpperCase();
+            if (!FULFILMENT_STATES[state]) {
+                return res.status(400).json({ ok: false, error: `step must be one of ${Object.keys(FULFILMENT_STATES).join(', ')}` });
+            }
+            let existing = null;
+            try { existing = await redis.hgetall(id); }
+            catch (e) { return res.status(503).json({ ok: false, error: 'could not read that request, so nothing was written' }); }
+            if (!existing || !existing.email) return res.status(404).json({ ok: false, error: 'no such request' });
+
+            const v = validateFulfilment(existing, state, b.set || {});
+            if (!v.ok) return res.status(400).json({ ok: false, error: v.error, hint: v.hint || '' });
+            v.patch.fulfilmentBy = STR((who && who.name) || 'operator', 60);
+            try { await redis.hset(id, v.patch); }
+            catch (e) { return res.status(503).json({ ok: false, error: 'the step could not be recorded, so nothing was changed' }); }
+
+            const after = { ...existing, ...v.patch };
+            return res.status(200).json({ ok: true, state, patch: v.patch,
+                balance: balanceOf(after), next: fulfilmentNext(after) });
+        }
+
         if (scope === 'retry-alert') {
             const id = STR(b.id, 200);
             if (!/^pilot:req:[A-Za-z0-9]+$/.test(id)) return res.status(400).json({ ok: false, error: 'not a request id' });
@@ -289,7 +331,7 @@ export default async function handler(req, res) {
             const out = await retryAlert(id, { redis, notifyEmail, notifySlack, now: Date.now });
             return res.status(out.ok ? 200 : 502).json(out);
         }
-        return res.status(400).json({ ok: false, error: 'scope must be cohort, request, draft, save-draft, sync, start-opportunity, payment-candidates, payment-link or retry-alert' });
+        return res.status(400).json({ ok: false, error: 'scope must be cohort, request, draft, save-draft, sync, start-opportunity, payment-candidates, payment-link, fulfilment or retry-alert' });
     }
 
     const [cohort, requests, sync, guard, qbo] = await Promise.all([
@@ -347,6 +389,8 @@ export default async function handler(req, res) {
         health,
         requestStates: REQUEST_STATES,
         answerKinds: ANSWER_KINDS,
+        fulfilmentStates: FULFILMENT_STATES,
+        reviewResults: REVIEW_RESULTS,
         you: { name: who.name || '', email: who.email || '' },
     });
 }

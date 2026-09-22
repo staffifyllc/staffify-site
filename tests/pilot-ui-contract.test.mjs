@@ -23,7 +23,7 @@ test('every scope the hub calls is one the handler accepts', () => {
 });
 
 test('the handler accepts the scopes this workflow needs', () => {
-    for (const s of ['draft', 'save-draft', 'sync', 'start-opportunity', 'payment-candidates', 'payment-link', 'retry-alert', 'request', 'cohort']) {
+    for (const s of ['draft', 'save-draft', 'sync', 'start-opportunity', 'payment-candidates', 'payment-link', 'retry-alert', 'request', 'cohort', 'fulfilment']) {
         assert.ok(apiScopes.includes(s), `handler is missing scope ${s}`);
     }
 });
@@ -37,6 +37,8 @@ test('the hub has the controls a person actually presses', () => {
         ['open the draft in a mail client', 'data-dmail'],
         ['rebuild a draft from the structured fields', 'data-drebuild'],
         ['run a sync', 'data-sync'],
+        ['open a fulfilment step', 'data-fulstep'],
+        ['record a fulfilment step', 'data-fulsave'],
     ]) {
         assert.ok(UI.includes(marker), `no control to ${what} (${marker})`);
     }
@@ -99,4 +101,33 @@ test('health asks the matcher, not the environment, which event types count', ()
     assert.ok(!/PILOT_EVENT_TYPES \? '' :/.test(block), 'it must not decide from the env var alone');
     // And the note has to reflect the shipped default rather than calling it unset.
     assert.match(block, /counting bookings on/);
+});
+
+
+// The fulfilment controls exist because the model used to stop at payment. These pin that the
+// distinctions survive in the UI, not just in the gate.
+test('the hub shows cash and deferred as different things', () => {
+    assert.match(UI, /DEFERRED/, 'the hub has to name deferred terms');
+    assert.match(UI, /NOT fully paid/, 'an activated deferred owner must not be shown as paid');
+    assert.ok(UI.includes('deferredOutstandingCents'), 'the carried balance is shown separately from cash');
+});
+
+test('the hub warns that activating deferred terms is not payment', () => {
+    assert.match(UI, /does <b>not<\/b> mean they have paid/);
+});
+
+test('the hub says first value means they accepted it', () => {
+    assert.match(UI, /Sending work is not first value/);
+});
+
+test('every fulfilment step the gate defines has a label in the hub', async () => {
+    const { FULFILMENT_STATES } = await import('../api/_pilot-fulfilment.js');
+    for (const step of Object.keys(FULFILMENT_STATES)) {
+        assert.ok(UI.includes(step), `the hub has no control for ${step}`);
+    }
+});
+
+test('the review results the gate accepts are the ones the hub offers', async () => {
+    const { REVIEW_RESULTS } = await import('../api/_pilot-fulfilment.js');
+    for (const r of REVIEW_RESULTS) assert.ok(UI.includes(r), `the hub does not offer ${r}`);
 });
