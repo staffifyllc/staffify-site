@@ -56,7 +56,7 @@
    */
   function fireBookingLinkClick(a) {
     var cta = '';
-    try { var m = /utm_content=([^&]+)/.exec((a && a.getAttribute('href')) || ''); if (m) cta = decodeURIComponent(m[1]); } catch (e) {}
+    try { var m = /utm_content=([^&]+)/.exec((a && a.getAttribute('href')) || ''); if (m) cta = decodeURIComponent(m[1]).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); } catch (e) {}
     track('booking_link_clicked', { event_category: 'cta', event_label: 'calendly', page: location.pathname, cta: cta });
   }
 
@@ -92,7 +92,7 @@
     if (!a) return;
     var href = (a.getAttribute('href') || '').toLowerCase();
     if (href.indexOf('calendly.com') !== -1) { fireBookingLinkClick(a); return; }
-    if (href.indexOf('mailto:') === 0)        { track('email_click', { event_label: href.replace('mailto:', '') }); return; }
+    if (href.indexOf('mailto:') === 0)        { track('email_click', { event_category: 'contact', event_label: 'email' }); return; }
     if (href.indexOf('/apply') !== -1)        { fireApply(); return; }
   }, true);
 
