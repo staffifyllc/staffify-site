@@ -399,7 +399,7 @@ import { mediaBookingUrl } from '/assets/js/pilot-attribution.js';
         if (!res.ok || !res.j || res.j.ok !== true) throw new Error((res.j && res.j.error) || 'that did not go through');
         sent = true; btn.textContent = 'Sent';
         // Only now, with the request durably stored, is this a submitted request.
-        try { if (window.staffifyRequestSubmitted) window.staffifyRequestSubmitted({ form: 'role_map_request' }); } catch (e) {}
+        try { if (window.staffifyRequestSubmitted && !f.website.value) window.staffifyRequestSubmitted({ form: 'role_map_request' }); } catch (e) {}
         show('ok', (res.j.message || 'Got it. Paul will write back himself, usually within one business day. Nothing is booked.')
           + ' He will read what you wrote and reply with the role map: what a second person could take over, what stays '
           + 'with you, an hours estimate with the assumptions shown, and the cost at those hours. '

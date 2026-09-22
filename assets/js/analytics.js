@@ -40,7 +40,7 @@
 
   /* ---- unified conversion fire (all platforms that are live) ---- */
   function track(name, meta) {
-    try { if (window.va) window.va('event', { name: name }); } catch (e) {}          // Vercel — works now
+    try { if (window.va) window.va('event', { name: name, data: meta || {} }); } catch (e) {}  // Vercel (safe labels only)
     try { if (window.gtag && CFG.GA4_ID) window.gtag('event', name, meta || {}); } catch (e) {} // GA4
   }
   /* CLICKING A LINK IS NOT A BOOKING.
@@ -54,8 +54,10 @@
    *   request_submitted      the form came back successful and the request is stored.
    *   booked / paid          only ever from a verified provider event, server side, never here.
    */
-  function fireBookingLinkClick() {
-    track('booking_link_clicked', { event_category: 'cta', event_label: 'calendly' });
+  function fireBookingLinkClick(a) {
+    var cta = '';
+    try { var m = /utm_content=([^&]+)/.exec((a && a.getAttribute('href')) || ''); if (m) cta = decodeURIComponent(m[1]); } catch (e) {}
+    track('booking_link_clicked', { event_category: 'cta', event_label: 'calendly', page: location.pathname, cta: cta });
   }
 
   /* Called by a page ONLY after the server has confirmed the request is durably stored. */
@@ -89,7 +91,7 @@
     var a = ev.target && ev.target.closest ? ev.target.closest('a') : null;
     if (!a) return;
     var href = (a.getAttribute('href') || '').toLowerCase();
-    if (href.indexOf('calendly.com') !== -1) { fireBookingLinkClick(); return; }
+    if (href.indexOf('calendly.com') !== -1) { fireBookingLinkClick(a); return; }
     if (href.indexOf('mailto:') === 0)        { track('email_click', { event_label: href.replace('mailto:', '') }); return; }
     if (href.indexOf('/apply') !== -1)        { fireApply(); return; }
   }, true);

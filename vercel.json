@@ -60,6 +60,16 @@
   ],
   "redirects": [
     {
+      "source": "/about-1-1",
+      "destination": "/about/",
+      "permanent": true
+    },
+    {
+      "source": "/about-1-1/",
+      "destination": "/about/",
+      "permanent": true
+    },
+    {
       "source": "/services/",
       "destination": "/",
       "permanent": true

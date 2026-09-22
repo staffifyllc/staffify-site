@@ -21,6 +21,10 @@ User-agent: Amazonbot
 User-agent: Meta-ExternalAgent
 User-agent: CCBot
 Allow: /
+Disallow: /_archive/
+Disallow: /scripts/
+Disallow: /admin/
+Disallow: /api/
 
 # Canonical sitemap
 Sitemap: https://www.gostaffify.com/sitemap.xml

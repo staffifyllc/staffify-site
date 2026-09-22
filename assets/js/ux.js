@@ -14,12 +14,9 @@
         var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
         if (!a) return;
         var href = a.getAttribute('href') || '';
-        if (href.indexOf('calendly.com') !== -1) {
-            var cta = '';
-            var m = /utm_content=([^&]+)/.exec(href);
-            if (m) cta = decodeURIComponent(m[1]);
-            track('book_call_click', { page: location.pathname, cta: cta });
-        } else if (href.indexOf('buy.stripe.com') !== -1) {
+        // Booking-link clicks are owned by analytics.js (booking_link_clicked) so the
+        // scheduler-open intent fires exactly once. Do not track calendly clicks here.
+        if (href.indexOf('buy.stripe.com') !== -1) {
             track('stripe_checkout_click', { page: location.pathname });
         }
     }, true);
@@ -31,7 +28,7 @@
         var f = e.target;
         if (!f || !f.querySelector) return;
         if (f.querySelector('input[type="email"], input[name="email"]')) {
-            track('email_capture_submit', { page: location.pathname, form: f.id || 'unknown' });
+            track('email_capture_attempt', { page: location.pathname, form: f.id || 'unknown' });
         }
     }, true);
 })();
