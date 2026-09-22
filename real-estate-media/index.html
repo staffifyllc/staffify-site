@@ -6,7 +6,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Owner Is Still the Final Check | Staffify for Real Estate Media</title>
+<title>A Workflow You Can Hand Over | Staffify for Real Estate Media</title>
 <meta name="description" content="For real estate media owners who still review every file and chase every revision. What a second person can own, what stays with you, and the full cost before you decide. Written by Paul Chareth, who runs Flylisted.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://www.gostaffify.com/real-estate-media/">
@@ -138,16 +138,40 @@ footer a { color: var(--ink-mute); }
 
   <div class="cover">
     <div class="cover-eyebrow">For real estate media owners</div>
-    <h1>Your agency grew. The final check on every file is still yours.</h1>
-    <p class="lede">If reviews and revisions still fill your evenings, let us work out what you could hand
-    over while keeping your standards. Here is what a second person could take on, what stays with you, and
-    what it costs, before anyone asks you for a call.</p>
+    <h1>Your next hire should start with a handoff you can trust.</h1>
+    <p class="lede">Tell us about one recurring task that still comes back to you. Get a free workflow map:
+    what someone else could own, what stays with you, and a checklist that keeps your standard intact.
+    You keep the map whether you hire us or not. No call required.</p>
+    <p class="orbook"><a class="bookcta" href="#role-map">Get my workflow map</a>
+    <a href="#worked-example">See an example first</a></p>
     <div class="byline">Written by Paul Chareth. I run Flylisted, a real estate media company, and I built
     Staffify out of what I needed there.</div>
   </div>
 </div>
 
 <main class="page">
+
+<section id="worked-example" style="scroll-margin-top:90px">
+  <h2>A useful first step, before a hiring decision</h2>
+  <p class="note"><b>Illustrative example.</b> These are assumed numbers, not a client result or a promise of time saved.</p>
+  <p>Suppose you coordinate 20 deliveries a week and spend 10 minutes per delivery chasing files and revisions.
+  That is 3 hours and 20 minutes a week. This task alone would not justify a full-time hire.
+  Start with a clearer handoff, then measure what still needs you.</p>
+  <div class="steps">
+    <div class="step"><b>One checklist for each job</b><span>Correct property and job; all scoped files present;
+    filenames and formats match; delivery link opens with the intended access; unresolved issues are listed.</span></div>
+    <div class="step"><b>A clear split of responsibility</b><span>A coordinator checks the objective requirements
+    and tracks revisions. You keep taste decisions, scope changes and final approval.</span></div>
+    <div class="step"><b>An explicit stop rule</b><span>Missing requirements, uncertain quality, new scope or a deadline
+    at risk go back to you. Nobody quietly approves an exception.</span></div>
+    <div class="step"><b>Try it before expanding the role</b><span>Use the checklist on five authorized past jobs.
+    Record missed items, escalations and your review time. Decide what is actually worth handing over.</span></div>
+  </div>
+  <p>Your own map includes your workflow, responsibilities, checklist, workload assumptions and the cost at those
+  hours. If the best answer is to improve the process without hiring, that is what we will recommend.</p>
+  <p><a href="/real-estate-media/workflow-checklist.txt" download>Download the starter checklist</a>
+  &middot; <a href="#role-map">Ask for a map of your workflow</a></p>
+</section>
 
 <section>
   <h2>The part that does not scale</h2>
@@ -283,7 +307,7 @@ footer a { color: var(--ink-mute); }
   <p>No call is required to get it. If it is easier to say than to type, there is a fifteen minute slot
   below. Nothing to prepare, nothing to watch first, and you get the role map either way.</p>
 
-  <p class="orbook"><a class="bookcta" href="https://calendly.com/go-staffify/media-owner-workflow-chat?utm_source=real-estate-media&amp;utm_content=owner-page">Book fifteen minutes with Paul</a>
+  <p class="orbook"><a id="media-booking" class="bookcta" href="https://calendly.com/go-staffify/media-owner-workflow-chat?utm_source=real-estate-media&amp;utm_content=owner-page">Book fifteen minutes with Paul</a>
   <span>Or fill this in and he will write back.</span></p>
 
   <form id="rmForm" novalidate>
@@ -296,7 +320,7 @@ footer a { color: var(--ink-mute); }
     <label for="rm-company">Company <span>(optional)</span></label>
     <input id="rm-company" name="company" type="text" autocomplete="organization" maxlength="120">
 
-    <label for="rm-pain">What still comes back to you? <span>In your own words</span></label>
+    <label for="rm-pain">What still comes back to you, and how often? <span>In your own words</span></label>
     <textarea id="rm-pain" name="pain" maxlength="1200" placeholder="For example: the editor sends it back, I check every file, and I am the one answering the agent while the revision is in flight."></textarea>
 
     <label for="rm-times">If you would rather talk, when suits? <span>(optional)</span></label>
@@ -319,7 +343,8 @@ footer a { color: var(--ink-mute); }
   <p style="margin-top:8px;font-size:11px;">&copy; 2026 Staffify &middot; <a href="/privacy/">Privacy</a> &middot; <a href="/terms/">Terms</a></p>
 </footer>
 
-<script>
+<script type="module">
+import { mediaBookingUrl } from '/assets/js/pilot-attribution.js';
 (function () {
   // Everything that brought them here, captured once, so a booking six weeks from now can still be
   // traced back to the campaign that earned it. Previously only utm_source was kept.
@@ -347,6 +372,10 @@ footer a { color: var(--ink-mute); }
     return a;
   }
   attribution();
+  var booking = document.getElementById('media-booking');
+  function updateBooking() { booking.href = mediaBookingUrl(attribution()); }
+  updateBooking();
+  booking.addEventListener('click', updateBooking);
 
   var f = document.getElementById('rmForm'), btn = document.getElementById('rmBtn'), out = document.getElementById('rmResult');
   var sent = false;

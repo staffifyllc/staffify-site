@@ -23,6 +23,7 @@
 //  * LATE EVENTS DO NOT REOPEN WHAT IS FINISHED. A suppressed, closed or paid record is left alone.
 //  * AN EMAIL MATCH IS A LINK, NOT A RELATIONSHIP, AND NEVER PAYMENT EVIDENCE.
 import { createHash } from 'node:crypto';
+import { bookingAttribution } from '../assets/js/pilot-attribution.js';
 
 export const hashEmail = (s) => createHash('sha256').update(String(s).toLowerCase()).digest('hex').slice(0, 24);
 export const requestIdFor = (email) => `pilot:req:${hashEmail(email)}`;
@@ -156,6 +157,7 @@ export async function applyBookingEvent(event, deps) {
                 nurtureSuppressedReason: 'they booked the media-owner call directly',
                 pain: firstAnswer(p),
                 syncState: 'pending', owner: 'Paul', isTest: 'false',
+                ...bookingAttribution(p.tracking),
             };
             try {
                 for (const [k, v] of Object.entries(first)) await redis.hsetnx(id, k, v);
@@ -231,6 +233,10 @@ export async function applyBookingEvent(event, deps) {
                 // in a nurture sequence written for a cold visitor.
                 nurtureSuppressed: 'true', nurtureSuppressedReason: 'they came from an inbound role-map request',
             };
+            // Retain original form attribution; fill gaps for direct bookings and recovered records.
+            for (const [field, value] of Object.entries(bookingAttribution(p.tracking))) {
+                if (!r[field]) base[field] = value;
+            }
             if (p.rescheduled === true || p.old_invitee) {
                 base.bookingRescheduledFrom = String(p.old_invitee || '');
                 base.bookingRescheduledAt = at;

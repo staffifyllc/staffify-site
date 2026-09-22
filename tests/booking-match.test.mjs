@@ -178,6 +178,22 @@ test('a booking with no request gets its own opportunity, queued before it is ac
 const queued = [];
 const withQueue = (st, over = {}) => deps(st, { enqueueSync: async (_r, id) => { queued.push(id); return { ok: true }; }, ...over });
 
+test('direct booking persists campaign attribution for CRM and does not overwrite first touch', async () => {
+    const s = store({});
+    const event = created('inv-campaign', '2026-09-30T18:00:00Z', {
+        tracking: { utm_source: 'founder', utm_campaign: 'owner-pilot-1', email: 'ignored@example.com' },
+    });
+    await applyBookingEvent(event, withQueue(s));
+    assert.equal((await s.hgetall(ID)).utmCampaign, 'owner-pilot-1');
+    assert.equal((await s.hgetall(ID)).utmSource, 'founder');
+    const next = created('inv-campaign-new', '2026-10-01T18:00:00Z', {
+        updated_at: '2026-09-23T09:00:00Z', tracking: { utm_campaign: 'later-touch', utm_medium: 'email' },
+    });
+    await applyBookingEvent(next, withQueue(s));
+    assert.equal((await s.hgetall(ID)).utmCampaign, 'owner-pilot-1');
+    assert.equal((await s.hgetall(ID)).utmMedium, 'email');
+});
+
 test('a direct booking on the media-owner event creates its own opportunity', async () => {
     queued.length = 0;
     const s = store({});                       // nothing on file for this person at all
