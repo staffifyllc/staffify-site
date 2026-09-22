@@ -131,11 +131,16 @@ export function validateActivation(kind, evidence = {}) {
     const t = TERMS[k];
     if (!t) return { ok: false, error: 'unknown terms' };
     if (k === 'CASH_UPFRONT') {
-        const ref = S(evidence.activationReference, 300);
-        if (!/^qbo:.+:invoice:.+:payment:.+$/.test(ref)) {
-            return { ok: false, error: 'upfront onboarding activates on a verified QuickBooks payment reference' };
+        // `verified` is assembled by the SERVER from its own recorded verdict. A reference typed by
+        // a person is not evidence of anything: the pattern is a format, not a verification, and
+        // accepting one here would let anybody mark a client paid by typing a plausible string.
+        const v = evidence.verified;
+        if (!v || !/^qbo:.+:invoice:.+:payment:.+$/.test(S(v.reference, 300))) {
+            return { ok: false, error: 'upfront onboarding activates on a payment this system verified against QuickBooks' };
         }
-        return { ok: true, patch: { activationKind: k, activationReference: ref, activatedAt: S(evidence.activatedAt, 40) || new Date().toISOString() } };
+        return { ok: true, patch: { activationKind: k, activationReference: S(v.reference, 300),
+            activationVerifiedAt: S(v.verifiedAt, 40),
+            activatedAt: S(v.verifiedAt, 40) || new Date().toISOString() } };
     }
     const startedAt = S(evidence.placementStartedAt, 40);
     const ref = S(evidence.placementRef, 200);

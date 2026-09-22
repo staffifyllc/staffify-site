@@ -971,10 +971,9 @@
         ['placementStartedAt', 'The day the placement actually started', 'input', f.placementStartedAt || ''],
         ['placementRef', 'Who started (name or seat reference)', 'input', f.placementRef || ''],
         ['placementEvidence', 'What they are doing, in a line', 'textarea', f.placementEvidence || ''],
-      ] : [
-        ['activationReference', 'Verified QuickBooks reference (leave blank to use the linked payment)', 'input', f.activationReference || ''],
-        ['activatedAt', 'When it settled (ISO date, optional)', 'input', f.activatedAt || ''],
-      ];
+      // Upfront activation takes NOTHING from this form. It is read from the verdict this system
+      // recorded when it verified the invoice, so there is no reference field to type into.
+      ] : [];
     } else if (step === 'FIRST_VALUE') {
       fields = [
         ['firstValueAt', 'When the client accepted it', 'input', f.firstValueAt || new Date().toISOString().slice(0, 10)],
@@ -998,6 +997,10 @@
     var note = step === 'ACTIVATED' && kind === 'DEFERRED'
       ? '<div class="pq-note">Activating deferred terms does <b>not</b> mean they have paid. ' +
         'The carried balance stays owed and is shown separately.</div>'
+      : step === 'ACTIVATED'
+      ? '<div class="pq-note">Upfront activation is read from the payment this system verified against ' +
+        'QuickBooks. There is nothing to type: link the invoice under <b>Payment evidence</b> and let it ' +
+        'verify first. A reference typed by hand is not a payment.</div>'
       : step === 'FIRST_VALUE'
         ? '<div class="pq-note">Sending work is not first value. This is the first thing they <b>accepted</b>.</div>'
         : '';

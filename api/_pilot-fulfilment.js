@@ -42,29 +42,59 @@ const intCents = (v) => {
 const isVerifiedRef = (v) => /^qbo:.+:invoice:.+:payment:.+$/.test(S(v, 300));
 
 /**
+ * The ONLY thing allowed to mean "they paid".
+ *
+ * Read from what the server recorded when it verified the linked invoice against QuickBooks, never
+ * from anything an operator typed. The reference pattern is a format, not a verification: a person
+ * who types `qbo:x:invoice:y:payment:z` has proved nothing, and treating that as payment would
+ * hand anybody with hub access the ability to mark a client paid.
+ *
+ * All three have to agree. `payment-link` writes the reference only on a verified paid verdict and
+ * CLEARS it on any later non-paid answer, so a voided or deleted invoice stops being paid here the
+ * moment it is re-checked.
+ */
+export function verifiedCashPayment(rec = {}) {
+    const status = S(rec.paymentStatus, 30).toLowerCase();
+    const reference = S(rec.paymentReference, 300);
+    const verifiedAt = S(rec.paymentVerifiedAt, 40);
+    if (status !== 'paid' || !isVerifiedRef(reference) || !verifiedAt) return null;
+    return { reference, verifiedAt };
+}
+
+/** A payment that was verified and has since been withdrawn. Kept visible rather than vanishing. */
+const paymentRevoked = (rec = {}) => !verifiedCashPayment(rec) && !!S(rec.paymentFormerReference, 300);
+
+const isDate = (v) => !!S(v, 40) && !Number.isNaN(Date.parse(S(v, 40)));
+
+/**
  * The money, with cash and deferred kept apart.
  * `fullyPaid` is deliberately hard to earn: cash needs a verified reference, deferred needs the
  * carried balance actually cleared. Neither can borrow the other's evidence.
  */
 export function balanceOf(rec = {}) {
     const kind = S(rec.acceptedTermsKind, 20).toUpperCase();
-    const cashPaid = isVerifiedRef(rec.paymentReference) || isVerifiedRef(rec.activationReference);
+    // activationReference is NOT consulted. It is a copy of a verdict that was true once, and it
+    // survives a void: reading it here would keep a withdrawn payment looking paid forever.
+    const verified = verifiedCashPayment(rec);
+    const cashPaid = !!verified;
+    const revoked = paymentRevoked(rec);
     const agreed = intCents(rec.acceptedAmountCents);
     const carried = intCents(rec.deferredBalanceCents);
-    const cleared = intCents(rec.deferredPaidCents) || 0;
+    const cleared = Math.max(0, intCents(rec.deferredPaidCents) || 0);
 
     if (kind === 'CASH_UPFRONT') {
         return {
-            kind, cashPaid, deferredOutstandingCents: 0, deferredPaidCents: 0,
+            kind, cashPaid, revoked, deferredOutstandingCents: 0, deferredPaidCents: 0,
             agreedCents: agreed, fullyPaid: cashPaid,
-            why: cashPaid ? 'onboarding settled against a verified QuickBooks payment'
+            why: cashPaid ? 'onboarding settled against a payment this system verified'
+                : revoked ? 'the payment that was verified has been withdrawn or voided, so this is not paid'
                 : 'no verified payment is linked, so nothing is paid',
         };
     }
     if (kind === 'DEFERRED') {
         const outstanding = carried === null ? null : Math.max(0, carried - cleared);
         return {
-            kind, cashPaid: false, deferredOutstandingCents: outstanding, deferredPaidCents: cleared,
+            kind, cashPaid: false, revoked: false, deferredOutstandingCents: outstanding, deferredPaidCents: cleared,
             agreedCents: agreed,
             // Unknown carry is not zero. An unreadable balance must never read as settled.
             fullyPaid: outstanding === 0 && carried !== null,
@@ -73,7 +103,7 @@ export function balanceOf(rec = {}) {
                 : `carrying ${(outstanding / 100).toFixed(2)} of onboarding on the hourly rate`,
         };
     }
-    return { kind: '', cashPaid, deferredOutstandingCents: null, deferredPaidCents: 0, agreedCents: agreed,
+    return { kind: '', cashPaid, revoked, deferredOutstandingCents: null, deferredPaidCents: 0, agreedCents: agreed,
         fullyPaid: false, why: 'no terms have been accepted yet, so there is nothing to owe' };
 }
 
@@ -97,7 +127,7 @@ export function validateFulfilment(existing = {}, state = '', set = {}) {
         return { ok: false, error: 'set the date the next thing is due', hint: 'Every open step needs a date somebody is working to.' };
     }
     if (due) {
-        if (Number.isNaN(Date.parse(due))) return { ok: false, error: 'that due date is not a date' };
+        if (!isDate(due)) return { ok: false, error: 'that due date is not a date' };
         patch.nextDueAt = due;
     }
     if (set.nextAction !== undefined) patch.nextAction = S(set.nextAction, 400);
@@ -110,7 +140,7 @@ export function validateFulfilment(existing = {}, state = '', set = {}) {
         const by = S(set.acceptedBy, 80);
         if (!by) return { ok: false, error: 'name who accepted, on their side' };
         const at = S(set.acceptedAt, 40) || new Date().toISOString();
-        if (Number.isNaN(Date.parse(at))) return { ok: false, error: 'that acceptance date is not a date' };
+        if (!isDate(at)) return { ok: false, error: 'that acceptance date is not a date' };
         patch.acceptedTermsKind = kind; patch.acceptedWords = words; patch.acceptedBy = by; patch.acceptedAt = at;
 
         const agreed = intCents(set.acceptedAmountCents);
@@ -124,8 +154,14 @@ export function validateFulfilment(existing = {}, state = '', set = {}) {
             // The carry starts at the full agreed amount. Recording it explicitly means the balance
             // is never inferred later from a number nobody wrote down.
             const carry = intCents(set.deferredBalanceCents);
+            if (carry !== null && carry < 0) return { ok: false, error: 'a carried balance cannot be negative' };
             patch.deferredBalanceCents = carry === null ? agreed : carry;
-            patch.deferredPaidCents = intCents(set.deferredPaidCents) || 0;
+            const paid = intCents(set.deferredPaidCents) || 0;
+            if (paid < 0) return { ok: false, error: 'the carry paid down cannot be negative' };
+            if (paid > patch.deferredBalanceCents) {
+                return { ok: false, error: 'they cannot have paid down more than they are carrying' };
+            }
+            patch.deferredPaidCents = paid;
         }
         return { ok: true, patch };
     }
@@ -133,21 +169,44 @@ export function validateFulfilment(existing = {}, state = '', set = {}) {
     if (state === 'ACTIVATED') {
         const kind = S(existing.acceptedTermsKind, 20).toUpperCase();
         if (!TERMS[kind]) return { ok: false, error: 'accept terms before activating', hint: 'Activation means something different for cash and for deferred.' };
-        const v = validateActivation(kind, {
-            activationReference: set.activationReference || existing.paymentReference || existing.activationReference,
-            activatedAt: set.activatedAt,
-            placementStartedAt: set.placementStartedAt,
-            placementRef: set.placementRef,
-        });
+        if (kind === 'CASH_UPFRONT') {
+            // NOTHING THE OPERATOR SENT IS READ HERE. Upfront activation is derived entirely from
+            // the verdict this system recorded when it checked the invoice against QuickBooks.
+            const verified = verifiedCashPayment(existing);
+            if (!verified) {
+                return { ok: false,
+                    error: paymentRevoked(existing)
+                        ? 'the payment that was verified has been withdrawn or voided, so this cannot be activated'
+                        : 'no verified QuickBooks payment is recorded against this opportunity',
+                    hint: 'Open Payment evidence, link the invoice and let it verify. A typed reference is not a payment.' };
+            }
+            const v = validateActivation(kind, { verified });
+            if (!v.ok) return { ok: false, error: v.error };
+            Object.assign(patch, v.patch);
+            return { ok: true, patch };
+        }
+
+        // DEFERRED. Here the evidence is genuinely manual, because a placement starting is a thing a
+        // person observes, not something QuickBooks can answer. It is kept in its own fields and can
+        // never stand in for a payment.
+        const startedAt = S(set.placementStartedAt, 40);
+        if (!isDate(startedAt)) return { ok: false, error: 'when did the placement actually start?' };
+        const v = validateActivation(kind, { placementStartedAt: startedAt, placementRef: set.placementRef });
         if (!v.ok) return { ok: false, error: v.error,
-            hint: kind === 'DEFERRED'
-                ? 'Deferred onboarding activates when the placement starts. It does not mean they have paid.'
-                : 'Link and verify the QuickBooks invoice first. A CRM stage is not a payment.' };
+            hint: 'Deferred onboarding activates when the placement starts. It does not mean they have paid.' };
         Object.assign(patch, v.patch);
-        if (kind === 'DEFERRED') {
-            const ev = S(set.placementEvidence, 600);
-            if (!ev) return { ok: false, error: 'say who started and what they are doing', hint: 'A start date with no person is not a placement.' };
-            patch.placementEvidence = ev;
+        const ev = S(set.placementEvidence, 600);
+        if (!ev) return { ok: false, error: 'say who started and what they are doing', hint: 'A start date with no person is not a placement.' };
+        patch.placementEvidence = ev;
+        // Carry may be paid down over time. It can never go negative and can never exceed the carry.
+        if (set.deferredPaidCents !== undefined) {
+            const paid = intCents(set.deferredPaidCents);
+            if (paid === null || paid < 0) return { ok: false, error: 'the carry paid down cannot be negative' };
+            const carried = intCents(existing.deferredBalanceCents);
+            if (carried !== null && paid > carried) {
+                return { ok: false, error: `they cannot have paid down more than the ${(carried / 100).toFixed(2)} they are carrying` };
+            }
+            patch.deferredPaidCents = paid;
         }
         return { ok: true, patch };
     }
@@ -155,7 +214,7 @@ export function validateFulfilment(existing = {}, state = '', set = {}) {
     if (state === 'FIRST_VALUE') {
         if (!S(existing.activatedAt, 40)) return { ok: false, error: 'activate before recording first value' };
         const at = S(set.firstValueAt, 40);
-        if (!at || Number.isNaN(Date.parse(at))) return { ok: false, error: 'when did the client accept it?' };
+        if (!isDate(at)) return { ok: false, error: 'when did the client accept it?' };
         const ref = S(set.firstValueRef, 300);
         if (!ref) return { ok: false, error: 'name the deliverable they accepted', hint: 'A link, a file, a job number. Something that exists.' };
         const by = S(set.firstValueAcceptedBy, 80);
@@ -169,7 +228,7 @@ export function validateFulfilment(existing = {}, state = '', set = {}) {
     // REVIEW_30
     if (!S(existing.firstValueAt, 40)) return { ok: false, error: 'record first value before reviewing it' };
     const at = S(set.reviewAt, 40);
-    if (!at || Number.isNaN(Date.parse(at))) return { ok: false, error: 'when was the review?' };
+    if (!isDate(at)) return { ok: false, error: 'when was the review?' };
     const result = S(set.reviewResult, 20).toUpperCase();
     if (!REVIEW_RESULTS.includes(result)) return { ok: false, error: `result must be one of ${REVIEW_RESULTS.join(', ')}` };
     const ev = S(set.reviewEvidence, 1200);
