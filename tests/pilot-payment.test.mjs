@@ -7,7 +7,8 @@ import { findPaymentCandidates, verifyLinkedPayment, isVerifiedPaid, approvedAmo
 const CUST = { Id: '55', DisplayName: 'Okafor Media', PrimaryEmailAddr: { Address: 'dana@example.com' } };
 const OTHER = { Id: '56', DisplayName: 'Unrelated Media Group', PrimaryEmailAddr: { Address: 'someone@else.com' } };
 const inv = (over = {}) => ({ Id: '900', DocNumber: 'INV-900', TotalAmt: 2499, Balance: 0, TxnDate: '2026-10-01',
-    CustomerRef: { value: '55' }, Line: [{ Description: 'Staffify onboarding', Amount: 2499 }], ...over });
+    CustomerRef: { value: '55' }, Line: [{ Description: 'Staffify onboarding', Amount: 2499,
+        SalesItemLineDetail: { ItemRef: { value: '7', name: 'Onboarding' } } }], ...over });
 const pay = (over = {}) => ({ Id: 'P1', TxnDate: '2026-10-02', CustomerRef: { value: '55' },
     Line: [{ Amount: 2499, LinkedTxn: [{ TxnId: '900', TxnType: 'Invoice' }] }], ...over });
 
@@ -83,7 +84,8 @@ test('the wrong QuickBooks company can never answer', async () => {
 });
 
 test('an amount that is not the approved onboarding amount is refused', async () => {
-    const v = await verifyLinkedPayment(LINK, qbo({ invoices: [inv({ TotalAmt: 1200, Line: [{ Description: 'onboarding, discounted', Amount: 1200 }] })] }));
+    const v = await verifyLinkedPayment(LINK, qbo({ invoices: [inv({ TotalAmt: 1200, Line: [{ Description: 'onboarding, discounted', Amount: 1200,
+        SalesItemLineDetail: { ItemRef: { value: '7', name: 'Onboarding' } } }] })] }));
     assert.equal(v.status, 'wrong-amount');
     assert.match(v.why, new RegExp(String(approvedAmount())));
 });
@@ -137,4 +139,15 @@ test('only an explicit paid verdict with a full reference is accepted', () => {
         assert.equal(isVerifiedPaid(bad), false);
     }
     assert.equal(isVerifiedPaid({ status: 'paid', reference: 'qbo:R:customer:1:invoice:2:payment:3' }), true);
+});
+
+// The item is the item, not a word that happens to appear in the line.
+test('a line that only MENTIONS onboarding in its description is not an onboarding line', async () => {
+    const decoy = inv({
+        Line: [{ Description: 'Drone work for the onboarding shoot', Amount: 2499,
+            SalesItemLineDetail: { ItemRef: { value: '12', name: 'Aerial photography' } } }],
+    });
+    const v = await verifyLinkedPayment(LINK, qbo({ invoices: [decoy] }));
+    assert.equal(v.status, 'not-onboarding');
+    assert.equal(isVerifiedPaid(v), false);
 });

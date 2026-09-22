@@ -71,7 +71,6 @@ export async function findPaymentCandidates({ email, company, since }, deps) {
     }
     if (!scored.length) return { status: 'no-candidates', realm: r.realm, why: 'no QuickBooks customer matches this address or company' };
 
-    const item = approvedItem().toLowerCase();
     const out = [];
     for (const cand of scored.slice(0, 5)) {
         let invoices = [];
@@ -80,8 +79,7 @@ export async function findPaymentCandidates({ email, company, since }, deps) {
             invoices = (q && q.QueryResponse && q.QueryResponse.Invoice) || [];
         } catch (e) { return { status: 'unknown', realm: r.realm, why: 'the invoice query failed' }; }
         for (const inv of invoices) {
-            const lines = JSON.stringify(inv.Line || []).toLowerCase();
-            if (!lines.includes(item)) continue;
+            if (!onboardingLines(inv).length) continue;
             const tooOld = since && inv.TxnDate && Date.parse(inv.TxnDate) < Date.parse(since);
             out.push({
                 customerId: cand.id, customerName: cand.name, customerMatch: cand.match, strength: cand.strength,
@@ -126,12 +124,13 @@ export async function verifyLinkedPayment(link, deps) {
     if (custId !== String(link.customerId)) {
         return { status: 'mismatched', realm: r.realm, why: `the linked invoice belongs to customer ${custId}, not the linked customer ${link.customerId}` };
     }
-    const item = approvedItem().toLowerCase();
-    const onboardingLines = (inv.Line || []).filter((l) => JSON.stringify(l).toLowerCase().includes(item));
-    if (!onboardingLines.length) {
-        return { status: 'not-onboarding', realm: r.realm, why: `the linked invoice has no line matching the approved item "${approvedItem()}"` };
+    // Exact item, never a substring of the line's JSON: "onboarding" turns up in descriptions,
+    // customer names and memos, and any of those would let an unrelated line answer for onboarding.
+    const lines = onboardingLines(inv);
+    if (!lines.length) {
+        return { status: 'not-onboarding', realm: r.realm, why: `the linked invoice has no line whose item is "${approvedItem()}"` };
     }
-    const lineTotal = onboardingLines.reduce((s, l) => s + cents(l.Amount), 0);
+    const lineTotal = lines.reduce((s, l) => s + cents(l.Amount), 0);
     if (lineTotal !== cents(approvedAmount())) {
         return { status: 'wrong-amount', realm: r.realm, invoiceId: inv.Id, invoiceNumber: inv.DocNumber || '',
             why: `the onboarding lines total ${(lineTotal / 100).toFixed(2)}, not the approved ${approvedAmount().toFixed(2)}` };
@@ -185,4 +184,150 @@ export async function verifyLinkedPayment(link, deps) {
 /** Only an explicit paid verdict carrying a full reference may be written as payment evidence. */
 export function isVerifiedPaid(v) {
     return !!(v && v.status === 'paid' && typeof v.reference === 'string' && /^qbo:.+:invoice:.+:payment:.+$/.test(v.reference));
+}
+
+// ─── Activation from a payment webhook ──────────────────────────
+//
+// The legacy webhook asked "is this payer a known subscriber?" and called any answer onboarding.
+// A $60 payment against an unrelated invoice, from someone who once joined the mailing list,
+// activated them as a paying client and told them their team was being built. Every downstream
+// count of "paid" inherited that.
+//
+// This asks the only question that establishes onboarding: does THIS payment settle an invoice
+// carrying the approved onboarding item, at the amount THIS opportunity actually accepted, for the
+// same customer, in the expected company? Every other answer names itself and activates nothing.
+
+// Finite or nothing. NaN/Infinity from a malformed field must never reach an arithmetic comparison.
+// STRICT. Number(false) is 0 and Number([]) is 0, so a loose cast lets `Balance: false` read as a
+// settled invoice. Only an actual number, or a string that is entirely a number, is a number here.
+const fin = (v) => {
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    if (typeof v === 'string' && v.trim() !== '') { const n = Number(v); return Number.isFinite(n) ? n : null; }
+    return null;
+};
+const finCents = (v) => { const n = fin(v); return n === null ? null : Math.round(n * 100); };
+
+/**
+ * Lines whose ItemRef IS the approved onboarding item.
+ * Not a JSON substring search of the whole line: "onboarding" appears in free-text descriptions,
+ * customer names and memos, so substring matching lets an unrelated line answer for onboarding.
+ */
+export function onboardingLines(inv, approved = approvedItem()) {
+    const want = String(approved || '').trim().toLowerCase();
+    if (!want) return [];
+    return (inv && Array.isArray(inv.Line) ? inv.Line : []).filter((l) => {
+        const ref = l && l.SalesItemLineDetail && l.SalesItemLineDetail.ItemRef;
+        if (!ref) return false;
+        const name = String(ref.name || '').trim().toLowerCase();
+        const value = String(ref.value || '').trim().toLowerCase();
+        return name === want || value === want;
+    });
+}
+
+const RETRYABLE = new Set(['unknown', 'not-configured']);
+/** Whether a non-paid verdict means "ask again later" rather than "the answer is no". */
+export const verdictRetryable = (v) => !!(v && RETRYABLE.has(v.status));
+
+/**
+ * @param resolveTerms async ({customerId, email}) => {kind:'CASH_UPFRONT'|'DEFERRED', cents:number} | null
+ *        The accepted terms for THIS opportunity. Null means nothing was recorded, in which case the
+ *        published default must match exactly and the verdict is flagged as assumed, not accepted.
+ */
+export async function activationFromPayment({ payment, realm, getInvoice, expectedRealm, resolveTerms }) {
+    const want = String(expectedRealm || process.env.QB_REALM_ID || '');
+    const got = String(realm || '');
+    if (!want) return { status: 'not-configured', why: 'QB_REALM_ID is not set, so no company can be trusted' };
+    if (got !== want) return { status: 'wrong-realm', why: `payment came from company ${got || 'unknown'}, not ${want}` };
+    if (!payment || !payment.Id) return { status: 'unmatched', why: 'no payment was supplied' };
+    if (VOID(payment)) return { status: 'void', why: 'the payment is voided or deleted' };
+
+    const payCustomer = String((payment.CustomerRef && (payment.CustomerRef.value || payment.CustomerRef)) || '');
+    if (!payCustomer) return { status: 'unmatched', why: 'the payment names no customer' };
+
+    const linked = [];
+    for (const l of payment.Line || []) {
+        const amt = finCents(l && l.Amount);
+        for (const t of (l && l.LinkedTxn) || []) {
+            if (String(t.TxnType) !== 'Invoice' || !t.TxnId) continue;
+            // A zero, negative or unreadable applied amount settles nothing.
+            if (amt === null || amt <= 0) continue;
+            linked.push({ id: String(t.TxnId), amount: amt });
+        }
+    }
+    if (!linked.length) {
+        return { status: 'unlinked', why: 'the payment applies no positive amount to any invoice, so nothing establishes what it was for' };
+    }
+
+    const seen = [];
+    for (const link of linked) {
+        let inv;
+        try { inv = await getInvoice(link.id); }
+        // Unreadable is unknown, and unknown is retryable. It is never "not onboarding".
+        catch (e) { return { status: 'unknown', why: `invoice ${link.id} could not be read: ${String((e && e.message) || e).slice(0, 120)}` }; }
+        if (!inv) { seen.push({ id: link.id, why: 'invoice not found' }); continue; }
+        if (VOID(inv)) { seen.push({ id: link.id, why: 'invoice voided or deleted' }); continue; }
+
+        const lines = onboardingLines(inv);
+        if (!lines.length) { seen.push({ id: link.id, why: `no line whose item is "${approvedItem()}"` }); continue; }
+
+        const invCustomer = String((inv.CustomerRef && (inv.CustomerRef.value || inv.CustomerRef)) || '');
+        if (!invCustomer || invCustomer !== payCustomer) {
+            return { status: 'mismatched', invoiceId: String(inv.Id),
+                why: `the onboarding invoice belongs to customer ${invCustomer || 'unknown'}, but the payment is from ${payCustomer}` };
+        }
+
+        let lineTotal = 0;
+        for (const l of lines) {
+            const c = finCents(l.Amount);
+            if (c === null) return { status: 'unknown', invoiceId: String(inv.Id), why: 'an onboarding line has an unreadable amount' };
+            lineTotal += c;
+        }
+
+        // WHAT THEY ACCEPTED, not one global default.
+        let terms = null;
+        if (typeof resolveTerms === 'function') {
+            try { terms = await resolveTerms({ customerId: invCustomer, invoiceId: String(inv.Id) }); }
+            catch (e) { return { status: 'unknown', why: `accepted terms could not be read: ${String((e && e.message) || e).slice(0, 120)}` }; }
+        }
+        // Deferred onboarding is carried on the hourly rate. It is not activated by a payment event,
+        // so a payment arriving against deferred terms must not activate anything here.
+        if (terms && terms.kind === 'DEFERRED') {
+            return { status: 'deferred-terms', invoiceId: String(inv.Id), customerId: invCustomer,
+                why: 'this opportunity accepted deferred onboarding, which activates on placement start, not on a payment' };
+        }
+        const expected = terms && fin(terms.cents) !== null ? Math.round(terms.cents) : finCents(approvedAmount());
+        if (expected === null) return { status: 'not-configured', why: 'no approved onboarding amount could be resolved' };
+        if (lineTotal !== expected) {
+            return { status: 'wrong-amount', invoiceId: String(inv.Id), invoiceNumber: inv.DocNumber || '',
+                why: `onboarding lines total ${(lineTotal / 100).toFixed(2)}, not the ${terms ? 'accepted' : 'published'} ${(expected / 100).toFixed(2)}` };
+        }
+
+        // A missing balance is missing, not zero.
+        if (!has(inv, 'Balance')) {
+            return { status: 'unknown', invoiceId: String(inv.Id), why: 'the invoice came back with no balance field, so it cannot be called settled' };
+        }
+        const balance = finCents(inv.Balance);
+        if (balance === null) return { status: 'unknown', invoiceId: String(inv.Id), why: 'the invoice balance is not a readable number' };
+        if (balance !== 0) {
+            return { status: 'partial', invoiceId: String(inv.Id), invoiceNumber: inv.DocNumber || '',
+                total: fin(inv.TotalAmt), balance: balance / 100,
+                why: `onboarding invoice still owes ${(balance / 100).toFixed(2)}` };
+        }
+
+        return {
+            status: 'paid', realm: want, customerId: invCustomer,
+            invoiceId: String(inv.Id), invoiceNumber: inv.DocNumber || '',
+            paymentId: String(payment.Id), paymentDate: payment.TxnDate || '',
+            total: fin(inv.TotalAmt),
+            termsKind: terms ? terms.kind : 'CASH_UPFRONT',
+            termsAccepted: !!terms,
+            amountCents: lineTotal,
+            reference: `qbo:${want}:customer:${invCustomer}:invoice:${inv.Id}:payment:${payment.Id}`,
+            why: `onboarding invoice ${inv.DocNumber || inv.Id} for ${(lineTotal / 100).toFixed(2)} settled by payment ${payment.Id}`
+                + (terms ? ' against accepted terms' : ' against the published default, because no accepted terms are recorded for this opportunity'),
+        };
+    }
+    return { status: 'not-onboarding',
+        why: `no invoice this payment settles carries the approved item "${approvedItem()}"`,
+        invoicesChecked: seen };
 }
