@@ -1,8 +1,8 @@
 export const KEY = 'staffify:outreach-review:v1';
-export const SENDERS = ['paul@trystaffify.com','paul@staffifyhq.com','hello@gostaffify.com','paul@hirestaffify.com','madison@gostaffify.com'];
+export const SENDERS = ['paul@trystaffify.com','paul@staffifyhq.com','hello@gostaffify.com','paul@hirestaffify.com','madison@gostaffify.com','madison@staffifyhq.com','madison@trystaffify.com','madison@hirestaffify.com','madison.sterling@trystaffify.com'];
 export function ownerFor(rep) {
   if (rep?.role === 'admin') return 'all';
-  if (rep?.email?.toLowerCase() === 'madison@gostaffify.com') return 'Madison';
+  if (SENDERS.slice(4).includes(rep?.email?.toLowerCase())) return 'Madison';
   if (SENDERS.slice(0,4).includes(rep?.email?.toLowerCase())) return 'Paul';
   return null;
 }
@@ -24,7 +24,7 @@ export function mergeSnapshot(previous, incoming, now=new Date().toISOString()) 
     const recipient=String(r.recipient||'').toLowerCase();
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient))throw Error('Invalid recipient');
     const owner=assignment.get(recipient)||agencyOwners.get(r.agencyKey)||r.owner;
-    const ownershipHold=owner==='Madison'&&r.sender!=='madison@gostaffify.com';
+    const ownershipHold=owner==='Madison'&&!SENDERS.slice(4).includes(r.sender);
     return {...r,recipient,owner,status:suppressed.has(recipient)?'suppressed':ownershipHold?'reserved_for_madison_external':r.status};
   });
   return {revision:(previous?.revision||0)+1,records,assignments,suppressions:[...suppressed],pausedOwners:previous?.pausedOwners||[],updatedAt:now,mailboxes:incoming.mailboxes||[],lastWorkerError:incoming.lastWorkerError||null};

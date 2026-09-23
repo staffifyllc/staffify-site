@@ -1,4 +1,5 @@
 import { redis, requireAccess, adminAuthorized, SITE, readBody } from './_auth.js';
+import {config} from './_outreach-gmail.js';
 import {KEY,ownerFor,visibleState,mergeSnapshot,controlState} from './_outreach-queue.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
@@ -16,6 +17,7 @@ export default async function handler(req,res) {
     let next;
     if(body.action==='sync') {
       if(!machine)return res.status(403).json({error:'Worker authorization required'});
+      if((await config()).enabled)return res.status(409).json({error:'Hosted worker owns the queue; local snapshot writes are disabled'});
       next=mergeSnapshot(state,body);
     } else next=controlState(state,body,owner);
     const saved=await redis.eval(CAS,[KEY],[String(state?.revision||0),JSON.stringify(next)]);
