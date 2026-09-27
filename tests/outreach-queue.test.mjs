@@ -7,3 +7,12 @@ test('owner access isolation',()=>{const s=mergeSnapshot(null,input);assert.equa
 test('reject duplicate records and unknown senders',()=>{assert.throws(()=>mergeSnapshot(null,{...input,records:[row,row]}));assert.throws(()=>mergeSnapshot(null,{...input,records:[{...row,sender:'other@example.com'}]}));});
 import { readFileSync } from 'node:fs';
 test('review page script parses',()=>{const html=readFileSync(new URL('../outreach-review/index.html',import.meta.url),'utf8');const js=html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];assert.doesNotThrow(()=>new Function(js));});
+
+test('stale call-ready flag cannot survive reply, suppression or owner pause',()=>{
+ const r={id:'call',owner:'Paul',recipient:'a@example.com',status:'human_reply_hold',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01T00:00:00Z',callReady:true};
+ const s={records:[r],assignments:[],suppressions:[],pausedOwners:[]};
+ assert.equal(visibleState(s,'all').records[0].callReady,false);
+ r.status='sent';assert.equal(visibleState(s,'all').records[0].callReady,true);
+ s.pausedOwners=['Paul'];assert.equal(visibleState(s,'all').records[0].callReady,false);
+ s.pausedOwners=[];s.suppressions=[r.recipient];assert.equal(visibleState(s,'all').records[0].callReady,false);
+});

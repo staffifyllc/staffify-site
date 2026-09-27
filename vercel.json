@@ -24,7 +24,7 @@
       "schedule": "*/10 * * * *"
     },
     {
-      "path": "/api/outreach-worker",
+      "path": "/api/outreach-worker/",
       "schedule": "* * * * *"
     }
   ],
@@ -251,7 +251,7 @@
   ],
   "functions": {
     "api/outreach-worker.js": {
-      "maxDuration": 60
+      "maxDuration": 300
     }
   }
 }

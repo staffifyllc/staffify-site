@@ -1,10 +1,18 @@
+import {slackHealth} from './_slack.js';
 import {redis,requireAccess,currentRep,newToken,SITE,readBody,adminAuthorized} from './_auth.js';
 import {ownerFor} from './_outreach-queue.js';
-import {CONFIG,SCOPES,config,clientId,clientSecret,seal,gmail} from './_outreach-gmail.js';
+import {CONFIG,SCOPES,config,clientId,clientSecret,seal,gmail,access} from './_outreach-gmail.js';
 const callback=SITE+'/api/outreach-connect/?action=callback';
 export default async function handler(req,res){res.setHeader('Cache-Control','private, no-store');try{
  const who=await requireAccess(req),owner=ownerFor(who);if(!owner)return res.status(401).json({error:'Sign in to the Sales Hub'});
  const cfg=await config();const action=req.query?.action||'status';
+ if(action==='health'){
+  if(owner!=='all')return res.status(403).json({error:'Administrator required'});
+  const selected=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
+  const results=await Promise.all(selected.map(async a=>{try{const t=await access(a.email);const p=await gmail(t,'profile');const m=await gmail(t,'messages?maxResults=1');if(m.messages?.length)await gmail(t,'messages/'+m.messages[0].id+'?format=full');return {email:a.email,ok:p.emailAddress?.toLowerCase()===a.email,readVerified:true};}catch(e){return {email:a.email,ok:false,error:e.message};}}));
+  const health={checkedAt:new Date().toISOString(),accounts:results,ok:results.every(a=>a.ok),slack:await slackHealth()};
+  await redis.set('outreach:cloud:health',health);return res.status(200).json(health);
+ }
  if(action==='callback'){
   const state=await redis.getdel('outreach:oauth-state:'+String(req.query.state||''));if(!state||state.rep!==who.email)return res.status(400).json({error:'Expired authorization; start again'});
   const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({code:String(req.query.code||''),client_id:clientId(),client_secret:clientSecret(),redirect_uri:callback,grant_type:'authorization_code'}),signal:AbortSignal.timeout(15000)});if(!r.ok)return res.status(400).json({error:'Google authorization failed'});
@@ -25,14 +33,15 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
    const email=String(body.email||'').trim().toLowerCase();if(!/^[a-z0-9._+-]+@[a-z0-9.-]*(?:staffify|foundry)[a-z0-9.-]*\.[a-z]{2,}$/.test(email)||!['Paul','Madison'].includes(body.owner))return res.status(400).json({error:'Valid Staffify address and owner required'});
    if(cfg.enabled)return res.status(409).json({error:'Pause hosted worker before changing its mailbox inventory'});
    if(!cfg.accounts.some(a=>a.email===email)){if(cfg.accounts.length>=cfg.expectedAccounts)return res.status(400).json({error:'Expected accounts already registered'});cfg.accounts.push({email,owner:body.owner,dailyLimit:50,brand:email.includes('foundry')?'Foundry':'Staffify',draftEnabled:!email.includes('foundry')});}
+  }else if(body.action==='reconcile'){cfg.enabled=true;cfg.draftingEnabled=false;
   }else if(body.action==='enable'){
-   if(process.env.OUTREACH_WORKER_VERIFIED!=='true')return res.status(409).json({error:'Hosted worker validation is not complete; existing local automation remains active'});
+   if(process.env.OUTREACH_WORKER_VERIFIED!=='true')return res.status(409).json({error:'Draft creation is paused until hosted validation is complete; cloud reconciliation remains available'});
    if(cfg.accounts.length!==cfg.expectedAccounts)return res.status(409).json({error:'Every outreach account must be registered'});
-   for(const a of cfg.accounts)if(!await redis.get('outreach:oauth:'+a.email))return res.status(409).json({error:'Connect every mailbox before enabling'});
-   cfg.enabled=true;
+   const health=await redis.get('outreach:cloud:health');if(!health?.ok||Date.now()-Date.parse(health.checkedAt)>10*60000)return res.status(409).json({error:'Every Staffify mailbox must pass a live health check before enabling drafts'});
+   cfg.enabled=true;cfg.draftingEnabled=true;
   }else if(body.action==='disable')cfg.enabled=false;else return res.status(400).json({error:'Unknown action'});
   cfg.updatedAt=new Date().toISOString();await redis.set(CONFIG,cfg);
  }
  const accounts=[];for(const a of cfg.accounts)if(owner==='all'||a.owner===owner)accounts.push({...a,connected:!!await redis.get('outreach:oauth:'+a.email)});
- return res.status(200).json({enabled:cfg.enabled,expectedAccounts:cfg.expectedAccounts,registeredAccounts:cfg.accounts.length,oauthConfigured:!!(clientId()&&clientSecret()),redirectUri:callback,accounts,lastRun:await redis.get('outreach:cloud:last-run')});
+ return res.status(200).json({enabled:cfg.enabled,draftingEnabled:cfg.draftingEnabled!==false,expectedAccounts:cfg.expectedAccounts,registeredAccounts:cfg.accounts.length,validationComplete:process.env.OUTREACH_WORKER_VERIFIED==='true',workerLockSeconds:await redis.ttl('outreach:cloud:lock'),health:await redis.get('outreach:cloud:health'),oauthConfigured:!!(clientId()&&clientSecret()),redirectUri:callback,accounts,lastRun:await redis.get('outreach:cloud:last-run')});
  }catch(e){return res.status(503).json({error:'Mailbox connection service unavailable'});}}
