@@ -22,5 +22,5 @@ export async function slackNotify(text, blocks) {
 // Read-only credential check. This does not post a test message.
 export async function slackHealth(){
  if(!process.env.SLACK_BOT_TOKEN||!process.env.SLACK_CHANNEL)return {ok:false,error:'Slack bot or channel configuration missing'};
- try{const r=await fetch('https://slack.com/api/auth.test',{method:'POST',headers:{Authorization:'Bearer '+process.env.SLACK_BOT_TOKEN},signal:AbortSignal.timeout(10000)});const j=await r.json();return {ok:!!j.ok,error:j.ok?null:j.error,channel:process.env.SLACK_CHANNEL,deliveryVerified:false};}catch{return {ok:false,error:'Slack credential check unavailable',deliveryVerified:false};}
+ try{const r=await fetch('https://slack.com/api/auth.test',{method:'POST',headers:{Authorization:'Bearer '+process.env.SLACK_BOT_TOKEN},signal:AbortSignal.timeout(10000)});const j=await r.json();return {ok:!!j.ok,error:j.ok?null:j.error,channel:process.env.SLACK_CHANNEL,teamId:j.team_id||null,team:j.team||null,deliveryVerified:false};}catch{return {ok:false,error:'Slack credential check unavailable',deliveryVerified:false};}
 }
