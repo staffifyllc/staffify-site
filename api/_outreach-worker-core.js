@@ -1,6 +1,6 @@
 import {fairCandidates} from './_outreach-fairness.js';
 import {sendOne} from './_outreach-send.js';
-export function makeWorker({maintain,redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
+export function makeWorker({dealSupply,maintain,redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
 const LOCK='outreach:cloud:lock';
 const CAS=`local s=redis.call('GET',KEYS[1]); if not s or cjson.decode(s).revision~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 async function save(state){const rev=state.revision;const next={...state,revision:rev+1,queueUpdatedAt:new Date().toISOString()};if(Number(await redis.eval(CAS,[KEY],[String(rev),JSON.stringify(next)]))!==1)throw Error('Concurrent control change; retry next tick');return next;}
@@ -69,6 +69,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    if(await canDraft(row)){if(row.sentTouches&&row.lastSentAt)row.status='sent';else if(row.qualificationApproved)row.status='prepared';}
   }
   state=await save(state);
+  if(dealSupply&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000){try{report.dealFollowups=await dealSupply(state,cfg,tokens);state=await save(state);}catch(e){report.dealFollowupError=String(e.message).slice(0,120);}}
   if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report});
   const hour=Number(new Intl.DateTimeFormat('en-US',{hour:'numeric',hourCycle:'h23',timeZone:'America/New_York'}).format(new Date()));
   if(cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000&&hour>=8&&state.records.filter(r=>r.status==='prepared').length<30){report.qualified=await supply(state,cfg);state=await save(state);}

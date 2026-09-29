@@ -1,3 +1,4 @@
+import {dealEmail} from './_deal-followup-policy.js';
 export function automatedModeAllowed(mode){return !mode||mode==='AUTOMATED';}
 export const FOUR_TOUCHES=4;
 export const dayKey=(now)=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
@@ -23,6 +24,7 @@ export function classify(messages,recipient,senders) {
  return {status:null,sent};
 }
 export function followup(record) {
+ if(record.lane==='deal_followup')return dealEmail(record,record.sentTouches);
  const parts=[
  'One useful handoff is a revision log: each requested change, who owns it, and whether it passed review. Which part of revision tracking still lands on your desk?',
  'Another task to hand off is checking that every promised deliverable is ready before a client is told the job is complete. Do you already have one person responsible for that last check?',
