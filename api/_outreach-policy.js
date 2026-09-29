@@ -10,8 +10,7 @@ export function eligible(record,state,now=Date.now()) {
 }
 export function quota(record,creations,now=Date.now()) {
  const day=dayKey(now);const today=creations.filter(c=>c.day===day);
- // Each Madison mailbox has its own 50-total daily quota, including follow-ups.
- if(record.owner==='Madison')return today.filter(c=>c.owner==='Madison'&&c.sender===record.sender).length<50;
+ // Both owners: 50 new prospect introductions per mailbox; follow-ups are additional.
  if(record.sentTouches>0)return true;
  return today.filter(c=>c.sender===record.sender&&c.touch===1).length<50;
 }
