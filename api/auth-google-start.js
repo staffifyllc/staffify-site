@@ -13,7 +13,7 @@ export const REDIRECT_URI = `${SITE}/api/auth-google-callback`;
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
-    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientId = (process.env.HUB_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID);
     if (!clientId) {
         return res.status(200).json({
             ok: false,

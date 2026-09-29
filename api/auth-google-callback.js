@@ -36,8 +36,8 @@ export default async function handler(req, res) {
         return bounce(res, 'google_state');
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = (process.env.HUB_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID);
+    const clientSecret = (process.env.HUB_GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET);
     if (!clientId || !clientSecret) return bounce(res, 'google_unconfigured');
 
     let payload;
