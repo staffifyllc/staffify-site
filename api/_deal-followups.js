@@ -12,8 +12,8 @@ async function catalogue(previous){
  let after,rows=[];do{const page=await hs('/crm/v3/objects/deals/search',{filterGroups:[{filters:[{propertyName:'pipeline',operator:'EQ',value:DEAL_PIPELINE},{propertyName:'dealstage',operator:'IN',values:Object.keys(DEAL_STAGES)}]}],properties:['dealname','pipeline','dealstage','hubspot_owner_id','closed_lost_reason','hs_next_activity_date'],limit:100,...(after?{after}:{})});rows.push(...page.results);after=page.paging?.next?.after;if(rows.length>2000)throw Error('Deal audit exceeded safe page limit');}while(after);
  return {loadedAt:new Date().toISOString(),cursor:previous?.cursor||0,assignmentTurn:previous?.assignmentTurn||0,rows:rows.map(d=>({...d,...previous?.rows?.find(x=>x.id===d.id),id:d.id,properties:d.properties,stage:DEAL_STAGES[d.properties.dealstage]}))};
 }
-export async function supplyDealFollowups(state,cfg,tokens){
- let queue=await catalogue(await redis.get(DEAL_QUEUE));const reps=await listReps();const now=new Date().toISOString();let added=0;const started=Date.now();
+export async function supplyDealFollowups(state,cfg,tokens,options={}){
+ const previous=await redis.get(DEAL_QUEUE);let queue=await catalogue(options.refresh?{...previous,loadedAt:null}:previous);const reps=await listReps();for(const item of queue.rows){const rep=reps.find(r=>r.hubspotOwnerId&&String(r.hubspotOwnerId)===String(item.properties.hubspot_owner_id));if(rep)item.owner=/madison/i.test(rep.email)?'Madison':'Paul';}const now=new Date().toISOString();let added=0;const started=Date.now();
  const active=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);const senders=active.map(a=>a.email);
  for(let i=0;i<10&&queue.rows.length&&Date.now()-started<30000;i++){
   const item=queue.rows[queue.cursor++%queue.rows.length];item.checkedAt=now;item.reason=dealBlock(item.properties);item.status='held';if(item.reason)continue;
