@@ -269,6 +269,9 @@
     },
     "api/finance-snapshot.js": {
       "maxDuration": 300
+    },
+    "api/deal-followups.js": {
+      "maxDuration": 120
     }
   }
 }

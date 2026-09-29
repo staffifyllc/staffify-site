@@ -5,24 +5,39 @@ import {history,compactMessage} from './_outreach-gmail.js';
 import {classify} from './_outreach-policy.js';
 import {DEAL_PIPELINE,DEAL_STAGES,dealBlock,dealEmail,historyBlock} from './_deal-followup-policy.js';
 export const DEAL_QUEUE='staffify:deal-followups:v1';
-async function hs(path,body){const r=await fetch('https://api.hubapi.com'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('Deal CRM unavailable: '+r.status);return r.json();}
+async function hs(path,body,method){const r=await fetch('https://api.hubapi.com'+path,{method:method||(body?'POST':'GET'),headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('Deal CRM unavailable: '+r.status);return r.json();}
 async function catalogue(previous){
  if(previous?.loadedAt&&Date.now()-Date.parse(previous.loadedAt)<15*60000)return previous;
  const account=await hs('/account-info/v3/details');if(String(account.portalId)!=='51666712')throw Error('Wrong CRM portal');
  let after,rows=[];do{const page=await hs('/crm/v3/objects/deals/search',{filterGroups:[{filters:[{propertyName:'pipeline',operator:'EQ',value:DEAL_PIPELINE},{propertyName:'dealstage',operator:'IN',values:Object.keys(DEAL_STAGES)}]}],properties:['dealname','pipeline','dealstage','hubspot_owner_id','closed_lost_reason','hs_next_activity_date'],limit:100,...(after?{after}:{})});rows.push(...page.results);after=page.paging?.next?.after;if(rows.length>2000)throw Error('Deal audit exceeded safe page limit');}while(after);
- return {loadedAt:new Date().toISOString(),cursor:previous?.cursor||0,rows:rows.map(d=>({...d,...previous?.rows?.find(x=>x.id===d.id),id:d.id,properties:d.properties,stage:DEAL_STAGES[d.properties.dealstage]}))};
+ return {loadedAt:new Date().toISOString(),cursor:previous?.cursor||0,assignmentTurn:previous?.assignmentTurn||0,rows:rows.map(d=>({...d,...previous?.rows?.find(x=>x.id===d.id),id:d.id,properties:d.properties,stage:DEAL_STAGES[d.properties.dealstage]}))};
 }
 export async function supplyDealFollowups(state,cfg,tokens){
- let queue=await catalogue(await redis.get(DEAL_QUEUE));const reps=await listReps();const now=new Date().toISOString();let added=0;
+ let queue=await catalogue(await redis.get(DEAL_QUEUE));const reps=await listReps();const now=new Date().toISOString();let added=0;const started=Date.now();
  const active=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);const senders=active.map(a=>a.email);
- for(let i=0;i<2&&queue.rows.length;i++){
+ for(let i=0;i<10&&queue.rows.length&&Date.now()-started<30000;i++){
   const item=queue.rows[queue.cursor++%queue.rows.length];item.checkedAt=now;item.reason=dealBlock(item.properties);item.status='held';if(item.reason)continue;
   try{
    const assoc=await hs('/crm/v4/objects/deals/'+item.id+'/associations/contacts?limit=100');if(assoc.paging?.next||assoc.results.length!==1){item.reason='A single primary contact must be confirmed';continue;}
    const cid=String(assoc.results[0].toObjectId),c=await hs('/crm/v3/objects/contacts/'+cid+'?properties=email,firstname,lastname,company,website,hubspot_owner_id');const p=c.properties,email=String(p.email||'').toLowerCase();item.recipient=email;
    if(!email){item.reason='Contact email is missing';continue;}
-   const rep=reps.find(r=>String(r.hubspotOwnerId||'')===String(item.properties.hubspot_owner_id||p.hubspot_owner_id||'')&&r.hubspotOwnerId);
-   const owner=rep&&(/madison/i.test(rep.email)?'Madison':/^(paul|hello)@/.test(rep.email)?'Paul':null);item.owner=owner;
+   let ownerId=item.properties.hubspot_owner_id||p.hubspot_owner_id||'';
+   const ownerName=rep=>/madison/i.test(rep.email)?'Madison':/^(paul|hello)@/.test(rep.email)?'Paul':null;
+   let rep=ownerId?reps.find(r=>String(r.hubspotOwnerId||'')===String(ownerId)):null;
+   let owner=rep&&ownerName(rep);
+   if(!ownerId){
+    const reserved=state.assignments.find(a=>a.email===email)?.owner||state.records.find(r=>r.recipient===email)?.owner;
+    const chosen=reserved||((queue.assignmentTurn||0)%2?'Madison':'Paul');
+    const ids=[...new Set(reps.filter(r=>ownerName(r)===chosen&&r.hubspotOwnerId).map(r=>String(r.hubspotOwnerId)))];
+    if(ids.length!==1){item.reason='HubSpot owner mapping needs confirmation for '+chosen;continue;}
+    const fresh=await hs('/crm/v3/objects/deals/'+item.id+'?properties=hubspot_owner_id');
+    if(fresh.properties.hubspot_owner_id){item.reason='Owner changed during assessment; checking next pass';continue;}
+    await hs('/crm/v3/objects/deals/'+item.id,{properties:{hubspot_owner_id:ids[0]}},'PATCH');
+    const verified=await hs('/crm/v3/objects/deals/'+item.id+'?properties=hubspot_owner_id');if(verified.properties.hubspot_owner_id!==ids[0])throw Error('Owner assignment did not verify');
+    item.properties.hubspot_owner_id=ids[0];item.assignedAt=now;item.assignmentReason='Paul authorized even split of unassigned opportunities, 2026-09-29';owner=chosen;
+    if(!reserved)queue.assignmentTurn=(queue.assignmentTurn||0)+1;
+   }
+   item.owner=owner;
    if(!owner){item.reason='Assign this opportunity to Paul or Madison';continue;}
    const existing=state.records.find(r=>r.recipient===email);if(existing){item.status='tracked';item.recordId=existing.id;item.reason='Existing outreach record: '+existing.status;continue;}
    if(state.assignments.some(a=>a.email===email&&a.owner!==owner)){item.reason='Reserved for a different owner';continue;}
