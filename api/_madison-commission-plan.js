@@ -2,11 +2,18 @@
 export const MADISON_PLAN=Object.freeze({version:'2026-09-29-confirmed',email:'madison@gostaffify.com',houseRate:20,selfRate:30,acceleratedRate:35,afterPlacements:4,residualPerHour:1,residualMonths:null,thresholdMode:'fifth-and-later',timezone:'America/New_York'});
 const identities=new Set(['madison@gostaffify.com','madison@staffifyhq.com','madison@trystaffify.com','madison@hirestaffify.com','madison.sterling@trystaffify.com']);
 export const isMadison=email=>identities.has(String(email||'').toLowerCase());
+export const PAUL_PLAN=Object.freeze({...MADISON_PLAN,version:'2026-09-29-paul-fresh',email:'paul@staffifyhq.com',houseRate:30,selfRate:30,effectiveDate:'2026-09-29'});
+const paulIdentities=new Set(['hello@gostaffify.com','paul@gostaffify.com','paul@staffifyhq.com','paul@trystaffify.com','paul@hirestaffify.com']);
+export const isPaul=email=>paulIdentities.has(String(email||'').toLowerCase());
+export const isPaulPlacement=(email,date)=>isPaul(email)&&String(date||'')>=PAUL_PLAN.effectiveDate;
+export const hasConfirmedPlan=(email,date)=>isMadison(email)||isPaulPlacement(email,date);
 export const cents=value=>Math.round((Number(value)||0)*100)/100;
 export function sourceKind(value){const v=String(value||'').trim().toLowerCase().replace(/[ _-]+/g,' ');if(['self','self sourced','madison','madison generated','rep sourced'].includes(v))return 'self';if(['house','business','company','paul','business generated','company generated'].includes(v))return 'house';return '';}
-export function applyMadisonPlan(lines){
+export function applyMadisonPlan(lines){return applyPlacementPlan(lines,MADISON_PLAN,isMadison);}
+export function applyPaulPlan(lines){return applyPlacementPlan(lines,PAUL_PLAN,(email,date)=>isPaulPlacement(email,date));}
+function applyPlacementPlan(lines,plan,eligibleOwner){
  const byMonth=new Map();
- for(const line of lines){if(!isMadison(line.repEmail)||line.dealType!=='va')continue;line.planVersion=MADISON_PLAN.version;const month=String(line.closeDate||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(month))continue;if(!byMonth.has(month))byMonth.set(month,[]);byMonth.get(month).push(line);}
+ for(const line of lines){if(!eligibleOwner(line.repEmail,line.closeDate)||line.dealType!=='va')continue;line.planVersion=plan.version;const month=String(line.closeDate||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(month))continue;if(!byMonth.has(month))byMonth.set(month,[]);byMonth.get(month).push(line);}
  for(const [month,rows] of byMonth){
   let count=0;const claimed=new Set();
   rows.sort((a,b)=>String(a.closeDate).localeCompare(String(b.closeDate))||String(a.dealId).localeCompare(String(b.dealId)));
@@ -14,15 +21,15 @@ export function applyMadisonPlan(lines){
    const units=Array.isArray(row.placementUnits)?row.placementUnits:[];
    const eligible=!!row.invoiceId&&units.length>0&&!claimed.has(row.invoiceId)&&!row.refunded;
    row.month=month;row.monthlyPlacementsBefore=count;row.placements=eligible?units.length:0;
-   const source=sourceKind(row.leadSource),baseRate=source==='self'?30:20;
+   const source=sourceKind(row.leadSource),baseRate=source==='self'?plan.selfRate:plan.houseRate;
    const weights=eligible?units:[1],total=weights.reduce((n,x)=>n+x,0)||1;
-   const rates=weights.map((_,i)=>eligible&&count+i>=4?35:baseRate);
+   const rates=weights.map((_,i)=>eligible&&count+i>=plan.afterPlacements?plan.acceleratedRate:baseRate);
    const effective=rates.reduce((n,r,i)=>n+r*weights[i],0)/total;
    if(eligible){claimed.add(row.invoiceId);count+=units.length;}
    row.monthlyPlacementsAfter=count;
    if(row.status==='paid_out')continue; // Recorded payouts are never repriced.
    row.rate=effective;row.rateDisplay=cents(effective);row.unitRates=rates;row.accelerated=rates.some(r=>r===35);row.splitPlan=true;
-   const sourceKnown=!!source||rates.every(r=>r===35);
+   const sourceKnown=plan.houseRate===plan.selfRate||!!source||rates.every(r=>r===plan.acceleratedRate);
    row.leadSourceVerified=sourceKnown;
    row.commission=row.refunded?0:cents(row.base*effective/100);
    row.remainingCommission=cents(row.outstanding*effective/100);
@@ -37,7 +44,7 @@ export function applyMadisonPlan(lines){
 export function residualTerms(email,closeDate,months=6){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(closeDate||''))return null;
  const from=new Date(closeDate+'T00:00:00Z');if(Number.isNaN(+from))return null;
- if(isMadison(email))return {from:closeDate,to:null,perHour:1};
+ if(hasConfirmedPlan(email,closeDate))return {from:closeDate,to:null,perHour:1};
  const to=new Date(from);to.setUTCMonth(to.getUTCMonth()+months);return {from:closeDate,to:to.toISOString().slice(0,10)};
 }
 export const eligibleResidualDay=(day,window)=>!!window&&day>=window.from&&(!window.to||day<window.to);
@@ -53,7 +60,7 @@ export function indexResidualDeal(index,key,deal){
  if(!key||key.length<=2)return;
  if(!Object.hasOwn(index,key)){index[key]=deal;return;}
  const prior=index[key];if(prior?.dealId===deal.dealId)return;
- if(prior&&isMadison(prior.ownerEmail)&&isMadison(deal.ownerEmail)){
+ if(prior&&((isMadison(prior.ownerEmail)&&isMadison(deal.ownerEmail))||(isPaulPlacement(prior.ownerEmail,prior.closeDate)&&isPaulPlacement(deal.ownerEmail,deal.closeDate)))){
   if(deal.closeDate&&(!prior.closeDate||deal.closeDate<prior.closeDate))index[key]=deal;
  }else index[key]=null;
 }

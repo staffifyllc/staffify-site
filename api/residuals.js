@@ -18,7 +18,7 @@
 
 import { redis, currentRep, listReps, readBody, SITE } from './_auth.js';
 import {financeAccess,financeMachine} from './_finance-access.js';
-import {isMadison,residualTerms,eligibleResidualDay,MADISON_PLAN,indexResidualDeal} from './_madison-commission-plan.js';
+import {isMadison,hasConfirmedPlan,PAUL_PLAN,residualTerms,eligibleResidualDay,MADISON_PLAN,indexResidualDeal} from './_madison-commission-plan.js';
 import {commissionDeal} from './_commission-evidence.js';
 import { hoursByClient } from './_hubstaff.js';
 import { loadHubspotWon } from './commissions.js';
@@ -105,7 +105,7 @@ export default async function handler(req, res) {
     const parse=v=>typeof v==='string'?JSON.parse(v):v||{};
     const deals=(hs.deals||[]).filter(commissionDeal).map(d=>({...d,ownerEmail:parse(overrides[d.dealId]).rep||parse(snaps[d.dealId]).ownerEmail||d.ownerEmail}));
 
-    const firstMadison=deals.filter(d=>isMadison(d.ownerEmail)&&d.closeDate).map(d=>d.closeDate).sort()[0];if(firstMadison&&firstMadison<start)start=firstMadison;
+    const firstMadison=deals.filter(d=>hasConfirmedPlan(d.ownerEmail,d.closeDate)&&d.closeDate).map(d=>d.closeDate).sort()[0];if(firstMadison&&firstMadison<start)start=firstMadison;
     const hours = await hoursByClient({ start, stop }).catch(e => ({ connected: false, error: String(e).slice(0, 120), clients: [] }));
     if (!hours.connected) {
         return res.status(200).json({
@@ -136,7 +136,7 @@ export default async function handler(req, res) {
 
         const repEmail = (deal.ownerEmail || '').toLowerCase();
         const rep = repByEmail[repEmail];
-        const perHour = rep && rep.perHour != null ? rep.perHour : 0;
+        const perHour = hasConfirmedPlan(repEmail,deal.closeDate)?1:rep && rep.perHour != null ? rep.perHour : 0;
         const win = residualTerms(repEmail,deal.closeDate,RESIDUAL_MONTHS);
         if(!win){unmatched.push({client:c.name,hours:c.hours,reason:'Missing deal close date'});continue;}
 
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
             perHour, periods: {}, weeks: {}, clients: {},
             note: !repEmail ? 'deal has no owner, so no rep to pay'
                 : !rep ? 'deal owner is not a registered rep'
-                : rep.perHour == null ? 'rep has no residualPerHour on file'
+                : rep.perHour == null && !hasConfirmedPlan(repEmail,deal.closeDate) ? 'rep has no residualPerHour on file'
                 : '',
         });
 
@@ -202,7 +202,7 @@ export default async function handler(req, res) {
     const all = Object.values(ledger).map(shape).sort((a, b) => b.owed - a.owed || b.totalHours - a.totalHours);
     const meta = {
         connected: true, schedule: { anchor: PAY_ANCHOR, everyDays: PERIOD_DAYS, nextPayDate: nextRun.payDate, nextCovers: { start: nextRun.start, end: nextRun.end } },
-        madisonPlan:MADISON_PLAN, range: { start, stop }, residualMonths: RESIDUAL_MONTHS,
+        madisonPlan:MADISON_PLAN, paulPlan:PAUL_PLAN, range: { start, stop }, residualMonths: RESIDUAL_MONTHS,
         upcomingPeriods: periodsBetween(start, stop).slice(-6),
         outOfWindow: { clients: outOfWindow.clients, hours: Math.round(outOfWindow.hours * 10) / 10 },
     };

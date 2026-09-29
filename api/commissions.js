@@ -15,7 +15,7 @@
 import { currentRep, listReps, readBody, redis, SITE } from './_auth.js';
 import {onboardingAmount,invoicePayments,commissionDeal,placementUnits} from './_commission-evidence.js';
 import {financeAccess,financeMachine} from './_finance-access.js';
-import {MADISON_PLAN,isMadison,sourceKind,applyMadisonPlan,residualTerms,eligibleResidualDay,indexResidualDeal} from './_madison-commission-plan.js';
+import {MADISON_PLAN,PAUL_PLAN,isMadison,isPaulPlacement,hasConfirmedPlan,sourceKind,applyMadisonPlan,applyPaulPlan,residualTerms,eligibleResidualDay,indexResidualDeal} from './_madison-commission-plan.js';
 import {KEY as OUTREACH_KEY} from './_outreach-queue.js';
 import { qboConnected, qboQuery } from './_qbo.js';
 import { hoursByClient, hubstaffStatus } from './_hubstaff.js';
@@ -310,7 +310,7 @@ export async function buildResiduals(deals, repRateByEmail, manualMap, range) {
 
         const repEmail = (deal.ownerEmail || '').toLowerCase();
         const plan = repRateByEmail[repEmail];
-        const perHour = isMadison(repEmail)?1:plan && plan.residualPerHour != null ? Number(plan.residualPerHour) : 0;
+        const perHour = hasConfirmedPlan(repEmail,deal.closeDate)?1:plan && plan.residualPerHour != null ? Number(plan.residualPerHour) : 0;
         const win = residualTerms(repEmail,deal.closeDate,RESIDUAL_MONTHS);
         const eligibleHours=win?Object.entries(c.byDay||{}).filter(([day])=>eligibleResidualDay(day,win)).reduce((n,[,secs])=>n+Number(secs)/3600,0):0;
         // No rate on file means no residual, and we say so. Silently paying $0 is how this rots.
@@ -432,7 +432,7 @@ function allocatePayouts(lines, payouts) {
 function applyAccelerator(lines) {
     const groups = {};
     lines.forEach(l => {
-        if (isMadison(l.repEmail) || l.flat != null || !l.repEmail || !l.repKnown || l.splitPlan || l.refunded || l.status==='attribution_review' || l.status==='payment_review') return;
+        if (hasConfirmedPlan(l.repEmail,l.closeDate) || l.flat != null || !l.repEmail || !l.repKnown || l.splitPlan || l.refunded || l.status==='attribution_review' || l.status==='payment_review') return;
         const month = (l.closeDate || '').slice(0, 7);
         if (!month) return;
         (groups[l.repEmail + '|' + month] || (groups[l.repEmail + '|' + month] = [])).push(l);
@@ -555,7 +555,7 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     const houseRate = (snap && snap.houseRate != null) ? Number(snap.houseRate) : (plan ? plan.houseRate : null);
     const ownRate = (snap && snap.rate != null) ? Number(snap.rate) : (plan ? plan.rate : 35);
     // Rates are locked at win time, so changing a rep's plan never re-prices deals they already closed.
-    const planRate = isMadison(repEmail)&&!ov?.paidOut?(selfSourced?30:20):(!selfSourced && houseRate != null) ? houseRate : ownRate;
+    const planRate = isPaulPlacement(repEmail,deal.closeDate)&&!ov?.paidOut?30:isMadison(repEmail)&&!ov?.paidOut?(selfSourced?30:20):(!selfSourced && houseRate != null) ? houseRate : ownRate;
     const rate = rateFor(dealType, planRate);
 
     const customerId = (qbo && qbo.connected) ? ((assignment && assignment.custId) || matchCustomer(deal, ov, qbo)) : '';
@@ -762,13 +762,15 @@ export default async function handler(req, res) {
     const lines = (hs.deals || []).map(d => reconcile(d, overrides[d.dealId], qbo, repRateByEmail, snaps[d.dealId], assignments[d.dealId]));
     applyAccelerator(lines);
     applyMadisonPlan(lines);
+    applyPaulPlan(lines);
 
     // Auto-settle: flip payable -> paid out for any rep QuickBooks shows we have already paid (1099 vendors).
     // W2 reps (payroll) have no vendor record, so they stay manual and are labeled as such.
     let payouts = { byRep: {}, autoReps: {} };
     if (qbo.connected) payouts = await loadRepPayouts(reps).catch(() => ({ byRep: {}, autoReps: {} }));
-    allocatePayouts(lines, payouts.byRep || {});
-    lines.forEach(l => { l.payoutMode = (payouts.autoReps && payouts.autoReps[l.repEmail]) ? 'auto' : 'manual'; });
+    // A fresh contest cannot be settled by a historical aggregate vendor payment.
+    allocatePayouts(lines.filter(l=>l.planVersion!==PAUL_PLAN.version), payouts.byRep || {});
+    lines.forEach(l => { l.payoutMode = l.planVersion!==PAUL_PLAN.version && (payouts.autoReps && payouts.autoReps[l.repEmail]) ? 'auto' : 'manual'; });
 
     // ---- Team ranking, and the per-rep roll-up admins see ----
     //
@@ -838,7 +840,7 @@ export default async function handler(req, res) {
         };
         const custList = qbo.connected ? Object.values(qbo.custById || {}).map(c => ({ id: c.id, name: c.name, email: c.email })) : [];
         return res.status(200).json({
-            connected: true, view: 'admin', madisonPlan:MADISON_PLAN, qboConnected: !!qbo.connected, qboError: qbo.error || '',
+            connected: true, view: 'admin', madisonPlan:MADISON_PLAN, paulPlan:PAUL_PLAN, qboConnected: !!qbo.connected, qboError: qbo.error || '',
             blockers, residuals,
             byRep: ranked,
             generatedAt: new Date().toISOString(),
