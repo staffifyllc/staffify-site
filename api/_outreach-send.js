@@ -4,7 +4,7 @@ export function sendQuota(row,state,now=Date.now()) {
  const day=dayKey(now),seen=new Map();
  for(const r of state.records)for(const e of r.events||[])if(e.kind==='sent'&&dayKey(e.at)===day)seen.set(r.sender+':'+e.id,{owner:r.owner,sender:r.sender,touch:(r.events||[]).filter(x=>x.kind==='sent'&&Date.parse(x.at)<=Date.parse(e.at)).length});
  for(const s of state.sends||[])if(s.day===day)seen.set(s.sender+':'+(s.messageId||s.id),s);
- const today=[...seen.values()];return row.owner==='Madison'?today.filter(s=>s.owner==='Madison').length<50:row.sentTouches>0||today.filter(s=>s.sender===row.sender&&s.touch===1).length<50;
+ const today=[...seen.values()];return row.owner==='Madison'?today.filter(s=>s.owner==='Madison'&&s.sender===row.sender).length<50:row.sentTouches>0||today.filter(s=>s.sender===row.sender&&s.touch===1).length<50;
 }
 export function sendDecision(row,state,messages,senders,now=Date.now()) {
  if(state.pausedOwners.includes(row.owner)||state.suppressions.includes(row.recipient))return 'control_hold';
