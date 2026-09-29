@@ -1,5 +1,6 @@
 // GET /api/auth-me -> the signed-in rep, or 401.
 
+import {financeAccess} from './_finance-access.js';
 import { currentRep } from './_auth.js';
 
 export default async function handler(req, res) {
@@ -7,6 +8,6 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     if (!rep) return res.status(401).json({ error: 'unauthenticated' });
     return res.status(200).json({
-        rep: { email: rep.email, name: rep.name, role: rep.role, rate: rep.rate },
+        rep: { email: rep.email, name: rep.name, role: rep.role, rate: rep.rate, financeAccess: financeAccess(rep) },
     });
 }

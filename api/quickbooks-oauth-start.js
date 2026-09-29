@@ -2,6 +2,8 @@
 // Kicks off the Intuit OAuth handshake. Redirects to Intuit's auth screen.
 // After Paul approves, Intuit redirects to /api/quickbooks-oauth-callback/.
 
+import {currentRep} from './_auth.js';
+import {financeAccess,financeMachine} from './_finance-access.js';
 import crypto from 'node:crypto';
 import { Redis } from '@upstash/redis';
 
@@ -14,7 +16,8 @@ const REDIRECT_URI = 'https://www.gostaffify.com/api/quickbooks-oauth-callback/'
 const SCOPE = 'com.intuit.quickbooks.accounting';
 
 export default async function handler(req, res) {
-    if ((req.query.token || '') !== process.env.ADMIN_TOKEN) {
+    const rep=await currentRep(req).catch(()=>null);
+    if (!financeMachine(req)&&(!financeAccess(rep)||rep.email.toLowerCase()==='madison@gostaffify.com')) {
         return res.status(401).send('unauthorized');
     }
     const clientId = process.env.QB_CLIENT_ID;

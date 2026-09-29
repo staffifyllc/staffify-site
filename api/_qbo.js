@@ -17,7 +17,7 @@ export async function qboConnected() {
     return !!(cached && cached.refresh_token);
 }
 
-export async function getAccessToken() {
+async function refreshAccessToken() {
     const cached = await redis.hgetall('qb:tokens');
     const now = Date.now();
     if (cached && cached.access_token && cached.access_expires_at && Number(cached.access_expires_at) > now + 60000) {
@@ -29,6 +29,7 @@ export async function getAccessToken() {
     const basicAuth = Buffer.from(`${process.env.QB_CLIENT_ID}:${process.env.QB_CLIENT_SECRET}`).toString('base64');
     const res = await fetch(QB_OAUTH_TOKEN_URL, {
         method: 'POST',
+        signal:AbortSignal.timeout(15000),
         headers: {
             'Authorization': `Basic ${basicAuth}`,
             'Accept': 'application/json',
@@ -53,6 +54,18 @@ export async function getAccessToken() {
     return accessToken;
 }
 
+export async function getAccessToken(){
+    const saved=await redis.hgetall('qb:tokens');
+    if(saved?.access_token&&Number(saved.access_expires_at)>Date.now()+60000)return saved.access_token;
+    const nonce=String(Date.now())+Math.random();
+    if(!await redis.set('qb:refresh_lock',nonce,{nx:true,ex:30})){
+        for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,250));const s=await redis.hgetall('qb:tokens');if(s?.access_token&&Number(s.access_expires_at)>Date.now()+60000)return s.access_token;}
+        throw Error('QuickBooks token refresh busy; retry shortly');
+    }
+    try{return await refreshAccessToken();}
+    finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",['qb:refresh_lock'],[nonce]);}
+}
+
 // Realm (company) id. Prefer the env var, but fall back to what the OAuth callback captured
 // into qb:tokens, so connecting is enough and QB_REALM_ID never has to be set by hand.
 export async function getRealmId() {
@@ -67,7 +80,7 @@ export async function qboQuery(sql) {
     const realmId = await getRealmId();
     if (!realmId) throw new Error('qb_no_realm');
     const url = `${QB_API_BASE}/v3/company/${realmId}/query?query=${encodeURIComponent(sql)}&minorversion=70`;
-    const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+    const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },signal:AbortSignal.timeout(15000) });
     if (!r.ok) {
         const detail = await r.text().catch(() => '');
         throw new Error(`qb_query ${r.status}: ${detail.slice(0, 200)}`);

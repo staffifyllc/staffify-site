@@ -13,6 +13,7 @@
 
 import { Redis } from '@upstash/redis';
 import crypto from 'node:crypto';
+import {getAccessToken} from './_qbo.js';
 import { processPaymentEvent } from './_pilot-activation.js';
 
 const _redis = new Redis({
@@ -52,44 +53,6 @@ function verifyQbSignature(rawBody, header, verifier) {
 }
 
 // ─── OAuth token management ─────────────────────────────────────
-async function getAccessToken() {
-    // If we have a non-expired cached access token, use it.
-    const cached = await _redis.hgetall('qb:tokens');
-    const now = Date.now();
-    if (cached && cached.access_token && cached.access_expires_at && Number(cached.access_expires_at) > now + 60000) {
-        return cached.access_token;
-    }
-    // Otherwise, refresh.
-    const refreshToken = cached && cached.refresh_token;
-    if (!refreshToken) throw new Error('No refresh token stored. Run OAuth first.');
-
-    const basicAuth = Buffer.from(`${process.env.QB_CLIENT_ID}:${process.env.QB_CLIENT_SECRET}`).toString('base64');
-    const res = await fetch(QB_OAUTH_TOKEN_URL, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Basic ${basicAuth}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
-    });
-    if (!res.ok) {
-        const detail = await res.text().catch(() => '');
-        throw new Error(`QB token refresh failed ${res.status}: ${detail}`);
-    }
-    const j = await res.json();
-    const accessToken = j.access_token;
-    const newRefreshToken = j.refresh_token || refreshToken; // QB sometimes rotates, sometimes not
-    const expiresAt = now + (Number(j.expires_in || 3600) * 1000);
-
-    await _redis.hset('qb:tokens', {
-        access_token: accessToken,
-        access_expires_at: expiresAt,
-        refresh_token: newRefreshToken,
-        refresh_token_updated_at: now,
-    });
-    return accessToken;
-}
 
 async function _qbApi(path) {
     const token = await getAccessToken();

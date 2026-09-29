@@ -34,14 +34,14 @@ async function currentRefreshToken() {
     return stored || process.env.HUBSTAFF_REFRESH_TOKEN || '';
 }
 
-async function mintAccessToken() {
+async function exchangeAccessToken() {
     const rt = await currentRefreshToken();
     if (!rt) return { ok: false, error: 'no_refresh_token', hint: 'Set a Hubstaff personal access token. Redis key ' + RT_KEY + ', or HUBSTAFF_REFRESH_TOKEN.' };
 
     const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: rt });
     let r, j;
     try {
-        r = await fetch(ACCOUNT, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA }, body });
+        r = await fetch(ACCOUNT, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA }, signal:AbortSignal.timeout(15000), body });
         j = await r.json().catch(() => ({}));
     } catch (e) {
         return { ok: false, error: 'network', hint: String(e).slice(0, 120) };
@@ -56,10 +56,20 @@ async function mintAccessToken() {
     }
     // Persist the rotation FIRST. If this write is lost the next call fails with invalid_grant and
     // the whole residual feed goes quiet, which is the failure mode that killed the last token.
-    if (j.refresh_token && j.refresh_token !== rt) await redis.set(RT_KEY, j.refresh_token).catch(() => {});
+    if (j.refresh_token && j.refresh_token !== rt) await redis.set(RT_KEY, j.refresh_token);
     const ttl = Math.max(60, Number(j.expires_in || 3600) - 120);
     await redis.set(AT_KEY, j.access_token, { ex: ttl }).catch(() => {});
     return { ok: true, token: j.access_token };
+}
+
+async function mintAccessToken(){
+    const nonce=String(Date.now())+Math.random();
+    if(!await redis.set('hubstaff:refresh_lock',nonce,{nx:true,ex:30})){
+        for(let i=0;i<10;i++){await new Promise(r=>setTimeout(r,200));const token=await redis.get(AT_KEY);if(token)return {ok:true,token};}
+        return {ok:false,error:'refresh_busy',hint:'Hubstaff authorization refresh is already running; retry shortly.'};
+    }
+    try{const token=await redis.get(AT_KEY);return token?{ok:true,token}:await exchangeAccessToken();}
+    finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",['hubstaff:refresh_lock'],[nonce]);}
 }
 
 async function bearer() {
@@ -84,7 +94,7 @@ export async function hubstaffStatus() {
 async function api(path) {
     const b = await bearer();
     if (!b.ok) return { ok: false, ...b };
-    const r = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${b.token}`, 'User-Agent': UA } });
+    const r = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${b.token}`, 'User-Agent': UA },signal:AbortSignal.timeout(15000) });
     if (r.status === 401) {                       // cached bearer went stale mid-flight
         await redis.del(AT_KEY).catch(() => {});
         const b2 = await mintAccessToken();

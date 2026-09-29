@@ -12,7 +12,9 @@
 // Commission = base * rate, where rate = dealType: va -> the rep's rate (default 35), website -> 30, ai -> 10.
 // base = the paid invoice amount once paid, else the HubSpot deal amount as an estimate (admin can pin it, incl 0).
 
-import { currentRep, openIdentity, adminAuthorized, listReps, readBody, redis } from './_auth.js';
+import { currentRep, listReps, readBody, redis, SITE } from './_auth.js';
+import {onboardingAmount,invoicePayments} from './_commission-evidence.js';
+import {financeAccess,financeMachine} from './_finance-access.js';
 import { qboConnected, qboQuery } from './_qbo.js';
 import { hoursByClient, hubstaffStatus } from './_hubstaff.js';
 
@@ -166,7 +168,7 @@ async function loadQboPaid() {
     if (!(await qboConnected())) return { connected: false };
     let invoices = [];
     try {
-        const j = await qboQuery("SELECT Id, DocNumber, TotalAmt, Balance, TxnDate, CustomerRef FROM Invoice ORDERBY TxnDate DESC MAXRESULTS 1000");
+        const j = await qboQuery("SELECT Id, DocNumber, TotalAmt, Balance, TxnDate, CustomerRef, Line FROM Invoice ORDERBY TxnDate DESC MAXRESULTS 1000");
         invoices = (j && j.QueryResponse && j.QueryResponse.Invoice) || [];
     } catch (e) { return { connected: true, error: String((e && e.message) || e).slice(0, 200) }; }
     let customers = [];
@@ -195,7 +197,7 @@ async function loadQboPaid() {
         const paid = balance <= 0 && total > 0;
         const c = ensure(id, inv.CustomerRef && inv.CustomerRef.name);
         // Keep every invoice so a deal can be tied to ITS OWN invoice, not to the customer as a whole.
-        c.invoices.push({ id: inv.Id, docNumber: inv.DocNumber || '', total, balance, date, paid });
+        c.invoices.push({ id: inv.Id, docNumber: inv.DocNumber || '', total, balance, date, paid, onboarding:onboardingAmount(inv), receipts:[] });
         if (paid) {
             c.paidCount++; c.paidTotal += total;
             if (date && (!c.lastPaidDate || date > c.lastPaidDate)) c.lastPaidDate = date;
@@ -206,15 +208,19 @@ async function loadQboPaid() {
     // payment, so payable requires a paid invoice AND received > 0.
     let payments = [];
     try {
-        const j = await qboQuery("SELECT CustomerRef, TotalAmt, TxnDate, PaymentMethodRef FROM Payment ORDERBY TxnDate DESC MAXRESULTS 1000");
+        const j = await qboQuery("SELECT Id, CustomerRef, TotalAmt, TxnDate, PaymentMethodRef, Line FROM Payment ORDERBY TxnDate DESC MAXRESULTS 1000");
         payments = (j && j.QueryResponse && j.QueryResponse.Payment) || [];
-    } catch (e) { payments = []; }
+    } catch (e) { return {connected:true,error:'QuickBooks payment evidence unavailable'}; }
+    let methodNames={};
+    try {const j=await qboQuery("SELECT Id, Name FROM PaymentMethod MAXRESULTS 1000");for(const m of j.QueryResponse?.PaymentMethod||[])methodNames[m.Id]=m.Name;}catch{return {connected:true,error:'Payment method verification unavailable'};}
     payments.forEach(p => {
+        const methodName=p.PaymentMethodRef?.name||methodNames[p.PaymentMethodRef?.value]||'';
         const id = p.CustomerRef && p.CustomerRef.value; if (!id) return;
         const c = ensure(id, p.CustomerRef && p.CustomerRef.name);
         const amt = Number(p.TotalAmt) || 0;
         c.received += amt;
-        const method = (p.PaymentMethodRef && (p.PaymentMethodRef.name || p.PaymentMethodRef.value)) || '';
+        for(const allocation of invoicePayments(p)){const inv=c.invoices.find(i=>i.id===allocation.invoiceId);if(inv)inv.receipts.push({amount:allocation.amount,date:p.TxnDate,id:p.Id,method:methodName,isCard:CARD_METHOD.test(methodName)});}
+        const method = methodName;
         const isCard = CARD_METHOD.test(String(method));
         if (isCard) { c.cardPaid += amt; c.cardCount++; }
         // Keep the individual payments. A client on an instalment plan needs to see what EACH payment
@@ -228,11 +234,11 @@ async function loadQboPaid() {
     try {
         const j = await qboQuery("SELECT CustomerRef, TotalAmt, TxnDate FROM RefundReceipt ORDERBY TxnDate DESC MAXRESULTS 500");
         refunds = (j && j.QueryResponse && j.QueryResponse.RefundReceipt) || [];
-    } catch (e) { refunds = []; }
+    } catch (e) { return {connected:true,error:'Refund verification unavailable'}; }
     try {
         const j = await qboQuery("SELECT CustomerRef, TotalAmt, TxnDate FROM CreditMemo ORDERBY TxnDate DESC MAXRESULTS 500");
         refunds = refunds.concat((j && j.QueryResponse && j.QueryResponse.CreditMemo) || []);
-    } catch (e) { /* credit memos optional */ }
+    } catch (e) { return {connected:true,error:'Credit verification unavailable'}; }
     refunds.forEach(r => {
         const id = r.CustomerRef && r.CustomerRef.value; if (!id) return;
         const c = ensure(id, r.CustomerRef && r.CustomerRef.name);
@@ -293,7 +299,7 @@ export async function buildResiduals(deals, repRateByEmail, manualMap, range) {
         [d.company, d.client, d.name].filter(Boolean).forEach(n => {
             candidates(n).forEach(c => {
                 const k = normName(c);
-                if (k && k.length > 2 && !byName[k]) byName[k] = d;
+                if(k&&k.length>2){if(!Object.hasOwn(byName,k))byName[k]=d;else if(byName[k]?.dealId!==d.dealId)byName[k]=null;}
             });
         });
     });
@@ -312,13 +318,14 @@ export async function buildResiduals(deals, repRateByEmail, manualMap, range) {
         const plan = repRateByEmail[repEmail];
         const perHour = plan && plan.residualPerHour != null ? Number(plan.residualPerHour) : 0;
         const win = residualWindow(deal.closeDate);
+        const eligibleHours=win?Object.entries(c.byDay||{}).filter(([day])=>day>=win.from&&day<win.to).reduce((n,[,secs])=>n+Number(secs)/3600,0):0;
         // No rate on file means no residual, and we say so. Silently paying $0 is how this rots.
         lines.push({
             client: c.name, dealId: deal.dealId, repEmail,
-            hours: c.hours, vaCount: c.vaCount,
-            perHour, residual: Math.round(c.hours * perHour * 100) / 100,
+            hours: Math.round(eligibleHours*100)/100, trackedHours:c.hours, vaCount: c.vaCount,
+            perHour, residual: Math.round(eligibleHours * perHour * 100) / 100,
             window: win, closeDate: deal.closeDate,
-            note: !repEmail ? 'deal has no owner, so no rep to pay'
+            note: !win ? 'deal close date missing; residual cannot be calculated' : !repEmail ? 'deal has no owner, so no rep to pay'
                 : !plan ? 'owner is not a registered rep'
                 : !perHour ? 'rep has no residualPerHour on file'
                 : '',
@@ -510,7 +517,7 @@ function assignInvoices(deals, overrides, qbo) {
         const custId = matchCustomer(d, ov, qbo);
         const cust = custId && qbo.byCust[custId];
         const inv = cust && (cust.invoices || []).find(i => String(i.id) === String(ov.invoiceId));
-        if (inv) { assigned[d.dealId] = { custId, inv }; claimed[inv.id] = true; }
+        if (inv&&!claimed[inv.id]) { assigned[d.dealId] = { custId, inv }; claimed[inv.id] = true; }
     });
 
     // Then auto-assign, oldest close first, so early deals take the early invoices.
@@ -520,7 +527,7 @@ function assignInvoices(deals, overrides, qbo) {
         const custId = matchCustomer(d, ov, qbo);
         const cust = custId && qbo.byCust[custId];
         if (!cust) return;
-        const pool = (cust.invoices || []).filter(i => !claimed[i.id]);
+        const pool = (cust.invoices || []).filter(i => !claimed[i.id]&&((d.dealType||'va')!=='va'||i.onboarding>0));
         if (!pool.length) { assigned[d.dealId] = { custId, inv: null }; return; }
         const close = d.closeDate || '';
         let best = null, bestScore = null;
@@ -562,27 +569,28 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     // INSTALMENTS (Paul, 2026-09-04). A client paying $2,099 as three $700 instalments earns the rep
     // commission as each payment lands, not all at once when the last one clears. The old rule was
     // Balance == 0 or nothing, which would have shown Madison $0 on a deal already a third collected.
-    // An invoice's own TotalAmt and Balance give exact per-invoice attribution, so this needs no walk
-    // of QBO Payment lines. cust.received stays in the guard so a written-off invoice, which can read
-    // Balance 0 with no money in, is never mistaken for a payment.
+    // Require Payment.LinkedTxn evidence for this invoice; zero balance alone is not cash.
     const invTotal = inv ? (Number(inv.total) || 0) : 0;
     const invBalance = inv ? (Number(inv.balance) || 0) : 0;
-    const invReceived = inv ? Math.max(0, round(Math.min(invTotal, invTotal - invBalance))) : 0;
-    const moneyLanded = !!(cust && cust.received > 0);
+    const allocatedCash=(inv?.receipts||[]).reduce((n,p)=>n+p.amount,0);
+    const invReceived=inv?Math.max(0,round(Math.min(invTotal,allocatedCash))):0;
+    const eligibleBase=dealType==='va'?(inv?.onboarding||0):invTotal;
+    const earnedBase=invTotal>0?invReceived*Math.min(1,eligibleBase/invTotal):0;
+    const moneyLanded = allocatedCash>0;
     const invoicePaid = !!(inv && inv.paid && moneyLanded);
     const invoicePartPaid = !!(inv && invReceived > 0 && moneyLanded);
 
     // Earned on what actually came in. With nothing collected yet the line still shows the full deal
     // so the rep can see what is coming, and it stays 'pending' until money lands.
     const gross = round((ov && ov.amount != null) ? ov.amount
-        : (invoicePartPaid ? invReceived : deal.amount));
+        : (invoicePartPaid ? earnedBase : dealType==='va'?eligibleBase:deal.amount));
 
     // Net of processing fees (Paul, 2026-08-14). Only charged when the money actually came in on a
     // card: an ACH or a cheque incurs no processing fee and must not be docked one. An explicit
     // admin amount is taken as already-final and is never reduced again.
-    const paidByCard = !!(cust && cust.cardCount > 0);
+    const paidByCard=(inv?.receipts||[]).some(p=>p.isCard);
     const feeApplies = invoicePartPaid && paidByCard && !(ov && ov.amount != null) && flatOrPct(dealType) !== 'skip';
-    const fee = feeApplies ? Math.round((gross * (FEE_PCT / 100) + FEE_FIXED) * 100) / 100 : 0;
+    const fee = feeApplies ? Math.round((inv.receipts||[]).filter(p=>p.isCard).reduce((n,p)=>n+(p.amount*(FEE_PCT/100)+FEE_FIXED)*(invTotal?eligibleBase/invTotal:0),0)*100)/100 : 0;
     const base = round(gross - fee);
 
     const flat = FLAT_COMMISSION[dealType];
@@ -597,12 +605,12 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     if (refunded && !(ov && ov.keepOnRefund)) {
         clawback = commission;
         commission = 0;
-        status = 'clawed_back';
+        status = 'refund_review';
     }
 
     // What is still to come on this deal, so a rep sees "earned so far" and "remaining" rather than a
     // single number that quietly means different things on an instalment deal.
-    const outstanding = round(Math.max(0, (invTotal || deal.amount) - invReceived));
+    const outstanding = round(Math.max(0, (dealType==='va'?eligibleBase:invTotal||deal.amount) - earnedBase));
     const remainingCommission = (flat != null) ? 0 : round(outstanding * rate / 100);
 
     // Per-payment breakdown, so an instalment deal shows what each payment actually earned rather than
@@ -612,28 +620,29 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     // between reps. In that case the schedule is omitted rather than approximated.
     let paymentSchedule = [];
     const custInvoices = (cust && cust.invoices) ? cust.invoices.length : 0;
-    if (flat == null && cust && Array.isArray(cust.payments) && custInvoices === 1) {
-        paymentSchedule = cust.payments
+    if (flat == null && inv && inv.receipts.length) {
+        paymentSchedule = inv.receipts
             .slice()
             .sort((a, b) => String(a.date).localeCompare(String(b.date)))
             .map(pm => {
-                const pFee = pm.isCard ? Math.round((pm.amount * (FEE_PCT / 100) + FEE_FIXED) * 100) / 100 : 0;
+                const share=invTotal?eligibleBase/invTotal:0;
+                const pFee = pm.isCard ? Math.round((pm.amount * (FEE_PCT / 100) + FEE_FIXED)*share * 100) / 100 : 0;
                 return {
                     date: pm.date, amount: round(pm.amount), method: pm.method || (pm.isCard ? 'card' : ''),
-                    fee: pFee, commission: round((pm.amount - pFee) * rate / 100),
+                    fee: pFee, commission: round((pm.amount*share - pFee) * rate / 100),
                 };
             });
     }
 
     return {
         instalment: invTotal > 0 && invBalance > 0 && invReceived > 0,
-        invoiceTotal: invTotal, invoiceReceived: invReceived, invoiceBalance: invBalance,
+        invoiceTotal: invTotal, invoiceReceived: invReceived, invoiceBalance: invBalance, commissionBaseVerified:!!eligibleBase,
         outstanding, remainingCommission, paymentSchedule,
         dealId: deal.dealId, client: deal.name, company: deal.company,
         repEmail, repKnown: knownRep,
         ownerEmail: deal.ownerEmail, ownerName: deal.ownerName,
         closerEmail, closerName: (snap && snap.ownerName) || deal.ownerName, ownerChanged,
-        dealType, dealTypeAuto: !!(deal.dealType && !(ov && ov.dealType)),
+        bookedAmount:Number(deal.amount)||0, dealType, dealTypeAuto: !!(deal.dealType && !(ov && ov.dealType)),
         gross, fee, base, rate: (flat != null) ? null : rate, flat: (flat != null) ? round(flat) : null, commission,
         paidByCard, refunded, refundedAmount: cust ? round(cust.refunded) : 0, clawback, refundDate: cust ? cust.lastRefundDate : '',
         leadSource, splitPlan: houseRate != null, accelerated: false,
@@ -647,27 +656,15 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
-    // IDENTITY ON READS IS OPEN, EXACTLY LIKE EVERY OTHER REP PAGE.
-    //
-    // This endpoint still demanded a session cookie via currentRep, long after the rep OS was made
-    // login-free and moved to openIdentity. Nothing in the product sets that cookie any more, so
-    // BOTH the rep view and the admin view returned 401 login_required in production and the Team
-    // tab rendered "Could not load the team view / Failed to fetch". The page was not broken. It
-    // was asking for a door that had been removed.
-    //
-    // Writes are untouched: the POST override path below still requires the admin token.
-    const session = await currentRep(req).catch(() => null);
-    const who = req.method === 'GET' ? await openIdentity(req).catch(() => null) : session;
-    // Paul is the owner. His address identifies him on a shared link with no session, which is how
-    // he actually opens this page.
-    const OWNER_EMAILS = new Set(['hello@gostaffify.com', 'paul@gostaffify.com']);
-    const isAdmin = (who && who.role === 'admin')
-        || (who && OWNER_EMAILS.has(String(who.email || '').toLowerCase()))
-        || adminAuthorized(req);
+    const who=await currentRep(req).catch(()=>null);
+    const machine=financeMachine(req);
+    if(!machine&&!financeAccess(who))return res.status(who?403:401).json({error:who?'Finance is restricted to Paul and Madison':'Sign in to view financial data'});
+    const isAdmin=machine||financeAccess(who);
+    if(req.method==='POST'&&!machine&&req.headers.origin!==SITE)return res.status(403).json({error:'Invalid origin'});
 
     // ---- POST: admin overrides one deal ----
     if (req.method === 'POST') {
-        if (!isAdmin) return res.status(403).json({ error: 'admin_only' });
+        if (!machine&&(!financeAccess(who)||who.email.toLowerCase()==='madison@gostaffify.com')) return res.status(403).json({ error: 'owner_only' });
         const b = readBody(req);
         const dealId = (b.dealId || '').toString();
         if (!dealId) return res.status(400).json({ error: 'bad_deal' });
@@ -733,7 +730,8 @@ export default async function handler(req, res) {
     const residualMap = await loadResidualMap();
     const today = new Date().toISOString().slice(0, 10);
     const resStart = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10);
-    const residuals = await buildResiduals(hs.deals || [], repRateByEmail, residualMap, { start: resStart, stop: today })
+    const residualDeals=(hs.deals||[]).map(d=>({...d,ownerEmail:overrides[d.dealId]?.rep||ownerSnaps[d.dealId]?.ownerEmail||d.ownerEmail}));
+    const residuals = await buildResiduals(residualDeals, repRateByEmail, residualMap, { start: resStart, stop: today })
         .catch(e => ({ connected: false, error: String(e).slice(0, 120), lines: [], unmatched: [] }));
 
     const unowned = (hs.deals || []).filter(d => !d.ownerEmail);

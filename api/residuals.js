@@ -16,7 +16,8 @@
 // GET  /api/residuals/?weeks=1             -> include the weekly breakdown
 // POST /api/residuals/ {repEmail, periodIndex, paid, reference}  -> mark a period paid (admin only)
 
-import { redis, currentRep, listReps, adminAuthorized, readBody } from './_auth.js';
+import { redis, currentRep, listReps, readBody, SITE } from './_auth.js';
+import {financeAccess,financeMachine} from './_finance-access.js';
 import { hoursByClient } from './_hubstaff.js';
 import { loadHubspotWon } from './commissions.js';
 import { periodForWorkDate, periodByIndex, periodsBetween, weekKey, nextPayDate, PAY_ANCHOR, PERIOD_DAYS } from './_payperiods.js';
@@ -50,11 +51,14 @@ function residualWindow(closeDate) {
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     const who = await currentRep(req).catch(() => null);
-    const isAdmin = (who && who.role === 'admin') || adminAuthorized(req);
+    const machine=financeMachine(req);
+    if(!machine&&!financeAccess(who))return res.status(who?403:401).json({error:who?'Finance is restricted to Paul and Madison':'Sign in to view financial data'});
+    const isAdmin=machine||financeAccess(who);
+    if(req.method==='POST'&&!machine&&req.headers.origin!==SITE)return res.status(403).json({error:'Invalid origin'});
 
     // ---- POST: an admin records that a period has been paid ----
     if (req.method === 'POST') {
-        if (!isAdmin) return res.status(403).json({ error: 'admin_only' });
+        if (!machine&&(!financeAccess(who)||who.email.toLowerCase()==='madison@gostaffify.com')) return res.status(403).json({ error: 'owner_only' });
         const b = readBody(req);
         const repEmail = String(b.repEmail || '').toLowerCase();
         const periodIndex = Number(b.periodIndex);
@@ -112,11 +116,14 @@ export default async function handler(req, res) {
         });
     }
 
-    const deals = hs.deals || [];
+    if(hs.error||!hs.configured||hs.truncated||hours.truncated)return res.status(503).json({error:'Incomplete source data; residual calculation withheld'});
+    const snaps=await redis.hgetall('commission:owners')||{};const overrides=await redis.hgetall('commission:overrides')||{};
+    const parse=v=>typeof v==='string'?JSON.parse(v):v||{};
+    const deals=(hs.deals||[]).map(d=>({...d,ownerEmail:parse(overrides[d.dealId]).rep||parse(snaps[d.dealId]).ownerEmail||d.ownerEmail}));
     const byName = {};
     deals.forEach(d => {
         [d.company, d.client, d.name].filter(Boolean).forEach(n => {
-            forms(n).forEach(f => { const k = norm(f); if (k && k.length > 2 && !byName[k]) byName[k] = d; });
+            forms(n).forEach(f => { const k = norm(f); if(k&&k.length>2){if(!Object.hasOwn(byName,k))byName[k]=d;else if(byName[k]?.dealId!==d.dealId)byName[k]=null;} });
         });
     });
 
@@ -136,6 +143,7 @@ export default async function handler(req, res) {
         const rep = repByEmail[repEmail];
         const perHour = rep && rep.perHour != null ? rep.perHour : 0;
         const win = residualWindow(deal.closeDate);
+        if(!win){unmatched.push({client:c.name,hours:c.hours,reason:'Missing deal close date'});continue;}
 
         const L = ledger[repEmail] || (ledger[repEmail] = {
             repEmail, name: (rep && rep.name) || repEmail || 'unattributed',

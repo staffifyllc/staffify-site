@@ -242,7 +242,7 @@
 <script>
 (function(){
   var app=document.getElementById('app'), tbRight=document.getElementById('tbRight');
-  var ME=null, C=null, R=null, ADM=null, TAB='overview', F={q:'',status:'',range:'all'}, OPEN={}, LOADED_AT=null;
+  var ME=null, C=null, R=null, ADM=null, TAB='finance', F={q:'',status:'',range:'all'}, OPEN={}, LOADED_AT=null, FIN=null;
 
   // ---------- helpers ----------
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -252,7 +252,7 @@
   function ago(iso){if(!iso)return '';var m=Math.round((Date.now()-Date.parse(iso))/60000);return m<1?'just now':(m<60?m+' min ago':Math.round(m/60)+' h ago');}
   function qp(k){return new URLSearchParams(location.search).get(k);}
   function typeLabel(t){return t==='website'?'Website build':(t==='ai'?'AI automation':'VA placement');}
-  function isAdmin(){return !!(ME&&ME.role==='admin');}
+  function isAdmin(){return !!(ME&&ME.financeAccess===true);}
 
   // The backend has four states. These are their honest, human names, with what each one means
   // and what happens next. When QuickBooks is disconnected, "pending" cannot mean "waiting on the
@@ -364,7 +364,7 @@
   function tabs(){
     var n=((C&&C.deals)||[]).length;
     var b=function(id,label,count){return '<button role="tab" data-tab="'+id+'" aria-selected="'+(TAB===id)+'">'+label+(count!=null?'<span class="n">'+count+'</span>':'')+'</button>';};
-    return '<div class="tabs" role="tablist">'+b('overview','Overview')+b('commissions','Commissions',n)+b('payouts','Payouts')+(isAdmin()?b('team','Team')+b('exceptions','Exceptions'):'')+'</div>';
+    return '<div class="tabs" role="tablist">'+b('finance','Revenue & commissions')+b('overview','My commissions')+b('commissions','Commissions',n)+b('payouts','Payouts')+(isAdmin()?b('team','Team')+b('exceptions','Exceptions'):'')+'</div>';
   }
 
   // ---------- commission detail: the "why is this number what it is" view ----------
@@ -547,8 +547,28 @@
     }).join('');
   }
 
+  function financePanel(){
+    if(!FIN)return '<p>Loading private financial dashboard…</p>';
+    if(!FIN.commission)return '<div class="errbox"><h3>Financial sync pending</h3><p>'+esc(FIN.error||FIN.message||'Waiting for the first cloud refresh.')+'</p></div>';
+    var c=FIN.commission,r=FIN.residual||{},deals=(c.deals||[]).filter(function(d){return d.dealType==='va'&&!/\bflylisted\b/i.test(d.company||d.client||'');});
+    var booked=deals.reduce(function(n,d){return n+(d.bookedAmount||0);},0),calc=deals.reduce(function(n,d){return n+(d.commission||0);},0);
+    var verified=c.qboConnected&&!c.qboError;
+    var received=deals.reduce(function(n,d){return n+(d.invoiceReceived||0);},0);
+    var h='<p class="sub">Private to Paul and Madison · Staffify staffing deals · Cloud refresh every 5 minutes</p>';
+    h+='<div class="fresh">Last successful sync: '+esc(new Date(FIN.updatedAt).toLocaleString())+(FIN.stale||FIN.status==='error'?' · STALE: refresh needs attention':'')+'</div>';
+    h+='<div class="band4"><div class="kpi"><b>'+money(booked)+'</b><span>CRM client revenue records, all time</span></div><div class="kpi"><b>'+(verified?money(received):'Unavailable')+'</b><span>Payments verified against deal invoices</span></div><div class="kpi"><b>'+money(calc)+'</b><span>Calculated placement commissions</span></div><div class="kpi"><b>'+money(r.totals&&r.totals.owed||0)+'</b><span>Residuals due · Hubstaff hours</span></div></div>';
+    if(!verified)h+='<div class="hold"><h3>Payment verification needs QuickBooks</h3><p>CRM revenue records and calculated commissions are not proof of money received. Connect the Staffify QuickBooks company to verify payments.</p><a href="/api/quickbooks-oauth-start/">Connect QuickBooks</a></div>';
+    h+='<p class="sub">CRM records may include lifetime client billing. Commission calculations use identified onboarding invoice lines; ordinary hourly billing is excluded from the placement commission base.</p><h3 class="sec">Commission attribution</h3><div class="tbl"><table><thead><tr><th>Client / deal</th><th>Closer</th><th>CRM revenue record</th><th>Commission</th><th>Status</th></tr></thead><tbody>'+deals.map(function(d){return '<tr><td>'+esc(d.company||d.client)+'</td><td>'+esc(d.closerName||d.repEmail||'Unassigned')+'</td><td>'+money(d.bookedAmount)+'</td><td>'+(d.commissionBaseVerified?money(d.commission):'Unverified base')+'</td><td>'+esc(d.status==='pending'?'Awaiting payment verification':d.status)+'</td></tr>';}).join('')+'</tbody></table></div>';
+    h+='<h3 class="sec">Hubstaff residual ledger</h3><p class="sub">'+esc(r.range? r.range.start+' to '+r.range.stop:'')+' · Hours inside each deal’s six-month residual window.</p><div class="tbl"><table><thead><tr><th>Salesperson</th><th>Eligible VA hours</th><th>Due</th><th>Accruing</th><th>Recorded paid</th></tr></thead><tbody>'+(r.reps||[]).map(function(x){return '<tr><td>'+esc(x.name||x.repEmail)+'</td><td>'+x.totalHours+'</td><td>'+money(x.owed)+'</td><td>'+money(x.accruing)+'</td><td>'+money(x.paidToDate)+'</td></tr>';}).join('')+'</tbody></table></div>';
+    h+='<details><summary>Client hours and residuals</summary>'+(r.reps||[]).map(function(x){return '<h3>'+esc(x.name||x.repEmail)+'</h3>'+(x.clients||[]).map(function(y){return '<p>'+esc(y.client)+' · '+y.hours+' hours · '+money(y.amount)+'</p>';}).join('');}).join('')+'</details>';
+    h+='<h3 class="sec">Needs attention</h3>'+(c.blockers||[]).map(function(x){return '<p>'+esc(x.detail)+'</p>';}).join('');
+    return h;
+  }
+  async function loadFinance(){try{var response=await fetch('/api/finance-snapshot/',{cache:'no-store'});if(!response.ok)throw Error('Financial data is unavailable or access is restricted');FIN=await response.json();}catch(e){FIN=FIN?Object.assign({},FIN,{stale:true,status:'error'}):{error:e.message};}if(TAB==='finance')render();}
+
   // ---------- render ----------
   function render(){
+    if(TAB==='finance'){app.innerHTML=head()+tabs()+financePanel();wire();return;}
     if(!C){ app.innerHTML=skeleton(); return; }
     if(C.error&&C.error!=='login_required'){ app.innerHTML=head()+'<div class="errbox"><h3>We could not load your commissions</h3><p>'+esc(C.error)+(C.hint?' '+esc(C.hint):'')+'</p><p style="margin-top:8px"><button class="btn small" id="retry">Try again</button></p></div>'; wire(); return; }
     if(C.connected===false){ app.innerHTML=head()+'<div class="errbox"><h3>Commission data is not connected</h3><p>'+esc(C.message||'HubSpot is not connected, so there are no closed deals to show.')+' Nothing here is a zero; the data source is off.</p></div>'; return; }
@@ -627,9 +647,11 @@
     var meRes; try{ meRes=await fetch('/api/auth-me',{cache:'no-store'}); }catch(e){ showSignIn('Network error.'); return; }
     if(meRes.status!==200){ var m=qp('e'); showSignIn(m==='expired'?'That link expired. Request a new one.':(m==='norep'?'That account is not set up as a rep yet.':'')); return; }
     ME=(await meRes.json()).rep;
+    if(!ME.financeAccess){app.innerHTML='<div class="gate"><h2>Private finance workspace</h2><p>Revenue and commission details are restricted to Paul and Madison.</p><a href="/hub/">Return to the Hub</a></div>';return;}
     tbRight.innerHTML='<a class="btn ghost small" href="/api/auth-logout" style="text-decoration:none">Sign out</a>';
-    var t=qp('tab'); if(t&&['overview','commissions','payouts','team','exceptions'].includes(t)) TAB=t;
-    loadData();
+    var t=qp('tab'); if(t&&['finance','overview','commissions','payouts','team','exceptions'].includes(t)) TAB=t;
+    loadFinance();loadData();
+    setInterval(function(){if(!document.hidden)loadFinance();},30000);
   }
   load();
 })();
