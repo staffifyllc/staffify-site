@@ -13,8 +13,10 @@
 // base = the paid invoice amount once paid, else the HubSpot deal amount as an estimate (admin can pin it, incl 0).
 
 import { currentRep, listReps, readBody, redis, SITE } from './_auth.js';
-import {onboardingAmount,invoicePayments,commissionDeal} from './_commission-evidence.js';
+import {onboardingAmount,invoicePayments,commissionDeal,placementUnits} from './_commission-evidence.js';
 import {financeAccess,financeMachine} from './_finance-access.js';
+import {MADISON_PLAN,isMadison,sourceKind,applyMadisonPlan,residualTerms,eligibleResidualDay,indexResidualDeal} from './_madison-commission-plan.js';
+import {KEY as OUTREACH_KEY} from './_outreach-queue.js';
 import { qboConnected, qboQuery } from './_qbo.js';
 import { hoursByClient, hubstaffStatus } from './_hubstaff.js';
 
@@ -114,7 +116,7 @@ export async function loadHubspotWon(ownerIdToRep = {}) {
             const body = {
                 filterGroups: [{ filters: [{ propertyName: 'hs_is_closed_won', operator: 'EQ', value: 'true' }] }],
                 sorts: [{ propertyName: 'closedate', direction: 'DESCENDING' }],
-                properties: ['dealname', 'amount', 'closedate', 'hubspot_owner_id', 'pipeline', LEAD_SOURCE_PROP],
+                properties: ['dealname', 'amount', 'closedate', 'hubspot_owner_id', 'pipeline', LEAD_SOURCE_PROP, 'staffify_commission_lead_source'],
                 limit: 100,
             };
             if (after) body.after = after;
@@ -157,7 +159,8 @@ export async function loadHubspotWon(ownerIdToRep = {}) {
             clientEmail: (emailByDeal[d.id] || '').toLowerCase(),
             dealType: pipeType[p.pipeline] || '',
             // Self-sourced only when the deal says so. Anything else is treated as a company lead.
-            leadSource: /self|own|rep.?sourced|prospect/i.test(String(p[LEAD_SOURCE_PROP] || '')) ? 'self' : '',
+            leadSource: sourceKind(p.staffify_commission_lead_source||p[LEAD_SOURCE_PROP]),
+            sourceEvidence:p.staffify_commission_lead_source?'Recorded CRM commission source':'',
         };
     });
     return { configured: true, deals, truncated, ownersError };
@@ -197,7 +200,7 @@ async function loadQboPaid() {
         const paid = balance <= 0 && total > 0;
         const c = ensure(id, inv.CustomerRef && inv.CustomerRef.name);
         // Keep every invoice so a deal can be tied to ITS OWN invoice, not to the customer as a whole.
-        c.invoices.push({ id: inv.Id, docNumber: inv.DocNumber || '', total, balance, date, paid, onboarding:onboardingAmount(inv), receipts:[] });
+        c.invoices.push({ id: inv.Id, docNumber: inv.DocNumber || '', total, balance, date, paid, onboarding:onboardingAmount(inv), placementUnits:placementUnits(inv), receipts:[] });
         if (paid) {
             c.paidCount++; c.paidTotal += total;
             if (date && (!c.lastPaidDate || date > c.lastPaidDate)) c.lastPaidDate = date;
@@ -252,8 +255,7 @@ async function loadQboPaid() {
 
 // ---- Residual: $/hour on every hour a VA works under a client the rep closed ----
 //
-// Paul, 2026-09-04: Madison earns $0.50 per hour worked. The canonical plan is $1/hr for six
-// months; hers is half, matching her 20% against the standard 35%.
+// Paul confirmed Madison earns $1 per hour on 2026-09-29, without the old six-month cutoff.
 //
 // THE CHAIN: Hubstaff time entry -> Hubstaff project (= the client) -> the Closed Won deal for that
 // client -> that deal's owner -> the rep. It only scales if the client-to-deal step is automatic,
@@ -266,14 +268,6 @@ function normName(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/
 
 // Deal close date + the residual window. Hours before the deal closed are not the rep's, and the
 // window stops the residual running forever on a client they closed years ago.
-function residualWindow(closeDate) {
-    if (!closeDate) return null;
-    const from = new Date(closeDate + 'T00:00:00Z');
-    if (isNaN(from)) return null;
-    const to = new Date(from); to.setUTCMonth(to.getUTCMonth() + RESIDUAL_MONTHS);
-    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
-}
-
 async function loadResidualMap() {
     try { return (await redis.hgetall(RESIDUAL_MAP_KEY)) || {}; } catch (e) { return {}; }
 }
@@ -299,7 +293,7 @@ export async function buildResiduals(deals, repRateByEmail, manualMap, range) {
         [d.company, d.client, d.name].filter(Boolean).forEach(n => {
             candidates(n).forEach(c => {
                 const k = normName(c);
-                if(k&&k.length>2){if(!Object.hasOwn(byName,k))byName[k]=d;else if(byName[k]?.dealId!==d.dealId)byName[k]=null;}
+                indexResidualDeal(byName,k,d);
             });
         });
     });
@@ -316,9 +310,9 @@ export async function buildResiduals(deals, repRateByEmail, manualMap, range) {
 
         const repEmail = (deal.ownerEmail || '').toLowerCase();
         const plan = repRateByEmail[repEmail];
-        const perHour = plan && plan.residualPerHour != null ? Number(plan.residualPerHour) : 0;
-        const win = residualWindow(deal.closeDate);
-        const eligibleHours=win?Object.entries(c.byDay||{}).filter(([day])=>day>=win.from&&day<win.to).reduce((n,[,secs])=>n+Number(secs)/3600,0):0;
+        const perHour = isMadison(repEmail)?1:plan && plan.residualPerHour != null ? Number(plan.residualPerHour) : 0;
+        const win = residualTerms(repEmail,deal.closeDate,RESIDUAL_MONTHS);
+        const eligibleHours=win?Object.entries(c.byDay||{}).filter(([day])=>eligibleResidualDay(day,win)).reduce((n,[,secs])=>n+Number(secs)/3600,0):0;
         // No rate on file means no residual, and we say so. Silently paying $0 is how this rots.
         lines.push({
             client: c.name, dealId: deal.dealId, repEmail,
@@ -438,7 +432,7 @@ function allocatePayouts(lines, payouts) {
 function applyAccelerator(lines) {
     const groups = {};
     lines.forEach(l => {
-        if (l.flat != null || !l.repEmail || !l.repKnown || l.splitPlan || l.refunded || l.status==='attribution_review' || l.status==='payment_review') return;
+        if (isMadison(l.repEmail) || l.flat != null || !l.repEmail || !l.repKnown || l.splitPlan || l.refunded || l.status==='attribution_review' || l.status==='payment_review') return;
         const month = (l.closeDate || '').slice(0, 7);
         if (!month) return;
         (groups[l.repEmail + '|' + month] || (groups[l.repEmail + '|' + month] = [])).push(l);
@@ -556,12 +550,12 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
 
     // Lead source decides which rate applies for reps on a split plan. Admin override wins, then the
     // HubSpot property, then default to a company lead (the conservative side for a handed-over lead).
-    const leadSource = ((ov && ov.leadSource) || deal.leadSource || 'house');
+    const leadSource = ((ov && ov.leadSource) || deal.leadSource || (isMadison(repEmail)?'':'house'));
     const selfSourced = leadSource === 'self';
     const houseRate = (snap && snap.houseRate != null) ? Number(snap.houseRate) : (plan ? plan.houseRate : null);
     const ownRate = (snap && snap.rate != null) ? Number(snap.rate) : (plan ? plan.rate : 35);
     // Rates are locked at win time, so changing a rep's plan never re-prices deals they already closed.
-    const planRate = (!selfSourced && houseRate != null) ? houseRate : ownRate;
+    const planRate = isMadison(repEmail)&&!ov?.paidOut?(selfSourced?30:20):(!selfSourced && houseRate != null) ? houseRate : ownRate;
     const rate = rateFor(dealType, planRate);
 
     const customerId = (qbo && qbo.connected) ? ((assignment && assignment.custId) || matchCustomer(deal, ov, qbo)) : '';
@@ -638,6 +632,7 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     }
 
     return {
+        placementUnits:inv?.placementUnits||[], commissionEligibleBase:eligibleBase, sourceEvidence:deal.sourceEvidence||'',
         instalment: invTotal > 0 && invBalance > 0 && invReceived > 0,
         invoiceTotal: invTotal, invoiceReceived: invReceived, invoiceBalance: invBalance, commissionBaseVerified:!!eligibleBase,
         outstanding, remainingCommission, paymentSchedule,
@@ -672,6 +667,8 @@ export default async function handler(req, res) {
         const dealId = (b.dealId || '').toString();
         if (!dealId) return res.status(400).json({ error: 'bad_deal' });
         if (b.clear) { await redis.hdel(OVERRIDE_KEY, dealId); return res.status(200).json({ ok: true, cleared: dealId }); }
+        const oldRaw=await redis.hget(OVERRIDE_KEY,dealId);const old=typeof oldRaw==='string'?JSON.parse(oldRaw):oldRaw||{};
+        if(b.action==='lead-source'){const kind=sourceKind(b.leadSource);if(!kind)return res.status(400).json({error:'Choose business or self-generated'});const updated={...old,leadSource:kind,sourceRecordedAt:new Date().toISOString(),sourceRecordedBy:who?.email||'machine'};const saved=await fetch(HS+'/crm/v3/objects/deals/'+encodeURIComponent(dealId),{method:'PATCH',headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({properties:{staffify_commission_lead_source:kind}}),signal:AbortSignal.timeout(15000)});if(!saved.ok)return res.status(503).json({error:'CRM source could not be saved; no finance override changed'});await redis.hset(OVERRIDE_KEY,{[dealId]:JSON.stringify(updated)});return res.status(200).json({ok:true,saved:dealId});}
         const rec = {
             rep: (b.rep || '').toString().trim().toLowerCase() || undefined,
             dealType: DEAL_TYPES.includes((b.dealType || '').toString()) ? b.dealType : undefined,
@@ -704,8 +701,7 @@ export default async function handler(req, res) {
         });
     }
 
-    // A GET can no longer 401: openIdentity always resolves to at least a Guest, and a page that
-    // cannot say who you are should show you an empty rep view, never an error box.
+    // Financial reads require a verified authorized identity or the cloud scheduler.
     if (!who && !isAdmin) return res.status(401).json({ error: 'login_required' });
 
     // Reps load FIRST, because a rep's recorded hubspotOwnerId is what lets a deal find its closer
@@ -723,8 +719,11 @@ export default async function handler(req, res) {
         loadHubspotWon(ownerIdToRep).catch(() => ({ configured: true, error: 'hubspot load failed', deals: [] })),
         loadQboPaid().catch(() => ({ connected: false })),
     ]);
+    const outreach=await redis.get(OUTREACH_KEY).catch(()=>null);
+    const businessEmails=new Set((outreach?.assignments||[]).map(x=>String(x.email||'').toLowerCase()));
+    for(const d of hs.deals||[]){if(!d.leadSource&&businessEmails.has(d.clientEmail)){d.leadSource='house';d.sourceEvidence='Existing Staffify business outreach pool';}}
     const repRateByEmail = {};
-    reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e) repRateByEmail[e] = { rate: repRate(r), houseRate: repHouseRate(r), residualPerHour: (r.residualPerHour != null && r.residualPerHour !== '') ? Number(r.residualPerHour) : null }; });
+    reps.forEach(r => { const e = (r.email || '').toLowerCase(); if (e) repRateByEmail[e] = { rate: isMadison(e)?30:repRate(r), houseRate: isMadison(e)?20:repHouseRate(r), residualPerHour: isMadison(e)?1:(r.residualPerHour != null && r.residualPerHour !== '') ? Number(r.residualPerHour) : null }; });
 
     // A deal that cannot find its rep earns nobody anything, so say so loudly rather than rendering
     // a confident zero. These are the three ways attribution breaks, in the order they bite.
@@ -762,6 +761,7 @@ export default async function handler(req, res) {
     const assignments = assignInvoices(hs.deals || [], overrides, qbo);
     const lines = (hs.deals || []).map(d => reconcile(d, overrides[d.dealId], qbo, repRateByEmail, snaps[d.dealId], assignments[d.dealId]));
     applyAccelerator(lines);
+    applyMadisonPlan(lines);
 
     // Auto-settle: flip payable -> paid out for any rep QuickBooks shows we have already paid (1099 vendors).
     // W2 reps (payroll) have no vendor record, so they stay manual and are labeled as such.
@@ -838,7 +838,7 @@ export default async function handler(req, res) {
         };
         const custList = qbo.connected ? Object.values(qbo.custById || {}).map(c => ({ id: c.id, name: c.name, email: c.email })) : [];
         return res.status(200).json({
-            connected: true, view: 'admin', qboConnected: !!qbo.connected, qboError: qbo.error || '',
+            connected: true, view: 'admin', madisonPlan:MADISON_PLAN, qboConnected: !!qbo.connected, qboError: qbo.error || '',
             blockers, residuals,
             byRep: ranked,
             generatedAt: new Date().toISOString(),

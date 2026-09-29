@@ -2,6 +2,7 @@ import {redis,currentRep,SITE} from './_auth.js';
 import {financeAccess,financeMachine} from './_finance-access.js';
 import commissions from './commissions.js';
 import residuals from './residuals.js';
+import {ensureMadisonPlan} from './_madison-commission-plan.js';
 import {monthlyRevenue} from './_finance-revenue.js';
 const KEY='finance:snapshot:v1',LOCK='finance:snapshot:lock';
 async function capture(handler){let code=200,value;await handler({method:'GET',headers:{authorization:'Bearer '+process.env.CRON_SECRET},query:{view:'admin'}},{setHeader(){},status(n){code=n;return this;},json(v){value=v;return v;}});if(code!==200||!value||value.error||value.qboError||!value.connected||value.truncated?.hubspot||value.truncated?.qbo)throw Error(value?.error||'Source unavailable');return value;}
@@ -13,6 +14,7 @@ export default async function handler(req,res){
  if(!machine&&(req.method!=='POST'||req.headers.origin!==SITE))return res.status(403).json({error:'Invalid request'});
  const nonce=String(Date.now());if(!await redis.set(LOCK,nonce,{nx:true,ex:290}))return res.status(200).json({running:true});
  const old=await redis.get(KEY);try{
+  await ensureMadisonPlan(redis);
   // Sequential: the shared Hubstaff refresh token must not be rotated concurrently.
   const commission=await capture(commissions),residual=await capture(residuals);
   const revenue=await monthlyRevenue().catch(()=>({connected:false,error:'QuickBooks monthly revenue report unavailable'}));
