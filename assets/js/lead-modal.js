@@ -175,13 +175,20 @@
         }).then(function (r) {
             if (!r.ok) throw new Error('Status ' + r.status);
             return r.json();
-        }).then(function () {
-            var s = getState();
-            s.submitted = true;
-            s.email = email;
-            setState(s);
+        }).then(function (resp) {
+            var st = getState();
+            st.submitted = true;
+            st.email = email;
+            setState(st);
             formWrap.style.display = 'none';
             success.style.display = 'block';
+            // A lead is counted only when the server durably stored a real subscriber:
+            // not a honeypot bot (client knows the hidden field was filled) and not a
+            // suppressed/unsubscribed address (server flags resp.suppressed).
+            var honeypot = (form.website && form.website.value) || '';
+            if (resp && resp.ok === true && !resp.suppressed && !honeypot) {
+                try { if (window.staffifyRequestSubmitted) window.staffifyRequestSubmitted({ form: 'lead_modal' }); } catch (e) {}
+            }
         }).catch(function (err) {
             console.error(err);
             errBox.textContent = 'Hmm, that didn’t go through. Try again or email hello@gostaffify.com.';
