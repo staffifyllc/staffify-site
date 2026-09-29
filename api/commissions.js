@@ -46,7 +46,7 @@ function rateFor(dealType, rate) { if (dealType === 'ai') return 10; return rate
 // A flat-fee deal type pays a fixed amount, so netting a processing fee off the invoice would not
 // change the payout. Skip the calculation rather than showing a deduction that does nothing.
 function flatOrPct(dealType) { return (FLAT_COMMISSION[dealType] != null) ? 'skip' : 'pct'; }
-function round(n) { return Math.round(Number(n) || 0); }
+function round(n) { return Math.round((Number(n) || 0)*100)/100; }
 function norm(s) { return String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
 
 // Resolve a deal's primary associated object id -> a property, via v4 batch associations + v3 batch read.
