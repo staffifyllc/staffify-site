@@ -1,3 +1,4 @@
+import {fairCandidates} from './_outreach-fairness.js';
 import {sendOne} from './_outreach-send.js';
 export function makeWorker({redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
 const LOCK='outreach:cloud:lock';
@@ -64,7 +65,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
   if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report});
   const hour=Number(new Intl.DateTimeFormat('en-US',{hour:'numeric',hourCycle:'h23',timeZone:'America/New_York'}).format(new Date()));
   if(cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000&&hour>=8&&state.records.filter(r=>r.status==='prepared').length<30){report.qualified=await supply(state,cfg);state=await save(state);}
-  const candidates=state.records.filter(r=>eligible(r,state)&&cfg.draftingEnabled!==false&&historyComplete&&(r.sentTouches>0||hour>=8)).sort((a,b)=>b.sentTouches-a.sentTouches);
+  const candidates=fairCandidates(state.records.filter(r=>eligible(r,state)&&cfg.draftingEnabled!==false&&historyComplete&&(r.sentTouches>0||hour>=8)),state.creations);
   for(const row of candidates){
    if(Date.now()-started>120000||report.created>=1)break;
    if(!cfg.accounts.find(a=>a.email===row.sender&&a.owner===row.owner)?.draftEnabled||!tokens[row.sender]||!quota(row,state.creations))continue;

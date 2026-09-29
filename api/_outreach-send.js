@@ -1,3 +1,4 @@
+import {fairCandidates} from './_outreach-fairness.js';
 import {dayKey,classify} from './_outreach-policy.js';
 export function sendQuota(row,state,now=Date.now()) {
  const day=dayKey(now),seen=new Map();
@@ -27,7 +28,7 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   state=await save(state);
  }
  const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hourCycle:'h23'}).format(new Date(now)));if(hour<8)return state;
- const candidates=state.records.filter(r=>r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')).sort((a,b)=>b.sentTouches-a.sentTouches);
+ const candidates=fairCandidates(state.records.filter(r=>r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
  for(const row of candidates){
   if(Date.now()-started>170000)break;
   if(!sendQuota(row,state)||state.pausedOwners.includes(row.owner)||state.suppressions.includes(row.recipient))continue;
