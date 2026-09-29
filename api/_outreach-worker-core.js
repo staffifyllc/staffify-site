@@ -8,7 +8,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
  const started=Date.now();let report={startedAt:new Date().toISOString(),trigger:String(req.headers['user-agent']||'').startsWith('vercel-cron')?'schedule':'manual',created:0,checked:0,status:'blocked'};
  async function finish(code){report.finishedAt=new Date().toISOString();try{await redis.set('outreach:cloud:last-run',report);}finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",[LOCK],[nonce]);}return res.status(code).json(report);} 
  try{
-  const cfg=await config();if(!cfg.enabled){report.reason='Hosted draft worker paused; enable after validation';return await finish(200);}
+  const cfg=await config();if(req.query?.validate==='1'){cfg.draftingEnabled=true;report.validation=true;}if(!cfg.enabled){report.reason='Hosted draft worker paused; enable after validation';return await finish(200);}
   cfg.accounts=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
   if(!cfg.accounts.length)throw Error('No Staffify mailboxes enabled');
   const tokens={};const errors=[];await Promise.all(cfg.accounts.map(async a=>{try{tokens[a.email]=await access(a.email);}catch(e){errors.push({email:a.email,error:e.message});}}));
@@ -71,6 +71,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    const assignment=state.assignments.find(a=>a.email===row.recipient);if(assignment&&assignment.owner!==row.owner)continue;
    let messages=[];try{messages=(await Promise.all(senders.map(async sender=>(await history(tokens[sender],row.recipient)).map(m=>compactMessage(m,sender))))).flat();}catch(e){row.status='history_check_hold';row.holdError='Mailbox history could not be fully checked';state=await save(state);continue;}
    if(Date.now()-started>210000)break;
+   if(messages.some(m=>m.draft)){row.status='existing_draft_hold';row.holdError='An existing Gmail draft was found; review it before creating another';state=await save(state);continue;}
    const verdict=classify(messages,row.recipient,senders);if(verdict.status){row.status=verdict.status;if(verdict.status==='suppressed')state.suppressions.push(row.recipient);state=await save(state);continue;}
    if(row.sentTouches===0&&messages.length){row.status='prior_contact_hold';state=await save(state);continue;}
    const actual=verdict.sent;if(actual.some(m=>m.mailbox!==row.sender)){row.status='cross_account_history_hold';state=await save(state);continue;}
