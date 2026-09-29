@@ -39,9 +39,13 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
    if(cfg.accounts.length!==cfg.expectedAccounts)return res.status(409).json({error:'Every outreach account must be registered'});
    const health=await redis.get('outreach:cloud:health');if(!health?.ok||Date.now()-Date.parse(health.checkedAt)>10*60000)return res.status(409).json({error:'Every Staffify mailbox must pass a live health check before enabling drafts'});
    cfg.enabled=true;cfg.draftingEnabled=true;
-  }else if(body.action==='disable')cfg.enabled=false;else return res.status(400).json({error:'Unknown action'});
+  }else if(body.action==='enable-sending'){
+   if(process.env.OUTREACH_SEND_VERIFIED!=='true'||process.env.OUTREACH_WORKER_VERIFIED!=='true')return res.status(409).json({error:'Automatic sending validation is incomplete'});
+   const health=await redis.get('outreach:cloud:health');if(!health?.ok||Date.now()-Date.parse(health.checkedAt)>600000)return res.status(409).json({error:'Run live mailbox checks before enabling sending'});
+   cfg.enabled=true;cfg.draftingEnabled=true;cfg.sendingEnabled=true;cfg.sendingAuthorizedAt=new Date().toISOString();
+  }else if(body.action==='disable-sending')cfg.sendingEnabled=false;else if(body.action==='disable')cfg.enabled=false;else return res.status(400).json({error:'Unknown action'});
   cfg.updatedAt=new Date().toISOString();await redis.set(CONFIG,cfg);
  }
  const accounts=[];for(const a of cfg.accounts)if(owner==='all'||a.owner===owner)accounts.push({...a,connected:!!await redis.get('outreach:oauth:'+a.email)});
- return res.status(200).json({enabled:cfg.enabled,draftingEnabled:cfg.draftingEnabled!==false,expectedAccounts:cfg.expectedAccounts,registeredAccounts:cfg.accounts.length,validationComplete:process.env.OUTREACH_WORKER_VERIFIED==='true',workerLockSeconds:await redis.ttl('outreach:cloud:lock'),health:await redis.get('outreach:cloud:health'),oauthConfigured:!!(clientId()&&clientSecret()),redirectUri:callback,accounts,lastRun:await redis.get('outreach:cloud:last-run')});
+ return res.status(200).json({enabled:cfg.enabled,sendingEnabled:cfg.sendingEnabled===true,sendingValidationComplete:process.env.OUTREACH_SEND_VERIFIED==='true',draftingEnabled:cfg.draftingEnabled!==false,expectedAccounts:cfg.expectedAccounts,registeredAccounts:cfg.accounts.length,validationComplete:process.env.OUTREACH_WORKER_VERIFIED==='true',workerLockSeconds:await redis.ttl('outreach:cloud:lock'),health:await redis.get('outreach:cloud:health'),oauthConfigured:!!(clientId()&&clientSecret()),redirectUri:callback,accounts,lastRun:await redis.get('outreach:cloud:last-run')});
  }catch(e){return res.status(503).json({error:'Mailbox connection service unavailable'});}}

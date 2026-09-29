@@ -1,3 +1,4 @@
+import {sendOne} from './_outreach-send.js';
 export function makeWorker({redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
 const LOCK='outreach:cloud:lock';
 const CAS=`local s=redis.call('GET',KEYS[1]); if not s or cjson.decode(s).revision~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
@@ -39,7 +40,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
   if(!list.nextPageToken)await redis.set('outreach:cloud:inbox-index',(index+1)%active.length);
   // Reconcile held drafts before making more. No delete or send endpoint is used.
   for(const row of state.records){const a=state.assignments.find(a=>a.email===row.recipient);if(state.suppressions.includes(row.recipient))row.status='suppressed';else if(a&&a.owner!==row.owner){row.owner=a.owner;row.status='ownership_hold';}else if(state.pausedOwners.includes(row.owner)&&row.draftId)row.status='owner_paused_hold';}
-  for(const row of state.records.filter(r=>r.draftId&&(['suppressed','human_reply_hold','bounce_hold','auto_reply_hold','held_reply','held_out_of_office','ownership_hold','owner_paused_hold','crm_hold','reserved_for_madison_external'].includes(r.status))&&!r.cloudHeld)){
+  for(const row of state.records.filter(r=>r.draftId&&(['suppressed','human_reply_hold','bounce_hold','auto_reply_hold','held_reply','held_out_of_office','ownership_hold','owner_paused_hold','crm_hold','control_hold','existing_draft_hold','send_history_changed_hold','cross_account_history_hold','sequence_complete_hold','followup_not_due_hold','draft_changed_hold','reserved_for_madison_external'].includes(r.status))&&!r.cloudHeld)){
    if(Date.now()-started>120000)break;
    if(!tokens[row.sender])continue;
    let draft;try{draft=await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(row.draftId));}catch(e){row.holdError='Draft unavailable; reconcile manually';state=await save(state);continue;}
@@ -60,6 +61,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    report.checked++;
   }
   await redis.set('outreach:cloud:thread-index',offset+report.checked);state=await save(state);
+  if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report});
   const hour=Number(new Intl.DateTimeFormat('en-US',{hour:'numeric',hourCycle:'h23',timeZone:'America/New_York'}).format(new Date()));
   if(cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000&&hour>=8&&state.records.filter(r=>r.status==='prepared').length<30){report.qualified=await supply(state,cfg);state=await save(state);}
   const candidates=state.records.filter(r=>eligible(r,state)&&cfg.draftingEnabled!==false&&historyComplete&&(r.sentTouches>0||hour>=8)).sort((a,b)=>b.sentTouches-a.sentTouches);
