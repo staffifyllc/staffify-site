@@ -620,32 +620,31 @@
             from { transform: translateX(0); }
             to   { transform: translateX(-50%); }
         }
+        /* Client logos: monochrome white on dark, matching the role pages'
+           trust strip (no white cards). brightness(0) invert(1) flattens
+           every logo to white, dimmed at rest and brightening on hover. */
         .marquee-item {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 14px;
-            padding: 12px 24px;
+            margin: 0 26px;
             height: 72px;
-            min-width: 140px;
-            background: rgba(255,255,255,0.96);
-            border-radius: 12px;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
-            opacity: 0.85;
-            transition: opacity .25s ease, transform .25s ease, box-shadow .25s ease;
-        }
-        .marquee-item:hover {
-            opacity: 1;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(26,189,225,0.25), 0 0 0 1px rgba(26,189,225,0.4);
         }
         .marquee-item img {
-            max-height: 44px;
-            max-width: 180px;
+            max-height: 34px;
+            max-width: 170px;
             width: auto;
             height: auto;
             display: block;
             object-fit: contain;
+            filter: brightness(0) invert(1);
+            opacity: 0.5;
+            transition: opacity .2s ease;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        .marquee-item:hover img {
+            opacity: 0.95;
         }
 
         /* ─── WHAT WE DO ─── */
