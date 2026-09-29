@@ -18,6 +18,7 @@
 
 import { redis, currentRep, listReps, readBody, SITE } from './_auth.js';
 import {financeAccess,financeMachine} from './_finance-access.js';
+import {commissionDeal} from './_commission-evidence.js';
 import { hoursByClient } from './_hubstaff.js';
 import { loadHubspotWon } from './commissions.js';
 import { periodForWorkDate, periodByIndex, periodsBetween, weekKey, nextPayDate, PAY_ANCHOR, PERIOD_DAYS } from './_payperiods.js';
@@ -119,7 +120,7 @@ export default async function handler(req, res) {
     if(hs.error||!hs.configured||hs.truncated||hours.truncated)return res.status(503).json({error:'Incomplete source data; residual calculation withheld'});
     const snaps=await redis.hgetall('commission:owners')||{};const overrides=await redis.hgetall('commission:overrides')||{};
     const parse=v=>typeof v==='string'?JSON.parse(v):v||{};
-    const deals=(hs.deals||[]).map(d=>({...d,ownerEmail:parse(overrides[d.dealId]).rep||parse(snaps[d.dealId]).ownerEmail||d.ownerEmail}));
+    const deals=(hs.deals||[]).filter(commissionDeal).map(d=>({...d,ownerEmail:parse(overrides[d.dealId]).rep||parse(snaps[d.dealId]).ownerEmail||d.ownerEmail}));
     const byName = {};
     deals.forEach(d => {
         [d.company, d.client, d.name].filter(Boolean).forEach(n => {

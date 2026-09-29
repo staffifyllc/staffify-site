@@ -13,7 +13,7 @@
 // base = the paid invoice amount once paid, else the HubSpot deal amount as an estimate (admin can pin it, incl 0).
 
 import { currentRep, listReps, readBody, redis, SITE } from './_auth.js';
-import {onboardingAmount,invoicePayments} from './_commission-evidence.js';
+import {onboardingAmount,invoicePayments,commissionDeal} from './_commission-evidence.js';
 import {financeAccess,financeMachine} from './_finance-access.js';
 import { qboConnected, qboQuery } from './_qbo.js';
 import { hoursByClient, hubstaffStatus } from './_hubstaff.js';
@@ -438,7 +438,7 @@ function allocatePayouts(lines, payouts) {
 function applyAccelerator(lines) {
     const groups = {};
     lines.forEach(l => {
-        if (l.flat != null || !l.repEmail || l.splitPlan) return;
+        if (l.flat != null || !l.repEmail || !l.repKnown || l.splitPlan || l.refunded || l.status==='attribution_review' || l.status==='payment_review') return;
         const month = (l.closeDate || '').slice(0, 7);
         if (!month) return;
         (groups[l.repEmail + '|' + month] || (groups[l.repEmail + '|' + month] = [])).push(l);
@@ -505,7 +505,7 @@ function matchCustomer(deal, ov, qbo) {
 // has paid invoices, so a brand-new deal would read as "already paid" the second it is marked Closed Won,
 // and would be priced off the client's FIRST-ever invoice. Each deal gets the invoice raised nearest its
 // close date (preferring on/after the close), and an invoice is only ever claimed by one deal.
-function assignInvoices(deals, overrides, qbo) {
+export function assignInvoices(deals, overrides, qbo) {
     const assigned = {};
     if (!qbo || !qbo.connected) return assigned;
     const claimed = {};
@@ -522,7 +522,7 @@ function assignInvoices(deals, overrides, qbo) {
 
     // Then auto-assign, oldest close first, so early deals take the early invoices.
     deals.slice().sort((a, b) => (a.closeDate || '').localeCompare(b.closeDate || '')).forEach(d => {
-        if (assigned[d.dealId]) return;
+        if (assigned[d.dealId]||!commissionDeal(d)) return;
         const ov = overrides[d.dealId] || {};
         const custId = matchCustomer(d, ov, qbo);
         const cust = custId && qbo.byCust[custId];
@@ -534,6 +534,7 @@ function assignInvoices(deals, overrides, qbo) {
         pool.forEach(i => {
             const days = (close && i.date) ? Math.abs((new Date(i.date) - new Date(close)) / 864e5) : 9999;
             // Prefer an invoice raised on/after the close date; a pre-close invoice is likely a different sale.
+            if(days>60)return; // Distant historical invoices require an explicit, reviewed mapping.
             const after = (close && i.date && i.date >= close) ? 0 : 1;
             const score = after * 10000 + days;
             if (bestScore === null || score < bestScore) { bestScore = score; best = i; }
@@ -601,6 +602,8 @@ function reconcile(deal, ov, qbo, repRateByEmail, snap, assignment) {
     const paidOut = !!(ov && ov.paidOut);
     // Partly collected is payable on the collected part. It is not 'pending': that money is earned.
     let status = paidOut ? 'paid_out' : (invoicePartPaid ? 'payable' : 'pending');
+    if(!knownRep&&!paidOut)status='attribution_review';
+    if(invoicePartPaid&&(inv.receipts||[]).some(p=>!p.method)&&!paidOut)status='payment_review';
     let clawback = 0;
     if (refunded && !(ov && ov.keepOnRefund)) {
         clawback = commission;
@@ -730,7 +733,7 @@ export default async function handler(req, res) {
     const residualMap = await loadResidualMap();
     const today = new Date().toISOString().slice(0, 10);
     const resStart = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10);
-    const residualDeals=(hs.deals||[]).map(d=>({...d,ownerEmail:overrides[d.dealId]?.rep||ownerSnaps[d.dealId]?.ownerEmail||d.ownerEmail}));
+    const residualDeals=(hs.deals||[]).filter(commissionDeal).map(d=>({...d,ownerEmail:overrides[d.dealId]?.rep||ownerSnaps[d.dealId]?.ownerEmail||d.ownerEmail}));
     const residuals = await buildResiduals(residualDeals, repRateByEmail, residualMap, { start: resStart, stop: today })
         .catch(e => ({ connected: false, error: String(e).slice(0, 120), lines: [], unmatched: [] }));
 

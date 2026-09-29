@@ -550,7 +550,7 @@
   function financePanel(){
     if(!FIN)return '<p>Loading private financial dashboard…</p>';
     if(!FIN.commission)return '<div class="errbox"><h3>Financial sync pending</h3><p>'+esc(FIN.error||FIN.message||'Waiting for the first cloud refresh.')+'</p></div>';
-    var c=FIN.commission,r=FIN.residual||{},deals=(c.deals||[]).filter(function(d){return d.dealType==='va'&&!/\bflylisted\b/i.test(d.company||d.client||'');});
+    var c=FIN.commission,r=FIN.residual||{},deals=(c.deals||[]).filter(function(d){return d.dealType==='va'&&!/discovery call/i.test(d.name||d.client||d.company||'')&&!/\bflylisted\b/i.test(d.company||d.client||'');});
     var booked=deals.reduce(function(n,d){return n+(d.bookedAmount||0);},0),calc=deals.reduce(function(n,d){return n+(d.commission||0);},0);
     var verified=c.qboConnected&&!c.qboError;
     var received=deals.reduce(function(n,d){return n+(d.invoiceReceived||0);},0);
@@ -561,7 +561,7 @@
     h+='<p class="sub">CRM records may include lifetime client billing. Commission calculations use identified onboarding invoice lines; ordinary hourly billing is excluded from the placement commission base.</p><h3 class="sec">Commission attribution</h3><div class="tbl"><table><thead><tr><th>Client / deal</th><th>Closer</th><th>CRM revenue record</th><th>Commission</th><th>Status</th></tr></thead><tbody>'+deals.map(function(d){return '<tr><td>'+esc(d.company||d.client)+'</td><td>'+esc(d.closerName||d.repEmail||'Unassigned')+'</td><td>'+money(d.bookedAmount)+'</td><td>'+(d.commissionBaseVerified?money(d.commission):'Unverified base')+'</td><td>'+esc(d.status==='pending'?'Awaiting payment verification':d.status)+'</td></tr>';}).join('')+'</tbody></table></div>';
     h+='<h3 class="sec">Hubstaff residual ledger</h3><p class="sub">'+esc(r.range? r.range.start+' to '+r.range.stop:'')+' · Hours inside each deal’s six-month residual window.</p><div class="tbl"><table><thead><tr><th>Salesperson</th><th>Eligible VA hours</th><th>Due</th><th>Accruing</th><th>Recorded paid</th></tr></thead><tbody>'+(r.reps||[]).map(function(x){return '<tr><td>'+esc(x.name||x.repEmail)+'</td><td>'+x.totalHours+'</td><td>'+money(x.owed)+'</td><td>'+money(x.accruing)+'</td><td>'+money(x.paidToDate)+'</td></tr>';}).join('')+'</tbody></table></div>';
     h+='<details><summary>Client hours and residuals</summary>'+(r.reps||[]).map(function(x){return '<h3>'+esc(x.name||x.repEmail)+'</h3>'+(x.clients||[]).map(function(y){return '<p>'+esc(y.client)+' · '+y.hours+' hours · '+money(y.amount)+'</p>';}).join('');}).join('')+'</details>';
-    h+='<h3 class="sec">Needs attention</h3>'+(c.blockers||[]).map(function(x){return '<p>'+esc(x.detail)+'</p>';}).join('');
+    h+='<h3 class="sec">Needs attention</h3>'+((r.unmatched||[]).length?'<p>'+r.unmatched.length+' Hubstaff clients need a confirmed deal mapping.</p>':'')+(r.reps||[]).filter(function(x){return x.note&&x.totalHours>0;}).map(function(x){return '<p>'+esc(x.name||x.repEmail)+': '+esc(x.note)+'. Hours remain visible for reconciliation.</p>';}).join('')+(c.blockers||[]).map(function(x){return '<p>'+esc(x.detail)+'</p>';}).join('');
     return h;
   }
   async function loadFinance(){try{var response=await fetch('/api/finance-snapshot/',{cache:'no-store'});if(!response.ok)throw Error('Financial data is unavailable or access is restricted');FIN=await response.json();}catch(e){FIN=FIN?Object.assign({},FIN,{stale:true,status:'error'}):{error:e.message};}if(TAB==='finance')render();}
@@ -589,7 +589,7 @@
       +recent.map(function(d){return '<button class="prow" data-open="'+esc(d.dealId)+'"><div><div class="d">'+esc(d.client)+'</div><div class="c">won '+nice(d.closeDate)+' &middot; '+typeLabel(d.dealType)+'</div></div>'+stPill(d)+'<div class="a">'+money(d.commission,true)+'</div></button>';}).join('')
       +'</div></div>';
   }
-  function head(){var first=((ME&&ME.name)||'').split(' ')[0]||'there';return '<div class="eyebrow" style="margin-bottom:4px">Commissions</div><h1 style="font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--sub);margin-bottom:18px">'+esc(first)+'\'s earnings</h1>';}
+  function head(){if(TAB==='finance')return '<div class="eyebrow">Private finance workspace</div><h1>Staffify revenue & commissions</h1>';var first=((ME&&ME.name)||'').split(' ')[0]||'there';return '<div class="eyebrow" style="margin-bottom:4px">Commissions</div><h1 style="font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--sub);margin-bottom:18px">'+esc(first)+'\'s earnings</h1>';}
   function skeleton(){
     return head()+'<div class="hero"><div><div class="skel" style="height:14px;width:140px;margin-bottom:14px"></div><div class="skel" style="height:64px;width:280px"></div><div class="skel" style="height:14px;width:320px;margin-top:14px"></div></div><div class="skel" style="height:130px"></div></div>'
       +'<div class="strip"><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div></div>'

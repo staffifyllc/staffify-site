@@ -7,3 +7,13 @@ import {onboardingAmount,invoicePayments} from '../api/_commission-evidence.js';
 test('placement commissions exclude ordinary hours and subtract onboarding discounts',()=>{const line=(name,Amount)=>({Amount,SalesItemLineDetail:{ItemRef:{name}}});assert.equal(onboardingAmount({Line:[line('VA Staffing',2499),line('Hourly VA',5000),line('Action Taker Price',-500)]}),1999);assert.equal(onboardingAmount({Line:[line('Hourly VA',5000)]}),0);});
 test('cash evidence is invoice-specific and ambiguous allocations are not guessed',()=>{assert.deepEqual(invoicePayments({Line:[{Amount:700,LinkedTxn:[{TxnType:'Invoice',TxnId:'a'}]},{Amount:300,LinkedTxn:[{TxnType:'Invoice',TxnId:'b'},{TxnType:'Invoice',TxnId:'c'}]}]}),[{invoiceId:'a',amount:700}]);});
 test('anonymous requests cannot impersonate finance identities through any finance route',async()=>{process.env.KV_REST_API_URL='https://example.com';process.env.KV_REST_API_TOKEN='test';for(const name of ['commissions','residuals','finance-snapshot','finance-connection']){const handler=(await import('../api/'+name+'.js')).default;for(const email of ['hello@gostaffify.com','madison@gostaffify.com']){let code;const res={setHeader(){},status(n){code=n;return this;},json(v){return v;}};await handler({method:'GET',headers:{},query:{email,view:'admin',probe:'1'}},res);assert.equal(code,401,name);}}});
+
+test('discovery placeholders cannot take placement invoice evidence',async()=>{const {commissionDeal}=await import('../api/_commission-evidence.js');assert.equal(commissionDeal({name:'John Reid - Discovery Call'}),false);assert.equal(commissionDeal({name:'John Reid - Staffify VA'}),true);});
+
+test('actual invoice allocation preserves Madison placement ahead of discovery placeholder',async()=>{
+ const {assignInvoices}=await import('../api/commissions.js');
+ const q={connected:true,custById:{c:{}},custByName:{'john reid':'c'},byCust:{c:{invoices:[{id:'i',date:'2026-09-05',onboarding:2100}]}}};
+ const a=assignInvoices([{dealId:'discovery',name:'John Reid - Discovery Call',company:'John Reid',closeDate:'2026-09-01'},{dealId:'placement',name:'John Reid - Staffify VA',company:'John Reid',closeDate:'2026-09-04'}],{},q);
+ assert.equal(a.discovery,undefined);assert.equal(a.placement.inv.id,'i');
+ const b=assignInvoices([{dealId:'new',company:'John Reid',closeDate:'2027-01-01'}],{},q);assert.equal(b.new.inv,null);
+});
