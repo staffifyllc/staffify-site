@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const context={window:{}};vm.runInNewContext(readFileSync(new URL('../assets/js/outreach-replies.js',import.meta.url),'utf8'),context);
+const {waiting,queue,latestReply}=context.window.StaffifyReplies;
+const row={recipient:'prospect@example.com',status:'human_reply_hold',events:[{kind:'received',from:'prospect@example.com',at:'2026-09-29T12:00:00Z',body:'Can we talk?'}]};
+test('reply queue excludes answered conversations and reopens on a newer reply',()=>{assert.equal(waiting(row),true);const answered={...row,events:[...row.events,{kind:'sent',at:'2026-09-29T13:00:00Z'}]};assert.equal(waiting(answered),false);assert.equal(waiting({...answered,events:[...answered.events,{...row.events[0],at:'2026-09-29T14:00:00Z'}]}),true);});
+test('reply queue excludes suppressed and automatic replies and retains missing-message holds honestly',()=>{assert.equal(waiting({...row,status:'suppressed'}),false);assert.equal(waiting({...row,status:'auto_reply_hold'}),false);assert.equal(waiting({...row,events:[]}),true);assert.equal(latestReply({...row,events:[]}),null);assert.equal(queue([]).length,0);});
+test('reply queue orders oldest unanswered first and reads latest reply body',()=>{const later={...row,id:'later',events:[{...row.events[0],at:'2026-09-29T15:00:00Z',body:'Next question'}]};assert.equal(queue([later,row])[0],row);assert.equal(latestReply(later).body,'Next question');});
