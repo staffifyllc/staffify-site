@@ -17,3 +17,9 @@ test('actual invoice allocation preserves Madison placement ahead of discovery p
  assert.equal(a.discovery,undefined);assert.equal(a.placement.inv.id,'i');
  const b=assignInvoices([{dealId:'new',company:'John Reid',closeDate:'2027-01-01'}],{},q);assert.equal(b.new.inv,null);
 });
+
+test('monthly revenue uses the accounting income total and never guesses zero',async()=>{
+ const {reportIncome}=await import('../api/_finance-revenue.js');
+ assert.equal(reportIncome({Header:{ReportBasis:'Accrual'},Rows:{Row:[{group:'Income',Summary:{ColData:[{value:'Income'},{value:'95720.98'}]}},{group:'NetIncome',Summary:{ColData:[{value:'Net Income'},{value:'100'}]}}]}}).amount,95720.98);
+ assert.throws(()=>reportIncome({Rows:{Row:[]}}));
+});
