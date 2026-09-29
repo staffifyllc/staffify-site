@@ -1,3 +1,4 @@
+import {maintainClients} from './_outreach-maintenance.js';
 import {randomUUID} from 'node:crypto';
 import {redis} from './_auth.js';
 import {KEY} from './_outreach-queue.js';
@@ -6,4 +7,4 @@ import {supply} from './_outreach-supply.js';
 import {canDraft,suppress} from './_outreach-crm.js';
 import {eligible,quota,dayKey,classify,followup,reconcileThread,callReady} from './_outreach-policy.js';
 import {makeWorker} from './_outreach-worker-core.js';
-export default makeWorker({redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret:()=>process.env.CRON_SECRET});
+export default makeWorker({maintain:()=>maintainClients({redis}),redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret:()=>process.env.CRON_SECRET});

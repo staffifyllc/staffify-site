@@ -1,6 +1,6 @@
 import {fairCandidates} from './_outreach-fairness.js';
 import {sendOne} from './_outreach-send.js';
-export function makeWorker({redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
+export function makeWorker({maintain,redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
 const LOCK='outreach:cloud:lock';
 const CAS=`local s=redis.call('GET',KEYS[1]); if not s or cjson.decode(s).revision~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 async function save(state){const rev=state.revision;const next={...state,revision:rev+1,queueUpdatedAt:new Date().toISOString()};if(Number(await redis.eval(CAS,[KEY],[String(rev),JSON.stringify(next)]))!==1)throw Error('Concurrent control change; retry next tick');return next;}
@@ -11,6 +11,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
  async function finish(code){report.finishedAt=new Date().toISOString();try{await redis.set('outreach:cloud:last-run',report);}finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",[LOCK],[nonce]);}return res.status(code).json(report);} 
  try{
   const cfg=await config();if(req.query?.validate==='1'){cfg.draftingEnabled=true;report.validation=true;}if(!cfg.enabled){report.reason='Hosted draft worker paused; enable after validation';return await finish(200);}
+  if(maintain)report.clientSources=await maintain();
   cfg.accounts=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
   if(!cfg.accounts.length)throw Error('No Staffify mailboxes enabled');
   const tokens={};const errors=[];await Promise.all(cfg.accounts.map(async a=>{try{tokens[a.email]=await access(a.email);}catch(e){errors.push({email:a.email,error:e.message});}}));
@@ -62,6 +63,12 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    report.checked++;
   }
   await redis.set('outreach:cloud:thread-index',offset+report.checked);state=await save(state);
+  // Retry transient eligibility holds against fresh live data, without recreating held or removed drafts.
+  for(const row of state.records.filter(r=>r.status==='crm_hold'&&!r.draftId&&(!r.crmRecheckedAt||Date.now()-Date.parse(r.crmRecheckedAt)>30*60000)).slice(0,12)){
+   row.crmRecheckedAt=new Date().toISOString();
+   if(await canDraft(row)){if(row.sentTouches&&row.lastSentAt)row.status='sent';else if(row.qualificationApproved)row.status='prepared';}
+  }
+  state=await save(state);
   if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report});
   const hour=Number(new Intl.DateTimeFormat('en-US',{hour:'numeric',hourCycle:'h23',timeZone:'America/New_York'}).format(new Date()));
   if(cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000&&hour>=8&&state.records.filter(r=>r.status==='prepared').length<30){report.qualified=await supply(state,cfg);state=await save(state);}
