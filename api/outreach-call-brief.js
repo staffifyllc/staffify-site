@@ -17,7 +17,7 @@ export default async function handler(req,res){
   const all=(await Promise.all(accounts.map(async a=>(await history(await access(a.email),row.recipient)).map(m=>compactMessage(m,a.email))))).flat();
   const verdict=classify(all,row.recipient,accounts.map(a=>a.email));
   if(verdict.status)return res.status(409).json({error:'Do not call from this queue: '+verdict.status+'. A human must review the conversation.'});
-  const sent=all.filter(m=>m.mailbox===row.sender&&m.sent&&m.to.includes(row.recipient)&&m.threadId===row.threadId);
+  const sent=all.filter(m=>m.mailbox===row.sender&&m.sent&&m.to.includes(row.recipient));
   if(!callReady({...row,verifiedSentTouches:sent.length,lastSentAt:sent.length?new Date(Math.max(...sent.map(m=>m.date))).toISOString():null}))throw Error('Four sent emails and the reply window could not be verified');
   const latest=await redis.get(KEY);if(!visibleState(latest,owner).records.find(r=>r.id===row.id)?.callReady)throw Error('Queue changed; refresh before calling');
   const p=(await contact(row.recipient)).properties;

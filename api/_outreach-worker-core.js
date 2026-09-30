@@ -57,7 +57,9 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
   for(const row of tracked.slice(offset%Math.max(1,tracked.length),offset%Math.max(1,tracked.length)+12)){
    if(Date.now()-started>120000)break;
    let thread;try{thread=await gmail(tokens[row.sender],'threads/'+row.threadId+'?format=full');}catch(e){row.status='thread_check_hold';row.holdError=e.message;report.checked++;continue;}
-   reconcileThread(row,(thread.messages||[]).map(m=>compactMessage(m,row.sender)));
+   let messages=thread.messages||[];
+   if(row.sentTouches>=4){try{messages=await history(tokens[row.sender],row.recipient);}catch(e){row.status='thread_check_hold';row.holdError=e.message;report.checked++;continue;}}
+   reconcileThread(row,messages.map(m=>compactMessage(m,row.sender)));
    if(row.status==='suppressed'&&!state.suppressions.includes(row.recipient))state.suppressions.push(row.recipient);
    if((row.status==='draft_saved'||row.callReady)&&!await canDraft(row))row.status='crm_hold';
    report.checked++;
