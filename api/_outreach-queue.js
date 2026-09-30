@@ -44,7 +44,7 @@ export function controlState(previous, {action,owner,email,id,outcome,notes,next
     if(!callReady(row)||previous.pausedOwners?.includes(row.owner)||previous.suppressions?.includes(row.recipient))throw Error('Call is no longer due');
     if(['no_answer','voicemail','callback'].includes(outcome)&&!(Date.parse(nextCallAt)>Date.now()))throw Error('Choose a future callback time');
     const at=new Date().toISOString(),entry={outcome,notes:String(notes||'').slice(0,4000),at,caller:actor==='all'?row.owner:actor,nextCallAt:nextCallAt||null};
-    return {...previous,revision:previous.revision+1,records:previous.records.map(r=>r.id===id?{...r,callOutcome:outcome,nextCallAt:entry.nextCallAt,callHistory:[...(r.callHistory||[]),entry],...(outcome==='connected'?{status:'human_reply_hold'}:{})}:r)};
+    return {...previous,revision:previous.revision+1,records:previous.records.map(r=>r.id===id?{...r,callOutcome:outcome,nextCallAt:entry.nextCallAt,callHistory:[...(r.callHistory||[]),entry],...(outcome==='connected'?{status:'human_reply_hold'}:outcome==='wrong_number'?{status:'call_research_hold'}:{})}:r)};
   }
   if(action==='suppress') {
     email=String(email||'').toLowerCase();
