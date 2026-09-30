@@ -1,3 +1,4 @@
+import {copyIssue} from './_outreach-copy.js';
 import {fairCandidates} from './_outreach-fairness.js';
 import {sendOne} from './_outreach-send.js';
 export function makeWorker({dealSupply,maintain,redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
@@ -89,12 +90,13 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    if(row.sentTouches===0&&messages.length){row.status='prior_contact_hold';state=await save(state);continue;}
    const actual=verdict.sent;if(actual.some(m=>m.mailbox!==row.sender)){row.status='cross_account_history_hold';state=await save(state);continue;}
    if(actual.length){const latest=actual.sort((a,b)=>a.date-b.date).at(-1);row.sentTouches=Math.max(row.sentTouches,actual.length);row.lastSentAt=new Date(latest.date).toISOString();row.replyId=latest.replyId;row.threadId=latest.threadId;if(!eligible({...row,status:'sent'},state))continue;}
+   const body=row.sentTouches?followup(row):row.bodyText;const copyError=copyIssue(row,body);if(copyError){row.status='copy_review_hold';row.holdError=copyError;state=await save(state);continue;}
    // Durable reservation precedes Gmail: an uncertain create is held, never blindly retried.
    const operation=row.id+':'+(row.sentTouches+1);if(await redis.get('outreach:cloud:operation:'+operation))continue;
    const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before draft creation');
    if(!await redis.set('outreach:cloud:operation:'+operation,{status:'reserved',at:Date.now()},{nx:true}))continue;
    state.creations.push({id:operation,day:dayKey(Date.now()),owner:row.owner,sender:row.sender,touch:row.sentTouches+1,status:'reserved'});row.status='draft_creation_pending';state=await save(state);
-   try{const body=row.sentTouches?followup(row):row.bodyText;const raw=mime({sender:row.sender,to:row.recipient,subject:row.sentTouches?'Re: '+String(row.subject||'Your agency workflow').replace(/^Re:\s*/i,''):row.subject,body,id:'staffify-'+operation.replace(/[^a-z0-9-]/gi,'-'),replyId:row.sentTouches?row.replyId:undefined});
+   try{const raw=mime({sender:row.sender,to:row.recipient,subject:row.sentTouches?'Re: '+String(row.subject||'Your agency workflow').replace(/^Re:\s*/i,''):row.subject,body,id:'staffify-'+operation.replace(/[^a-z0-9-]/gi,'-'),replyId:row.sentTouches?row.replyId:undefined});
     const draft=await gmail(tokens[row.sender],'drafts',{message:{raw,...(row.sentTouches?{threadId:row.threadId}:{})}});
     assertDraft(await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(draft.id)),row.recipient);
     await redis.set('outreach:cloud:operation:'+operation,{status:'saved',draft,at:Date.now()});

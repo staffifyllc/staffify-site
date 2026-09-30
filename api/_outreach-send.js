@@ -1,3 +1,4 @@
+import {copyIssue} from './_outreach-copy.js';
 import {fairCandidates} from './_outreach-fairness.js';
 import {dayKey,classify} from './_outreach-policy.js';
 export function sendQuota(row,state,now=Date.now()) {
@@ -32,11 +33,14 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
  for(const row of candidates){
   if(Date.now()-started>170000)break;
   if(!sendQuota(row,state)||state.pausedOwners.includes(row.owner)||state.suppressions.includes(row.recipient))continue;
+  const copyError=copyIssue(row);if(copyError){row.status='copy_review_hold';row.holdError=copyError;state=await save(state);continue;}
   if(!await canDraft(row)){row.status='crm_hold';state=await save(state);continue;}
   const messages=(await Promise.all(senders.map(async sender=>(await history(tokens[sender],row.recipient)).map(m=>compactMessage(m,sender))))).flat();
   const reason=sendDecision(row,state,messages,senders);if(reason){row.status=reason;if(reason==='suppressed'&&!state.suppressions.includes(row.recipient))state.suppressions.push(row.recipient);state=await save(state);continue;}
   const draft=assertDraft(await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(row.draftId)),row.recipient);
   if(!draft.message.labelIds?.includes('DRAFT')||draft.message.id!==row.messageId||messageText(draft.message).trim()!==row.bodyText.trim()){row.status='draft_changed_hold';state=await save(state);continue;}
+  const actualSubject=draft.message.payload?.headers?.find(h=>h.name.toLowerCase()==='subject')?.value;
+  const actualCopyError=copyIssue(row,messageText(draft.message),actualSubject);if(actualCopyError){row.status='copy_review_hold';row.holdError=actualCopyError;state=await save(state);continue;}
   const current=await config();if(!current.enabled||!current.sendingEnabled)return state;
   const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before send');
   const id=row.id+':'+(row.sentTouches+1),key='outreach:cloud:send:'+id;
