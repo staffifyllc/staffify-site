@@ -30,12 +30,21 @@ export function mergeSnapshot(previous, incoming, now=new Date().toISOString()) 
   });
   return {revision:(previous?.revision||0)+1,records,assignments,suppressions:[...suppressed],pausedOwners:previous?.pausedOwners||[],updatedAt:now,mailboxes:incoming.mailboxes||[],lastWorkerError:incoming.lastWorkerError||null};
 }
-export function controlState(previous, {action,owner,email}, actor) {
+export function controlState(previous, {action,owner,email,id,outcome,notes,nextCallAt}, actor) {
   if (!previous) throw Error('Queue not initialized');
   if (action==='pause'||action==='resume') {
     if(!['Paul','Madison'].includes(owner)||(actor!=='all'&&actor!==owner))throw Error('Forbidden');
     const paused=new Set(previous.pausedOwners||[]);action==='pause'?paused.add(owner):paused.delete(owner);
     return {...previous,pausedOwners:[...paused],revision:previous.revision+1};
+  }
+  if(action==='call-outcome') {
+    const row=previous.records.find(r=>r.id===id);
+    if(!row||(actor!=='all'&&actor!==row.owner))throw Error('Forbidden');
+    if(!['connected','no_answer','voicemail','callback','wrong_number'].includes(outcome))throw Error('Invalid outcome');
+    if(!callReady(row)||previous.pausedOwners?.includes(row.owner)||previous.suppressions?.includes(row.recipient))throw Error('Call is no longer due');
+    if(['no_answer','voicemail','callback'].includes(outcome)&&!(Date.parse(nextCallAt)>Date.now()))throw Error('Choose a future callback time');
+    const at=new Date().toISOString(),entry={outcome,notes:String(notes||'').slice(0,4000),at,caller:actor==='all'?row.owner:actor,nextCallAt:nextCallAt||null};
+    return {...previous,revision:previous.revision+1,records:previous.records.map(r=>r.id===id?{...r,callOutcome:outcome,nextCallAt:entry.nextCallAt,callHistory:[...(r.callHistory||[]),entry],...(outcome==='connected'?{status:'human_reply_hold'}:{})}:r)};
   }
   if(action==='suppress') {
     email=String(email||'').toLowerCase();

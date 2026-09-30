@@ -34,7 +34,7 @@ export function followup(record) {
 
 // Only the newly authored reply is evidence of refusal, never quoted campaign copy.
 export function replyText(text){return String(text||'').split(/<blockquote\b|<div[^>]*class=["']gmail_quote|\nOn .{0,200}wrote:|-----Original Message-----|\nFrom:\s/mi)[0].split('\n').filter(l=>!/^\s*>/.test(l)).join('\n').replace(/<[^>]*>/g,' ');}
-export function callReady(r,now=Date.now()){return r.status==='sent'&&r.sentTouches>=4&&r.verifiedSentTouches>=4&&!!r.lastSentAt&&now-Date.parse(r.lastSentAt)>=48*3600000;}
+export function callReady(r,now=Date.now()){return (!r.callOutcome||(['no_answer','voicemail','callback'].includes(r.callOutcome)&&!!r.nextCallAt&&Date.parse(r.nextCallAt)<=now))&&r.status==='sent'&&r.sentTouches>=4&&r.verifiedSentTouches>=4&&!!r.lastSentAt&&now-Date.parse(r.lastSentAt)>=48*3600000;}
 export function reconcileThread(row,messages,now=Date.now()) {
  const sent=messages.filter(m=>m.sent&&m.to.includes(row.recipient)).sort((a,b)=>a.date-b.date);
  const drafts=messages.filter(m=>m.draft);const before=row.sentTouches||0;row.verifiedSentTouches=sent.length;

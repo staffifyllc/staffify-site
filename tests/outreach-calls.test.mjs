@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {callReady} from '../api/_outreach-policy.js';
+import {controlState,visibleState} from '../api/_outreach-queue.js';
+const row=()=>({id:'a',recipient:'a@example.com',owner:'Madison',status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:new Date(Date.now()-49*3600000).toISOString()});
+const state=()=>({revision:1,records:[row()],assignments:[],suppressions:[],pausedOwners:[]});
+test('four actual sends and full reply window required',()=>{assert.ok(callReady(row()));assert.equal(callReady({...row(),verifiedSentTouches:3}),false);assert.equal(callReady({...row(),lastSentAt:new Date().toISOString()}),false);for(const status of ['human_reply_hold','suppressed','crm_hold'])assert.equal(callReady({...row(),status}),false);});
+test('owner and suppression guards',()=>{assert.throws(()=>controlState(state(),{action:'call-outcome',id:'a',outcome:'connected'},'Paul'));assert.equal(visibleState({...state(),pausedOwners:['Madison']},'all').records[0].callReady,false);assert.throws(()=>controlState({...state(),suppressions:['a@example.com']},{action:'call-outcome',id:'a',outcome:'connected'},'Madison'));});
+test('connected call stops queue and retry cannot duplicate outcome',()=>{const next=controlState(state(),{action:'call-outcome',id:'a',outcome:'connected',notes:'Discuss role'},'Madison');assert.equal(next.records[0].callHistory.length,1);assert.equal(callReady(next.records[0]),false);assert.throws(()=>controlState(next,{action:'call-outcome',id:'a',outcome:'connected'},'Madison'));});
+test('no answer requires dated callback and returns only when due',()=>{assert.throws(()=>controlState(state(),{action:'call-outcome',id:'a',outcome:'no_answer'},'Madison'));const next=controlState(state(),{action:'call-outcome',id:'a',outcome:'no_answer',nextCallAt:new Date(Date.now()+3600000).toISOString()},'Madison');assert.equal(callReady(next.records[0]),false);assert.equal(callReady(next.records[0],Date.now()+3600001),true);});

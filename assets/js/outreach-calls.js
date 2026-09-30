@@ -1,0 +1,17 @@
+async function openCallBrief(row,card){
+ const box=document.createElement('section');box.className='call-brief';card.append(box);box.textContent='Checking current mailboxes, CRM and exclusions…';
+ try{
+  const response=await fetch('/api/outreach-call-brief/?id='+encodeURIComponent(row.id));const b=await response.json();if(!response.ok)throw Error(b.error);
+  box.replaceChildren();const close=text('button','Close call brief');close.onclick=()=>{box.remove();const button=card.querySelector('button');if(button)button.disabled=false;};box.append(close);box.append(text('h3','Call brief · Assigned to '+b.owner),text('p',b.name+' · '+b.company),text('p','Location: '+(b.location||'Not recorded in CRM')),text('p','Checked '+new Date(b.checkedAt).toLocaleString()));
+  if(b.phone){const a=text('a','Call '+b.phone);a.href='tel:'+b.phone.replace(/[^+\d]/g,'');box.append(a);}else box.append(text('p','Phone missing. Open the CRM contact to add a verified business number; this prospect stays in the queue.'));
+  const crm=text('a',' Open CRM contact');crm.href=b.crmUrl;crm.target='_blank';crm.rel='noopener';box.append(crm);
+  if(b.fact){box.append(text('h3','Business context from earlier research'),text('p',b.fact));if(/^https?:\/\//.test(b.source?.url||'')){const a=text('a','Verify source'+(b.source.checkedAt?' · '+new Date(b.source.checkedAt).toLocaleDateString():''));a.href=b.source.url;a.target='_blank';a.rel='noopener';box.append(a);}}else box.append(text('p','No sourced business fact available. Use the email history; do not invent a personal connection.'));
+  box.append(text('h3','Suggested opener'),text('p',b.opener),text('h3','Discovery questions'));for(const q of b.questions)box.append(text('p',q));box.append(text('p',b.instruction));
+  const history=document.createElement('details');history.append(text('summary','Live email paper trail ('+b.events.length+')'));for(const e of b.events)history.append(text('h3',e.kind+' · '+new Date(e.at).toLocaleString()),text('p',e.mailbox+' · '+e.subject),text('pre',e.body));box.append(history);
+  const outcome=document.createElement('select');outcome.setAttribute('aria-label','Call outcome');for(const [v,l] of [['connected','Connected: human follow-up'],['no_answer','No answer'],['voicemail','Left voicemail'],['callback','Callback agreed'],['wrong_number','Wrong number: needs research']]){const o=text('option',l);o.value=v;outcome.append(o);}
+  const notes=document.createElement('textarea');notes.placeholder='Call notes, what they need, and agreed next step';notes.setAttribute('aria-label','Call notes');
+  const due=document.createElement('input');due.type='datetime-local';due.setAttribute('aria-label','Next call date and time');
+  const save=text('button','Save call result');save.onclick=async()=>{if(['no_answer','voicemail','callback'].includes(outcome.value)&&!(Date.parse(due.value)>Date.now())){save.textContent='Choose a future callback time';return;}save.disabled=true;await action({action:'call-outcome',id:row.id,outcome:outcome.value,notes:notes.value,nextCallAt:due.value?new Date(due.value).toISOString():null});save.disabled=false;};
+  box.append(text('h3','Record your call'),outcome,notes,text('p','For no answer, voicemail or a callback, choose the next call time:'),due,save);
+ }catch(e){box.textContent=e.message;}
+}
