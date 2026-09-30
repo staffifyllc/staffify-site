@@ -41,8 +41,8 @@ export async function reconcileInvoices({redis,query,hs,now=new Date().toISOStri
  for(const invoice of invoices){
   const e=invoiceEvidence(invoice,payments),c=customerById.get(String(invoice.CustomerRef?.value))||{};
   const old=priorRows.get(String(invoice.Id));
-  const recentPayment=e.receipts.some(p=>p.date>=enabledAt.slice(0,10)&&p.updatedAt>=enabledAt);
-  const recentInvoice=invoice.MetaData?.CreateTime>=enabledAt;
+  const recentPayment=e.receipts.some(p=>p.date>=enabledAt.slice(0,10)&&Date.parse(p.updatedAt)>=Date.parse(enabledAt));
+  const recentInvoice=Date.parse(invoice.MetaData?.CreateTime)>=Date.parse(enabledAt);
   rows.push({id:String(invoice.Id),number:invoice.DocNumber||invoice.Id,customerId:String(invoice.CustomerRef?.value||''),client:c.DisplayName||invoice.CustomerRef?.name||'',email:email(c.PrimaryEmailAddr?.Address),currency:invoice.CurrencyRef?.value||'USD',date:invoice.TxnDate,...e,firstSeenAt:old?.firstSeenAt||now,dealId:old?.dealId,convertedAt:old?.convertedAt,attemptedAt:old?.attemptedAt,
    status:old?.convertedAt?(e.fullyPaid?'closed_won':'payment_review'):!e.fullyPaid?(e.received>0?'part_paid':'awaiting_payment'):!e.placement?'revenue_only':!(recentInvoice||recentPayment)&&!old?.eligible?'historical_review':'ready',eligible:!!(old?.eligible||recentInvoice||recentPayment)});
  }
