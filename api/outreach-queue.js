@@ -1,3 +1,5 @@
+import {withCallPhones} from './_outreach-call-phones.js';
+import {hubspotRequest} from './_outreach-hubspot.js';
 import { redis, requireAccess, adminAuthorized, SITE, readBody } from './_auth.js';
 import {config,access,gmail,compactMessage} from './_outreach-gmail.js';
 import {KEY,ownerFor,visibleState,mergeSnapshot,controlState} from './_outreach-queue.js';
@@ -8,7 +10,10 @@ export default async function handler(req,res) {
     const rep=await requireAccess(req);const owner=ownerFor(rep);
     if(!owner)return res.status(401).json({error:'Sign in with your Staffify account'});
     const state=await redis.get(KEY);
-    if(req.method==='GET')return res.status(200).json(visibleState(state,owner));
+    if(req.method==='GET'){
+      const crm=async(path,body)=>{const response=await hubspotRequest('https://api.hubapi.com'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined},{redis});if(!response.ok)throw Error('CRM unavailable');return response.json();};
+      return res.status(200).json(await withCallPhones(visibleState(state,owner),{redis,crm}));
+    }
     if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});
     const machine=adminAuthorized(req);
     if(!machine&&req.headers.origin!==SITE)return res.status(403).json({error:'Invalid origin'});

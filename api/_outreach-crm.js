@@ -10,7 +10,7 @@ async function hs(path,body,method){const token=process.env.HUBSPOT_TOKEN;if(!to
 export async function contact(email){const account=await hs('/account-info/v3/details');if(String(account.portalId)!=='51666712')throw Error('Wrong CRM portal');const found=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'email',operator:'EQ',value:email}]}],properties,limit:2});if(found.results.length!==1)throw Error('CRM contact missing or ambiguous');return found.results[0];}
 export async function draftBlockReason(row,{requireVerified=true}={}){
  if(await isOptedOut({email:row.recipient}))return 'Global opt-out';
- const c=await contact(row.recipient),p=c.properties;row.prospectTimezone={...resolveTimezone(p),checkedAt:new Date().toISOString()};const name=(p.firstname+' '+p.lastname).toLowerCase();
+ const c=await contact(row.recipient),p=c.properties;row.prospectTimezone={...resolveTimezone(p),checkedAt:new Date().toISOString()};row.phone=String(p.phone||'').trim()||String(p.mobilephone||'').trim()||null;const name=(p.firstname+' '+p.lastname).toLowerCase();
  if(['trey tatro','mike haymes','blake watkins'].some(n=>name.includes(n)))return 'Explicit exclusion';
  if(requireVerified&&p.rep_email_verified!=='verified')return 'Email verification: '+(p.rep_email_verified||'missing');
  if(p.rep_last_reply_at)return 'CRM records a reply';
