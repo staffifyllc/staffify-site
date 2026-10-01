@@ -1,5 +1,5 @@
 import { redis, requireAccess, adminAuthorized, SITE, readBody } from './_auth.js';
-import {config} from './_outreach-gmail.js';
+import {config,access,gmail,compactMessage} from './_outreach-gmail.js';
 import {KEY,ownerFor,visibleState,mergeSnapshot,controlState} from './_outreach-queue.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
@@ -15,7 +15,16 @@ export default async function handler(req,res) {
     const body=readBody(req);
     if(body.expectedRevision!==(state?.revision||0))return res.status(409).json({error:'Queue changed; reload before retrying'});
     let next;
-    if(body.action==='sync') {
+    if(body.action==='refresh-history') {
+      if(!machine)return res.status(403).json({error:'Worker authorization required'});
+      const row=state.records.find(r=>r.id===body.id);
+      const cfg=await config();
+      if(!row?.threadId||!cfg.accounts.some(a=>a.email===row.sender&&a.brand==='Staffify'&&a.draftEnabled))return res.status(400).json({error:'Connected Staffify conversation required'});
+      const thread=await gmail(await access(row.sender),'threads/'+encodeURIComponent(row.threadId)+'?format=full');
+      const messages=new Map((thread.messages||[]).map(m=>[m.id,m]));
+      const evidence=m=>{const types=[];const walk=p=>{if(!p||p.filename)return;if(p.body?.data)types.push(p.mimeType);for(const c of p.parts||[])walk(c);};walk(m.payload);return {rootType:m.payload?.mimeType,bodyTypes:types,readerVersion:2};};
+      next={...state,revision:state.revision+1,queueUpdatedAt:new Date().toISOString(),records:state.records.map(r=>r.id!==row.id?r:{...r,events:(r.events||[]).map(e=>{const m=messages.get(e.id);return m?{...e,body:compactMessage(m,row.sender).text,bodyMimeEvidence:evidence(m)}:e;})})};
+    } else if(body.action==='sync') {
       if(!machine)return res.status(403).json({error:'Worker authorization required'});
       if((await config()).enabled)return res.status(409).json({error:'Hosted worker owns the queue; local snapshot writes are disabled'});
       next=mergeSnapshot(state,body);

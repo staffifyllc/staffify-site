@@ -1,0 +1,8 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {messageText} from '../api/_mail-text.js';
+const part=(mimeType,text,extra={})=>({mimeType,body:{data:Buffer.from(text).toString('base64url')},...extra});
+test('alternative formats appear once, preferring plain text',()=>assert.equal(messageText({payload:{mimeType:'multipart/alternative',parts:[part('text/plain',"Hi\nI'm Paul\nPaul"),part('text/html',"<p>Hi</p><p>I&#39;m Paul</p><p>Paul</p>")]}}),"Hi\nI'm Paul\nPaul"));
+test('HTML-only fallback decodes entities and preserves paragraphs',()=>assert.equal(messageText({payload:part('text/html','<p>I&#39;m Paul &amp; Staffify</p><p>Thank you</p>')}),"I'm Paul & Staffify\nThank you"));
+test('plain text keeps literal angle brackets and entities',()=>assert.equal(messageText({payload:part('text/plain','Cost < $50 &amp; test')}),'Cost < $50 &amp; test'));
+test('nested alternative with attachment excludes attachment',()=>assert.equal(messageText({payload:{mimeType:'multipart/mixed',parts:[{mimeType:'multipart/alternative',parts:[part('text/plain','hello'),part('text/html','<p>hello</p>')]},part('text/plain','private attachment',{filename:'notes.txt'})]}}),'hello'));
+test('blank plain text falls back to HTML',()=>assert.equal(messageText({payload:{mimeType:'multipart/alternative',parts:[part('text/plain',' '),part('text/html','<p>Hello</p>')]}}),'Hello'));
+test('quoted HTML and plain replies excluded',()=>{assert.equal(messageText({payload:part('text/html','<p>Stop</p><blockquote>Old pitch</blockquote>')}),'Stop');assert.equal(messageText({payload:part('text/plain','Stop\nOn Tuesday Paul wrote: old pitch')}),'Stop');});
