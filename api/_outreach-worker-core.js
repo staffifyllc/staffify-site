@@ -43,7 +43,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
   if(!list.nextPageToken)await redis.set('outreach:cloud:inbox-index',(index+1)%active.length);
   // Reconcile held drafts before making more. No delete or send endpoint is used.
   for(const row of state.records){const a=state.assignments.find(a=>a.email===row.recipient);if(state.suppressions.includes(row.recipient))row.status='suppressed';else if(a&&a.owner!==row.owner){row.owner=a.owner;row.status='ownership_hold';}else if(state.pausedOwners.includes(row.owner)&&row.draftId)row.status='owner_paused_hold';}
-  for(const row of state.records.filter(r=>r.draftId&&(['suppressed','human_reply_hold','bounce_hold','auto_reply_hold','held_reply','held_out_of_office','ownership_hold','owner_paused_hold','crm_hold','control_hold','existing_draft_hold','send_history_changed_hold','cross_account_history_hold','sequence_complete_hold','followup_not_due_hold','draft_changed_hold','reserved_for_madison_external'].includes(r.status))&&!r.cloudHeld)){
+  for(const row of state.records.filter(r=>r.draftId&&(['email_verification_hold','suppressed','human_reply_hold','bounce_hold','auto_reply_hold','held_reply','held_out_of_office','ownership_hold','owner_paused_hold','crm_hold','control_hold','existing_draft_hold','send_history_changed_hold','cross_account_history_hold','sequence_complete_hold','followup_not_due_hold','draft_changed_hold','reserved_for_madison_external'].includes(r.status))&&!r.cloudHeld)){
    if(Date.now()-started>120000)break;
    if(!tokens[row.sender])continue;
    let draft;try{draft=await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(row.draftId));}catch(e){row.holdError='Draft unavailable; reconcile manually';state=await save(state);continue;}

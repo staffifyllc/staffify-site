@@ -1,3 +1,4 @@
+import {verificationGate} from './_outreach-verification.js';
 import {copyIssue} from './_outreach-copy.js';
 import {fairCandidates} from './_outreach-fairness.js';
 import {dayKey,classify} from './_outreach-policy.js';
@@ -18,7 +19,7 @@ export function sendDecision(row,state,messages,senders,now=Date.now()) {
  if(verdict.sent.length&&now-Math.max(...verdict.sent.map(m=>m.date))<48*3600000)return 'followup_not_due_hold';
  return null;
 }
-export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report,now=Date.now()}) {
+export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report,now=Date.now(),verify=verificationGate}) {
  if(!cfg.sendingEnabled)return state;
  state.sends ||= [];
  // A request with an uncertain outcome is never retried automatically.
@@ -41,6 +42,8 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(!draft.message.labelIds?.includes('DRAFT')||draft.message.id!==row.messageId||messageText(draft.message).trim()!==row.bodyText.trim()){row.status='draft_changed_hold';state=await save(state);continue;}
   const actualSubject=draft.message.payload?.headers?.find(h=>h.name.toLowerCase()==='subject')?.value;
   const actualCopyError=copyIssue(row,messageText(draft.message),actualSubject);if(actualCopyError){row.status='copy_review_hold';row.holdError=actualCopyError;state=await save(state);continue;}
+  if(!await verify(row,redis)){if(row.emailVerification?.status!=='unavailable')row.status='email_verification_hold';row.holdError='Email verification: '+(row.emailVerification?.reason||row.emailVerification?.status||'unconfirmed');report.verificationHeld=(report.verificationHeld||0)+1;state=await save(state);continue;}
+  row.holdError=null;state=await save(state);
   const current=await config();if(!current.enabled||!current.sendingEnabled)return state;
   const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before send');
   const id=row.id+':'+(row.sentTouches+1),key='outreach:cloud:send:'+id;

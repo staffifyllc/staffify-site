@@ -17,6 +17,7 @@ export function quota(record,creations,now=Date.now()) {
 }
 export function classify(messages,recipient,senders) {
  const seen=new Set();const sent=messages.filter(m=>{if(!m.sent||!m.to.includes(recipient))return false;const key=m.replyId||m.id;if(seen.has(key))return false;seen.add(key);return true;});
+ if(messages.some(m=>/mailer-daemon|postmaster/i.test(m.from||'')&&String(m.text||'').toLowerCase().includes(recipient.toLowerCase())))return {status:'bounce_hold',sent};
  const incoming=messages.filter(m=>m.from===recipient&&!senders.includes(m.from));
  if(incoming.some(m=>/\b(stop|unsubscribe|remove me|do not (?:email|contact|reach out)|don['’]?t (?:email|contact)|not interested|no thanks|no thank you|take me off|remove (?:us|my email)|not (?:a good fit|for us)|not looking (?:for|to))\b/i.test(replyText(m.text))))return {status:'suppressed',sent};
  // All other inbound messages, including automatic responses, hold until reviewed.
