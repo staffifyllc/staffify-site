@@ -1,7 +1,8 @@
 import {lookup} from 'node:dns/promises';
-import {isIP} from 'node:net';
+import {publicIp} from './_public-ip.js';
+export {publicIp} from './_public-ip.js';
 import {draftBlockReason} from './_outreach-crm.js';
-export function publicIp(ip){if(isIP(ip)!==4)return false;const [a,b]=ip.split('.').map(Number);return !(a===0||a===10||a===127||a===169&&b===254||a===172&&b>=16&&b<=31||a===192&&b===168||a===100&&b>=64&&b<=127||a>=224);}
+
 export async function site(url){let u=new URL(url.startsWith('http')?url:'https://'+url);for(let i=0;i<4;i++){if(!['https:','http:'].includes(u.protocol)||u.username||u.password||u.port&&!['80','443'].includes(u.port))throw Error('Invalid website');const ips=await lookup(u.hostname,{all:true});if(!ips.length||ips.some(x=>!publicIp(x.address)))throw Error('Non-public website');const r=await fetch(u,{redirect:'manual',signal:AbortSignal.timeout(5000)});if(r.status>=300&&r.status<400&&r.headers.get('location')){u=new URL(r.headers.get('location'),u);continue;}if(!r.ok)throw Error('Website unavailable');const reader=r.body.getReader();let raw='',bytes=0;while(bytes<500000){const {done,value}=await reader.read();if(done)break;bytes+=value.length;raw+=new TextDecoder().decode(value);}await reader.cancel();return {url:u.toString(),text:raw.replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ')};}throw Error('Too many redirects');}
 export async function supply(state,cfg){
  const token=process.env.HUBSPOT_TOKEN;if(!token)throw Error('CRM connection missing');

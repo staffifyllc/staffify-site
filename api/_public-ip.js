@@ -1,0 +1,2 @@
+import {isIP} from 'node:net';
+export function publicIp(ip){if(isIP(ip)===6){const [a,b]=ip.toLowerCase().split(':');const first=parseInt(a,16),second=parseInt(b||'0',16);return first>=0x2000&&first<=0x3fff&&first!==0x2002&&first!==0x3fff&&!(first===0x2001&&(second<0x200||second===0xdb8));}if(isIP(ip)!==4)return false;const [a,b]=ip.split('.').map(Number);return !(a===0||a===10||a===127||a===169&&b===254||a===172&&b>=16&&b<=31||a===192&&b===168||a===100&&b>=64&&b<=127||a>=224);}
