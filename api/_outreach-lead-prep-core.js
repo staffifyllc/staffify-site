@@ -30,7 +30,7 @@ return async function handler(req,res){
     state=await redis.get(KEY);let blocked=localBlock(item,state);if(blocked){await finish(blocked,1);continue;}
     if(await isOptedOut({email:item.email})){await finish('Global opt-out',30);continue;}
     let c=await find(item.email),p=c?.properties||{};
-    if(c&&p.rep_lifecycle_state!=='ACTIVE_OUTREACH'){await finish('CRM lifecycle requires review',1);continue;}
+    if(c&&p.rep_lifecycle_state&&p.rep_lifecycle_state!=='ACTIVE_OUTREACH'){await finish('CRM lifecycle requires review',1);continue;}
     const company=p.company||item.company,website=p.website||item.domain;if(!company||!website){await finish('Missing company or website',7);continue;}
     const row={recipient:item.email,company};
     if(c){blocked=await draftBlockReason(row,{requireVerified:false});if(blocked){await finish(blocked,1);continue;}}
@@ -53,12 +53,13 @@ return async function handler(req,res){
      }
     }
     const freshBlock=await draftBlockReason(row,{requireVerified:false});if(freshBlock){await finish(freshBlock,1);continue;}
-    // Never overwrite ownership, lifecycle, or an existing location.
-    const live=await find(item.email);if(live.properties.rep_lifecycle_state!=='ACTIVE_OUTREACH'){await finish('CRM lifecycle changed',1);continue;}
-    const fill=Object.fromEntries(Object.entries(loc).filter(([k,v])=>v&&!live.properties[k]));
-    await hs('/crm/v3/objects/contacts/'+c.id,{properties:{...fill,rep_email_verified:'verified'}},'PATCH');report.verified++;
+    // Never overwrite ownership, a nonempty lifecycle, or an existing location.
+    const live=await find(item.email);if(live.properties.rep_lifecycle_state&&live.properties.rep_lifecycle_state!=='ACTIVE_OUTREACH'){await finish('CRM lifecycle changed',1);continue;}
+    const sameCountry=!live.properties.country||live.properties.country.toLowerCase()===String(loc.country||'').toLowerCase();
+    const fill=sameCountry?Object.fromEntries(Object.entries(loc).filter(([k,v])=>v&&!live.properties[k])):{};
+    await hs('/crm/v3/objects/contacts/'+c.id,{properties:{...fill,...(!live.properties.rep_lifecycle_state?{rep_lifecycle_state:'ACTIVE_OUTREACH'}:{}),rep_email_verified:'verified'}},'PATCH');report.verified++;
     await finish('Verified and available to supply',7);
-   }catch(e){await finish('Retry: '+e.message,1/24);report.lastRetryReason=e.message;report.retries=(report.retries||0)+1;}
+   }catch(e){await finish('Retry: '+e.message,1/24);report.lastRetryReason=e.message;report.retries=(report.retries||0)+1;if(/CRM unavailable|Wrong CRM/.test(e.message)){report.status='error';report.reason=e.message;crmPageComplete=false;break;}}
   }
   if(crmPageComplete)await redis.set('staffify:lead-prep:cursor',page.paging?.next?.after||null);
   if(report.status==='complete'&&report.retries&&report.retries===report.checked)report.status='retrying';
