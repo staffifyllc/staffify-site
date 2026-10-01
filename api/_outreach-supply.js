@@ -1,3 +1,5 @@
+import {redis} from './_auth.js';
+import {hubspotRequest} from './_outreach-hubspot.js';
 import {lookup} from 'node:dns/promises';
 import {publicIp} from './_public-ip.js';
 export {publicIp} from './_public-ip.js';
@@ -9,7 +11,7 @@ export async function supply(state,cfg){
  const now=new Date().toISOString();
  const reserved=state.records.filter(r=>['reserved_for_madison_external','mailbox_connection_required'].includes(r.status)&&r.owner==='Madison'&&!r.sentTouches&&!(r.events||[]).some(e=>e.kind==='sent')&&(!r.draftId||r.cloudHeld)&&(!r.qualificationCheckedAt||r.qualificationReason==='CRM eligibility check failed'||r.qualificationReason==='Client check: unknown'&&Date.now()-Date.parse(r.qualificationCheckedAt)>30*60000||Date.now()-Date.parse(r.qualificationCheckedAt)>86400000)).slice(0,5);
  const filters=reserved.length?[{propertyName:'email',operator:'IN',values:reserved.map(r=>r.recipient)}]:[{propertyName:'rep_email_verified',operator:'EQ',value:'verified'},{propertyName:'rep_lifecycle_state',operator:'EQ',value:'ACTIVE_OUTREACH'}];
- const r=await fetch('https://api.hubapi.com/crm/v3/objects/contacts/search',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({filterGroups:[{filters}],properties:['email','firstname','lastname','company','website'],limit:reserved.length?5:1,...(!reserved.length&&state.supplyCursor?{after:state.supplyCursor}:{})}),signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error('CRM supply unavailable');const page=await r.json();
+ const r=await hubspotRequest('https://api.hubapi.com/crm/v3/objects/contacts/search',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({filterGroups:[{filters}],properties:['email','firstname','lastname','company','website'],limit:reserved.length?5:1,...(!reserved.length&&state.supplyCursor?{after:state.supplyCursor}:{})}),signal:AbortSignal.timeout(10000)},{redis});if(!r.ok)throw Error('CRM supply unavailable');const page=await r.json();
  if(!reserved.length)state.supplyCursor=page.paging?.next?.after||null;state.supplyCheckedAt=now;let added=0;
  for(const row of reserved){row.qualificationCheckedAt=now;row.qualificationReason='CRM record not found';}
 

@@ -1,11 +1,12 @@
+import {hubspotRequest} from './_outreach-hubspot.js';
 import {resolveTimezone} from './_outreach-timezone.js';
-import {listReps} from './_auth.js';
+import {redis,listReps} from './_auth.js';
 import {dealBlock} from './_deal-followup-policy.js';
 import {automatedModeAllowed} from './_outreach-policy.js';
 import {isOptedOut,optOut} from './_optout.js';
 import {clientCheck} from './_client-guard.js';
 const properties=['hs_timezone','phone','mobilephone','city','state','country','company','website','jobtitle','email','firstname','lastname','lifecyclestage','rep_lifecycle_state','rep_terminal_state','rep_last_reply_at','rep_email_verified','rep_outreach_mode','hs_email_optout','do_not_contact','hubspot_owner_id'];
-async function hs(path,body,method){const token=process.env.HUBSPOT_TOKEN;if(!token)throw Error('CRM connection missing');const r=await fetch('https://api.hubapi.com'+path,{method:method||(body?'POST':'GET'),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('CRM unavailable: '+r.status);return r.status===204?{}:r.json();}
+async function hs(path,body,method){const token=process.env.HUBSPOT_TOKEN;if(!token)throw Error('CRM connection missing');const r=await hubspotRequest('https://api.hubapi.com'+path,{method:method||(body?'POST':'GET'),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)},{redis});if(!r.ok)throw Error('CRM unavailable: '+r.status);return r.status===204?{}:r.json();}
 export async function contact(email){const account=await hs('/account-info/v3/details');if(String(account.portalId)!=='51666712')throw Error('Wrong CRM portal');const found=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'email',operator:'EQ',value:email}]}],properties,limit:2});if(found.results.length!==1)throw Error('CRM contact missing or ambiguous');return found.results[0];}
 export async function draftBlockReason(row,{requireVerified=true}={}){
  if(await isOptedOut({email:row.recipient}))return 'Global opt-out';
