@@ -18,8 +18,8 @@ return async function handler(req,res){
   let state=await redis.get(KEY);if(!state)throw Error('Queue unavailable');
   const cursor=await redis.get('staffify:lead-prep:cursor');
   const page=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'email',operator:'HAS_PROPERTY'}]}],properties:['email','website','company'],limit:30,...(cursor?{after:cursor}:{})});
-  const recovered=dueInventory(inventory),emails=new Set(recovered.map(r=>r.email));
-  const candidates=[...recovered,...(page.results||[]).filter(c=>!emails.has(String(c.properties.email).toLowerCase())).map(c=>({email:String(c.properties.email).toLowerCase(),company:c.properties.company,domain:c.properties.website,crmId:c.id}))];
+  const recovered=dueInventory(inventory),emails=new Set(recovered.map(r=>r.email)),inventoryEmails=new Set(inventory.records.map(r=>r.email));
+  const candidates=[...recovered,...(page.results||[]).filter(c=>!inventoryEmails.has(String(c.properties.email).toLowerCase())).map(c=>({email:String(c.properties.email).toLowerCase(),company:c.properties.company,domain:c.properties.website,crmId:c.id}))];
   let crmPageComplete=true;
   for(const item of candidates){
    if(Date.now()-started>210000){report.status='yielded';crmPageComplete=false;break;}
