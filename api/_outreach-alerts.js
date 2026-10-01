@@ -9,7 +9,7 @@ export function incidents({cfg,run,health,prep},now=Date.now()){
  if(failed.length)issues.push({id:'mailbox-access',title:'Mailbox connection needs attention',impact:'New introductions are paused because complete mailbox history is unavailable.',action:'Reconnect the affected mailboxes in the Hub.',accounts:failed});
  if(cfg.draftingEnabled!==false){
  if(age(prep?.finishedAt||prep?.startedAt,now)>20*60000)issues.push({id:'prep-overdue',title:'Lead preparation is overdue',impact:'The existing-contact queue is not being refreshed.',action:'Check the lead-preparation schedule and execution logs.'});
- else if(['error','provider_unavailable'].includes(prep?.status))issues.push({id:'prep-error',title:'Lead preparation is blocked',impact:'New eligible contacts may not reach the outreach queue.',action:'Check CRM access and Findymail availability or remaining credits in the Hub.'});
+ else if(['error','provider_unavailable','retrying'].includes(prep?.status))issues.push({id:'prep-error',title:'Lead preparation is blocked',impact:'New eligible contacts may not reach the outreach queue.',action:'Check CRM access and Findymail availability or remaining credits in the Hub.'});
  }
  if(run?.dealFollowupError)issues.push({id:'deal-followups',title:'Deal follow-up preparation failed',impact:'Existing-deal follow-ups may be delayed.',action:'Check the CRM integration and worker failure details.'});
  return issues;
