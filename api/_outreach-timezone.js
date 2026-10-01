@@ -11,10 +11,10 @@ export function resolveTimezone(p){
  return {timeZone:null,source:'Timezone needs confirmation'};
 }
 export function sendingWindow(row,now=Date.now(),window={start:9,end:17,weekdays:[1,2,3,4,5]}){
- const zone=canonicalZone(row.prospectTimezone?.timeZone);if(!zone)return {allowed:false,reason:'Prospect timezone missing; no sender-timezone fallback',timeZone:null};
+ const zone=canonicalZone(window.timeZone)||canonicalZone(row.prospectTimezone?.timeZone);if(!zone)return {allowed:false,reason:'Prospect timezone missing; no sender-timezone fallback',timeZone:null};
  const fmt=new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'});
  const local=t=>{const p=Object.fromEntries(fmt.formatToParts(new Date(t)).map(p=>[p.type,p.value]));return {day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday),hour:Number(p.hour)+Number(p.minute)/60};};
  const open=t=>{const p=local(t);return window.weekdays.includes(p.day)&&p.hour>=window.start&&p.hour<window.end;};
  const allowed=open(now);let nextOpenAt=null;if(!allowed)for(let t=Math.ceil(now/900000)*900000;t<=now+8*86400000;t+=900000){if(open(t)){nextOpenAt=new Date(t).toISOString();break;}}
- return {allowed,timeZone:zone,localHour:local(now).hour,start:window.start,end:window.end,nextOpenAt,reason:allowed?'Within prospect local business hours':'Waiting for prospect local business hours'};
+ return {allowed,timeZone:zone,mode:window.timeZone?'fixed':'prospect',localHour:local(now).hour,start:window.start,end:window.end,nextOpenAt,reason:allowed?'Within prospect local business hours':'Waiting for prospect local business hours'};
 }

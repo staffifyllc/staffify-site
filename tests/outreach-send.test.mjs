@@ -18,3 +18,12 @@ test('unverified email never reaches Gmail send',async()=>{const h=harness();h.d
 test('temporary verifier failure retains draft for automatic retry without sending',async()=>{const h=harness();h.d.verify=async row=>{row.emailVerification={status:'unavailable'};return false;};await sendOne(h.d);assert.equal(h.calls.includes('drafts/send'),false);assert.equal(h.get().records[0].status,'draft_saved');});
 
 test('delivery failure blocks send even when it comes from postmaster instead of recipient',()=>{assert.equal(sendDecision(row,state(),[prior,{from:'postmaster@example.com',text:'Delivery failed for '+to}],[sender],now),'bounce_hold');});
+test('batch sends across mailboxes but never more than one per mailbox per tick',async()=>{
+ const h=harness();const other='paul@hirestaffify.com';const s=h.d.state;
+ for(const [id,mail,recipient,draft] of [['two',other,'two@example.com','draft2'],['three',sender,'three@example.com','draft3']]){s.records.push({...structuredClone(row),id,sender:mail,recipient,draftId:draft,messageId:draft+'msg'});s.creations.push({id:id+':2',status:'verified'});}
+ h.d.cfg.accounts.push({email:other,owner:'Paul'});h.d.tokens[other]='token2';h.d.senders.push(other);
+ h.d.history=async(token,recipient)=>[{...prior,to:[recipient],mailbox:recipient==='two@example.com'?other:sender}];
+ const drafts=new Map(s.records.map(r=>[r.draftId,{...r}]));const sent=new Map();let n=0;
+ h.d.gmail=async(token,path,body)=>{if(path==='drafts/send'){const r=drafts.get(body.id),id='actual-'+(++n);sent.set(id,{...prior,id,replyId:id,to:[r.recipient],from:r.sender,date:Date.now(),threadId:'thread-'+id});return {id};}if(path.startsWith('messages/'))return sent.get(path.split('/')[1].split('?')[0]);const r=drafts.get(path.split('/')[1]);return {message:{id:r.messageId,labelIds:['DRAFT']}};};
+ await sendOne(h.d);assert.equal(h.d.report.sent,2);assert.equal(s.records[2].status,'draft_saved');
+});

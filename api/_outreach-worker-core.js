@@ -73,15 +73,16 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
   }
   state=await save(state);
   if(dealSupply&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000){try{report.dealFollowups=await dealSupply(state,cfg,tokens);state=await save(state);}catch(e){report.dealFollowupError=String(e.message).slice(0,120);}}
-  if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report});
-  const hour=Number(new Intl.DateTimeFormat('en-US',{hour:'numeric',hourCycle:'h23',timeZone:'America/New_York'}).format(new Date()));
   if(cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000&&state.records.filter(r=>r.status==='prepared').length<30){report.qualified=await supply(state,cfg);state=await save(state);}
+  if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report});
   const candidates=fairCandidates(state.records.filter(r=>eligible(r,state)&&cfg.draftingEnabled!==false&&historyComplete),state.creations);
+  const draftedMailboxes=new Set();
   for(const row of candidates){
-   if(Date.now()-started>120000||report.created>=1)break;
+   if(draftedMailboxes.has(row.sender))continue;
+   if(Date.now()-started>210000||report.created>=7)break;
    if(!cfg.accounts.find(a=>a.email===row.sender&&a.owner===row.owner)?.draftEnabled||!tokens[row.sender]||!quota(row,state.creations))continue;
    if(!await canDraft(row)){row.status='crm_hold';state=await save(state);continue;}
-   if(Date.now()-started>120000)break;
+   if(Date.now()-started>210000)break;
    const assignment=state.assignments.find(a=>a.email===row.recipient);if(assignment&&assignment.owner!==row.owner)continue;
    let messages=[];try{messages=(await Promise.all(senders.map(async sender=>(await history(tokens[sender],row.recipient)).map(m=>compactMessage(m,sender))))).flat();}catch(e){row.status='history_check_hold';row.holdError='Mailbox history could not be fully checked';state=await save(state);continue;}
    if(Date.now()-started>210000)break;
@@ -101,7 +102,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
     assertDraft(await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(draft.id)),row.recipient);
     await redis.set('outreach:cloud:operation:'+operation,{status:'saved',draft,at:Date.now()});
     state.creations.find(c=>c.id===operation).status='verified';
-    Object.assign(row,{draftId:draft.id,messageId:draft.message.id,threadId:draft.message.threadId,status:'draft_saved',bodyText:body,draftCreatedAt:new Date().toISOString()});state=await save(state);report.created++;
+    Object.assign(row,{draftId:draft.id,messageId:draft.message.id,threadId:draft.message.threadId,status:'draft_saved',bodyText:body,draftCreatedAt:new Date().toISOString()});state=await save(state);report.created++;draftedMailboxes.add(row.sender);
    }catch(e){await redis.set('outreach:cloud:operation:'+operation,{status:'uncertain',at:Date.now(),error:'Inspect Gmail before any retry'});throw e;}
   }
   report.status=historyComplete?'complete':'partial';if(!historyComplete)report.reason='One or more mailbox histories are unavailable; new drafts paused to prevent duplicate outreach';return await finish(200);

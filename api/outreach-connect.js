@@ -33,6 +33,9 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
    const email=String(body.email||'').trim().toLowerCase();if(!/^[a-z0-9._+-]+@[a-z0-9.-]*(?:staffify|foundry)[a-z0-9.-]*\.[a-z]{2,}$/.test(email)||!['Paul','Madison'].includes(body.owner))return res.status(400).json({error:'Valid Staffify address and owner required'});
    if(cfg.enabled)return res.status(409).json({error:'Pause hosted worker before changing its mailbox inventory'});
    if(!cfg.accounts.some(a=>a.email===email)){if(cfg.accounts.length>=cfg.expectedAccounts)return res.status(400).json({error:'Expected accounts already registered'});cfg.accounts.push({email,owner:body.owner,dailyLimit:50,brand:email.includes('foundry')?'Foundry':'Staffify',draftEnabled:!email.includes('foundry')});}
+  }else if(body.action==='set-send-window'){
+   if(body.start!==9||body.end!==21||body.timeZone!=='America/New_York')return res.status(400).json({error:'Supported shared window is 9 AM to 9 PM Eastern'});
+   cfg.sendWindow={start:9,end:21,timeZone:'America/New_York',weekdays:[1,2,3,4,5]};
   }else if(body.action==='reconcile'){cfg.enabled=true;cfg.draftingEnabled=false;
   }else if(body.action==='enable'){
    if(process.env.OUTREACH_WORKER_VERIFIED!=='true')return res.status(409).json({error:'Draft creation is paused until hosted validation is complete; cloud reconciliation remains available'});

@@ -32,11 +32,13 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   state=await save(state);
  }
  const candidates=fairCandidates(state.records.filter(r=>r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
+ const sentMailboxes=new Set();
  for(const row of candidates){
-  if(Date.now()-started>170000)break;
+  if(sentMailboxes.has(row.sender)||sentMailboxes.size>=7)continue;
+  if(Date.now()-started>90000)break;
   if(!sendQuota(row,state)||state.pausedOwners.includes(row.owner)||state.suppressions.includes(row.recipient))continue;
   // Unknown locations cannot send; avoid spending the entire tick rechecking the same holds.
-  if(locationRefreshDeferred(row,now)){report.missingProspectTimezone=(report.missingProspectTimezone||0)+1;continue;}
+  if(!cfg.sendWindow?.timeZone&&locationRefreshDeferred(row,now)){report.missingProspectTimezone=(report.missingProspectTimezone||0)+1;continue;}
   const copyError=copyIssue(row);if(copyError){row.status='copy_review_hold';row.holdError=copyError;state=await save(state);continue;}
   if(!await canDraft(row)){row.status='crm_hold';state=await save(state);continue;}
   row.sendWindow=sendingWindow(row,now,cfg.sendWindow);if(!row.sendWindow.allowed){const key=row.sendWindow.timeZone?'outsideRecipientHours':'missingProspectTimezone';report[key]=(report[key]||0)+1;state=await save(state);continue;}
@@ -59,7 +61,7 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
    await redis.set(key,{id,status:'sent',messageId:sent.id,at:Date.now()});
    const verified=compactMessage(await gmail(tokens[row.sender],'messages/'+sent.id+'?format=full'),row.sender);
    if(!verified.sent||!verified.to.includes(row.recipient))throw Error('Sent message verification failed');
-   applySent(row,state,verified,id);state=await save(state);report.sent=(report.sent||0)+1;break;
+   applySent(row,state,verified,id);state=await save(state);report.sent=(report.sent||0)+1;sentMailboxes.add(row.sender);
   }catch(e){report.sendError='Send outcome held for reconciliation; no automatic retry';throw e;}
  }
  return state;
