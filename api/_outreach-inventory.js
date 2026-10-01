@@ -18,7 +18,7 @@ export function localBlock(item,state){
  if(row&&(!['prepared','draft_saved','awaiting_qualification','reserved_for_madison_external','mailbox_connection_required'].includes(row.status)||row.sentTouches||(row.events||[]).some(e=>e.kind==='sent')))return 'Existing sequence or protected hold';
  return null;
 }
-export function dueInventory(inventory,now=Date.now(),limit=20){return (inventory?.records||[]).filter(r=>!r.result||r.nextAt&&Date.parse(r.nextAt)<=now).sort((a,b)=>(!!a.result)-(!!b.result)||(/possible_media|existing_REP/.test(b.fit_review)?1:0)-(/possible_media|existing_REP/.test(a.fit_review)?1:0)).slice(0,limit);}
+export function dueInventory(inventory,now=Date.now(),limit=60){return (inventory?.records||[]).filter(r=>!r.result||r.nextAt&&Date.parse(r.nextAt)<=now).sort((a,b)=>(!!a.result)-(!!b.result)||(/possible_media|existing_REP/.test(b.fit_review)?1:0)-(/possible_media|existing_REP/.test(a.fit_review)?1:0)).slice(0,limit);}
 export function location(item){const personal=!!(item.country&&item.region);return {city:personal?item.city:item.company_city,state:personal?item.region:item.company_region,country:personal?item.country:item.company_country};}
 
 export function supplyOwner({assigned,existing,crmOwnerId,reps=[],id}){if(assigned?.owner||existing?.owner)return assigned?.owner||existing.owner;if(crmOwnerId){const rep=reps.find(r=>String(r.hubspotOwnerId)===String(crmOwnerId));return rep&&/madison/i.test(rep.email)?'Madison':rep&&/^(paul|hello)@/.test(rep.email)?'Paul':null;}return Number(String(id).slice(-1))%2?'Madison':'Paul';}

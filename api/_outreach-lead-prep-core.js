@@ -17,7 +17,7 @@ return async function handler(req,res){
   const portal=await hs('/account-info/v3/details',null,'GET');if(String(portal.portalId)!=='51666712')throw Error('Wrong CRM portal');
   let state=await redis.get(KEY);if(!state)throw Error('Queue unavailable');
   const cursor=await redis.get('staffify:lead-prep:cursor');
-  const page=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'rep_lifecycle_state',operator:'EQ',value:'ACTIVE_OUTREACH'},{propertyName:'email',operator:'HAS_PROPERTY'},{propertyName:'website',operator:'HAS_PROPERTY'},{propertyName:'company',operator:'HAS_PROPERTY'}]}],properties:['email','website','company'],limit:10,...(cursor?{after:cursor}:{})});
+  const page=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'email',operator:'HAS_PROPERTY'}]}],properties:['email','website','company'],limit:30,...(cursor?{after:cursor}:{})});
   const recovered=dueInventory(inventory),emails=new Set(recovered.map(r=>r.email));
   const candidates=[...recovered,...(page.results||[]).filter(c=>!emails.has(String(c.properties.email).toLowerCase())).map(c=>({email:String(c.properties.email).toLowerCase(),company:c.properties.company,domain:c.properties.website,crmId:c.id}))];
   let crmPageComplete=true;
@@ -64,6 +64,7 @@ return async function handler(req,res){
   }
   if(crmPageComplete)await redis.set('staffify:lead-prep:cursor',page.paging?.next?.after||null);
   if(report.status==='complete'&&report.retries&&report.retries===report.checked)report.status='retrying';
+  report.crmInventory={scope:'All existing Staffify CRM contacts with an email',matchingContacts:page.total??null,pageSize:(page.results||[]).length,nextCursor:crmPageComplete?(page.paging?.next?.after||null):(cursor||null),cycleComplete:crmPageComplete&&!page.paging?.next?.after};
   report.inventory=inventorySummary(inventory);report.finishedAt=new Date().toISOString();await redis.set(STATUS,report);return res.status(200).json(report);
  }catch(e){report.status='error';report.reason=e.message;await redis.set(STATUS,report);return res.status(503).json(report);}
  finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",[LOCK],[nonce]);}
