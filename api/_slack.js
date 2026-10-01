@@ -3,6 +3,14 @@
 // if the bot has channels:read). Best-effort: never throws into the caller.
 
 export async function slackNotify(text, blocks) {
+    const webhook = process.env.OUTREACH_SLACK_WEBHOOK;
+    if (webhook) {
+        try {
+            const response = await fetch(webhook, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,...(blocks?{blocks}:{}),unfurl_links:false,unfurl_media:false}),signal:AbortSignal.timeout(10000)});
+            const result=(await response.text()).trim();
+            return response.ok&&result==='ok'?{ok:true,transport:'webhook'}:{ok:false,error:'Slack webhook rejected delivery ('+response.status+')'};
+        } catch {return {ok:false,error:'Slack webhook delivery unavailable'};}
+    }
     const token = process.env.SLACK_BOT_TOKEN;
     const channel = process.env.SLACK_CHANNEL;
     if (!token || !channel) return { ok: false, skipped: true };
@@ -22,6 +30,7 @@ export async function slackNotify(text, blocks) {
 
 // Read-only credential check. This does not post a test message.
 export async function slackHealth(){
+ if(process.env.OUTREACH_SLACK_WEBHOOK)return {ok:true,transport:'webhook',configured:true,deliveryVerified:false};
  if(!process.env.SLACK_BOT_TOKEN||!process.env.SLACK_CHANNEL)return {ok:false,error:'Slack bot or channel configuration missing'};
  try{const r=await fetch('https://slack.com/api/auth.test',{method:'POST',headers:{Authorization:'Bearer '+process.env.SLACK_BOT_TOKEN},signal:AbortSignal.timeout(10000)});const j=await r.json();return {ok:!!j.ok,error:j.ok?null:j.error,channel:process.env.SLACK_CHANNEL,teamId:j.team_id||null,team:j.team||null,deliveryVerified:false};}catch{return {ok:false,error:'Slack credential check unavailable',deliveryVerified:false};}
 }
