@@ -58,6 +58,7 @@ return async function handler(req,res){
     const sameCountry=!live.properties.country||live.properties.country.toLowerCase()===String(loc.country||'').toLowerCase();
     const fill=sameCountry?Object.fromEntries(Object.entries(loc).filter(([k,v])=>v&&!live.properties[k])):{};
     await hs('/crm/v3/objects/contacts/'+c.id,{properties:{...fill,...(!live.properties.rep_lifecycle_state?{rep_lifecycle_state:'ACTIVE_OUTREACH'}:{}),rep_email_verified:'verified'}},'PATCH');report.verified++;
+    await redis.sadd('staffify:lead-prep:ready',item.email);
     await finish('Verified and available to supply',7);
    }catch(e){await finish('Retry: '+e.message,1/24);report.lastRetryReason=e.message;report.retries=(report.retries||0)+1;if(/CRM unavailable|Wrong CRM/.test(e.message)){report.status='error';report.reason=e.message;crmPageComplete=false;break;}}
   }
