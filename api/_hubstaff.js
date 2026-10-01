@@ -91,7 +91,7 @@ export async function hubstaffStatus() {
     return { connected: false, reason: b.hint || b.error || 'unknown' };
 }
 
-async function api(path) {
+export async function api(path) {
     const b = await bearer();
     if (!b.ok) return { ok: false, ...b };
     const r = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${b.token}`, 'User-Agent': UA },signal:AbortSignal.timeout(15000) });
