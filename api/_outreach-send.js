@@ -20,6 +20,7 @@ export function sendDecision(row,state,messages,senders,now=Date.now()) {
  if(verdict.sent.length&&now-Math.max(...verdict.sent.map(m=>m.date))<48*3600000)return 'followup_not_due_hold';
  return null;
 }
+export function locationRefreshDeferred(row,now){return row.prospectTimezone?.timeZone===null&&now-Date.parse(row.prospectTimezone.checkedAt)<15*60000;}
 export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report,now=Date.now(),verify=verificationGate}) {
  if(!cfg.sendingEnabled)return state;
  state.sends ||= [];
@@ -34,9 +35,11 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
  for(const row of candidates){
   if(Date.now()-started>170000)break;
   if(!sendQuota(row,state)||state.pausedOwners.includes(row.owner)||state.suppressions.includes(row.recipient))continue;
+  // Unknown locations cannot send; avoid spending the entire tick rechecking the same holds.
+  if(locationRefreshDeferred(row,now)){report.missingProspectTimezone=(report.missingProspectTimezone||0)+1;continue;}
   const copyError=copyIssue(row);if(copyError){row.status='copy_review_hold';row.holdError=copyError;state=await save(state);continue;}
   if(!await canDraft(row)){row.status='crm_hold';state=await save(state);continue;}
-  row.sendWindow=sendingWindow(row,now,cfg.sendWindow);if(!row.sendWindow.allowed){report.outsideRecipientHours=(report.outsideRecipientHours||0)+1;state=await save(state);continue;}
+  row.sendWindow=sendingWindow(row,now,cfg.sendWindow);if(!row.sendWindow.allowed){const key=row.sendWindow.timeZone?'outsideRecipientHours':'missingProspectTimezone';report[key]=(report[key]||0)+1;state=await save(state);continue;}
   const messages=(await Promise.all(senders.map(async sender=>(await history(tokens[sender],row.recipient)).map(m=>compactMessage(m,sender))))).flat();
   const reason=sendDecision(row,state,messages,senders);if(reason){row.status=reason;if(reason==='suppressed'&&!state.suppressions.includes(row.recipient))state.suppressions.push(row.recipient);state=await save(state);continue;}
   const draft=assertDraft(await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(row.draftId)),row.recipient);
