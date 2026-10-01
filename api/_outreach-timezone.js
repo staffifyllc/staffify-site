@@ -1,0 +1,20 @@
+// Explicit CRM timezone takes precedence. Location inference is deliberately limited
+// to single-zone regions; split-zone states require an explicit timezone.
+const STATES={CA:'America/Los_Angeles',California:'America/Los_Angeles',WA:'America/Los_Angeles',Washington:'America/Los_Angeles',NY:'America/New_York','New York':'America/New_York',NJ:'America/New_York','New Jersey':'America/New_York',MA:'America/New_York',Massachusetts:'America/New_York',CT:'America/New_York',Connecticut:'America/New_York',RI:'America/New_York','Rhode Island':'America/New_York',VT:'America/New_York',Vermont:'America/New_York',NH:'America/New_York','New Hampshire':'America/New_York',ME:'America/New_York',Maine:'America/New_York',PA:'America/New_York',Pennsylvania:'America/New_York',OH:'America/New_York',Ohio:'America/New_York',VA:'America/New_York',Virginia:'America/New_York',WV:'America/New_York','West Virginia':'America/New_York',NC:'America/New_York','North Carolina':'America/New_York',SC:'America/New_York','South Carolina':'America/New_York',GA:'America/New_York',Georgia:'America/New_York',DE:'America/New_York',Delaware:'America/New_York',MD:'America/New_York',Maryland:'America/New_York',DC:'America/New_York',AL:'America/Chicago',Alabama:'America/Chicago',AR:'America/Chicago',Arkansas:'America/Chicago',IL:'America/Chicago',Illinois:'America/Chicago',IA:'America/Chicago',Iowa:'America/Chicago',LA:'America/Chicago',Louisiana:'America/Chicago',MN:'America/Chicago',Minnesota:'America/Chicago',MS:'America/Chicago',Mississippi:'America/Chicago',MO:'America/Chicago',Missouri:'America/Chicago',OK:'America/Chicago',Oklahoma:'America/Chicago',WI:'America/Chicago',Wisconsin:'America/Chicago',CO:'America/Denver',Colorado:'America/Denver',NM:'America/Denver','New Mexico':'America/Denver',UT:'America/Denver',Utah:'America/Denver',WY:'America/Denver',Wyoming:'America/Denver',MT:'America/Denver',Montana:'America/Denver',HI:'Pacific/Honolulu',Hawaii:'Pacific/Honolulu'};
+const normalizedStates=Object.fromEntries(Object.entries(STATES).map(([k,v])=>[k.toLowerCase(),v]));
+export function canonicalZone(value){try{const s=String(value||'').replace(/_slash_/gi,'/');if(!s.includes('/'))return null;return new Intl.DateTimeFormat('en-US',{timeZone:s}).resolvedOptions().timeZone;}catch{return null;}}
+export function resolveTimezone(p){
+ const explicit=canonicalZone(p.hs_timezone||p.timeZone);if(explicit)return {timeZone:explicit,source:'CRM timezone'};
+ const country=String(p.country||'').trim().toLowerCase(),state=String(p.state||'').trim().toLowerCase();
+ if(['us','usa','united states','united states of america'].includes(country)&&normalizedStates[state])return {timeZone:normalizedStates[state],source:'CRM country and single-zone state'};
+ if(['uk','gb','united kingdom','great britain'].includes(country))return {timeZone:'Europe/London',source:'CRM country'};
+ return {timeZone:null,source:'Timezone needs confirmation'};
+}
+export function sendingWindow(row,now=Date.now(),window={start:9,end:17,weekdays:[1,2,3,4,5]}){
+ const zone=canonicalZone(row.prospectTimezone?.timeZone);if(!zone)return {allowed:false,reason:'Prospect timezone missing; no sender-timezone fallback',timeZone:null};
+ const fmt=new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'});
+ const local=t=>{const p=Object.fromEntries(fmt.formatToParts(new Date(t)).map(p=>[p.type,p.value]));return {day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday),hour:Number(p.hour)+Number(p.minute)/60};};
+ const open=t=>{const p=local(t);return window.weekdays.includes(p.day)&&p.hour>=window.start&&p.hour<window.end;};
+ const allowed=open(now);let nextOpenAt=null;if(!allowed)for(let t=Math.ceil(now/900000)*900000;t<=now+8*86400000;t+=900000){if(open(t)){nextOpenAt=new Date(t).toISOString();break;}}
+ return {allowed,timeZone:zone,localHour:local(now).hour,start:window.start,end:window.end,nextOpenAt,reason:allowed?'Within prospect local business hours':'Waiting for prospect local business hours'};
+}

@@ -30,6 +30,14 @@
     {
       "path": "/api/finance-snapshot/",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/outreach-lead-prep/",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/outreach-health/",
+      "schedule": "*/5 * * * *"
     }
   ],
   "rewrites": [
@@ -272,6 +280,9 @@
     },
     "api/deal-followups.js": {
       "maxDuration": 120
+    },
+    "api/outreach-lead-prep.js": {
+      "maxDuration": 300
     }
   }
 }

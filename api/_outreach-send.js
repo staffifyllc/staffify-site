@@ -1,3 +1,4 @@
+import {sendingWindow} from './_outreach-timezone.js';
 import {verificationGate} from './_outreach-verification.js';
 import {copyIssue} from './_outreach-copy.js';
 import {fairCandidates} from './_outreach-fairness.js';
@@ -29,13 +30,13 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(op?.messageId){const m=compactMessage(await gmail(tokens[row.sender],'messages/'+op.messageId+'?format=full'),row.sender);if(m.sent)applySent(row,state,m,op.id);}
   state=await save(state);
  }
- const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hourCycle:'h23'}).format(new Date(now)));if(hour<8)return state;
  const candidates=fairCandidates(state.records.filter(r=>r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
  for(const row of candidates){
   if(Date.now()-started>170000)break;
   if(!sendQuota(row,state)||state.pausedOwners.includes(row.owner)||state.suppressions.includes(row.recipient))continue;
   const copyError=copyIssue(row);if(copyError){row.status='copy_review_hold';row.holdError=copyError;state=await save(state);continue;}
   if(!await canDraft(row)){row.status='crm_hold';state=await save(state);continue;}
+  row.sendWindow=sendingWindow(row,now,cfg.sendWindow);if(!row.sendWindow.allowed){report.outsideRecipientHours=(report.outsideRecipientHours||0)+1;state=await save(state);continue;}
   const messages=(await Promise.all(senders.map(async sender=>(await history(tokens[sender],row.recipient)).map(m=>compactMessage(m,sender))))).flat();
   const reason=sendDecision(row,state,messages,senders);if(reason){row.status=reason;if(reason==='suppressed'&&!state.suppressions.includes(row.recipient))state.suppressions.push(row.recipient);state=await save(state);continue;}
   const draft=assertDraft(await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(row.draftId)),row.recipient);
@@ -45,6 +46,7 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(!await verify(row,redis)){if(row.emailVerification?.status!=='unavailable')row.status='email_verification_hold';row.holdError='Email verification: '+(row.emailVerification?.reason||row.emailVerification?.status||'unconfirmed');report.verificationHeld=(report.verificationHeld||0)+1;state=await save(state);continue;}
   row.holdError=null;state=await save(state);
   const current=await config();if(!current.enabled||!current.sendingEnabled)return state;
+  if(!sendingWindow(row,Date.now(),current.sendWindow).allowed)continue;
   const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before send');
   const id=row.id+':'+(row.sentTouches+1),key='outreach:cloud:send:'+id;
   if(!await redis.set(key,{id,status:'reserved',at:Date.now()},{nx:true}))continue;

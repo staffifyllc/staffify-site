@@ -10,7 +10,8 @@ export async function slackNotify(text, blocks) {
         const res = await fetch('https://slack.com/api/chat.postMessage', {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({ channel, text, ...(blocks ? { blocks } : {}), unfurl_links: false }),
+            body: JSON.stringify({ channel, text, ...(blocks ? { blocks } : {}), unfurl_links: false, unfurl_media: false }),
+            signal: AbortSignal.timeout(10000),
         });
         const j = await res.json().catch(() => ({}));
         return { ok: !!j.ok, error: j.error };
