@@ -456,7 +456,8 @@
         "manage virtual assistants",
         "remote team stack"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-09-11T17:41:33Z"
     },
     {
       "slug": "real-estate-photography-business",
@@ -468,7 +469,8 @@
         "photography studio scale",
         "aryeo workflow"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-10-02T19:06:27Z"
     },
     {
       "slug": "lift-legal-intake-conversion",
