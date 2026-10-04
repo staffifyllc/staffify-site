@@ -27,9 +27,9 @@ export function classify(messages,recipient,senders) {
 export function followup(record) {
  if(record.lane==='deal_followup')return dealEmail(record,record.sentTouches);
  const parts=[
- 'One useful handoff is a revision log: each requested change, who owns it, and whether it passed review. Which part of revision tracking still lands on your desk?',
- 'Another task to hand off is checking that every promised deliverable is ready before a client is told the job is complete. Do you already have one person responsible for that last check?',
- 'I will leave it here after this note. If you decide to delegate a recurring task, start with one written checklist and a clear rule for what comes back to you. Is there one task you would start with?'];
+ "Another simple handoff: have one person collect the shoot details before it goes on the calendar: address, access instructions, requested services, and delivery deadline. Missing details get flagged in one place. Is scheduling something you still handle yourself?",
+ "For delivery, a short checklist can be enough: correct property, every promised file, working download link, and any revisions checked. Whoever owns delivery runs through it before the client gets the email. Does your team have someone doing that last check?",
+ "I'll wrap up this email thread here. If handing something off becomes a priority, pick one recurring task and write down what done looks like before deciding who should own it. If you want to talk through a task, reply with it and we can compare notes."];
  return ['Hi '+(record.verifiedFirstName||'there')+',',parts[Math.min(Math.max(record.sentTouches-1,0),2)],record.owner==='Madison'?'Madison\nStaffify':'Paul\nFlylisted + Staffify',"If you'd prefer no more emails, just let me know."].join('\n\n');
 }
 
