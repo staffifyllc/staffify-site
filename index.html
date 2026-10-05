@@ -1809,7 +1809,27 @@
             .compare-cell.us::before { content: "Staffify — "; color: var(--c); font-weight: 700; }
         }
 
-        </style>
+        
+/* Additive enterprise discovery; keep the SMB hero and calls to action. */
+.nav-links{gap:clamp(12px,1.5vw,24px)}
+.nav-links .enterprise-nav-link{color:#78d7ec;font-weight:600;white-space:nowrap}
+.hero-enterprise-link{margin:18px 0 0;font-size:14px;color:#c0ccd5;position:relative;z-index:2}
+.hero-enterprise-link a{color:#78d7ec;text-decoration:underline;text-underline-offset:4px}
+.growth-paths{padding:64px 32px;background:linear-gradient(125deg,#0d1720,#080b10);border-block:1px solid #26343f}
+.growth-paths-inner{max-width:1160px;margin:auto}
+.growth-paths h2{font-size:clamp(28px,3.5vw,42px);line-height:1.15;letter-spacing:-.03em;margin:12px 0 14px}
+.growth-paths .growth-intro{max-width:680px;color:#b7c3cd;line-height:1.65}
+.growth-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:30px}
+.growth-card{background:#10171f;border:1px solid #304351;border-radius:14px;padding:26px;display:flex;flex-direction:column;align-items:flex-start}
+.growth-card .growth-label{color:#78d7ec;font-size:11px;letter-spacing:.13em;text-transform:uppercase;margin-bottom:16px}
+.growth-card h3{font-size:24px;margin:0 0 12px;line-height:1.2}
+.growth-card p{color:#b7c3cd;font-size:15px;line-height:1.65;margin-bottom:24px}
+.growth-card a{margin-top:auto;color:#78d7ec;font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.growth-partner{margin-top:24px;color:#b7c3cd;font-size:14px;line-height:1.6}.growth-partner a{color:#78d7ec;text-decoration:underline;text-underline-offset:4px}
+.growth-paths a:focus-visible,.hero-enterprise-link a:focus-visible{outline:2px solid #78d7ec;outline-offset:5px}
+@media(min-width:961px) and (max-width:1200px){.nav-links a{font-size:12px}.nav-links{gap:12px}nav{padding-left:20px;padding-right:20px}.nav-apply{display:none}}
+@media(max-width:720px){.growth-grid{grid-template-columns:1fr}.growth-paths{padding:42px 24px}.growth-card{padding:24px}.hero-enterprise-link{font-size:13px}}
+</style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
@@ -1986,6 +2006,7 @@
         <li><a href="/admins/">Exec Admins</a></li>
         <li><a href="/csr/">CSR</a></li>
         <li><a href="/sales/">Sales</a></li>
+<li><a href="/enterprise-workforce-solutions/" class="enterprise-nav-link">Teams &amp; Enterprise</a></li>
         
         <li><a href="/case-studies/">Case Studies</a></li><li><a href="/blog/">Blog</a></li>
         <li><a href="/about/">About</a></li>
@@ -2001,6 +2022,7 @@
             <li><a href="/admins/">Exec Admins</a></li>
             <li><a href="/csr/">CSR</a></li>
             <li><a href="/sales/">Sales</a></li>
+<li><a href="/enterprise-workforce-solutions/" class="enterprise-nav-link">Teams &amp; Enterprise</a></li>
             
             <li><a href="/case-studies/">Case Studies</a></li><li><a href="/blog/">Blog</a></li>
             <li><a href="/about/">About</a></li>
@@ -2056,7 +2078,8 @@
             <a href="/how-it-works/" class="btn-ghost">See pricing &amp; process →</a>
         </div>
 
-        <div class="hero-role-picker" aria-label="Explore staffing roles">
+        <p class="hero-enterprise-link">Building a larger team? <a href="/enterprise-workforce-solutions/">Explore Teams &amp; Enterprise →</a></p>
+<div class="hero-role-picker" aria-label="Explore staffing roles">
             <p>Who would take the most off your plate?</p>
             <div class="hero-role-links">
                 <a href="/editors/">Video editing</a>
@@ -2139,6 +2162,17 @@
 </div>
 </div>
 </div>
+
+<section class="growth-paths" aria-labelledby="growth-heading" id="staffing-options">
+<div class="growth-paths-inner"><p style="color:#78d7ec;font-size:11px;letter-spacing:.16em;text-transform:uppercase">Support for every stage</p>
+<h2 id="growth-heading">One great hire. A growing team.<br>A larger workforce.</h2>
+<p class="growth-intro">Start with the support you need today. Staffify helps you define the roles, find the right people and plan how they work with your business.</p>
+<div class="growth-grid">
+<article class="growth-card"><span class="growth-label">For owners &amp; small businesses</span><h3>Individual hires</h3><p>A dedicated executive assistant, video editor, customer service rep or sales support specialist, with recruiting and ongoing support.</p><a href="#services">Find your next hire →</a></article>
+<article class="growth-card"><span class="growth-label">For growing organizations</span><h3>Growing teams</h3><p>Build roughly 3–20+ roles across operations, customer support, admin, sales support, marketing and back-office work.</p><a href="/enterprise-workforce-solutions/#approach">Plan your team →</a></article>
+<article class="growth-card"><span class="growth-label">For larger organizations</span><h3>Enterprise</h3><p>Discuss scalable offshore, nearshore and contingent workforce solutions, with recruiting, screening, deployment and workforce support.</p><a href="/enterprise-workforce-solutions/">Explore workforce solutions →</a></article>
+</div><p class="growth-partner">Already delivering a staffing program? <a href="/staffing-partnerships/">Explore Staffing Partnerships &amp; Tier 2 Supplier Solutions →</a></p>
+</div></section>
 
 <!-- ─── THE DIFFERENCE ─── -->
 <section class="diff-section">
@@ -2648,7 +2682,6 @@
 </section>
 
 <!-- ─── FOOTER ─── -->
-<section aria-labelledby="workforce-heading" style="padding:44px 24px;border-top:1px solid #29313a;background:#0d1218"><div style="max-width:1120px;margin:auto"><p style="font-size:11px;letter-spacing:.16em;color:#76d7ed;text-transform:uppercase">Teams &amp; enterprise</p><h2 id="workforce-heading" style="font-size:clamp(24px,3vw,34px);margin:12px 0">Building beyond an individual hire?</h2><p style="color:#b6c0c9;max-width:750px;line-height:1.7">Explore team recruiting, offshore and nearshore workforce support, or delivery partnerships for existing staffing programs.</p><div style="display:flex;flex-wrap:wrap;gap:16px 28px;margin-top:20px"><a href="/enterprise-workforce-solutions/" style="color:#76d7ed;text-decoration:underline">Enterprise Workforce Solutions →</a><a href="/staffing-partnerships/" style="color:#76d7ed;text-decoration:underline">Staffing Partnerships →</a></div></div></section>
 <footer>
     <div class="footer-grid">
         <div class="footer-brand">
