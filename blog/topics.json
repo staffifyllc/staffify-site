@@ -482,7 +482,8 @@
         "personal injury intake",
         "after hours legal calls"
       ],
-      "status": "pending"
+      "status": "done",
+      "published_iso": "2026-10-05T21:26:46Z"
     },
     {
       "slug": "agency-margins-fix",
