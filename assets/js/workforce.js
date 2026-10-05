@@ -1,0 +1,2 @@
+/* Inquiry clicks are intent only, never a submitted lead or booking. */
+document.addEventListener('click',function(event){var link=event.target.closest&&event.target.closest('[data-workforce-inquiry]');if(!link)return;var segment=link.getAttribute('data-workforce-inquiry');if(segment!=='enterprise'&&segment!=='staffing_partner')return;if(window.staffifyTrack)window.staffifyTrack('workforce_inquiry_clicked',{segment:segment,page:location.pathname});});
