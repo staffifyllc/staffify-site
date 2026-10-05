@@ -6,7 +6,8 @@ test('exclusion and pause survive stale worker state',()=>{let s=mergeSnapshot(n
 test('owner access isolation',()=>{const s=mergeSnapshot(null,input);assert.equal(visibleState(s,'Paul').records.length,0);assert.equal(visibleState(s,'Madison').records.length,1);assert.throws(()=>controlState(s,{action:'suppress',email:row.recipient},'Paul'));assert.equal(ownerFor({email:'outsider@example.com',role:'rep'}),null);});
 test('reject duplicate records and unknown senders',()=>{assert.throws(()=>mergeSnapshot(null,{...input,records:[row,row]}));assert.throws(()=>mergeSnapshot(null,{...input,records:[{...row,sender:'other@example.com'}]}));});
 import { readFileSync } from 'node:fs';
-test('review page script parses',()=>{const html=readFileSync(new URL('../outreach-review/index.html',import.meta.url),'utf8');const js=html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];assert.doesNotThrow(()=>new Function(js));});
+import {spawnSync} from 'node:child_process';
+test('review page script parses',()=>{const html=readFileSync(new URL('../outreach-review/index.html',import.meta.url),'utf8');const js=html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];const parsed=spawnSync(process.execPath,['--input-type=module','--check'],{input:js,encoding:'utf8'});assert.equal(parsed.status,0,parsed.stderr);});
 
 test('stale call-ready flag cannot survive reply, suppression or owner pause',()=>{
  const r={id:'call',owner:'Paul',recipient:'a@example.com',status:'human_reply_hold',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01T00:00:00Z',callReady:true};
