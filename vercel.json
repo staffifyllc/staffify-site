@@ -76,11 +76,6 @@
   ],
   "redirects": [
     {
-      "source": "/dialer/",
-      "destination": "/outreach-review/?view=calls",
-      "permanent": false
-    },
-    {
       "source": "/about-1-1",
       "destination": "/about/",
       "permanent": true
