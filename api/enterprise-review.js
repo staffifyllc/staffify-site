@@ -1,3 +1,4 @@
+import {engagementPlan} from './_enterprise-engagement.js';
 import {redis} from './_auth.js';
 import {ENTERPRISE_KEY,initialState,review} from './_enterprise.js';
 // Own datastore only. This job cannot enroll, draft, send or modify agency outreach.
@@ -8,7 +9,7 @@ export default async function handler(req,res){
  if(!['GET','POST'].includes(req.method))return res.status(405).json({error:'Method not allowed'});
  try{
   const state=await redis.get(ENTERPRISE_KEY)||initialState(),at=new Date().toISOString(),rows=review(state,at);
-  const report={at,mode:'research_and_planning',accounts:rows.length,due:rows.filter(r=>r.due&&r.status!=='paused').length,stale:rows.filter(r=>r.evidenceStale).length,sendingEnabled:false,sourceRefresh:'Not performed; this job evaluates stored evidence age and next steps.'};
+  const report={at,mode:'research_and_planning',accounts:rows.length,engagementTasksDue:state.accounts.flatMap(a=>engagementPlan(a,Date.parse(at)).steps).filter(s=>s.current&&['due','email_not_connected','needs_connection'].includes(s.state)).length,due:rows.filter(r=>r.due&&r.status!=='paused').length,stale:rows.filter(r=>r.evidenceStale).length,sendingEnabled:false,sourceRefresh:'Not performed; this job evaluates stored evidence age and next steps.'};
   const next={...state,revision:state.revision+1,lastReview:report};
   if(Number(await redis.eval(CAS,[ENTERPRISE_KEY],[String(state.revision),JSON.stringify(next)]))!==1)return res.status(409).json({error:'Workspace changed; next scheduled review will retry.'});
   return res.status(200).json(report);

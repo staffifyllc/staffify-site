@@ -32,3 +32,11 @@ API: `GET/POST /api/enterprise-accounts/`, existing authenticated Paul/Madison/a
 Cron: daily at 12:15 UTC. Failures return a non-200 response; `lastReview` exposes successful execution time. There is no additional third-party paid API usage in this V1. No Slack delivery or autonomous research is claimed.
 
 Tests include campaign separation, immutable prior state, source references, unsafe stages, duplicate/capped contacts, URL validation, stale-evidence reporting and the existing outreach regression suite. Re-verify existing routes, scheduler and mailbox health after deployment.
+
+## Coordinated LinkedIn and email tasks
+
+Added October 5: a single primary stakeholder per account, two manual LinkedIn tasks and four email drafts at planned days 0/3/10/14/21/28. Delayed completed touches push the next task out by at least three days. Starting a plan sends nothing. A contact requires a researched individual LinkedIn profile, validated against linkedin.com/in/ URLs. Connection acceptance is explicitly operator-reported; a follow-up LinkedIn message cannot be recorded before acceptance. Skipping a step requires a reason.
+
+Each actual completion is recorded with operator, time, channel and message/reference. These are operator reports, not Gmail-verified sends; they do not modify original outreach counts. A reply, meeting, opt-out, client or human-owned conversation sets a persistent enterprise account stop across both task channels. Ordinary status editing cannot remove it. LinkedIn replies are not automatically read; the rep must log them here. Existing agency global suppression is not modified by this research/task workflow. Before enterprise sending is connected, the sender must integrate those shared controls as described above.
+
+The daily cloud review also counts actionable engagement tasks. It schedules work, not browser actions, invitations or emails. Enterprise automatic email delivery and verified-contact enrichment are still incomplete.
