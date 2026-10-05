@@ -4,7 +4,8 @@ const comparable=s=>{const n=digits(s);return n.length===11&&n[0]==='1'?n.slice(
 export function listedPhone(page,phone){
  const wanted=comparable(phone);if(wanted.length<10||wanted.length>15)return false;
  const raw=(page.text||'')+' '+(page.html||'').replace(/<(script|style)[\s\S]*?<\/\1>/gi,'');
- const candidates=[...raw.matchAll(/(?:\+?\d[\d ().-]{7,}\d)/g)].map(m=>comparable(m[0]));
+ const normalized=raw.replace(/[\u2010-\u2015\u2212]/g,'-').replace(/&(?:nbsp|ndash|mdash);/g,' ');
+ const candidates=[...normalized.matchAll(/(?:\+?\d[\d ().-]{7,}\d)/g)].map(m=>comparable(m[0]));
  return candidates.includes(wanted);
 }
 export async function checkBusinessPhone({phone,website,fetchSite,now=new Date().toISOString()}){
