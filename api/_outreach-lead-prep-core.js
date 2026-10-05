@@ -16,10 +16,11 @@ return async function handler(req,res){
   const cfg=await config();if(!cfg.enabled||cfg.draftingEnabled===false)return res.status(200).json({status:'paused'});
   const portal=await hs('/account-info/v3/details',null,'GET');if(String(portal.portalId)!=='51666712')throw Error('Wrong CRM portal');
   let state=await redis.get(KEY);if(!state)throw Error('Queue unavailable');
-  const cursor=await redis.get('staffify:lead-prep:cursor');
-  const page=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'email',operator:'HAS_PROPERTY'}]}],properties:['email','website','company'],limit:30,...(cursor?{after:cursor}:{})});
+  const cursor=await redis.get('staffify:lead-prep:list-cursor:v3');
+  const query=new URLSearchParams({limit:'30',properties:'email,website,company',archived:'false'});if(cursor)query.set('after',String(cursor));
+  const page=await hs('/crm/v3/objects/contacts?'+query.toString(),null,'GET');
   const recovered=dueInventory(inventory),emails=new Set(recovered.map(r=>r.email)),inventoryEmails=new Set(inventory.records.map(r=>r.email));
-  const candidates=[...recovered,...(page.results||[]).filter(c=>!inventoryEmails.has(String(c.properties.email).toLowerCase())).map(c=>({email:String(c.properties.email).toLowerCase(),company:c.properties.company,domain:c.properties.website,crmId:c.id}))];
+  const candidates=[...recovered,...(page.results||[]).filter(c=>c.properties?.email&&!inventoryEmails.has(String(c.properties.email).toLowerCase())).map(c=>({email:String(c.properties.email).toLowerCase(),company:c.properties.company,domain:c.properties.website,crmId:c.id}))];
   let crmPageComplete=true;
   for(const item of candidates){
    if(Date.now()-started>210000){report.status='yielded';crmPageComplete=false;break;}
@@ -62,7 +63,7 @@ return async function handler(req,res){
     await finish('Verified and available to supply',7);
    }catch(e){await finish('Retry: '+e.message,1/24);report.lastRetryReason=e.message;report.retries=(report.retries||0)+1;if(/CRM unavailable|Wrong CRM/.test(e.message)){report.status='error';report.reason=e.message;crmPageComplete=false;break;}}
   }
-  if(crmPageComplete)await redis.set('staffify:lead-prep:cursor',page.paging?.next?.after||null);
+  if(crmPageComplete)await redis.set('staffify:lead-prep:list-cursor:v3',page.paging?.next?.after||null);
   if(report.status==='complete'&&report.retries&&report.retries===report.checked)report.status='retrying';
   report.crmInventory={scope:'All existing Staffify CRM contacts with an email',matchingContacts:page.total??null,pageSize:(page.results||[]).length,nextCursor:crmPageComplete?(page.paging?.next?.after||null):(cursor||null),cycleComplete:crmPageComplete&&!page.paging?.next?.after};
   report.inventory=inventorySummary(inventory);report.finishedAt=new Date().toISOString();await redis.set(STATUS,report);return res.status(200).json(report);
