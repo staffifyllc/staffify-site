@@ -10,5 +10,6 @@ export async function withCallPhones(state,{redis,crm,now=Date.now()}){
  }catch{for(const email of missing)if(!phones.has(email))phones.set(email,{phone:null,phoneStatus:'unavailable'});}
  const evidence=new Map();for(const row of due){const v=await redis.get('staffify:call-phone-evidence:'+row.recipient);if(v)evidence.set(row.recipient,v);}
  for(const [email,v] of evidence){const c=phones.get(email)||{};phones.set(email,{...c,phone:v.status==='business_listed'?v.phone:null,phoneStatus:v.status,phoneSource:v.status==='business_listed'?'Listed on business website':'Number needs confirmation',phoneEvidence:v});}
- return {...state,records:state.records.map(r=>r.callReady?{...r,callContact:phones.get(r.recipient)||{phone:null,phoneStatus:'missing'}}:r)};
+ const blocked=new Map();for(const row of due){const v=await redis.get('staffify:call-block:'+row.id);if(v&&v.lastSentAt===row.lastSentAt)blocked.set(row.id,v);}
+ return {...state,records:state.records.map(r=>r.callReady?{...r,callReady:!blocked.has(r.id),callBlock:blocked.get(r.id)||null,callContact:phones.get(r.recipient)||{phone:null,phoneStatus:'missing'}}:r)};
 }
