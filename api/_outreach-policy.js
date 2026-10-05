@@ -1,8 +1,10 @@
+import {inCampaign} from './_outreach-campaign.js';
 import {dealEmail} from './_deal-followup-policy.js';
 export function automatedModeAllowed(mode){return !mode||mode==='AUTOMATED';}
 export const FOUR_TOUCHES=4;
 export const dayKey=(now)=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
 export function eligible(record,state,now=Date.now()) {
+ if(!inCampaign(record))return false;
  if(state.pausedOwners?.includes(record.owner)||state.suppressions?.includes(record.recipient))return false;
  if(!['sent','prepared'].includes(record.status)||record.sentTouches>=FOUR_TOUCHES)return false;
  if(record.nextEligibleAt&&now<Date.parse(record.nextEligibleAt))return false;
@@ -35,7 +37,7 @@ export function followup(record) {
 
 // Only the newly authored reply is evidence of refusal, never quoted campaign copy.
 export function replyText(text){return String(text||'').split(/<blockquote\b|<div[^>]*class=["']gmail_quote|\nOn .{0,200}wrote:|-----Original Message-----|\nFrom:\s/mi)[0].split('\n').filter(l=>!/^\s*>/.test(l)).join('\n').replace(/<[^>]*>/g,' ');}
-export function callReady(r,now=Date.now()){return (!r.callOutcome||(['no_answer','voicemail','callback'].includes(r.callOutcome)&&!!r.nextCallAt&&Date.parse(r.nextCallAt)<=now))&&r.status==='sent'&&r.sentTouches>=4&&r.verifiedSentTouches>=4&&!!r.lastSentAt&&now-Date.parse(r.lastSentAt)>=48*3600000;}
+export function callReady(r,now=Date.now()){return inCampaign(r)&&( !r.callOutcome||(['no_answer','voicemail','callback'].includes(r.callOutcome)&&!!r.nextCallAt&&Date.parse(r.nextCallAt)<=now))&&r.status==='sent'&&r.sentTouches>=4&&r.verifiedSentTouches>=4&&!!r.lastSentAt&&now-Date.parse(r.lastSentAt)>=48*3600000;}
 export function reconcileThread(row,messages,now=Date.now()) {
  const sent=messages.filter(m=>m.sent&&m.to.includes(row.recipient)).sort((a,b)=>a.date-b.date);
  const drafts=messages.filter(m=>m.draft);const before=row.sentTouches||0;row.verifiedSentTouches=sent.length;

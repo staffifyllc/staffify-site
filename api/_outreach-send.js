@@ -1,3 +1,4 @@
+import {inCampaign} from './_outreach-campaign.js';
 import {sendingWindow} from './_outreach-timezone.js';
 import {verificationGate} from './_outreach-verification.js';
 import {copyIssue} from './_outreach-copy.js';
@@ -10,6 +11,7 @@ export function sendQuota(row,state,now=Date.now()) {
  const today=[...seen.values()];return row.sentTouches>0||today.filter(s=>s.sender===row.sender&&s.touch===1).length<50;
 }
 export function sendDecision(row,state,messages,senders,now=Date.now()) {
+ if(!inCampaign(row))return 'campaign_not_enabled_hold';
  if(state.pausedOwners.includes(row.owner)||state.suppressions.includes(row.recipient))return 'control_hold';
  if(state.assignments.some(a=>a.email===row.recipient&&a.owner!==row.owner))return 'ownership_hold';
  const verdict=classify(messages,row.recipient,senders);if(verdict.status)return verdict.status;
@@ -31,7 +33,7 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(op?.messageId){const m=compactMessage(await gmail(tokens[row.sender],'messages/'+op.messageId+'?format=full'),row.sender);if(m.sent)applySent(row,state,m,op.id);}
   state=await save(state);
  }
- const candidates=fairCandidates(state.records.filter(r=>r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
+ const candidates=fairCandidates(state.records.filter(r=>inCampaign(r)&&r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
  const sentMailboxes=new Set();
  for(const row of candidates){
   if(sentMailboxes.has(row.sender)||sentMailboxes.size>=7)continue;

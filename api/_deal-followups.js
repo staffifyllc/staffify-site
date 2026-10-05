@@ -1,3 +1,4 @@
+import {CAMPAIGN_ID} from './_outreach-campaign.js';
 import {site} from './_outreach-supply.js';
 import {redis,listReps} from './_auth.js';
 import {draftBlockReason} from './_outreach-crm.js';
@@ -43,7 +44,7 @@ export async function supplyDealFollowups(state,cfg,tokens,options={}){
    if(state.assignments.some(a=>a.email===email&&a.owner!==owner)){item.reason='Reserved for a different owner';continue;}
    if(state.pausedOwners.includes(owner)||state.suppressions.includes(email)){item.reason='Owner paused or globally excluded';continue;}
    const mailboxes=active.filter(a=>a.owner===owner);if(!mailboxes.length){item.reason='No authorized sender for this owner';continue;}
-   const row={id:'deal-'+item.id,hubspotId:cid,crmDealId:item.id,lane:'deal_followup',dealStage:item.stage,recipient:email,company:p.company||item.properties.dealname,owner,sender:mailboxes[0].email,sentTouches:0,status:'prepared',createdAt:now,qualificationApproved:true,subject:'A practical staffing handoff',verifiedFirstName:null};
+   const row={campaignId:CAMPAIGN_ID,id:'deal-'+item.id,hubspotId:cid,crmDealId:item.id,lane:'deal_followup',dealStage:item.stage,recipient:email,company:p.company||item.properties.dealname,owner,sender:mailboxes[0].email,sentTouches:0,status:'prepared',createdAt:now,qualificationApproved:true,subject:'A practical staffing handoff',verifiedFirstName:null};
    item.reason=await draftBlockReason(row);if(item.reason)continue;
    if(!p.website){item.reason='Agency website required to verify real estate media fit';continue;}
    const evidence=await site(p.website);if(!/real[ -]estate.{0,50}(photograph|videograph|media)|(?:property|architectural) photography/i.test(evidence.text)){item.reason='Website does not establish real estate media services';continue;}

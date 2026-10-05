@@ -1,3 +1,4 @@
+import {CAMPAIGN_ID} from './_outreach-campaign.js';
 import {introduction} from './_outreach-copy.js';
 import {supplyOwner} from './_outreach-inventory.js';
 import {redis,listReps} from './_auth.js';
@@ -22,7 +23,7 @@ export async function supply(state,cfg){
 
  for(const c of page.results||[]){const p=c.properties,email=String(p.email||'').toLowerCase();const existing=state.records.find(r=>r.recipient===email);if(existing&&reserved.includes(existing))existing.qualificationReason='Missing company or website, duplicate company, or ineligible state';if(!email||!p.company||!p.website||existing&&!['awaiting_qualification','reserved_for_madison_external','mailbox_connection_required'].includes(existing.status)||state.records.some(r=>r.recipient!==email&&r.company?.toLowerCase()===p.company.toLowerCase()))continue;if(existing&&(existing.sentTouches||(existing.events||[]).some(e=>e.kind==='sent')||existing.draftId&&!existing.cloudHeld))continue;
   const assigned=state.assignments.find(a=>a.email===email);const owner=supplyOwner({assigned,existing,crmOwnerId:p.hubspot_owner_id,reps,id:c.id});if(!owner||state.pausedOwners.includes(owner)||state.suppressions.includes(email))continue;const senders=cfg.accounts.filter(a=>a.owner===owner&&a.brand==='Staffify'&&a.draftEnabled);if(!senders.length)continue;const sender=senders[state.records.filter(r=>r.owner===owner).length%senders.length].email;
-  const row={id:existing?.id||'cloud-'+c.id,hubspotId:c.id,recipient:email,company:p.company,owner,sender,sentTouches:0,status:'prepared',createdAt:new Date().toISOString()};
+  const row={campaignId:CAMPAIGN_ID,id:existing?.id||'cloud-'+c.id,hubspotId:c.id,recipient:email,company:p.company,owner,sender,sentTouches:0,status:'prepared',createdAt:new Date().toISOString()};
   const blocked=await draftBlockReason(row);if(blocked){if(existing)existing.qualificationReason=blocked;continue;}let evidence;try{evidence=await site(p.website);}catch{if(existing)existing.qualificationReason='Agency website unavailable';continue;}
   const m=/real[ -]estate.{0,50}(photograph|videograph|media)|(?:property|architectural) photography/i.exec(evidence.text);if(!m){if(existing)existing.qualificationReason='Website does not establish real estate media services';continue;}
   const agencyKey=new URL(evidence.url).hostname.replace(/^www\./,'');if(state.assignments.some(a=>a.agencyKey===agencyKey&&a.email!==email)||state.records.some(r=>r.agencyKey===agencyKey&&r.recipient!==email))continue;

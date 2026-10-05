@@ -1,3 +1,4 @@
+import {tagCampaign} from './_outreach-campaign.js';
 import {callReady} from './_outreach-policy.js';
 export const KEY = 'staffify:outreach-review:v1';
 export const SENDERS = ['paul@trystaffify.com','paul@staffifyhq.com','hello@gostaffify.com','paul@hirestaffify.com','madison@gostaffify.com','madison@staffifyhq.com','madison@trystaffify.com','madison@hirestaffify.com','madison.sterling@trystaffify.com'];
@@ -8,7 +9,7 @@ export function ownerFor(rep) {
   return null;
 }
 export function visibleState(state, owner) {
-  const s=state || {revision:0,records:[],assignments:[],suppressions:[],pausedOwners:[],updatedAt:null};
+  const s=tagCampaign(state || {revision:0,records:[],assignments:[],suppressions:[],pausedOwners:[],updatedAt:null});
   const records=s.records.filter(r=>owner==='all'||r.owner===owner).map(r=>({...r,callReady:callReady(r)&&!s.pausedOwners?.includes(r.owner)&&!s.suppressions?.includes(r.recipient)}));
   return {...s,records,assignments:s.assignments.filter(r=>owner==='all'||r.owner===owner),suppressions:owner==='all'?s.suppressions:s.suppressions.filter(e=>records.some(r=>r.recipient===e)),workerFresh:!!(s.queueUpdatedAt||s.updatedAt) && Date.now()-Date.parse(s.queueUpdatedAt||s.updatedAt)<90*60*1000};
 }
