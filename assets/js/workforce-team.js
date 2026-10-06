@@ -22,7 +22,7 @@
       var seat = document.createElement('span');
       seat.className = 'brand-seat';
       var icon = document.createElement('img');
-      icon.src = '/assets/brand/icon.svg';
+      icon.src = '/assets/brand/person-cyan.svg';
       icon.alt = '';
       icon.width = 26;
       icon.height = 26;
@@ -40,7 +40,7 @@
       group('Customer-support specialists', counts[0], 'specialist-seats'),
       group('Quality assurance', counts[2], 'quality-seats')
     );
-    legend.textContent = n + ' total seats · Every Staffify mark represents one person';
+    legend.textContent = n + ' total seats · Each silhouette represents one person';
     buttons.forEach(function (b) {
       b.setAttribute('aria-pressed', String(Number(b.dataset.teamSize) === n));
     });
