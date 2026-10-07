@@ -1851,6 +1851,16 @@
 @keyframes shieldShimmer { 0%, 18% { transform: translateX(0); } 60%, 100% { transform: translateX(40px); } }
 @media (prefers-reduced-motion: reduce) { .shield-glint { animation: none; display: none; } }
 @media(max-width:768px) { #staffify-difference .compare-cell.old, #staffify-difference .compare-cell.us { display:block; } #staffify-difference .compare-cell.old::before, #staffify-difference .compare-cell.us::before { display:block; margin-bottom:6px; font-size:12px; } }
+#staffify-difference .value-inner { max-width: 1400px; }
+#staffify-difference .compare { max-width: 1400px; }
+#staffify-difference .compare-row { grid-template-columns: .85fr 1fr 1.1fr 1.25fr; }
+#staffify-difference .compare-cell { padding: 22px; min-width: 0; }
+#staffify-difference .compare-cell.agency { color: #aeb9c1; background: rgba(255,255,255,.02); }
+#staffify-difference .head .agency { color: #e0c69b; font-weight: 700; }
+.compare-benefit { display:flex; align-items:flex-start; gap:12px; }
+.benefit-check { display:inline-flex; align-items:center; justify-content:center; flex:0 0 28px; width:28px; height:28px; border-radius:50%; background:rgba(26,189,225,.18); color:#68e2f3; font-size:22px; font-weight:900; }
+.agency-note { color:#aeb9c1; font-size:13px; line-height:1.6; text-align:center; margin:18px auto 0; max-width:800px; }
+@media(max-width:900px) { #staffify-difference .compare-row { grid-template-columns:1fr; } #staffify-difference .compare-row.head { display:none; } #staffify-difference .compare-cell { display:block; padding:16px 20px; } #staffify-difference .compare-cell.dim { background:rgba(255,255,255,.06); } #staffify-difference .compare-cell.old::before { content:"On your own"; } #staffify-difference .compare-cell.agency::before { content:"Other VA agencies"; color:#e0c69b; } #staffify-difference .compare-cell.us::before { content:"Staffify"; } #staffify-difference .compare-cell.old::before, #staffify-difference .compare-cell.agency::before, #staffify-difference .compare-cell.us::before { display:block; margin-bottom:8px; font-size:12px; font-weight:700; } }
 </style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
@@ -2245,12 +2255,16 @@
   <h2 class="section-title" id="difference-title">A better hire.<br>A stronger team.</h2>
   <p class="section-sub">From defining the role to supporting the person in it, we help you build a team that works for your business.</p>
   <div class="compare">
-   <div class="compare-row head"><div class="compare-cell dim">What matters</div><div class="compare-cell old">Hiring on your own</div><div class="compare-cell us">With Staffify</div></div>
-   <div class="compare-row"><div class="compare-cell dim">Finding the right fit</div><div class="compare-cell old"><span>You source and screen</span></div><div class="compare-cell us"><span>Role planning, recruiting and practical screening</span></div></div>
-   <div class="compare-row"><div class="compare-cell dim">Getting started</div><div class="compare-cell old"><span>You manage the handoff</span></div><div class="compare-cell us"><span>Onboarding and workflow support</span></div></div>
-   <div class="compare-row"><div class="compare-cell dim">Ongoing support</div><div class="compare-cell old"><span>You manage day-to-day issues</span></div><div class="compare-cell us"><span>Payroll, HR and performance support</span></div></div>
-   <div class="compare-row highlight"><div class="compare-cell dim">Replacements</div><div class="compare-cell old"><span>Recruiting or onboarding fees can recur</span></div><div class="compare-cell us"><span>No new onboarding fee for covered replacements</span></div></div>
+   <div class="compare-row head"><div class="compare-cell dim">What matters</div><div class="compare-cell old">Hiring on your own</div><div class="compare-cell agency">Other VA agencies</div><div class="compare-cell us">With Staffify</div></div>
+   <div class="compare-row"><div class="compare-cell dim">Role design</div><div class="compare-cell old"><span>You define the role and workflows</span></div><div class="compare-cell agency"><span>Ask whether workflow mapping is included</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Role design & workflow mapping before hiring</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Candidate screening</div><div class="compare-cell old"><span>You review applications and test skills</span></div><div class="compare-cell agency"><span>Screening methods vary by provider</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Practical candidate testing before placement</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Onboarding</div><div class="compare-cell old"><span>You plan and manage the handoff</span></div><div class="compare-cell agency"><span>Confirm the onboarding support included</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Onboarding and workflow support</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Ongoing oversight</div><div class="compare-cell old"><span>You manage performance and follow-up</span></div><div class="compare-cell agency"><span>Confirm who manages performance after placement</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Performance tracking & ongoing support</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Payroll & HR</div><div class="compare-cell old"><span>You arrange payroll and HR support</span></div><div class="compare-cell agency"><span>Services depend on the plan and employment model</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Payroll & HR support built into the service</span></span></div></div>
+   <div class="compare-row highlight"><div class="compare-cell dim">Replacements</div><div class="compare-cell old"><span>You restart the search; costs can recur</span></div><div class="compare-cell agency"><span>Check replacement windows, exclusions and new fees</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>No new onboarding fee for covered replacements</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Pay & service costs</div><div class="compare-cell old"><span>You agree pay directly with your hire</span></div><div class="compare-cell agency"><span>Ask how worker pay and agency service fees are structured</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Onboarding starts at $2,499; ongoing staffing costs quoted separately</span></span></div></div>
   </div>
+  <p class="agency-note">Agency services, pay structures and replacement policies vary. Compare each provider’s written proposal and terms.</p>
   <p class="value-note"><strong>Onboarding starts at $2,499.</strong> Ongoing staffing costs quoted separately. <a href="/how-it-works/" style="color:var(--c)">Review pricing and replacement terms.</a></p>
   <div style="text-align:center;margin-top:28px"><a href="https://calendly.com/go-staffify/discovery-call?utm_content=home-comparison" class="btn-primary">Find your next hire <span aria-hidden="true">→</span></a></div>
  </div>
