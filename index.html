@@ -1846,6 +1846,10 @@
 .hero-motion-toggle:focus-visible { outline: 2px solid #62cbe7; outline-offset: 4px; }
 .hero-word-track.is-paused { animation-play-state: paused; }
 @media(prefers-reduced-motion: reduce) { .hero-word-track { animation: none; } .hero-motion-toggle { display: none; } }
+.shield-glint { animation: shieldShimmer 4s ease-in-out infinite; }
+.shield-glint.is-paused { animation-play-state: paused; }
+@keyframes shieldShimmer { 0%, 18% { transform: translateX(0); } 60%, 100% { transform: translateX(40px); } }
+@media (prefers-reduced-motion: reduce) { .shield-glint { animation: none; display: none; } }
 </style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
@@ -2138,7 +2142,18 @@
         </div>
 
         <div class="hero-guarantee">
-            <svg viewBox="0 0 24 24" width="15" height="15" style="stroke:var(--c);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <svg class="guarantee-shield" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <defs>
+                    <clipPath id="guarantee-shield-clip"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></clipPath>
+                    <linearGradient id="guarantee-gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#97621e"/><stop offset=".48" stop-color="#edc875"/><stop offset="1" stop-color="#b67b29"/></linearGradient>
+                    <linearGradient id="guarantee-glint"><stop stop-color="#fff1bd" stop-opacity="0"/><stop offset=".5" stop-color="#fff6d4" stop-opacity=".95"/><stop offset="1" stop-color="#fff1bd" stop-opacity="0"/></linearGradient>
+                </defs>
+                <g clip-path="url(#guarantee-shield-clip)">
+                    <path fill="url(#guarantee-gold)" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path class="shield-glint" fill="url(#guarantee-glint)" d="M-14 0h10L6 24H-4z"/>
+                </g>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="var(--c)" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
             <span>Every placement backed by our lifetime replacement guarantee.</span>
         </div>
 
@@ -3068,6 +3083,7 @@ const heroMotionToggle = document.querySelector('.hero-motion-toggle');
 heroMotionToggle.addEventListener('click', () => {
  const paused = document.querySelector('.hero-word-track').classList.toggle('is-paused');
  heroMotionToggle.setAttribute('aria-pressed', String(paused));
+ document.querySelector('.shield-glint').classList.toggle('is-paused', paused);
  heroMotionToggle.textContent = paused ? 'Resume animation' : 'Pause animation';
 });
 </script>
