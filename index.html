@@ -1812,8 +1812,8 @@
             .compare-cell { padding: 14px 20px; }
             .compare-cell.dim { background: rgba(255,255,255,0.04); padding-top: 18px; }
             .compare-row.head { display: none; }
-            .compare-cell.old::before { content: "Old way — "; color: rgba(255,120,120,0.7); font-weight: 700; }
-            .compare-cell.us::before { content: "Staffify — "; color: var(--c); font-weight: 700; }
+            .compare-cell.old::before { content: "On your own"; color: rgba(255,120,120,0.7); font-weight: 700; }
+            .compare-cell.us::before { content: "Staffify"; color: var(--c); font-weight: 700; }
         }
 
         
@@ -1850,6 +1850,7 @@
 .shield-glint.is-paused { animation-play-state: paused; }
 @keyframes shieldShimmer { 0%, 18% { transform: translateX(0); } 60%, 100% { transform: translateX(40px); } }
 @media (prefers-reduced-motion: reduce) { .shield-glint { animation: none; display: none; } }
+@media(max-width:768px) { #staffify-difference .compare-cell.old, #staffify-difference .compare-cell.us { display:block; } #staffify-difference .compare-cell.old::before, #staffify-difference .compare-cell.us::before { display:block; margin-bottom:6px; font-size:12px; } }
 </style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
@@ -2237,96 +2238,22 @@
 </div><p class="growth-partner">Already delivering a staffing program? <a href="/staffing-partnerships/">Explore Staffing Partnerships &amp; Tier 2 Supplier Solutions →</a></p>
 </div></section>
 
-<!-- ─── THE DIFFERENCE ─── -->
-<section class="diff-section">
-    <div class="section-eyebrow reveal">The Staffify Difference</div>
-    <h2 class="section-title reveal">Most companies fail with VAs.<br>Here's why we don't.</h2>
-    <p class="section-sub reveal">They hire first. We build the infrastructure first, then recruit talent into it.</p>
-
-    <div class="diff-grid">
-        <div class="diff-card bad reveal">
-            <div class="diff-label bad">
-                <span class="diff-label-dot"></span>
-                The old way
-            </div>
-            <div class="diff-title">Hire a random VA. Hope for the best.</div>
-            <div class="diff-items">
-                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>No systems or SOPs in place before hiring</span></div>
-                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Freelancers with no accountability structure</span></div>
-                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Managers become babysitters</span></div>
-                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Missed deadlines, poor communication</span></div>
-                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Constant turnover, restart from zero</span></div>
-                <div class="diff-item bad"><span class="diff-icon x">✕</span><span>Talent problem? No. Infrastructure problem.</span></div>
-            </div>
-        </div>
-        <div class="diff-card reveal reveal-delay-1">
-            <div class="diff-label good">
-                <span class="diff-label-dot"></span>
-                The Staffify way
-            </div>
-            <div class="diff-title">Build the foundation. Then install the team.</div>
-            <div class="diff-items">
-                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Role design & workflow mapping before hire one</span></div>
-                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Real-world candidate testing before placement</span></div>
-                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Real-time support with ongoing oversight</span></div>
-                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Performance metrics & productivity tracking</span></div>
-                <div class="diff-item good"><span class="diff-icon check">✓</span><span>95% retention. People who actually stay</span></div>
-                <div class="diff-item good"><span class="diff-icon check">✓</span><span>Perpetual free restaffing support</span></div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ─── VALUE: guarantee + same-hire comparison ─── -->
-<section class="value-section">
-    <div class="value-inner">
-        <div class="guarantee-band reveal">
-            <div class="section-eyebrow">No-risk hiring</div>
-            <h2 class="guarantee-title">Hiring sucks.<br>We took the <span class="g">risk</span> out of it.</h2>
-            <p class="guarantee-sub">A bad hire costs you thousands and weeks you&rsquo;ll never get back. If a placement ever stops working, <strong>we replace them at no cost.</strong> No new finder&rsquo;s fee, no restarting the search yourself, no eating the mistake. Every placement is backed by our lifetime replacement guarantee, for as long as you work with us.</p>
-        </div>
-
-        <h3 class="compare-title reveal">Same hire. Two very different deals.</h3>
-        <div class="compare reveal">
-            <div class="compare-row head">
-                <div class="compare-cell dim"></div>
-                <div class="compare-cell old">The old way</div>
-                <div class="compare-cell us">Staffify</div>
-            </div>
-            <div class="compare-row">
-                <div class="compare-cell dim">Upfront</div>
-                <div class="compare-cell old">Recruiting costs depend on your approach</div>
-                <div class="compare-cell us">Onboarding starting at: <strong>$2,499 once</strong></div>
-            </div>
-            <div class="compare-row">
-                <div class="compare-cell dim">Recruiting</div>
-                <div class="compare-cell old">Post a job and hope</div>
-                <div class="compare-cell us">Vetted, tested, benchmarked to the role</div>
-            </div>
-            <div class="compare-row">
-                <div class="compare-cell dim">Payroll, HR, taxes</div>
-                <div class="compare-cell old">Your problem, every month</div>
-                <div class="compare-cell us">We handle all of it</div>
-            </div>
-            <div class="compare-row highlight">
-                <div class="compare-cell dim">When someone quits</div>
-                <div class="compare-cell old">New recruiting or onboarding fees may apply for each replacement</div>
-                <div class="compare-cell us"><span>Covered replacements: <strong>no new onboarding fee.</strong> Replacement support continues while you work with us.</span></div>
-            </div>
-            <div class="compare-row">
-                <div class="compare-cell dim">Contracts</div>
-                <div class="compare-cell old">Terms depend on the hiring arrangement</div>
-                <div class="compare-cell us"><a href="/how-it-works/" style="color:inherit">See service and onboarding terms</a></div>
-            </div>
-            <div class="compare-row">
-                <div class="compare-cell dim">Support</div>
-                <div class="compare-cell old">You manage the hire and any replacement</div>
-                <div class="compare-cell us">For as long as you&rsquo;re with us</div>
-            </div>
-        </div>
-
-        <p class="value-note reveal"><strong>One investment. Not a bill every time someone quits.</strong> Onboarding starts at $2,499, separate from ongoing staffing costs. Replacements are covered while you work with us. <a href="/how-it-works/" style="color:var(--c)">Review pricing, payment options, and terms.</a></p>
-    </div>
+<!-- ─── CONSOLIDATED STAFFIFY COMPARISON ─── -->
+<section class="value-section" id="staffify-difference" aria-labelledby="difference-title">
+ <div class="value-inner">
+  <div class="section-eyebrow">The Staffify Difference</div>
+  <h2 class="section-title" id="difference-title">A better hire.<br>A stronger team.</h2>
+  <p class="section-sub">From defining the role to supporting the person in it, we help you build a team that works for your business.</p>
+  <div class="compare">
+   <div class="compare-row head"><div class="compare-cell dim">What matters</div><div class="compare-cell old">Hiring on your own</div><div class="compare-cell us">With Staffify</div></div>
+   <div class="compare-row"><div class="compare-cell dim">Finding the right fit</div><div class="compare-cell old"><span>You source and screen</span></div><div class="compare-cell us"><span>Role planning, recruiting and practical screening</span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Getting started</div><div class="compare-cell old"><span>You manage the handoff</span></div><div class="compare-cell us"><span>Onboarding and workflow support</span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Ongoing support</div><div class="compare-cell old"><span>You manage day-to-day issues</span></div><div class="compare-cell us"><span>Payroll, HR and performance support</span></div></div>
+   <div class="compare-row highlight"><div class="compare-cell dim">Replacements</div><div class="compare-cell old"><span>Recruiting or onboarding fees can recur</span></div><div class="compare-cell us"><span>No new onboarding fee for covered replacements</span></div></div>
+  </div>
+  <p class="value-note"><strong>Onboarding starts at $2,499.</strong> Ongoing staffing costs quoted separately. <a href="/how-it-works/" style="color:var(--c)">Review pricing and replacement terms.</a></p>
+  <div style="text-align:center;margin-top:28px"><a href="https://calendly.com/go-staffify/discovery-call?utm_content=home-comparison" class="btn-primary">Find your next hire <span aria-hidden="true">→</span></a></div>
+ </div>
 </section>
 
 <!-- ─── VA VOICE VIDEO ─── -->
