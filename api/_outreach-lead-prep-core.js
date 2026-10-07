@@ -1,3 +1,4 @@
+import {recoverExisting} from './_outreach-recovery.js';
 import {INVENTORY,emailKey,mergeInventory,inventorySummary,localBlock,dueInventory,location} from './_outreach-inventory.js';
 import {randomUUID} from 'node:crypto';
 const LOCK='staffify:lead-prep:lock',STATUS='staffify:lead-prep:last-run';
@@ -32,7 +33,17 @@ return async function handler(req,res){
     if(await isOptedOut({email:item.email})){await finish('Global opt-out',30);continue;}
     let c=await find(item.email),p=c?.properties||{};
     if(c&&p.rep_lifecycle_state&&p.rep_lifecycle_state!=='ACTIVE_OUTREACH'){await finish('CRM lifecycle requires review',1);continue;}
-    const company=p.company||item.company,website=p.website||item.domain;if(!company||!website){await finish('Missing company or website',7);continue;}
+    if(c){const reason=await draftBlockReason({recipient:item.email,company:p.company||item.company},{requireVerified:false});if(reason){await finish(reason,1);continue;}}
+    if(!c){if(['trey tatro','mike haymes','blake watkins'].includes((item.first+' '+item.last).trim().toLowerCase())){await finish('Explicit exclusion',30);continue;}const client=await clientCheck({email:item.email,company:item.company});if(client.status!=='clear'){await finish('Client check: '+client.status,1);continue;}}
+    let company=p.company||item.company,website=p.website||item.domain;
+    if(!company||!website){
+     if((report.recoveryAttempts||0)>=10){crmPageComplete=false;break;}
+     report.recoveryAttempts=(report.recoveryAttempts||0)+1;
+     const recovered=await recoverExisting({...item,company,domain:website},{redis,siteReader:site});
+     item.recoveryVersion=1;
+     if(!recovered.unmatched){company=company||recovered.company;website=website||recovered.domain;item.company=item.company||company;item.domain=item.domain||website;item.recoveryEvidence=recovered.evidence;report.recovered=(report.recovered||0)+1;}
+     if(!company||!website){await finish('Missing company or website',7);continue;}
+    }
     const row={recipient:item.email,company};
     if(c){blocked=await draftBlockReason(row,{requireVerified:false});if(blocked){await finish(blocked,1);continue;}}
     else{if(['trey tatro','mike haymes','blake watkins'].includes((item.first+' '+item.last).trim().toLowerCase())){await finish('Explicit exclusion',30);continue;}const client=await clientCheck({email:item.email,company});if(client.status!=='clear'){await finish('Client check: '+client.status,1);continue;}}
@@ -58,7 +69,7 @@ return async function handler(req,res){
     const live=await find(item.email);if(live.properties.rep_lifecycle_state&&live.properties.rep_lifecycle_state!=='ACTIVE_OUTREACH'){await finish('CRM lifecycle changed',1);continue;}
     const sameCountry=!live.properties.country||live.properties.country.toLowerCase()===String(loc.country||'').toLowerCase();
     const fill=sameCountry?Object.fromEntries(Object.entries(loc).filter(([k,v])=>v&&!live.properties[k])):{};
-    await hs('/crm/v3/objects/contacts/'+c.id,{properties:{...fill,...(!live.properties.rep_lifecycle_state?{rep_lifecycle_state:'ACTIVE_OUTREACH'}:{}),rep_email_verified:'verified'}},'PATCH');report.verified++;
+    await hs('/crm/v3/objects/contacts/'+c.id,{properties:{...fill,...(!live.properties.company?{company}:{}),...(!live.properties.website?{website:evidence.url}:{}),...(!live.properties.rep_lifecycle_state?{rep_lifecycle_state:'ACTIVE_OUTREACH'}:{}),rep_email_verified:'verified'}},'PATCH');report.verified++;
     await redis.sadd('staffify:lead-prep:ready',item.email);
     await finish('Verified and available to supply',7);
    }catch(e){await finish('Retry: '+e.message,1/24);report.lastRetryReason=e.message;report.retries=(report.retries||0)+1;if(/CRM unavailable|Wrong CRM/.test(e.message)){report.status='error';report.reason=e.message;crmPageComplete=false;break;}}

@@ -1,0 +1,9 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {recoveredIdentity} from '../api/_outreach-recovery.js';
+import {dueInventory} from '../api/_outreach-inventory.js';
+const evidence={url:'https://example.com',html:'<title>Example Media</title>',text:'Real estate photography'};
+test('business email domain proves company website association',()=>assert.equal(recoveredIdentity(evidence,'owner@example.com').company,'Example Media'));
+test('generic email requires published exact email, not similar name',()=>{assert.equal(recoveredIdentity(evidence,'owner@gmail.com'),null);assert.ok(recoveredIdentity({...evidence,text:evidence.text+' owner@gmail.com'},'owner@gmail.com'));});
+test('unrelated business and directory cannot be a recovered agency',()=>{assert.equal(recoveredIdentity({...evidence,text:'Dentist'},'owner@example.com'),null);assert.equal(recoveredIdentity({...evidence,url:'https://linkedin.com',text:evidence.text+' owner@gmail.com'},'owner@gmail.com'),null);});
+test('missing fields get one recovery pass without resetting other holds',()=>{const rows=[{email:'a@x.com',result:{reason:'Missing company or website'},nextAt:'2099-01-01'},{email:'b@x.com',result:{reason:'Missing company or website'},recoveryVersion:1,nextAt:'2099-01-01'},{email:'c@x.com',result:{reason:'Global suppression'},nextAt:'2099-01-01'}];assert.deepEqual(dueInventory({records:rows}).map(x=>x.email),['a@x.com']);});
