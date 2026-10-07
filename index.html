@@ -689,11 +689,8 @@
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 1px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 24px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.06);
+            gap: 28px;
+            background: transparent;
         }
         .service-card.custom-roles { grid-column: 1 / -1; }
         .service-card.custom-roles {
@@ -747,7 +744,9 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            transition: background .3s;
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 24px;
+            transition: background .3s, translate .3s, box-shadow .3s, border-color .3s;
             text-decoration: none;
             color: inherit;
             overflow: hidden;
@@ -761,7 +760,12 @@
             opacity: 0;
             transition: opacity .35s;
         }
-        .service-card:hover { background: #111; }
+        .service-card:hover, .service-card:focus-visible { background: #10191e; border-color: rgba(26,189,225,.5); translate: 0 -6px; box-shadow: 0 18px 48px rgba(0,0,0,.3); }
+        .service-card:focus-visible { outline: 2px solid var(--c); outline-offset: 5px; }
+        .service-card.enterprise-card { background: linear-gradient(145deg, #112b36, #0b141c); border-color: rgba(26,189,225,.3); }
+        @media (min-width: 1200px) { .services-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 768px) { .services-grid { gap: 22px; } }
+        @media (prefers-reduced-motion: reduce) { .services-grid .service-card, .services-grid .service-photo img { transition: none; } .services-grid .service-card:hover, .services-grid .service-card:focus-visible { translate: none; } .services-grid .service-card:hover .service-photo img { transform: none; } }
         .service-card:hover::before { opacity: 1; }
 
         /* Photo header strip on role cards */
@@ -1966,13 +1970,45 @@
   "@type": "ItemList",
   "@id": "https://www.gostaffify.com/#services-list",
   "name": "Staffify Services",
-  "description": "The four operators that scale a service business",
+  "description": "Dedicated specialists and enterprise teams for growing businesses",
   "itemListElement": [
-    { "@type": "ListItem", "position": 1, "name": "Sales (B2B Email Outreach)", "url": "https://www.gostaffify.com/campaigns/" },
-    { "@type": "ListItem", "position": 2, "name": "Executive Admins", "url": "https://www.gostaffify.com/admins/" },
-    { "@type": "ListItem", "position": 3, "name": "Customer Service Reps", "url": "https://www.gostaffify.com/csr/" },
-    { "@type": "ListItem", "position": 4, "name": "Video Editors", "url": "https://www.gostaffify.com/editors/" }
-  ]
+    {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Enterprise Teams",
+        "url": "https://www.gostaffify.com/enterprise-workforce-solutions/"
+    },
+    {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Executive Support",
+        "url": "https://www.gostaffify.com/admins/"
+    },
+    {
+        "@type": "ListItem",
+        "position": 3,
+        "name": "Administrative Assistants",
+        "url": "https://www.gostaffify.com/admins/"
+    },
+    {
+        "@type": "ListItem",
+        "position": 4,
+        "name": "Customer Service",
+        "url": "https://www.gostaffify.com/csr/"
+    },
+    {
+        "@type": "ListItem",
+        "position": 5,
+        "name": "Sales Support",
+        "url": "https://www.gostaffify.com/sales/"
+    },
+    {
+        "@type": "ListItem",
+        "position": 6,
+        "name": "Video Editors",
+        "url": "https://www.gostaffify.com/editors/"
+    }
+]
 }
 </script>
     <link rel="stylesheet" href="/assets/css/ux.css">
@@ -2301,102 +2337,64 @@
 <!-- ─── SERVICES ─── -->
 <section class="services-section" id="services">
     <div class="section-eyebrow reveal">What We Build</div>
-    <h2 class="section-title reveal">The four operators<br>that scale a service business.</h2>
-    <p class="section-sub reveal">Sales. Admin. CSR. Video. Each placement is full-time, vetted, and aligned to how you actually work.</p>
+    <h2 class="section-title reveal">The right people.<br>For your next stage of growth.</h2>
+    <p class="section-sub reveal">From one dedicated specialist to an entire team. Choose the support your business needs next.</p>
 
     <div class="services-grid">
+        <a href="/enterprise-workforce-solutions/" class="service-card enterprise-card reveal">
+            <div class="service-photo"><img src="/assets/images/workforce/connected-team.webp" alt="Illustration of a connected workforce" loading="lazy"></div>
+            <div class="service-card-num">01 · Build a team</div>
+            <div class="service-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21v-6h6v6M15 21v-6h6v6M9 9V3h6v6M6 15v-3h12v3"/></svg></div>
+            <h3 class="service-name">Enterprise Teams</h3>
+            <p class="service-desc">Build a coordinated team across operations, support and back-office functions, with recruiting and a clear plan for delivery.</p>
+            <div class="service-features"><div class="service-feature">Team structure & role planning</div><div class="service-feature">Recruiting & candidate screening</div><div class="service-feature">Onboarding & workforce support</div></div>
+            <span class="service-link">Plan your workforce <span aria-hidden="true">→</span></span>
+        </a>
+        <a href="/admins/" class="service-card reveal">
+            <div class="service-photo"><img src="/assets/img/role-admin.jpg" alt="Executive assistant coordinating a busy workday" loading="lazy"></div>
+            <div class="service-card-num">02 · Dedicated talent</div>
+            <div class="service-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0"/></svg></div>
+            <h3 class="service-name">Executive Support</h3>
+            <p class="service-desc">Give your leadership team more room to lead. A dedicated assistant keeps priorities, schedules and communication moving.</p>
+            <div class="service-features"><div class="service-feature">Inbox & calendar management</div><div class="service-feature">Meeting preparation & follow-through</div><div class="service-feature">Travel & stakeholder coordination</div></div>
+            <span class="service-link">Support for leaders <span aria-hidden="true">→</span></span>
+        </a>
+        <a href="/admins/" class="service-card reveal">
+            <div class="service-photo"><img src="/assets/img/admin-hero.jpg" alt="Administrative support at a workstation" loading="lazy"></div>
+            <div class="service-card-num">03 · Dedicated talent</div>
+            <div class="service-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v4H8zM8 5H5v16h14V5h-3M8 12h8M8 16h6"/></svg></div>
+            <h3 class="service-name">Administrative Assistants</h3>
+            <p class="service-desc">Keep the day-to-day details organized. Dedicated administrative support helps your business stay responsive and on track.</p>
+            <div class="service-features"><div class="service-feature">CRM updates & data entry</div><div class="service-feature">Scheduling & document preparation</div><div class="service-feature">Routine coordination & follow-ups</div></div>
+            <span class="service-link">Support for daily operations <span aria-hidden="true">→</span></span>
+        </a>
+        <a href="/csr/" class="service-card reveal">
+            <div class="service-photo"><img src="/assets/img/role-csr.jpg" alt="Customer service specialist on a support call" loading="lazy"></div>
+            <div class="service-card-num">04 · Dedicated talent</div>
+            <div class="service-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13v-1a8 8 0 0 1 16 0v1M4 12H2v7h4v-7zM20 12h2v7h-4v-7zM18 19v2h-6"/></svg></div>
+            <h3 class="service-name">Customer Service</h3>
+            <p class="service-desc">Give customers a helpful, consistent point of contact, trained on your tone, policies and support workflows.</p>
+            <div class="service-features"><div class="service-feature">Email, chat & phone support</div><div class="service-feature">Ticket handling & escalation</div><div class="service-feature">Customer follow-up</div></div>
+            <span class="service-link">Build your support team <span aria-hidden="true">→</span></span>
+        </a>
         <a href="/sales/" class="service-card reveal">
-            <div class="service-photo"><img src="/assets/img/role-sales.jpg" alt="A Staffify sales specialist working outbound" loading="lazy"></div>
-            <div class="service-card-num">01</div>
-            <div class="service-icon">
-                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <div class="service-name">Sales</div>
-            <p class="service-desc">
-                Done-for-you outbound that finds, nurtures, and routes your warmest prospects straight to your inbox. Reply-first sequences, no spray-and-pray.
-            </p>
-            <div class="service-features">
-                <div class="service-feature">Triple-verified prospect lists</div>
-                <div class="service-feature">7-email reply-first sequences</div>
-                <div class="service-feature">Live ops feed & open-intent tracking</div>
-                <div class="service-feature">Weekly performance reporting</div>
-            </div>
-            <div class="service-price">Sales setup &amp; staffing</div>
-            <span class="service-link">
-                Explore
-                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </span>
+            <div class="service-photo"><img src="/assets/img/role-sales.jpg" alt="Sales specialist working with prospects" loading="lazy"></div>
+            <div class="service-card-num">05 · Dedicated talent</div>
+            <div class="service-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-11M15 4h6v6"/></svg></div>
+            <h3 class="service-name">Sales Support</h3>
+            <p class="service-desc">Keep your sales process moving with dedicated help for prospect research, outreach coordination and follow-up.</p>
+            <div class="service-features"><div class="service-feature">Prospect research & CRM upkeep</div><div class="service-feature">Outreach & appointment coordination</div><div class="service-feature">Pipeline follow-up & reporting</div></div>
+            <span class="service-link">Support your sales process <span aria-hidden="true">→</span></span>
         </a>
-
-        <a href="/admins/" class="service-card reveal reveal-delay-1">
-            <div class="service-photo"><img src="/assets/img/role-admin.jpg" alt="A Staffify executive admin at a multi-monitor desk" loading="lazy"></div>
-            <div class="service-card-num">02</div>
-            <div class="service-icon">
-                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
-            <div class="service-name">Executive Admins</div>
-            <p class="service-desc">
-                Full-time, dedicated admins who handle your communications end-to-end. Your clients always reach a real, professional voice.
-            </p>
-            <div class="service-features">
-                <div class="service-feature">Email &amp; phone management</div>
-                <div class="service-feature">Appointment scheduling</div>
-                <div class="service-feature">CRM &amp; account upkeep</div>
-                <div class="service-feature">Review collection &amp; upselling</div>
-            </div>
-            <div class="service-price">Dedicated executive support</div>
-            <span class="service-link">
-                Explore
-                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </span>
+        <a href="/editors/" class="service-card reveal">
+            <div class="service-photo"><img src="/assets/img/role-video.jpg" alt="Video editor working on a timeline" loading="lazy"></div>
+            <div class="service-card-num">06 · Dedicated talent</div>
+            <div class="service-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 9-14 9z"/></svg></div>
+            <h3 class="service-name">Video Editors</h3>
+            <p class="service-desc">Build a dependable editing workflow with a dedicated editor who learns your brand, style and delivery standards.</p>
+            <div class="service-features"><div class="service-feature">Reels, TikToks & short-form</div><div class="service-feature">YouTube & long-form content</div><div class="service-feature">Brand consistency & revisions</div></div>
+            <span class="service-link">Build your editing workflow <span aria-hidden="true">→</span></span>
         </a>
-
-        <a href="/csr/" class="service-card reveal reveal-delay-2">
-            <div class="service-photo"><img src="/assets/img/role-csr.jpg" alt="A Staffify customer service rep on a support call" loading="lazy"></div>
-            <div class="service-card-num">03</div>
-            <div class="service-icon">
-                <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-            </div>
-            <div class="service-name">Customer Service Reps</div>
-            <p class="service-desc">
-                Trained on your tone and SOPs. Tickets, chat, phone, and account touches handled end-to-end. Customers stay longer.
-            </p>
-            <div class="service-features">
-                <div class="service-feature">Support tickets &amp; email</div>
-                <div class="service-feature">Live chat &amp; phone support</div>
-                <div class="service-feature">Complaint resolution</div>
-                <div class="service-feature">Retention &amp; renewal touches</div>
-            </div>
-            <div class="service-price">Pricing based on role &amp; scope</div>
-            <span class="service-link">
-                Explore
-                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </span>
-        </a>
-
-        <a href="/editors/" class="service-card reveal reveal-delay-2">
-            <div class="service-photo"><img src="/assets/img/role-video.jpg" alt="A Staffify video editor working on a timeline" loading="lazy"></div>
-            <div class="service-card-num">04</div>
-            <div class="service-icon">
-                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </div>
-            <div class="service-name">Video Editors</div>
-            <p class="service-desc">
-                Dedicated editors who know your brand and move fast. Flat monthly rate. No per-project pricing, no scrambling.
-            </p>
-            <div class="service-features">
-                <div class="service-feature">Reels, TikToks &amp; short-form</div>
-                <div class="service-feature">YouTube &amp; long-form content</div>
-                <div class="service-feature">AI-enhanced editing</div>
-                <div class="service-feature">Flat monthly, no surprises</div>
-            </div>
-            <div class="service-price">Pricing based on role &amp; scope</div>
-            <span class="service-link">
-                Explore
-                <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </span>
-        </a>
-
         <a href="https://calendly.com/go-staffify/discovery-call" class="service-card custom-roles reveal">
             <div class="custom-text">
                 <div class="custom-eyebrow">Need something else?</div>
