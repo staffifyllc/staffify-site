@@ -16,10 +16,10 @@ export async function recoverExisting(item,{redis,siteReader,fetcher=fetch}={}){
  const cached=await redis.get(cache);if(cached)return {...cached,cached:true};
  const candidates=[];if(item.domain)candidates.push(item.domain);
  const domain=email.split('@')[1];if(!FREE.test(domain))candidates.push('https://'+domain);
- for(const url of [...new Set(candidates)]){try{const evidence=await siteReader(url),match=recoveredIdentity(evidence,email,item.company);if(match){await redis.set(cache,match,{ex:30*86400});return match;}}catch{}}
+ for(const url of [...new Set(candidates)]){try{const evidence=await siteReader(url),match=recoveredIdentity(evidence,email,item.company);if(match){await redis.set(cache,match,{ex:30*86400});return match;}if(new URL(evidence.url).hostname.replace(/^www\./,'')===domain&&!MEDIA.test(evidence.text)){const noMatch={unmatched:true,reason:'Business website does not establish REP services',checkedAt:new Date().toISOString()};await redis.set(cache,noMatch,{ex:30*86400});return noMatch;}}catch{}}
  if(!process.env.EXISTING_LEAD_RESEARCH_TOKEN)throw Error('Existing-lead search connection missing');
  const r=await fetcher('https://campaign-dashboard-green.vercel.app/api/existing-lead-research',{method:'POST',headers:{Authorization:'Bearer '+process.env.EXISTING_LEAD_RESEARCH_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({email}),signal:AbortSignal.timeout(50000)});
- if(!r.ok)throw Error('Existing-lead search unavailable ('+r.status+')');
+ if(!r.ok){const failure=await r.json().catch(()=>({}));throw Error('Existing-lead search: '+String(failure.error||r.status).slice(0,150));}
  const data=await r.json();
  for(const candidate of data.results||[]){try{const evidence=await siteReader(candidate.url),match=recoveredIdentity(evidence,email,item.company);if(match){await redis.set(cache,match,{ex:30*86400});return match;}}catch{}}
  const noMatch={unmatched:true,checkedAt:new Date().toISOString()};await redis.set(cache,noMatch,{ex:30*86400});return noMatch;
