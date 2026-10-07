@@ -1561,7 +1561,8 @@
         .admin-video-player video { width:100%; aspect-ratio:4/3; object-fit:contain; display:block; background:#05090d; }
         .admin-video-start { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; width:100%; border:0; color:#e8f7fc; background:linear-gradient(135deg,#102a36,#070b10); cursor:pointer; font:inherit; }
         .admin-video-start span:first-child { display:grid; place-items:center; width:64px; height:64px; border-radius:50%; background:#58c9e5; color:#07121a; font-size:26px; box-shadow:0 0 40px #1abde122; }
-        .admin-video-start:hover { background:#143747; }
+        .admin-video-start { background-size:cover; background-position:center; justify-content:flex-end; padding:22px; text-shadow:0 1px 8px #000; }
+        .admin-video-start:hover { filter:brightness(1.08); }
         .admin-video-start:focus-visible { outline:3px solid #58c9e5; outline-offset:-6px; }
         .admin-video-start[hidden] { display:none; }
         .admin-video-status { color:#c1d3dc; margin:12px; font-size:14px; }
@@ -1570,18 +1571,18 @@
       <h2 id="admin-examples-title">More executive admin introductions</h2>
       <div class="admin-video-grid">
         <div class="admin-video-player">
-          <video controls playsinline preload="none" aria-label="Executive admin introduction 1" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=15djD4O9A86TaaWHdLD29bg_sXJO7dseA"></video>
-          <button type="button" class="admin-video-start" aria-label="Play executive admin introduction 1"><span aria-hidden="true">▶</span><span>Watch introduction 1</span></button>
+          <video poster="/assets/img/admin-example-2.jpg" controls playsinline preload="none" aria-label="Executive admin introduction 2" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=1WHhhHQfHYYkeNxq6KsDe5HLHyA6xM_SK"></video>
+          <button type="button" class="admin-video-start" style="background-image:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0) 65%),url('/assets/img/admin-example-2.jpg')" aria-label="Play executive admin introduction 2"><span aria-hidden="true">▶</span><span>Watch introduction</span></button>
           <p class="admin-video-status" role="status" hidden></p>
         </div>
         <div class="admin-video-player">
-          <video controls playsinline preload="none" aria-label="Executive admin introduction 2" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=1WHhhHQfHYYkeNxq6KsDe5HLHyA6xM_SK"></video>
-          <button type="button" class="admin-video-start" aria-label="Play executive admin introduction 2"><span aria-hidden="true">▶</span><span>Watch introduction 2</span></button>
+          <video poster="/assets/img/admin-example-1.jpg" controls playsinline preload="none" aria-label="Executive admin introduction 1" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=15djD4O9A86TaaWHdLD29bg_sXJO7dseA"></video>
+          <button type="button" class="admin-video-start" style="background-image:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0) 65%),url('/assets/img/admin-example-1.jpg')" aria-label="Play executive admin introduction 1"><span aria-hidden="true">▶</span><span>Watch introduction</span></button>
           <p class="admin-video-status" role="status" hidden></p>
         </div>
         <div class="admin-video-player">
-          <video controls playsinline preload="none" aria-label="Executive admin introduction 3" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=1vHuuNSMEU5RFpOiwFYdsfMQ1fHeKw5Rb"></video>
-          <button type="button" class="admin-video-start" aria-label="Play executive admin introduction 3"><span aria-hidden="true">▶</span><span>Watch introduction 3</span></button>
+          <video poster="/assets/img/admin-example-3.jpg" controls playsinline preload="none" aria-label="Executive admin introduction 3" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=1vHuuNSMEU5RFpOiwFYdsfMQ1fHeKw5Rb"></video>
+          <button type="button" class="admin-video-start" style="background-image:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0) 65%),url('/assets/img/admin-example-3.jpg')" aria-label="Play executive admin introduction 3"><span aria-hidden="true">▶</span><span>Watch introduction</span></button>
           <p class="admin-video-status" role="status" hidden></p>
         </div>
       </div>
@@ -1600,7 +1601,7 @@
         video.addEventListener('play', () => {
           status.hidden = true;
           document.querySelectorAll('.admin-video-player video, .meet-admin video').forEach(other => { if (other !== video) other.pause(); });
-          if (!tracked) { tracked = true; window.va = window.va || function(){ (window.vaq=window.vaq||[]).push(arguments); }; window.va('event', {name:'admin_example_video_play',data:{page:'/admins/',example:index+1}}); }
+          if (!tracked) { tracked = true; window.va = window.va || function(){ (window.vaq=window.vaq||[]).push(arguments); }; window.va('event', {name:'admin_example_video_play',data:{page:'/admins/',example:video.getAttribute('aria-label').split(' ').pop()}}); }
         });
       });
       </script>
