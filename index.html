@@ -1836,6 +1836,16 @@
 .growth-paths a:focus-visible,.hero-enterprise-link a:focus-visible{outline:2px solid #78d7ec;outline-offset:5px}
 @media(min-width:961px) and (max-width:1200px){.nav-links a{font-size:12px}.nav-links{gap:12px}nav{padding-left:20px;padding-right:20px}.nav-apply{display:none}}
 @media(max-width:720px){.growth-grid{grid-template-columns:1fr}.growth-paths{padding:42px 24px}.growth-card{padding:24px}.hero-enterprise-link{font-size:13px}}
+/* Fixed-height word reel prevents hero layout shifts. */
+.hero-word-window { display: block; height: 1.2em; overflow: hidden; line-height: 1.2; font-size: clamp(30px, 7.8vw, 110px); }
+.hero-word-track { display: block; animation: heroWords 12s cubic-bezier(.65,0,.35,1) infinite; color: #62cbe7; }
+.hero-word-track > span { display: block; height: 1.2em; line-height: 1.2; white-space: nowrap; }
+@keyframes heroWords { 0%,24% { transform: translateY(0); } 33%,57% { transform: translateY(-25%); } 66%,90% { transform: translateY(-50%); } 100% { transform: translateY(-75%); } }
+.hero-built { color: #e2edf2; font-size: clamp(20px, 2.4vw, 30px); margin: -12px 0 12px; }
+.hero-motion-toggle { background: transparent; border: 1px solid #526671; border-radius: 20px; padding: 7px 13px; color: #b7c8d2; font: inherit; font-size: 12px; cursor: pointer; }
+.hero-motion-toggle:focus-visible { outline: 2px solid #62cbe7; outline-offset: 4px; }
+.hero-word-track.is-paused { animation-play-state: paused; }
+@media(prefers-reduced-motion: reduce) { .hero-word-track { animation: none; } .hero-motion-toggle { display: none; } }
 </style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
@@ -2094,15 +2104,14 @@
             Dedicated remote staff for service businesses
         </div>
 
-        <h1 class="hero-headline">
-            <!-- Main headline -->
-            <span class="text-row hero-line-main">
-                <span class="text-inner" style="--d:0.5s">Your remote team.</span>
-            </span>
-            <span class="text-row hero-line-accent">
-                <span class="text-inner" style="--d:0.66s"><span class="g-text">Built around you.</span></span>
+        <h1 class="hero-headline" aria-label="Your virtual assistant. Your virtual professional. Your virtual rockstar. Built around you.">
+            <span class="text-row hero-line-main" aria-hidden="true">Your virtual</span>
+            <span class="hero-word-window hero-line-accent" aria-hidden="true">
+                <span class="hero-word-track"><span>assistant.</span><span>professional.</span><span>rockstar.</span><span>assistant.</span></span>
             </span>
         </h1>
+        <p class="hero-built">Built around you.</p>
+        <button class="hero-motion-toggle" type="button" aria-pressed="false">Pause animation</button>
 
         <div class="hero-rule"></div>
 
@@ -3054,5 +3063,13 @@ window.addEventListener('mousemove', e => {
 <script defer src="/_vercel/insights/script.js"></script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
   <script src="/assets/js/analytics.js?v=1" defer></script>
+<script>
+const heroMotionToggle = document.querySelector('.hero-motion-toggle');
+heroMotionToggle.addEventListener('click', () => {
+ const paused = document.querySelector('.hero-word-track').classList.toggle('is-paused');
+ heroMotionToggle.setAttribute('aria-pressed', String(paused));
+ heroMotionToggle.textContent = paused ? 'Resume animation' : 'Pause animation';
+});
+</script>
 </body>
 </html>
