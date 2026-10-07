@@ -1552,6 +1552,60 @@
       </script>
     </section>
 
+    <section class="admin-video-examples" aria-labelledby="admin-examples-title">
+      <style>
+        .admin-video-examples { padding: 24px 24px 80px; background:rgba(8,8,10,.55); }
+        .admin-video-examples h2 { max-width:1200px; margin:0 auto 28px; font-size:clamp(24px,3vw,36px); color:#fff; }
+        .admin-video-grid { max-width:1200px; margin:auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
+        .admin-video-player { position:relative; border:1px solid rgba(26,189,225,.3); border-radius:18px; overflow:hidden; background:linear-gradient(135deg,#102a36,#070b10); }
+        .admin-video-player video { width:100%; aspect-ratio:4/3; object-fit:contain; display:block; background:#05090d; }
+        .admin-video-start { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; width:100%; border:0; color:#e8f7fc; background:linear-gradient(135deg,#102a36,#070b10); cursor:pointer; font:inherit; }
+        .admin-video-start span:first-child { display:grid; place-items:center; width:64px; height:64px; border-radius:50%; background:#58c9e5; color:#07121a; font-size:26px; box-shadow:0 0 40px #1abde122; }
+        .admin-video-start:hover { background:#143747; }
+        .admin-video-start:focus-visible { outline:3px solid #58c9e5; outline-offset:-6px; }
+        .admin-video-start[hidden] { display:none; }
+        .admin-video-status { color:#c1d3dc; margin:12px; font-size:14px; }
+        @media(max-width:800px) { .admin-video-grid { grid-template-columns:1fr; max-width:560px; } }
+      </style>
+      <h2 id="admin-examples-title">More executive admin introductions</h2>
+      <div class="admin-video-grid">
+        <div class="admin-video-player">
+          <video controls playsinline preload="none" aria-label="Executive admin introduction 1" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=15djD4O9A86TaaWHdLD29bg_sXJO7dseA"></video>
+          <button type="button" class="admin-video-start" aria-label="Play executive admin introduction 1"><span aria-hidden="true">▶</span><span>Watch introduction 1</span></button>
+          <p class="admin-video-status" role="status" hidden></p>
+        </div>
+        <div class="admin-video-player">
+          <video controls playsinline preload="none" aria-label="Executive admin introduction 2" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=1WHhhHQfHYYkeNxq6KsDe5HLHyA6xM_SK"></video>
+          <button type="button" class="admin-video-start" aria-label="Play executive admin introduction 2"><span aria-hidden="true">▶</span><span>Watch introduction 2</span></button>
+          <p class="admin-video-status" role="status" hidden></p>
+        </div>
+        <div class="admin-video-player">
+          <video controls playsinline preload="none" aria-label="Executive admin introduction 3" data-video-src="https://recruiting.gostaffify.com/api/video-proxy?id=1vHuuNSMEU5RFpOiwFYdsfMQ1fHeKw5Rb"></video>
+          <button type="button" class="admin-video-start" aria-label="Play executive admin introduction 3"><span aria-hidden="true">▶</span><span>Watch introduction 3</span></button>
+          <p class="admin-video-status" role="status" hidden></p>
+        </div>
+      </div>
+      <script>
+      document.querySelectorAll('.admin-video-player').forEach((player, index) => {
+        const video = player.querySelector('video');
+        const button = player.querySelector('button');
+        const status = player.querySelector('[role="status"]');
+        let tracked = false;
+        button.addEventListener('click', () => {
+          video.src = video.dataset.videoSrc;
+          button.hidden = true;
+          video.play().catch(() => { status.hidden = false; status.textContent = 'Press play to start the video.'; });
+        });
+        video.addEventListener('error', () => { status.hidden = false; status.textContent = 'This video is temporarily unavailable. Please try again later.'; });
+        video.addEventListener('play', () => {
+          status.hidden = true;
+          document.querySelectorAll('.admin-video-player video, .meet-admin video').forEach(other => { if (other !== video) other.pause(); });
+          if (!tracked) { tracked = true; window.va = window.va || function(){ (window.vaq=window.vaq||[]).push(arguments); }; window.va('event', {name:'admin_example_video_play',data:{page:'/admins/',example:index+1}}); }
+        });
+      });
+      </script>
+    </section>
+
     <section class="costs-section">
         <p class="section-eyebrow reveal">Built Around Your Business</p>
         <h2 class="section-title reveal">What You <span class="g">Get Back</span></h2>
