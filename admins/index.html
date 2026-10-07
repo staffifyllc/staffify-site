@@ -778,6 +778,19 @@
             line-height: 1.4;
         }
 
+        /* Keep word-based stats within their own columns at every width. */
+        .stat-banner .stat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+        .stat-banner .stat-item { min-width: 0; padding: 24px 16px; container-type: inline-size; }
+        .stat-banner .stat-value { font-size: 30px; font-size: clamp(24px, 14cqi, 38px); line-height: 1.2; letter-spacing: -1px; overflow-wrap: anywhere; }
+        @media (max-width: 1000px) and (min-width: 769px) {
+            .stat-banner .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 24px; }
+            .stat-banner .stat-item:nth-child(2) { border-right: none; }
+        }
+        @media (max-width: 768px) {
+            .stat-banner .stat-row { grid-template-columns: 1fr; }
+            .stat-banner .stat-item { min-width: 0; }
+        }
+
         /* ── MYTH VS REALITY ── */
         .myths-section {
             background: rgba(8,8,10,0.62);
