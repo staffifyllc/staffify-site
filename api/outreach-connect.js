@@ -29,16 +29,7 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
  if(req.method==='POST'){
   if(owner!=='all')return res.status(403).json({error:'Administrator required'});
   if(!adminAuthorized(req)&&req.headers.origin!==SITE)return res.status(403).json({error:'Invalid origin'});
-  const body=readBody(req);if(body.action==='restore-hello'){
-   const email='hello@gostaffify.com';
-   cfg.helloSenderRestored=true;
-   let account=cfg.accounts.find(a=>a.email===email);
-   if(!account){account={email,owner:'Paul',dailyLimit:50,brand:'Staffify',draftEnabled:false};cfg.accounts.push(account);}
-   cfg.expectedAccounts=cfg.accounts.length;
-   // An old saved token is insufficient: verify both identity and read access.
-   try{const t=await access(email);const p=await gmail(t,'profile');if(p.emailAddress?.toLowerCase()!==email)throw Error('Wrong mailbox');await gmail(t,'messages?maxResults=1');account.draftEnabled=true;}
-   catch{account.draftEnabled=false;}
-  }else if(body.action==='register'){
+  const body=readBody(req);if(body.action==='register'){
    const email=String(body.email||'').trim().toLowerCase();if(!/^[a-z0-9._+-]+@[a-z0-9.-]*(?:staffify|foundry)[a-z0-9.-]*\.[a-z]{2,}$/.test(email)||!['Paul','Madison'].includes(body.owner))return res.status(400).json({error:'Valid Staffify address and owner required'});
    if(cfg.enabled)return res.status(409).json({error:'Pause hosted worker before changing its mailbox inventory'});
    if(!cfg.accounts.some(a=>a.email===email)){if(cfg.accounts.length>=cfg.expectedAccounts)return res.status(400).json({error:'Expected accounts already registered'});cfg.accounts.push({email,owner:body.owner,dailyLimit:50,brand:email.includes('foundry')?'Foundry':'Staffify',draftEnabled:!email.includes('foundry')});}
