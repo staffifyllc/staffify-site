@@ -18,7 +18,7 @@ async function refresh(){
   const c=matches[0];if(!raw[c.Id])await redis.hsetnx(KEY,c.Id,JSON.stringify({...seed,customerId:String(c.Id),name:seed.name,qboName:c.DisplayName,by:'Paul instruction',at:new Date().toISOString()}));
  }
  raw=await redis.hgetall(KEY)||{};
- const accounts=Object.values(raw).map(parse).filter(a=>!a.archived).map(a=>{const c=customers.find(c=>String(c.Id)===a.customerId);return {...a,clientEmail:c?.PrimaryEmailAddr?.Address||'',qboName:c?.DisplayName||a.name,name:c?.CompanyName==='Joel Marion Photography'?'Joel Marion Photography':a.name};});
+ const accounts=Object.values(raw).map(parse).filter(a=>!a.archived).map(a=>{const c=customers.find(c=>String(c.Id)===a.customerId);return {...a,contactName:c?.CompanyName==='Joel Marion Photography'?'Kelly Hayes':a.contactName||'',clientEmail:c?.PrimaryEmailAddr?.Address||'',qboName:c?.DisplayName||a.name,name:c?.CompanyName==='Joel Marion Photography'?'Joel Marion Photography':a.name};});
  const start=accounts.map(a=>a.since).sort()[0]||new Date().toISOString().slice(0,10);
  const hours=await hoursByClient({start,stop:new Date().toISOString().slice(0,10)}).catch(()=>({connected:false}));
  const hourMatches=matchServiceHours(accounts,invoices,hours);
