@@ -16,7 +16,7 @@ export default async function handler(req,res){
  if(!await redis.set('website:conversation:lock',lock,{nx:true,ex:300}))return res.json({status:'already_running'});
  try{
  if(dry&&req.query?.notify_test==='1')report.slackTest=await slackNotify('Staffify website signup alerts are connected. New resource signups will appear here with a link to their Hub record. This is an integration test, not a new signup.\nhttps://www.gostaffify.com/website-leads/');
- const cfg=await config(),state=await redis.get(KEY);if(!state)throw Error('Outreach controls unavailable');
+ const cfg=await config(),state=await redis.get(KEY);if(!state)throw Error('Outreach controls unavailable');if(!dry&&(!cfg.enabled||cfg.sendingEnabled!==true))throw Error('Automatic outreach is paused');
  const accounts=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
  if(!accounts.some(a=>a.email===SENDER))throw Error('Paul sender unavailable');
  // Include the original playbook reply inbox in reconciliation, even though it cannot send outreach.
@@ -27,7 +27,8 @@ export default async function handler(req,res){
  candidates.sort((a,b)=>(a.rec.checkedAt||0)-(b.rec.checkedAt||0));
  const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hourCycle:'h23'}).format(new Date()));
  for(const {email,sub,old,rec} of candidates.slice(0,dry?25:2)){
- const key='website:conversation:'+email;report.checked++;rec.checkedAt=Date.now();
+ const key='website:conversation:'+email;report.checked++;
+ if(!dry&&sub.signup_slack_status==='failed'&&await redis.set('website:signup-alert-retry:'+email,'1',{nx:true,ex:600})){const notice=await slackNotify('New Staffify website signup (retried alert)\n'+email+'\nhttps://www.gostaffify.com/website-leads/');await redis.hset('subscriber:'+email,{signup_slack_status:notice.ok?'sent':'failed',signup_slack_checked_at:Date.now()});}rec.checkedAt=Date.now();
  const save=()=>redis.set(key,rec);
  try{
   let stop=await isOptedOut({email})?'Global opt-out':state.suppressions?.includes(email)?'Global suppression':state.pausedOwners?.includes('Paul')?'Paul is paused':state.assignments?.some(a=>a.email===email&&a.owner!=='Paul')?'Assigned to another owner':sub.decision?'Decision recorded':old?.completed_at?'Previous sequence completed':old?.graduated_at?'Previously engaged':null;
