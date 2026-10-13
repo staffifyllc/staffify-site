@@ -132,7 +132,7 @@ async function sendViaResend({ to, subject, html, text }) {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'hello@gostaffify.com' }),
+        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'paul@trystaffify.com' }),
     });
     if (!res.ok) {
         const detail = await res.text().catch(() => '');
@@ -235,7 +235,7 @@ export default async function handler(req, res) {
                 subject: "The 10 highest-ROI delegations, inside",
                 ...renderEmail(email),
             });
-            await redis.hset(`subscriber:${email}`, { playbook_sent_at: Date.now() });
+            await redis.hset(`subscriber:${email}`, { playbook_sent_at: Date.now(), playbook_reply_to: 'paul@trystaffify.com' });
         }
 
         if (shouldEnroll) {

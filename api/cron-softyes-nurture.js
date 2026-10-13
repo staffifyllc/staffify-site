@@ -15,26 +15,29 @@ export default async function handler(req,res){
  const dry=req.query?.dry==='1',lock=randomUUID(),report={dry,sent:0,checked:0,held:[],replies:0};
  if(!await redis.set('website:conversation:lock',lock,{nx:true,ex:300}))return res.json({status:'already_running'});
  try{
+ if(dry&&req.query?.notify_test==='1')report.slackTest=await slackNotify('Staffify website signup alerts are connected. New resource signups will appear here with a link to their Hub record. This is an integration test, not a new signup.\nhttps://www.gostaffify.com/website-leads/');
  const cfg=await config(),state=await redis.get(KEY);if(!state)throw Error('Outreach controls unavailable');
  const accounts=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
  if(!accounts.some(a=>a.email===SENDER))throw Error('Paul sender unavailable');
  // Include the original playbook reply inbox in reconciliation, even though it cannot send outreach.
- const senders=[...new Set([...accounts.map(a=>a.email),'hello@gostaffify.com'])];
+ const senders=[...new Set(accounts.map(a=>a.email))];
  const tokens={};for(const email of senders)tokens[email]=await access(email);
  const ids=await redis.zrange('softyes:active',0,-1),candidates=[];
  for(const email of ids){const [sub,old,rec]=await Promise.all([redis.hgetall('subscriber:'+email),redis.hgetall('softyes:'+email),redis.get('website:conversation:'+email)]);if(!sub||!isWebsiteSource(sub.source)||!sub.playbook_sent_at)continue;candidates.push({email,sub,old,rec:rec||{events:[],enrolledAt:Number(old?.enrolled_at||sub.signed_up_at),sender:SENDER,status:'enrolled'}});}
  candidates.sort((a,b)=>(a.rec.checkedAt||0)-(b.rec.checkedAt||0));
  const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hourCycle:'h23'}).format(new Date()));
- for(const {email,sub,old,rec} of candidates.slice(0,2)){
+ for(const {email,sub,old,rec} of candidates.slice(0,dry?25:2)){
  const key='website:conversation:'+email;report.checked++;rec.checkedAt=Date.now();
  const save=()=>redis.set(key,rec);
  try{
-  let stop=await isOptedOut({email})?'Global opt-out':state.suppressions?.includes(email)?'Global suppression':state.pausedOwners?.includes('Paul')?'Paul is paused':state.assignments?.some(a=>a.email===email&&a.owner!=='Paul')?'Assigned to another owner':sub.decision?'Decision recorded':old?.graduated_at?'Previously engaged':null;
+  let stop=await isOptedOut({email})?'Global opt-out':state.suppressions?.includes(email)?'Global suppression':state.pausedOwners?.includes('Paul')?'Paul is paused':state.assignments?.some(a=>a.email===email&&a.owner!=='Paul')?'Assigned to another owner':sub.decision?'Decision recorded':old?.completed_at?'Previous sequence completed':old?.graduated_at?'Previously engaged':null;
   if(!stop&&state.records?.some(r=>r.recipient===email))stop='Already tracked in another outreach campaign';
   if(!stop&&(await redis.hget('nurture:'+email,'enrolled_at')||await redis.zscore('disposition:pending',email)))stop='Meeting or human-owned follow-up';
   if(/@(gostaffify|staffifyhq|trystaffify|hirestaffify|flylisted)\.com$/i.test(email))stop='Internal address';
   if(stop){rec.status='held';rec.reason=stop;await save();report.held.push({email,reason:stop});continue;}
-  const messages=(await Promise.all(senders.map(async a=>(await history(tokens[a],email)).map(m=>compactMessage(m,a))))).flat();
+  const monitored=[...senders];
+  if(sub.playbook_reply_to!==SENDER){if(!tokens['hello@gostaffify.com'])tokens['hello@gostaffify.com']=await access('hello@gostaffify.com');monitored.push('hello@gostaffify.com');}
+  const messages=(await Promise.all(monitored.map(async a=>(await history(tokens[a],email)).map(m=>compactMessage(m,a))))).flat();
   const verdict=classify(messages,email,senders);
   const incoming=messages.filter(m=>m.from===email);
   rec.replies=incoming.map(m=>({id:m.id,at:new Date(m.date).toISOString(),body:m.text,subject:m.subject,mailbox:m.mailbox,threadId:m.threadId}));
@@ -46,7 +49,7 @@ export default async function handler(req,res){
   const known=new Set(rec.events.map(e=>e.id));
   if(messages.some(m=>m.draft||m.sent&&!known.has(m.id))){rec.status='held';rec.reason='Existing conversation or draft requires review';await save();continue;}
   const row={recipient:email,owner:'Paul',company:sub.company||''};
-  try{stop=await draftBlockReason(row,{requireVerified:false});}catch(e){if(e.message==='CRM contact missing or ambiguous')stop='CRM contact needs matching';else throw e;}
+  try{stop=await draftBlockReason(row,{requireVerified:false});}catch(e){if(e.message==='CRM contact missing'){const check=await clientCheck({email,company:row.company});stop=check.status==='clear'?null:'Client check: '+check.status;}else throw e;}
   if(stop){rec.status='held';rec.reason=stop;await save();report.held.push({email,reason:stop});continue;}
   const client=await clientCheck({email,company:row.company});if(client.status!=='clear')throw Error('Client check: '+client.status);
   rec.nextAt=nextConversationAt(rec.enrolledAt,rec.events);rec.status=rec.nextAt?'scheduled':'complete';rec.reason='';

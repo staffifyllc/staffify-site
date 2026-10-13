@@ -9,7 +9,7 @@ export function websiteLead(rec,nurture={},suppressed=false,conversation=null){
  events.sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
  const state=suppressed?'Unsubscribed':nurture.graduated_at?'Stopped: '+(nurture.graduated_reason||'engaged'):rec.decision?'Decision recorded: '+rec.decision:nurture.cool_off_until?'Nurture cooldown':nurture.enrolled_at?'Nurture enrolled':'Not enrolled';
  const next=touches.find(([key])=>!nurture[key]);
- const nextAt=state==='Nurture enrolled'&&next?iso(Number(nurture.enrolled_at)+next[1]*86400000):null;
+ const nextAt=state==='Nurture enrolled'?iso(nextConversationAt(nurture.enrolled_at,[])):null;
  if(conversation){
   for(const e of conversation.events||[])events.push({...e,type:'Personal follow-up',evidence:'Verified in Gmail Sent · Message ID: '+e.id});
   for(const e of conversation.replies||[])events.push({...e,type:'Reply received',evidence:'Read from connected Gmail mailbox',url:'https://mail.google.com/mail/?authuser='+encodeURIComponent(e.mailbox)+'#all/'+e.threadId});
