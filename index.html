@@ -1857,6 +1857,22 @@
 .benefit-check { display:inline-flex; align-items:center; justify-content:center; flex:0 0 28px; width:28px; height:28px; border-radius:50%; background:rgba(26,189,225,.18); color:#68e2f3; font-size:22px; font-weight:900; }
 .agency-note { color:#aeb9c1; font-size:13px; line-height:1.6; text-align:center; margin:18px auto 0; max-width:800px; }
 @media(max-width:900px) { #staffify-difference .compare-row { grid-template-columns:1fr; } #staffify-difference .compare-row.head { display:none; } #staffify-difference .compare-cell { display:block; padding:16px 20px; } #staffify-difference .compare-cell.dim { background:rgba(255,255,255,.06); } #staffify-difference .compare-cell.old::before { content:"On your own"; } #staffify-difference .compare-cell.agency::before { content:"Other VA agencies"; color:#e0c69b; } #staffify-difference .compare-cell.us::before { content:"Staffify"; } #staffify-difference .compare-cell.old::before, #staffify-difference .compare-cell.agency::before, #staffify-difference .compare-cell.us::before { display:block; margin-bottom:8px; font-size:12px; font-weight:700; } }
+
+.hero .hero-sub{max-width:720px;}
+.hero .hero-rule{margin:20px auto;}
+/* October conversion release: clear offer, supporting motion, earlier proof. */
+.hero-headline.conversion-headline {font-size:clamp(36px,4.2vw,64px);line-height:1.08;max-width:1120px;letter-spacing:-.045em;margin:0 0 20px;text-wrap:balance;}
+.conversion-headline>span{color:#a6eaf5;}
+.hero-supporting-reel{display:flex;align-items:center;justify-content:center;gap:.35em;font-size:clamp(18px,2vw,24px);color:#a6eaf5;}
+.hero-supporting-reel .hero-word-window{font-size:inherit;text-align:left;width:7em;}
+.hero-call-note{font-size:14px;color:#b8c9d0;margin:14px 0;line-height:1.6;}
+.proof-section{padding-top:64px;padding-bottom:40px;}
+.proof-section .section-title{font-size:clamp(30px,4vw,48px);}
+.conversion-booking{text-align:center;padding:48px 24px;background:#0b2029;}
+.conversion-booking h2{font-size:clamp(28px,4vw,42px);margin-bottom:16px;}
+.conversion-booking p{max-width:640px;margin:16px auto;color:#b8c9d0;line-height:1.6;}
+.conversion-booking .btn-primary{display:inline-flex;}
+@media(max-width:600px){.hero-inner{width:100%;}.hero-supporting-reel{margin-bottom:8px;}.hero-headline.conversion-headline{font-size:36px;}.hero-actions{width:100%;}.hero-call-note{max-width:310px;}.hero{padding-left:20px;padding-right:20px;}}
 </style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
@@ -2115,35 +2131,31 @@
             Dedicated remote staff for service businesses
         </div>
 
-        <h1 class="hero-headline" aria-label="Your virtual professional. Your virtual assistant. Your virtual rockstar. Your virtual teammate. Your virtual savior. Built around you.">
-            <span class="text-row hero-line-main" aria-hidden="true">Your virtual</span>
-            <span class="hero-word-window hero-line-accent" aria-hidden="true">
-                <span class="hero-word-track"><span>professional.</span><span>assistant.</span><span>rockstar.</span><span>teammate.</span><span>savior.</span><span>professional.</span></span>
-            </span>
-        </h1>
-        <p class="hero-built">Built around you.</p>
+        <h1 class="hero-headline conversion-headline">Your next great hire.<br><span>Without running the hiring process.</span></h1>
+        <div class="hero-supporting-reel" aria-label="Your virtual professional, assistant, rockstar, teammate or savior."><span>Your virtual</span><span class="hero-word-window" aria-hidden="true"><span class="hero-word-track"><span>professional.</span><span>assistant.</span><span>rockstar.</span><span>teammate.</span><span>savior.</span><span>professional.</span></span></span></div>
 
         <div class="hero-rule"></div>
 
         <p class="hero-sub">
-            Hire a dedicated executive assistant, customer service rep, sales team, or video editor. We handle recruiting, HR, payroll, and ongoing support. You get time back to run your business.
+            Dedicated executive assistants, customer support, sales support, and video editors. We handle recruiting, payroll, HR, and ongoing support. You get time back to run your business.
         </p>
 
         <div class="hero-actions">
-            <a href="https://calendly.com/go-staffify/discovery-call?utm_content=home-hero" class="btn-primary btn-magnetic">
-                Book a 30-minute call
+            <a href="/book/?utm_content=home-hero" class="btn-primary btn-magnetic">
+                Find my next hire
             </a>
-            <a href="/how-it-works/" class="btn-ghost">See pricing &amp; process →</a>
+            <a href="/how-it-works/" class="btn-ghost">See how it works →</a>
         </div>
 
+        <p class="hero-call-note">Free 30-minute discovery call. Talk through the role, hours and next steps.</p>
         <p class="hero-enterprise-link">Building a larger team? <a href="/enterprise-workforce-solutions/">Explore Teams &amp; Enterprise →</a></p>
 <div class="hero-role-picker" aria-label="Explore staffing roles">
             <p>Who would take the most off your plate?</p>
             <div class="hero-role-links">
-                <a href="/editors/">Video editing</a>
                 <a href="/admins/">Executive support</a>
                 <a href="/csr/">Customer service</a>
-                <a href="/sales/">Sales</a>
+                <a href="/sales/">Sales support</a>
+                <a href="/editors/">Video editing</a>
             </div>
         </div>
 
@@ -2232,40 +2244,57 @@
 </div>
 </div>
 
-<section class="growth-paths" aria-labelledby="growth-heading" id="staffing-options">
-<div class="growth-paths-inner"><p style="color:#78d7ec;font-size:11px;letter-spacing:.16em;text-transform:uppercase">Support for every stage</p>
-<h2 id="growth-heading">One great hire. A growing team.<br>A larger workforce.</h2>
-<p class="growth-intro">Start with the support you need today. Staffify helps you define the roles, find the right people and plan how they work with your business.</p>
-<div class="growth-grid">
-<article class="growth-card"><span class="growth-label">For owners &amp; small businesses</span><h3>Individual hires</h3><p>A dedicated executive assistant, video editor, customer service rep or sales support specialist, with recruiting and ongoing support.</p><a href="#services">Find your next hire →</a></article>
-<article class="growth-card"><span class="growth-label">For growing organizations</span><h3>Growing teams</h3><p>Build roughly 3–20+ roles across operations, customer support, admin, sales support, marketing and back-office work.</p><a href="/enterprise-workforce-solutions/#approach">Plan your team →</a></article>
-<article class="growth-card"><span class="growth-label">For larger organizations</span><h3>Enterprise</h3><p>Discuss scalable offshore, nearshore and contingent workforce solutions, with recruiting, screening, deployment and workforce support.</p><a href="/enterprise-workforce-solutions/">Explore workforce solutions →</a></article>
-</div><p class="growth-partner">Already delivering a staffing program? <a href="/staffing-partnerships/">Explore Staffing Partnerships &amp; Tier 2 Supplier Solutions →</a></p>
-</div></section>
+
 
 <!-- ─── CONSOLIDATED STAFFIFY COMPARISON ─── -->
-<section class="value-section" id="staffify-difference" aria-labelledby="difference-title">
- <div class="value-inner">
-  <div class="section-eyebrow">The Staffify Difference</div>
-  <h2 class="section-title" id="difference-title">A better hire.<br>A stronger team.</h2>
-  <p class="section-sub">From defining the role to supporting the person in it, we help you build a team that works for your business.</p>
-  <div class="compare">
-   <div class="compare-row head"><div class="compare-cell dim">What matters</div><div class="compare-cell old">Hiring on your own</div><div class="compare-cell agency">Other VA agencies</div><div class="compare-cell us">With Staffify</div></div>
-   <div class="compare-row"><div class="compare-cell dim">Role design</div><div class="compare-cell old"><span>You define the role and workflows</span></div><div class="compare-cell agency"><span>Ask whether workflow mapping is included</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Role design & workflow mapping before hiring</span></span></div></div>
-   <div class="compare-row"><div class="compare-cell dim">Candidate screening</div><div class="compare-cell old"><span>You review applications and test skills</span></div><div class="compare-cell agency"><span>Screening methods vary by provider</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Practical candidate testing before placement</span></span></div></div>
-   <div class="compare-row"><div class="compare-cell dim">Onboarding</div><div class="compare-cell old"><span>You plan and manage the handoff</span></div><div class="compare-cell agency"><span>Confirm the onboarding support included</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Onboarding and workflow support</span></span></div></div>
-   <div class="compare-row"><div class="compare-cell dim">Ongoing oversight</div><div class="compare-cell old"><span>You manage performance and follow-up</span></div><div class="compare-cell agency"><span>Confirm who manages performance after placement</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Performance tracking & ongoing support</span></span></div></div>
-   <div class="compare-row"><div class="compare-cell dim">Payroll & HR</div><div class="compare-cell old"><span>You arrange payroll and HR support</span></div><div class="compare-cell agency"><span>Services depend on the plan and employment model</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Payroll & HR support built into the service</span></span></div></div>
-   <div class="compare-row highlight"><div class="compare-cell dim">Replacements</div><div class="compare-cell old"><span>You restart the search; costs can recur</span></div><div class="compare-cell agency"><span>Check replacement windows, exclusions and new fees</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>No new onboarding fee for covered replacements</span></span></div></div>
-   <div class="compare-row"><div class="compare-cell dim">Pay & service costs</div><div class="compare-cell old"><span>You agree pay directly with your hire</span></div><div class="compare-cell agency"><span>Ask how worker pay and agency service fees are structured</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Onboarding is a small one-time investment; ongoing staffing costs quoted separately</span></span></div></div>
-  </div>
-  <p class="agency-note">Agency services, pay structures and replacement policies vary. Compare each provider’s written proposal and terms.</p>
-  <p class="value-note"><strong>Onboarding is a small one-time investment.</strong> Ongoing staffing costs quoted separately.</p>
-  <div style="text-align:center;margin-top:28px"><a href="https://calendly.com/go-staffify/discovery-call?utm_content=home-comparison" class="btn-primary">Find your next hire <span aria-hidden="true">→</span></a></div>
- </div>
-</section>
+
 
 <!-- ─── VA VOICE VIDEO ─── -->
+
+
+<!-- ─── SERVICES ─── -->
+<section class="proof-section">
+    <div class="section-eyebrow reveal">Client Results</div>
+    <h2 class="section-title reveal">Built on results.</h2>
+    <p class="section-sub reveal">Business owners who finally got their time back.</p>
+
+    <div class="proof-grid">
+        <div class="proof-card reveal">
+            <div class="proof-stars">
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <p class="proof-text">"Staffify did all of the heavy lifting in terms of helping me find someone, hire someone, and offered so many resources on how to train them as well."</p>
+            <div class="proof-author">
+                <div class="proof-avatar"><img src="/assets/pitch/testi-aaron.jpg" alt="Aaron Bradley" loading="lazy"></div>
+                <div>
+                    <div class="proof-name">Aaron Bradley</div>
+                    <div class="proof-role">Bluegrass Real Estate Media</div>
+                </div>
+            </div>
+        </div>
+        <div class="proof-card reveal reveal-delay-1">
+            <div class="proof-stars">
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <p class="proof-text">"I couldn't be more thankful for Staffify. Our VAs have been killing it, they're unreal. We have probably the most advanced editing system in the world right now, all because of the VAs we got."</p>
+            <div class="proof-author">
+                <div class="proof-avatar"><img src="/assets/pitch/testi-patrick.jpg" alt="Patrick Szydlik" loading="lazy"></div>
+                <div>
+                    <div class="proof-name">Patrick Szydlik</div>
+                    <div class="proof-role">Hephaestus Innovation</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 <section class="vavoice-section">
     <div class="va-voice reveal">
         <div class="va-voice-frame">
@@ -2293,8 +2322,6 @@
     })();
     </script>
 </section>
-
-<!-- ─── SERVICES ─── -->
 <section class="services-section" id="services">
     <div class="section-eyebrow reveal">What We Build</div>
     <h2 class="section-title reveal">The right people.<br>For your next stage of growth.</h2>
@@ -2355,7 +2382,7 @@
             <div class="service-features"><div class="service-feature">Reels, TikToks & short-form</div><div class="service-feature">YouTube & long-form content</div><div class="service-feature">Brand consistency & revisions</div></div>
             <span class="service-link">Build your editing workflow <span aria-hidden="true">→</span></span>
         </a>
-        <a href="https://calendly.com/go-staffify/discovery-call" class="service-card custom-roles reveal">
+        <a href="/book/?utm_content=home-secondary" class="service-card custom-roles reveal">
             <div class="custom-text">
                 <div class="custom-eyebrow">Need something else?</div>
                 <div class="custom-title">We staff custom roles too.</div>
@@ -2368,6 +2395,60 @@
         </a>
     </div>
 </section>
+<section class="how-section">
+    <div class="section-eyebrow reveal">The Process</div>
+    <h2 class="section-title reveal">Infrastructure first.<br>Team second.</h2>
+    <p class="section-sub reveal">Typical placement takes 7–10 days. Timing depends on the role and candidate fit.</p>
+
+    <div class="steps-container">
+        <div class="steps-connector"><div class="steps-connector-fill"></div></div>
+        <div class="step-card reveal">
+            <div class="step-num"><div class="step-num-inner">1</div></div>
+            <div class="step-title">Discovery Call</div>
+            <p class="step-desc">30 minutes. We learn your operation, your goals, and design the right role around real leverage, not just task-filling.</p>
+        </div>
+        <div class="step-card reveal reveal-delay-1">
+            <div class="step-num"><div class="step-num-inner">2</div></div>
+            <div class="step-title">Build the Foundation</div>
+            <p class="step-desc">We architect the role, map the workflows, and build the SOPs. Then we recruit, test, and place top-tier talent into that foundation.</p>
+        </div>
+        <div class="step-card reveal reveal-delay-2">
+            <div class="step-num"><div class="step-num-inner">3</div></div>
+            <div class="step-title">Scale With Confidence</div>
+            <p class="step-desc">Your team runs. We stay embedded with real-time support, performance tracking, and restaffing if you ever need it.</p>
+        </div>
+    </div>
+</section>
+<section class="value-section" id="staffify-difference" aria-labelledby="difference-title">
+ <div class="value-inner">
+  <div class="section-eyebrow">The Staffify Difference</div>
+  <h2 class="section-title" id="difference-title">A better hire.<br>A stronger team.</h2>
+  <p class="section-sub">From defining the role to supporting the person in it, we help you build a team that works for your business.</p>
+  <div class="compare">
+   <div class="compare-row head"><div class="compare-cell dim">What matters</div><div class="compare-cell old">Hiring on your own</div><div class="compare-cell agency">Other VA agencies</div><div class="compare-cell us">With Staffify</div></div>
+   <div class="compare-row"><div class="compare-cell dim">Role design</div><div class="compare-cell old"><span>You define the role and workflows</span></div><div class="compare-cell agency"><span>Ask whether workflow mapping is included</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Role design & workflow mapping before hiring</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Candidate screening</div><div class="compare-cell old"><span>You review applications and test skills</span></div><div class="compare-cell agency"><span>Screening methods vary by provider</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Practical candidate testing before placement</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Onboarding</div><div class="compare-cell old"><span>You plan and manage the handoff</span></div><div class="compare-cell agency"><span>Confirm the onboarding support included</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Onboarding and workflow support</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Ongoing oversight</div><div class="compare-cell old"><span>You manage performance and follow-up</span></div><div class="compare-cell agency"><span>Confirm who manages performance after placement</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Performance tracking & ongoing support</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Payroll & HR</div><div class="compare-cell old"><span>You arrange payroll and HR support</span></div><div class="compare-cell agency"><span>Services depend on the plan and employment model</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Payroll & HR support built into the service</span></span></div></div>
+   <div class="compare-row highlight"><div class="compare-cell dim">Replacements</div><div class="compare-cell old"><span>You restart the search; costs can recur</span></div><div class="compare-cell agency"><span>Check replacement windows, exclusions and new fees</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>No new onboarding fee for covered replacements</span></span></div></div>
+   <div class="compare-row"><div class="compare-cell dim">Pay & service costs</div><div class="compare-cell old"><span>You agree pay directly with your hire</span></div><div class="compare-cell agency"><span>Ask how worker pay and agency service fees are structured</span></div><div class="compare-cell us"><span class="compare-benefit"><span class="benefit-check" aria-hidden="true">✓</span><span>Onboarding is a small one-time investment; ongoing staffing costs quoted separately</span></span></div></div>
+  </div>
+  <p class="agency-note">Agency services, pay structures and replacement policies vary. Compare each provider’s written proposal and terms.</p>
+  <p class="value-note"><strong>Onboarding is a small one-time investment.</strong> Ongoing staffing costs quoted separately.</p>
+  <div style="text-align:center;margin-top:28px"><a href="/book/?utm_content=home-comparison" class="btn-primary">Find your next hire <span aria-hidden="true">→</span></a></div>
+ </div>
+</section>
+<div class="conversion-booking"><h2>What would you like off your plate?</h2><p>Tell us about your business. We’ll help you define the right hire and explain the next steps.</p><a class="btn-primary" href="/book/?utm_content=home-after-comparison">Find my next hire →</a><p class="hero-call-note">Free 30-minute call · No preparation required</p></div><section class="growth-paths" aria-labelledby="growth-heading" id="staffing-options">
+<div class="growth-paths-inner"><p style="color:#78d7ec;font-size:11px;letter-spacing:.16em;text-transform:uppercase">Support for every stage</p>
+<h2 id="growth-heading">One great hire. A growing team.<br>A larger workforce.</h2>
+<p class="growth-intro">Start with the support you need today. Staffify helps you define the roles, find the right people and plan how they work with your business.</p>
+<div class="growth-grid">
+<article class="growth-card"><span class="growth-label">For owners &amp; small businesses</span><h3>Individual hires</h3><p>A dedicated executive assistant, video editor, customer service rep or sales support specialist, with recruiting and ongoing support.</p><a href="#services">Find your next hire →</a></article>
+<article class="growth-card"><span class="growth-label">For growing organizations</span><h3>Growing teams</h3><p>Build roughly 3–20+ roles across operations, customer support, admin, sales support, marketing and back-office work.</p><a href="/enterprise-workforce-solutions/#approach">Plan your team →</a></article>
+<article class="growth-card"><span class="growth-label">For larger organizations</span><h3>Enterprise</h3><p>Discuss scalable offshore, nearshore and contingent workforce solutions, with recruiting, screening, deployment and workforce support.</p><a href="/enterprise-workforce-solutions/">Explore workforce solutions →</a></article>
+</div><p class="growth-partner">Already delivering a staffing program? <a href="/staffing-partnerships/">Explore Staffing Partnerships &amp; Tier 2 Supplier Solutions →</a></p>
+</div></section>
 
 <!-- ─── OPERATIONS LAYER ─── -->
 <section class="ops-section">
@@ -2472,30 +2553,7 @@
 </section>
 
 <!-- ─── HOW IT WORKS ─── -->
-<section class="how-section">
-    <div class="section-eyebrow reveal">The Process</div>
-    <h2 class="section-title reveal">Infrastructure first.<br>Team second.</h2>
-    <p class="section-sub reveal">Typical placement takes 7–10 days. Timing depends on the role and candidate fit.</p>
 
-    <div class="steps-container">
-        <div class="steps-connector"><div class="steps-connector-fill"></div></div>
-        <div class="step-card reveal">
-            <div class="step-num"><div class="step-num-inner">1</div></div>
-            <div class="step-title">Discovery Call</div>
-            <p class="step-desc">30 minutes. We learn your operation, your goals, and design the right role around real leverage, not just task-filling.</p>
-        </div>
-        <div class="step-card reveal reveal-delay-1">
-            <div class="step-num"><div class="step-num-inner">2</div></div>
-            <div class="step-title">Build the Foundation</div>
-            <p class="step-desc">We architect the role, map the workflows, and build the SOPs. Then we recruit, test, and place top-tier talent into that foundation.</p>
-        </div>
-        <div class="step-card reveal reveal-delay-2">
-            <div class="step-num"><div class="step-num-inner">3</div></div>
-            <div class="step-title">Scale With Confidence</div>
-            <p class="step-desc">Your team runs. We stay embedded with real-time support, performance tracking, and restaffing if you ever need it.</p>
-        </div>
-    </div>
-</section>
 
 <!-- ─── VIDEO ─── -->
 <section class="video-section reveal">
@@ -2574,48 +2632,7 @@
 </div>
 
 <!-- ─── TESTIMONIALS ─── -->
-<section class="proof-section">
-    <div class="section-eyebrow reveal">Client Results</div>
-    <h2 class="section-title reveal">Built on results.</h2>
-    <p class="section-sub reveal">Business owners who finally got their time back.</p>
 
-    <div class="proof-grid">
-        <div class="proof-card reveal">
-            <div class="proof-stars">
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
-            <p class="proof-text">"Staffify did all of the heavy lifting in terms of helping me find someone, hire someone, and offered so many resources on how to train them as well."</p>
-            <div class="proof-author">
-                <div class="proof-avatar"><img src="/assets/pitch/testi-aaron.jpg" alt="Aaron Bradley" loading="lazy"></div>
-                <div>
-                    <div class="proof-name">Aaron Bradley</div>
-                    <div class="proof-role">Bluegrass Real Estate Media</div>
-                </div>
-            </div>
-        </div>
-        <div class="proof-card reveal reveal-delay-1">
-            <div class="proof-stars">
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <svg class="proof-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
-            <p class="proof-text">"I couldn't be more thankful for Staffify. Our VAs have been killing it, they're unreal. We have probably the most advanced editing system in the world right now, all because of the VAs we got."</p>
-            <div class="proof-author">
-                <div class="proof-avatar"><img src="/assets/pitch/testi-patrick.jpg" alt="Patrick Szydlik" loading="lazy"></div>
-                <div>
-                    <div class="proof-name">Patrick Szydlik</div>
-                    <div class="proof-role">Hephaestus Innovation</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
 
 <!-- ─── CTA ─── -->
 <section class="cta-section bg-pulse">
@@ -2626,7 +2643,7 @@
     </h2>
     <p class="cta-sub reveal">Book a free 30-minute discovery call. We'll figure out exactly where to install leverage in your business.</p>
     <div class="reveal">
-        <a href="https://calendly.com/go-staffify/discovery-call" class="btn-primary btn-magnetic btn-pulse" style="font-size:16px;padding:18px 44px;">
+        <a href="/book/?utm_content=home-secondary" class="btn-primary btn-magnetic btn-pulse" style="font-size:16px;padding:18px 44px;">
             Book a Discovery Call →
         </a>
     </div>

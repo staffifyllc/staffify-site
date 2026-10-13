@@ -427,7 +427,8 @@
             .nav-cta { display: none; }
         }
 
-        </style>
+        .hero h1{font-size:clamp(36px,6vw,64px);line-height:1.1;letter-spacing:-.035em;} .hero{padding-bottom:24px;} .calendly-section{padding-top:24px;}
+</style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
     <link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
@@ -569,51 +570,26 @@
 </head>
 <body>
 
-    <nav>
-        <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify" style="height:28px;width:auto;display:block;"></a>
-        <ul class="nav-links">
-        <li><a href="/editors/">Video Editors</a></li>
-        <li><a href="/admins/">Exec Admins</a></li>
-        <li><a href="/csr/">CSR</a></li>
-        <li><a href="/sales/">Sales</a></li>
-        <li><a href="/case-studies/">Case Studies</a></li><li><a href="/blog/">Blog</a></li>
-        <li><a href="/about/">About</a></li>
-        <li><a href="/apply/">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a></li>
-    </ul>
-        <a href="/apply/" class="nav-apply">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a>
-        <a href="https://calendly.com/go-staffify/discovery-call" class="nav-cta">Get Started</a>
-        <button type="button" id="navHamburger" class="nav-hamburger" aria-label="Open navigation menu" aria-controls="navMobileMenu" aria-expanded="false"><span></span></button>
-</nav>
-
-<div class="nav-mobile-menu" id="navMobileMenu" role="dialog" aria-label="Mobile navigation">
-    <ul>
-            <li><a href="/editors/">Video Editors</a></li>
-            <li><a href="/admins/">Exec Admins</a></li>
-            <li><a href="/csr/">CSR</a></li>
-            <li><a href="/sales/">Sales</a></li>
-            <li><a href="/case-studies/">Case Studies</a></li><li><a href="/blog/">Blog</a></li>
-            <li><a href="/about/">About</a></li>
-            <li><a href="/apply/">Apply <span class="apply-hint"><svg viewBox="0 0 28 14" aria-hidden="true"><path d="M26 6 Q21 3 15 7 Q9 11 5 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7 L9 4 M5 7 L9 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>for VAs</span></a></li>
-    </ul>
-    <a href="https://calendly.com/go-staffify/discovery-call" class="nav-mobile-cta">Get Started</a>
-</div>
+    <nav aria-label="Booking navigation"><a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify" style="height:28px;width:auto;display:block;"></a><a href="/#services" style="color:#b8c9d0;font-size:14px;text-decoration:none;">← Explore roles</a></nav>
 
     <!-- HERO -->
     <section class="hero">
         <div class="orb"></div>
         <div class="hero-eyebrow reveal"><span class="pulse-dot"></span> Free 30-Minute Call</div>
-        <h1 class="reveal">Let's Talk.</h1>
-        <p class="hero-sub reveal">Tell us where your business is at. We'll figure out exactly what you need, and if we're the right fit.</p>
+        <h1>Find your next great hire.</h1>
+        <p class="hero-sub">Choose a time for a free 30-minute call. We’ll discuss your role, working hours, pricing and hiring timeline. No preparation or purchase required.</p>
     </section>
 
     <!-- CALENDLY EMBED -->
     <section class="calendly-section">
-        <div class="calendly-wrap reveal">
-            <div class="calendly-inline-widget" data-url="https://calendly.com/go-staffify/discovery-call" style="min-width:320px;height:700px;"></div>
+        <div class="calendly-wrap">
+            <div class="calendly-inline-widget" data-url="https://calendly.com/go-staffify/discovery-call?hide_event_type_details=1" style="min-width:0;width:100%;height:760px;"></div>
             <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
         </div>
     </section>
 
+    <p style="text-align:center;padding:0 24px 30px;line-height:1.7;color:#b8c9d0;">Calendar not loading? <a style="color:#52c8df" href="https://calendly.com/go-staffify/discovery-call?utm_content=book-fallback">Open scheduling directly</a>.<br>No suitable time? <a style="color:#52c8df" href="mailto:hello@gostaffify.com">Email hello@gostaffify.com</a>.</p>
+    <script src="/assets/js/booking-funnel.js" defer></script>
     <!-- WHAT TO EXPECT -->
     <section class="expect-section">
         <div class="expect-header">
@@ -656,7 +632,8 @@
             <a href="/">Home</a>
             <a href="/admins/">Exec Admins</a>
             <a href="/sales/">Sales</a>
-            <a href="/about/">About</a>
+            <a href="/blog/">Blog</a>
+            <a href="/about/">About</a><a href="/blog/">Blog</a>
         </div>
         <p class="f-copy">&copy; 2026 Staffify LLC. All rights reserved. &middot; <a href="/privacy/" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms/" style="color:inherit;text-decoration:underline;">Terms</a></p>
     </footer>
