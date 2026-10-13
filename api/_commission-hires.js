@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const norm=x=>String(x||'').toLowerCase().replace(/(?:[,\s]+)(?:llc|l\.l\.c\.|inc\.?|ltd\.?|corporation)\s*$/,'').replace(/[^a-z0-9]/g,'');
 async function rows(table,select){
  if(!process.env.TALENT_CLIENTS_URL||!process.env.TALENT_CLIENTS_KEY)throw Error('Talent Console connection missing');
  const out=[];for(let offset=0;offset<10000;offset+=500){const r=await fetch(process.env.TALENT_CLIENTS_URL.replace(/\/$/,'')+'/rest/v1/'+table+'?select='+encodeURIComponent(select)+'&limit=500&offset='+offset,{headers:{apikey:process.env.TALENT_CLIENTS_KEY,Authorization:'Bearer '+process.env.TALENT_CLIENTS_KEY},signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Talent '+table+' read failed: '+r.status);const page=await r.json();out.push(...page);if(page.length<500)return out;}throw Error('Talent data incomplete');
