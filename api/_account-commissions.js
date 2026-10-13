@@ -1,25 +1,25 @@
 import {invoiceEvidence} from './_invoice-monitor.js';
 import {onboardingAmount,placementUnits} from './_commission-evidence.js';
 export const round=n=>Math.round((Number(n)||0)*100)/100;
-export function billedHours(invoice){
+export function billedHours(invoice, matched={}){
  let hours=0,review=false;
  for(const line of invoice.Line||[]){
   const d=line.SalesItemLineDetail;if(!d||!(Number(line.Amount)>0))continue;
   const name=String(d.ItemRef?.name||'');
   // Only explicit hourly billing units qualify. Staffing placement quantities are never hours.
-  if(!/hour|hourly/i.test(name)){if(!onboardingAmount({Line:[line]}))review=true;continue;}
+  if(!/hour|hourly/i.test(name)){if(matched[line.Id]!=null)hours+=matched[line.Id];else if(!onboardingAmount({Line:[line]}))review=true;continue;}
   const qty=Number(d.Qty);if(!Number.isFinite(qty)||qty<=0||!(Number(d.UnitPrice)>0)){review=true;continue;}
   hours+=qty;
  }
  return {hours:round(hours),review};
 }
-export function accountLedger({accounts,invoices,payments,refunds=[],credits=[],methods=[]}){
+export function accountLedger({accounts,invoices,payments,refunds=[],credits=[],methods=[],hourMatches={}}){
  const methodNames=Object.fromEntries(methods.map(m=>[m.Id,m.Name]));const counts={};
  const ordered=invoices.slice().sort((a,b)=>String(a.TxnDate).localeCompare(String(b.TxnDate))||String(a.Id).localeCompare(String(b.Id)));
  const result=accounts.map(a=>({...a,invoices:[],collected:0,incoming:0,residualEarned:0,residualPending:0,placementEarned:0,placementPending:0}));
  for(const inv of ordered){
   const a=result.find(x=>String(x.customerId)===String(inv.CustomerRef?.value));if(!a||inv.TxnDate<a.since)continue;
-  const e=invoiceEvidence(inv,payments),hour=billedHours(inv),onboard=onboardingAmount(inv),units=placementUnits(inv);
+  const e=invoiceEvidence(inv,payments),hour=billedHours(inv,hourMatches[inv.Id]),onboard=onboardingAmount(inv),units=placementUnits(inv);
   const holds=[];const currency=inv.CurrencyRef?.value||'USD';
   if(currency!=='USD')holds.push('Non-USD invoice requires review');
   if(refunds.concat(credits).some(r=>String(r.CustomerRef?.value)===a.customerId&&r.TxnDate>=a.since&&Number(r.TotalAmt)>0))holds.push('Refund or credit requires allocation review');
@@ -42,4 +42,21 @@ export function accountLedger({accounts,invoices,payments,refunds=[],credits=[],
   if(currency==='USD')a.incoming=round(a.incoming+e.balance);
  }
  return result;
+}
+
+const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+export function matchServiceHours(accounts,invoices,hubstaff){
+ const out={},candidates=[],counts={};if(!hubstaff?.connected||hubstaff.truncated)return out;
+ for(const inv of invoices){const account=accounts.find(a=>a.customerId===String(inv.CustomerRef?.value));if(!account||inv.TxnDate<account.since)continue;
+  for(const line of inv.Line||[]){if(line.SalesItemLineDetail?.ItemRef?.name!=='Services'||!line.Id)continue;
+   const m=String(line.Description||'').match(/^(.+?) - (.+?) \((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([A-Z][a-z]{2} \d{1,2}, \d{4})\)$/);if(!m)continue;
+   const date=new Date(m[3]+' 12:00:00 GMT');if(Number.isNaN(+date))continue;const day=date.toISOString().slice(0,10);if(day<account.since)continue;
+   const projects=hubstaff.clients.filter(c=>norm(c.name)===norm(m[2])&&[account.name,account.qboName].some(n=>norm(n)===norm(m[2])));
+   if(projects.length!==1)continue;const project=projects[0];if(project.byDayUsers?.[day]?.length!==1)continue;
+   const hours=Number(project.byDay?.[day])/3600;if(!(hours>0))continue;
+   const key=project.projectId+':'+day;counts[key]=(counts[key]||0)+1;candidates.push({invoice:inv.Id,line:line.Id,key,hours});
+  }
+ }
+ for(const c of candidates)if(counts[c.key]===1)(out[c.invoice]||(out[c.invoice]={}))[c.line]=c.hours;
+ return out;
 }
