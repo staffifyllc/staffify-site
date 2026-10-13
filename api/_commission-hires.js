@@ -9,7 +9,7 @@ export async function hirePrompts({redis,accounts,read=rows,now=new Date().toISO
  const [hires,placements,clients,manual,snapshot,overrides]=await Promise.all([
  read('applicant_hires','applicant_id,role_id,hired_at'),
  read('placements','id,applicant_id,client_id,client_name,role_id,role_title,status,started_at'),
- read('snapshot_clients','id,name,name_override,business_name,business_name_override,sales_rep_email'),
+ read('snapshot_clients','id,name,name_override,business_name,business_name_override,sales_rep_email,contact_email,stripe_email'),
  read('manual_roles','id,title,client_name,role_kind'),read('snapshot_roles','id,title,client_name'),read('role_overrides','role_id,client_id')]);
  const confirmed=await redis.hgetall('finance:hire-confirmations:v1')||{};const prompts=[];
  for(const h of hires){
@@ -19,13 +19,13 @@ export async function hirePrompts({redis,accounts,read=rows,now=new Date().toISO
   let matches=clientId?clients.filter(c=>c.id===clientId):clients.filter(c=>[c.name,c.name_override,c.business_name,c.business_name_override].some(n=>norm(n)&&norm(n)===norm(role?.client_name||p?.client_name)));
   const client=matches.length===1?matches[0]:null;
   const names=[role?.client_name,p?.client_name,client?.name,client?.name_override,client?.business_name,client?.business_name_override].filter(Boolean).map(norm);
-  const accountMatches=accounts.filter(a=>[a.name,a.qboName].filter(Boolean).some(n=>names.includes(norm(n))));const account=accountMatches.length===1?accountMatches[0]:null;
+  const accountMatches=accounts.filter(a=>(a.clientEmail&&[client?.contact_email,client?.stripe_email].filter(Boolean).some(e=>e.toLowerCase()===a.clientEmail.toLowerCase()))||[a.name,a.qboName].filter(Boolean).some(n=>names.includes(norm(n))));const account=accountMatches.length===1?accountMatches[0]:null;
   // Fresh-start accounts show their existing hires; other old placements remain historical.
   if(!account&&h.hired_at<enabledAt)continue;
   if(account&&h.hired_at.slice(0,10)<account.since)continue;
   const id=createHash('sha256').update(h.applicant_id+'|'+h.role_id+'|'+h.hired_at).digest('hex').slice(0,24);
   const prior=confirmed[id];const confirmation=typeof prior==='string'?JSON.parse(prior):prior;
-  prompts.push({id,roleId:h.role_id,roleTitle:role?.title||p?.role_title||'Role needs matching',clientName:account?.name||role?.client_name||p?.client_name||'Client needs matching',talentClientId:client?.id||null,customerId:account?.customerId||null,rep:account?.rep||null,talentSalesRep:client?.sales_rep_email||null,source:account?.source||'',hiredAt:h.hired_at,roleKind:role?.role_kind||'needs_review',state:confirmation?'confirmed':'needs_confirmation',confirmation:confirmation||null,roleUrl:'https://recruiting.gostaffify.com/roles/'+encodeURIComponent(h.role_id)});
+  prompts.push({id,roleId:h.role_id,roleTitle:role?.title||p?.role_title||'Role needs matching',clientName:account?.name||role?.client_name||p?.client_name||'Client needs matching',talentClientId:client?.id||null,customerId:account?.customerId||null,rep:account?.rep||null,talentSalesRep:client?.sales_rep_email||null,source:account?.source||'',hiredAt:h.hired_at,roleKind:hires.some(other=>other.role_id===h.role_id&&other.hired_at<h.hired_at)?'needs_review':role?.role_kind||'needs_review',state:confirmation?'confirmed':'needs_confirmation',confirmation:confirmation||null,roleUrl:'https://recruiting.gostaffify.com/roles/'+encodeURIComponent(h.role_id)});
  }
  return {connected:true,enabledAt,checkedAt:now,prompts};
 }
