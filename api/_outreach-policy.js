@@ -1,3 +1,4 @@
+import {TOBIT_ID,tobitFollowup} from './_tobit-campaign.js';
 import {inCampaign} from './_outreach-campaign.js';
 import {dealEmail} from './_deal-followup-policy.js';
 export function automatedModeAllowed(mode){return !mode||mode==='AUTOMATED';}
@@ -27,6 +28,7 @@ export function classify(messages,recipient,senders) {
  return {status:null,sent};
 }
 export function followup(record) {
+ if(record.campaignId===TOBIT_ID)return tobitFollowup(record);
  if(record.lane==='deal_followup')return dealEmail(record,record.sentTouches);
  const parts=[
  "Another simple handoff: have one person collect the shoot details before it goes on the calendar: address, access instructions, requested services, and delivery deadline. Missing details get flagged in one place. Is scheduling something you still handle yourself?",

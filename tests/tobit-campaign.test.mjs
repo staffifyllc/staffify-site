@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {tagCampaign} from '../api/_outreach-campaign.js';
+import {eligible,followup,callReady} from '../api/_outreach-policy.js';
+import {sendDecision} from '../api/_outreach-send.js';
+const row={campaignId:'staffify-tobit-outreach',status:'sent',recipient:'ceo@example.com',owner:'Paul',sender:'paul@trystaffify.com',sentTouches:2,lastSentAt:'2026-10-12T16:00:00Z',followupBodies:{3:'Business-specific follow-up',4:'Final business note'}};
+const state={pausedOwners:[],suppressions:[],assignments:[]};
+test('Tobit preserves prior sends and waits 48 hours',()=>{assert.equal(eligible(row,state,Date.parse('2026-10-14T15:59:00Z')),false);assert.equal(eligible(row,state,Date.parse('2026-10-14T16:00:00Z')),true);assert.equal(followup(row),'Business-specific follow-up');});
+test('Tobit replies and opt-outs stop sending',()=>{const incoming=[{from:row.recipient,to:[],text:'Can we talk?',sent:false}];assert.equal(sendDecision(row,state,incoming,[]),'human_reply_hold');incoming[0].text='Please unsubscribe me';assert.equal(sendDecision(row,state,incoming,[]),'suppressed');assert.equal(eligible(row,{...state,pausedOwners:['Paul']}),false);});
+test('Tobit caps at four with a delayed human call handoff',()=>{const done={...row,sentTouches:4,verifiedSentTouches:4};assert.equal(eligible(done,state),false);assert.equal(callReady(done,Date.parse('2026-10-14T15:59:00Z')),false);assert.equal(callReady(done,Date.parse('2026-10-14T16:00:00Z')),true);});
+test('Tobit is distinct; unknown campaigns remain disabled; missing copy fails closed',()=>{const tagged=tagCampaign({records:[{},row]});assert.equal(tagged.records[0].campaignId,'staffify-agency-outreach');assert.equal(tagged.records[1].campaignId,row.campaignId);assert.equal(tagged.campaigns.length,2);assert.equal(eligible({...row,campaignId:'unapproved'},state),false);assert.throws(()=>followup({...row,followupBodies:{}}),/missing/);});
