@@ -3,6 +3,7 @@
   "cleanUrls": true,
   "trailingSlash": true,
   "crons": [
+    {"path":"/api/campaign-performance/?snapshot=1","schedule":"*/15 * * * *"},
     {
       "path": "/api/cron-disposition",
       "schedule": "0 14 * * 1"
