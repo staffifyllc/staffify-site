@@ -49,14 +49,14 @@
         .comp .cr { display:flex; align-items:baseline; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; }
         .comp .cr:last-child { border-bottom:none; }
         .comp .pay { font-size:20px; font-weight:900; color:var(--green-hi); white-space:nowrap; min-width:120px; }
-        .comp .desc { flex:1; min-width:200px; font-size:14px; color:#cfd4da; } .comp .desc b { color:#fff; }
+        .comp .desc { flex:1; min-width:200px; font-size:14px; color:#414146; } .comp .desc b { color:#1d1d1f; }
         .gate { max-width:440px; margin:70px auto; background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:32px 28px; text-align:center; }
         .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; } .gate p { color:var(--muted); font-size:14px; margin-bottom:18px; }
         .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
         .gate .btn { width:100%; padding:13px; }
     </style>
     <script id="vtag-ai-js" async src="https://r2.leadsy.ai/tag.js" data-pid="17PMqPWtsqz2Rzt3y" data-version="062024"></script>
-</head>
+<link rel="stylesheet" href="/assets/css/portal.css?v=20261013"><script defer src="/assets/js/portal-shell.js?v=20261013"></script></head>
 <body>
 
 <header class="topbar">
@@ -86,17 +86,14 @@
   function nameChip(){var r=repGet();return '<button class="btn btn-ghost" id="nm">'+(r?('Hi, '+esc(r.name.split(' ')[0])):'Set your name')+'</button>';}
   function wireChip(){var b=document.getElementById('nm');if(b)b.onclick=function(){var r=repGet();var n=prompt('Your name (shows on the scoreboard):',r?r.name:'');if(n){repSet(n);boot();}};}
 
-  var COMP=[
-    ['$400','<b>Foundry website</b> for every website you sell. Ask $2,995, downsell $995 plus $49 a month. Paid per site.'],
-    ['35%','<b>Staffify placement</b> of the onboarding fee per close (about $875), plus a <b>$1/hr residual</b> for 6 months, the strong-month accelerator, and a $200 retention bonus.']
-  ];
+
 
   async function boot(){
     app.innerHTML='<div class="empty">Loading the scoreboard...</div>';
     ME=repGet();
     tbRight.innerHTML=nameChip(); wireChip();
     var s=null; try{ var r=await fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); if(r.ok) s=await r.json(); }catch(e){}
-    render(s);
+    if(!s){app.innerHTML='<div class="empty">Call reporting is unavailable. Refresh to try again. No zero totals are assumed.</div>';return;}render(s);
   }
 
   function render(s){
@@ -122,14 +119,14 @@
       }).join('');
     }
 
-    var comp='<div class="comp">'+COMP.map(function(c){return '<div class="cr"><div class="pay">'+c[0]+'</div><div class="desc">'+c[1]+'</div></div>';}).join('')+'</div>';
+
 
     app.innerHTML=
       '<div class="eyebrow">Live Numbers</div><h1><span class="grad">Scoreboard</span></h1><div class="sub">'+esc(s.date||'today')+' &middot; live from the call log</div>'+
       cards+
       '<div class="conv"><span>Pickup rate <b>'+pct(t.answers,t.dials)+'</b></span><span>Interest rate <b>'+pct(t.interested,t.answers)+'</b></span></div>'+
       '<div class="lbl2">Rep leaderboard</div>'+board+
-      '<div class="lbl2">How you get paid</div>'+comp;
+      '<p><a class="btn" href="/commissions/">View your commissions and payroll</a></p>';
   }
 
   boot();
