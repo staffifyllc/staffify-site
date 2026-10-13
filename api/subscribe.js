@@ -1,3 +1,4 @@
+import { slackNotify } from './_slack.js';
 // POST /api/subscribe
 // Stores the email in Upstash Redis and fires the playbook delivery via Resend.
 // No external marketing tool. We own the list.
@@ -198,6 +199,11 @@ export default async function handler(req, res) {
         });
         await redis.zadd('subscribers:by_date', { score: existing ? Number(existing) : now, member: email });
 
+        if (!existing) {
+            const notice = await slackNotify('New Staffify website signup\n' + email + '\nSource: ' + String(source).replace(/[<>]/g, '') + '\nPersonal follow-up eligible 48 hours after enrollment.\nhttps://www.gostaffify.com/website-leads/');
+            await redis.hset(`subscriber:${email}`, { signup_slack_status: notice.ok ? 'sent' : 'failed', signup_slack_checked_at: Date.now() });
+        }
+
         // Determine whether to send the playbook + enroll in soft-yes drip.
         // Rules:
         //   First signup ever                                          → send + enroll
@@ -213,7 +219,7 @@ export default async function handler(req, res) {
         const softyesEndedAt = softyesRec
             ? Number(softyesRec.graduated_at || softyesRec.completed_at || softyesRec.day45_sent_at || 0)
             : 0;
-        const eligibleToReenroll = softyesEndedAt && (now - softyesEndedAt) >= REENROLL_AFTER_MS && !decisionSet;
+        const eligibleToReenroll = false; // No automatic recycling of a completed conversation.
 
         const isFirstSignup = !existing;
         const shouldEnroll =
