@@ -1,3 +1,4 @@
+import { slackNotify } from './_slack.js';
 // POST /api/subscribe
 // Stores the email in Upstash Redis and fires the playbook delivery via Resend.
 // No external marketing tool. We own the list.
@@ -131,7 +132,7 @@ async function sendViaResend({ to, subject, html, text }) {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'hello@gostaffify.com' }),
+        body: JSON.stringify({ from, to, subject, html, text, reply_to: 'paul@trystaffify.com' }),
     });
     if (!res.ok) {
         const detail = await res.text().catch(() => '');
@@ -198,6 +199,11 @@ export default async function handler(req, res) {
         });
         await redis.zadd('subscribers:by_date', { score: existing ? Number(existing) : now, member: email });
 
+        if (!existing) {
+            const notice = await slackNotify('New Staffify website signup\n' + email + '\nSource: ' + String(source).replace(/[<>]/g, '') + '\nPersonal follow-up eligible 48 hours after enrollment.\nhttps://www.gostaffify.com/website-leads/');
+            await redis.hset(`subscriber:${email}`, { signup_slack_status: notice.ok ? 'sent' : 'failed', signup_slack_checked_at: Date.now() });
+        }
+
         // Determine whether to send the playbook + enroll in soft-yes drip.
         // Rules:
         //   First signup ever                                          → send + enroll
@@ -213,7 +219,7 @@ export default async function handler(req, res) {
         const softyesEndedAt = softyesRec
             ? Number(softyesRec.graduated_at || softyesRec.completed_at || softyesRec.day45_sent_at || 0)
             : 0;
-        const eligibleToReenroll = softyesEndedAt && (now - softyesEndedAt) >= REENROLL_AFTER_MS && !decisionSet;
+        const eligibleToReenroll = false; // No automatic recycling of a completed conversation.
 
         const isFirstSignup = !existing;
         const shouldEnroll =
@@ -229,7 +235,7 @@ export default async function handler(req, res) {
                 subject: "The 10 highest-ROI delegations, inside",
                 ...renderEmail(email),
             });
-            await redis.hset(`subscriber:${email}`, { playbook_sent_at: Date.now() });
+            await redis.hset(`subscriber:${email}`, { playbook_sent_at: Date.now(), playbook_reply_to: 'paul@trystaffify.com' });
         }
 
         if (shouldEnroll) {

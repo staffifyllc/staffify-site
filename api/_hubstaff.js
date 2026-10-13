@@ -149,11 +149,12 @@ export async function hoursByClient({ start, stop }) {
                 const pid = d.project_id;
                 if (!pid) return;
                 const k = String(pid);
-                const rec = byProject[k] || (byProject[k] = { projectId: pid, name: projects[pid] || `project ${pid}`, seconds: 0, vas: new Set(), days: new Set(), byDay: {} });
+                const rec = byProject[k] || (byProject[k] = { projectId: pid, name: projects[pid] || `project ${pid}`, seconds: 0, vas: new Set(), days: new Set(), byDay: {}, byDayUsers: {} });
                 rec.seconds += Number(d.tracked) || 0;
                 if (d.user_id) rec.vas.add(d.user_id);
                 if (d.date) {
                     rec.days.add(d.date);
+                    if (d.user_id) { const users=rec.byDayUsers[d.date]||(rec.byDayUsers[d.date]=[]); if(!users.includes(d.user_id))users.push(d.user_id); }
                     // Per-day seconds, so hours can be bucketed into pay periods and weeks later.
                     // Aggregate first and you cannot tell which fortnight the work fell in, and the
                     // fortnight is what gets paid.
@@ -174,6 +175,7 @@ export async function hoursByClient({ start, stop }) {
             vaCount: r.vas.size,
             daysWorked: r.days.size,
             byDay: r.byDay,
+            byDayUsers: r.byDayUsers,
         }))
         .sort((a, b) => b.hours - a.hours);
 

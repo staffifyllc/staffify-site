@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {conversationEmail,nextConversationAt,DELAY,isWebsiteSource} from '../api/_playbook-conversation.js';
+test('first personal email never becomes due before 48 hours from enrollment',()=>{assert.equal(nextConversationAt(1000,[]),1000+DELAY);});
+test('late first send rebases the second send instead of catching up overdue emails',()=>{const at='2026-10-12T15:00:00Z';assert.equal(nextConversationAt(1000,[{kind:'sent',at}]),Date.parse(at)+DELAY);});
+test('three actual sends complete the sequence with no automatic recycle',()=>{assert.equal(nextConversationAt(1000,[1,2,3].map(n=>({kind:'sent',at:new Date(n*DELAY).toISOString()}))),null);});
+test('copy asks about business and a call without invented name or savings',()=>{const m=conversationEmail('john@example.com');assert.match(m.body,/Hey there/);assert.match(m.body,/15-minute call/);assert.match(m.body,/tell me a little about your business/);assert.doesNotMatch(m.body,/guarantee|\$|%/);});
+test('booking and test records never enter resource follow-ups',()=>{assert.equal(isWebsiteSource('discovery-call-booked'),false);assert.equal(isWebsiteSource('smoke-test'),false);assert.equal(isWebsiteSource('delegation-popup'),true);});

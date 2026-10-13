@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {performance} from '../api/_campaign-performance.js';
+const sent={kind:'sent',id:'m1',at:'2026-10-12T14:00:00Z',subject:'Hello',body:'Hello Jane'};
+test('repeated receipt is one send and multiple touches do not inflate reached contacts',()=>{const p=performance([{recipient:'a@x.com',sender:'p',events:[sent,sent,{...sent,id:'m2'}]}]);assert.equal(p.recordedSends,2);assert.equal(p.contactsReached,1);});
+test('drafts and unverified counters cannot inflate sends',()=>{const p=performance([{recipient:'a@x.com',sentTouches:4,events:[{...sent,kind:'draft'}]}]);assert.equal(p.recordedSends,0);assert.equal(p.missingSendHistory,1);assert.equal(p.humanReplyRate,null);});
+test('automatic replies do not count as human responses',()=>{const p=performance([{recipient:'a@x.com',status:'auto_reply_hold',events:[sent,{kind:'received'}]}]);assert.equal(p.humanReplyContacts,0);});
+test('human response requires retained inbound evidence and reached contact',()=>{const p=performance([{recipient:'a@x.com',status:'human_reply_hold',events:[sent,{kind:'received'}]}]);assert.equal(p.humanReplyRate,100);assert.equal(p.messageVersions.length,1);});
+
+test('a confirmed human response survives a later handoff status',()=>{assert.equal(performance([{recipient:'a@x.com',status:'client_hold',events:[sent]}],['a@x.com']).humanReplyContacts,1);});

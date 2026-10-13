@@ -17,8 +17,12 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
   const state=await redis.getdel('outreach:oauth-state:'+String(req.query.state||''));if(!state||state.rep!==who.email)return res.status(400).json({error:'Expired authorization; start again'});
   const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({code:String(req.query.code||''),client_id:clientId(),client_secret:clientSecret(),redirect_uri:callback,grant_type:'authorization_code'}),signal:AbortSignal.timeout(15000)});if(!r.ok)return res.status(400).json({error:'Google authorization failed'});
   const tok=await r.json();const profile=await gmail(tok.access_token,'profile');if(profile.emailAddress.toLowerCase()!==state.email)return res.status(400).json({error:'Wrong Google account selected'});
-  if(!tok.refresh_token||!SCOPES.every(s=>(tok.scope||'').split(' ').includes(s)))return res.status(400).json({error:'Both requested Gmail permissions and offline access are required'});
-  await redis.set('outreach:oauth:'+state.email,seal({refresh_token:tok.refresh_token,connectedAt:new Date().toISOString()}));res.writeHead(302,{Location:'/outreach-review/'});return res.end();
+  if(!tok.refresh_token||!(state.readOnly?[SCOPES[0]]:SCOPES).every(s=>(tok.scope||'').split(' ').includes(s)))return res.status(400).json({error:'Both requested Gmail permissions and offline access are required'});
+  await redis.set('outreach:oauth:'+state.email,seal({refresh_token:tok.refresh_token,connectedAt:new Date().toISOString()}));res.writeHead(302,{Location:state.readOnly?'/website-leads/':'/outreach-review/'});return res.end();
+ }
+ if(action==='start-website-reply'){
+  const rep=await currentRep(req);if(!rep||!['all','Paul'].includes(owner))return res.status(403).json({error:'Paul must sign in to connect his reply inbox'});
+  const state=newToken();await redis.set('outreach:oauth-state:'+state,{email:'hello@gostaffify.com',rep:who.email,readOnly:true},{ex:600});const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');Object.entries({client_id:clientId(),redirect_uri:callback,response_type:'code',scope:SCOPES[0],access_type:'offline',prompt:'consent',login_hint:'hello@gostaffify.com',state}).forEach(([k,v])=>url.searchParams.set(k,v));res.writeHead(302,{Location:url.toString()});return res.end();
  }
  if(action==='start'){
   const rep=await currentRep(req);if(!rep)return res.status(401).json({error:'Browser sign-in required'});
