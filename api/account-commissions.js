@@ -11,7 +11,7 @@ async function refresh(){
  const [customers,invoices,payments,refunds,credits,methods]=await Promise.all(['Customer','Invoice','Payment','RefundReceipt','CreditMemo','PaymentMethod'].map(all));
  let raw=await redis.hgetall(KEY)||{};
  const missing=[];
- for(const seed of [{name:'Evan Ulsh',rep:'paul',source:'self',since:'2026-09-29'},{name:'John Reid',rep:'madison',source:'house',since:'2026-09-04'},{name:'Joel Marion Photography',rep:'madison',source:'',since:'2026-09-29'}]){
+ for(const seed of [{name:'Evan Ulsh',rep:'paul',source:'self',since:'2026-09-29'},{name:'John Reid',rep:'madison',source:'house',since:'2026-09-04'},{name:'Joel Marion Photography',rep:'madison',source:'self',since:'2026-09-29'}]){
   const matches=customers.filter(c=>[c.DisplayName,c.CompanyName,[c.GivenName,c.FamilyName].filter(Boolean).join(' ')].some(n=>norm(n)===norm(seed.name)));
   if(matches.length!==1){missing.push(seed.name+': '+(matches.length?'multiple QBO customers match':'QBO customer match needed'));continue;}
   const c=matches[0];if(!raw[c.Id])await redis.hsetnx(KEY,c.Id,JSON.stringify({...seed,customerId:String(c.Id),name:seed.name,qboName:c.DisplayName,by:'Paul instruction',at:new Date().toISOString()}));
@@ -21,7 +21,9 @@ async function refresh(){
  const start=accounts.map(a=>a.since).sort()[0]||new Date().toISOString().slice(0,10);
  const hours=await hoursByClient({start,stop:new Date().toISOString().slice(0,10)}).catch(()=>({connected:false}));
  const hourMatches=matchServiceHours(accounts,invoices,hours);
- const snapshot={updatedAt:new Date().toISOString(),accounts:accountLedger({accounts,invoices,payments,refunds,credits,methods,hourMatches}),hubstaffConnected:!!hours.connected&&!hours.truncated,customers:customers.map(c=>({id:String(c.Id),name:c.DisplayName})),missing,status:'complete'};
+ const ledger=accountLedger({accounts,invoices,payments,refunds,credits,methods,hourMatches});
+ for(const a of ledger){const projects=hours.clients?.filter(c=>[a.name,a.qboName].some(n=>norm(n)===norm(c.name)))||[];const project=projects.length===1?projects[0]:null;a.trackedHours=hours.connected&&!hours.truncated&&project?Math.round(Object.entries(project.byDay||{}).filter(([day])=>day>=a.since).reduce((n,[day,seconds])=>n+seconds/3600,0)*100)/100:null;a.unlinkedHours=a.trackedHours==null?null:Math.max(0,Math.round((a.trackedHours-a.invoices.reduce((n,i)=>n+i.hours,0))*100)/100);}
+ const snapshot={updatedAt:new Date().toISOString(),accounts:ledger,hubstaffConnected:!!hours.connected&&!hours.truncated,customers:customers.map(c=>({id:String(c.Id),name:c.DisplayName})),missing,status:'complete'};
  await redis.set(SNAP,snapshot);return snapshot;
 }
 export default async function handler(req,res){
@@ -38,8 +40,8 @@ export default async function handler(req,res){
  try{
   let s=await redis.get(SNAP);
   if(machine||req.method==='POST'||!s){
-   const lock=await redis.set('finance:account-ledger:lock',Date.now(),{nx:true,ex:180});
-   if(lock){try{s=await refresh();}finally{await redis.del('finance:account-ledger:lock');}}
+   const nonce=String(Date.now())+Math.random();const lock=await redis.set('finance:account-ledger:lock',nonce,{nx:true,ex:290});
+   if(lock){try{s=await refresh();}finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",['finance:account-ledger:lock'],[nonce]);}}
   }
   if(!s)return res.status(503).json({error:'First QBO sync is running'});
   return res.json({...s,canEdit,viewer:who?.email==='madison@gostaffify.com'?'madison':'paul',stale:Date.now()-Date.parse(s.updatedAt)>10*60000});

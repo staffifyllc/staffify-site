@@ -278,6 +278,7 @@
     }
   ],
   "functions": {
+    "api/account-commissions.js": {"maxDuration": 300},
     "api/outreach-worker.js": {
       "maxDuration": 300
     },
