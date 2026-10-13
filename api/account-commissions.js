@@ -1,6 +1,7 @@
 import {redis,currentRep,readBody,SITE} from './_auth.js';
 import {financeAccess,financeMachine} from './_finance-access.js';
 import {qboQuery} from './_qbo.js';
+import {applyPayrollGate} from './_commission-payroll.js';
 import {hirePrompts} from './_commission-hires.js';
 import {hoursByClient} from './_hubstaff.js';
 import {accountLedger,matchServiceHours} from './_account-commissions.js';
@@ -24,8 +25,12 @@ async function refresh(){
  const hourMatches=matchServiceHours(accounts,invoices,hours);
  const ledger=accountLedger({accounts,invoices,payments,refunds,credits,methods,hourMatches});
  for(const a of ledger){const projects=hours.clients?.filter(c=>[a.name,a.qboName].some(n=>norm(n)===norm(c.name)))||[];const project=projects.length===1?projects[0]:null;a.trackedHours=hours.connected&&!hours.truncated&&project?Math.round(Object.entries(project.byDay||{}).filter(([day])=>day>=a.since).reduce((n,[day,seconds])=>n+seconds/3600,0)*100)/100:null;a.unlinkedHours=a.trackedHours==null?null:Math.max(0,Math.round((a.trackedHours-a.invoices.reduce((n,i)=>n+i.hours,0))*100)/100);}
+ const clearanceRaw=await redis.hgetall('finance:verified-settlements:v1')||{};
+ const clearances=Object.fromEntries(Object.entries(clearanceRaw).map(([k,v])=>[k,parse(v)]));
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const payroll=applyPayrollGate(ledger,clearances,today);
  const talent=await hirePrompts({redis,accounts}).catch(e=>({connected:false,error:e.message,prompts:[]}));
- const snapshot={talent,updatedAt:new Date().toISOString(),accounts:ledger,hubstaffConnected:!!hours.connected&&!hours.truncated,customers:customers.map(c=>({id:String(c.Id),name:c.DisplayName})),missing,status:'complete'};
+ const snapshot={payroll,talent,updatedAt:new Date().toISOString(),accounts:ledger,hubstaffConnected:!!hours.connected&&!hours.truncated,customers:customers.map(c=>({id:String(c.Id),name:c.DisplayName})),missing,status:'complete'};
  await redis.set(SNAP,snapshot);return snapshot;
 }
 export default async function handler(req,res){
