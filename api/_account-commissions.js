@@ -5,11 +5,10 @@ export function billedHours(invoice, matched={}){
  let hours=0,review=false;
  for(const line of invoice.Line||[]){
   const d=line.SalesItemLineDetail;if(!d||!(Number(line.Amount)>0))continue;
-  const name=String(d.ItemRef?.name||'');
-  // Only explicit hourly billing units qualify. Staffing placement quantities are never hours.
-  if(!/hour|hourly/i.test(name)){if(matched[line.Id]!=null)hours+=matched[line.Id];else if(!onboardingAmount({Line:[line]}))review=true;continue;}
-  const qty=Number(d.Qty);if(!Number.isFinite(qty)||qty<=0||!(Number(d.UnitPrice)>0)){review=true;continue;}
-  hours+=qty;
+  // Hubstaff is the only source of hours, including when QBO has an hourly quantity.
+  const verified=Number(matched[line.Id]);
+  if(Number.isFinite(verified)&&verified>0)hours+=verified;
+  else if(!onboardingAmount({Line:[line]}))review=true;
  }
  return {hours:round(hours),review};
 }
@@ -48,7 +47,7 @@ const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 export function matchServiceHours(accounts,invoices,hubstaff){
  const out={},candidates=[],counts={};if(!hubstaff?.connected||hubstaff.truncated)return out;
  for(const inv of invoices){const account=accounts.find(a=>a.customerId===String(inv.CustomerRef?.value));if(!account||inv.TxnDate<account.since)continue;
-  for(const line of inv.Line||[]){if(line.SalesItemLineDetail?.ItemRef?.name!=='Services'||!line.Id)continue;
+  for(const line of inv.Line||[]){if(!line.SalesItemLineDetail||!line.Id||onboardingAmount({Line:[line]})>0)continue;
    const m=String(line.Description||'').match(/^(.+?) - (.+?) \((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([A-Z][a-z]{2} \d{1,2}, \d{4})\)$/);if(!m)continue;
    const date=new Date(m[3]+' 12:00:00 GMT');if(Number.isNaN(+date))continue;const day=date.toISOString().slice(0,10);if(day<account.since)continue;
    const projects=hubstaff.clients.filter(c=>norm(c.name)===norm(m[2])&&[account.name,account.qboName].some(n=>norm(n)===norm(m[2])));
