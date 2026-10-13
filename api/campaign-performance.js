@@ -10,14 +10,17 @@ export default async function handler(req,res){
  try{
  const owner=ownerFor(await requireAccess(req));if(!owner)return res.status(401).json({error:'Sign in to the Hub'});
  const state=visibleState(await redis.get(KEY),owner),campaigns=[];
- for(const c of state.campaigns||[])campaigns.push({id:c.id,name:c.name,...performance(state.records.filter(r=>r.campaignId===c.id))});
+ const priorReplies=await redis.get('campaign:confirmed-replies:v1')||{};
+ for(const c of state.campaigns||[])campaigns.push({id:c.id,name:c.name,...performance(state.records.filter(r=>r.campaignId===c.id),priorReplies[c.id]||[])});
  const ids=await redis.zrange('subscribers:by_date',0,-1),website=[];
  for(let i=0;i<ids.length;i+=25){const result=await Promise.all(ids.slice(i,i+25).map(async recipient=>{const r=await redis.get('website:conversation:'+recipient);return r?{...r,recipient,sentTouches:r.events?.length||0,events:[...(r.events||[]),...(r.replies||[]).map(e=>({...e,kind:'received'}))]}:null;}));website.push(...result.filter(Boolean));}
- if(owner==='Paul'||owner==='all')campaigns.push({id:'website-playbook',name:'Delegation playbook follow-ups',...performance(website)});
+ if(owner==='Paul'||owner==='all')campaigns.push({id:'website-playbook',name:'Delegation playbook follow-ups',...performance(website,priorReplies['website-playbook']||[])});
  const at=new Date().toISOString();
  // Scheduled machine snapshots preserve the daily totals and exact template revisions.
  if(req.query?.snapshot==='1'){
   if(!adminAuthorized(req))return res.status(403).json({error:'Worker authorization required'});
+  for(const c of campaigns)priorReplies[c.id]=[...new Set([...(priorReplies[c.id]||[]),...c.confirmedReplyEmails])];
+  await redis.set('campaign:confirmed-replies:v1',priorReplies);
   const templates={agency:[introduction('Paul',''),introduction('Madison',''),...[1,2,3].map(sentTouches=>followup({owner:'Paul',sentTouches}))],playbook:[1,2,3].map(n=>conversationEmail('',n)),ceo:state.records.filter(r=>r.campaignId==='staffify-tobit-outreach').map(r=>({id:r.id,followups:r.followupBodies}))};
   const revision=createHash('sha256').update(JSON.stringify(templates)).digest('hex').slice(0,16);
   await redis.set('campaign:copy-version:'+revision,{at,templates},{nx:true});
