@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {accountLedger,billedHours} from '../api/_account-commissions.js';
+const account={customerId:'1',rep:'paul',source:'self',since:'2026-09-29'};
+const invoice={Id:'i',CustomerRef:{value:'1'},TxnDate:'2026-10-01',TotalAmt:200,Balance:0,Line:[{Amount:200,SalesItemLineDetail:{ItemRef:{name:'VA Hourly'},Qty:20,UnitPrice:10}}]};
+const payment={Id:'p',CustomerRef:{value:'1'},TxnDate:'2026-10-02',TotalAmt:200,Line:[{Amount:200,LinkedTxn:[{TxnType:'Invoice',TxnId:'i'}]}]};
+const run=(inv=invoice,pay=[payment],extra={})=>accountLedger({accounts:[account],invoices:[inv],payments:pay,...extra})[0];
+test('zero balance without payment cannot earn residual',()=>assert.equal(run(invoice,[]).residualEarned,0));
+test('fully collected invoice earns exactly one dollar per billed hour',()=>assert.equal(run().residualEarned,20));
+test('partial payment keeps all residual pending',()=>{const x=run({...invoice,Balance:100},[{...payment,TotalAmt:100,Line:[{Amount:100,LinkedTxn:[{TxnType:'Invoice',TxnId:'i'}]}]}]);assert.equal(x.residualEarned,0);assert.equal(x.residualPending,20);});
+test('old and unrelated customer invoices excluded',()=>{assert.equal(run({...invoice,TxnDate:'2025-01-01'}).invoices.length,0);assert.equal(run({...invoice,CustomerRef:{value:'2'}}).invoices.length,0);});
+test('placement quantities are not billed hours',()=>assert.equal(billedHours({...invoice,Line:[{Amount:200,SalesItemLineDetail:{ItemRef:{name:'VA Staffing'},Qty:1}}]}).hours,0));
+test('refunds hold residuals',()=>assert.equal(run(invoice,[payment],{refunds:[{CustomerRef:{value:'1'},TxnDate:'2026-10-02',TotalAmt:20}]}).residualEarned,0));
