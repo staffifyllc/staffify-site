@@ -22,7 +22,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
   // Without all Staffify histories, introductions cannot safely deduplicate globally.
   const historyComplete=!errors.length;
   const active=cfg.accounts.filter(a=>tokens[a.email]);if(!active.length)throw Error('No healthy mailbox connections');
-  let state=await redis.get(KEY);if(!state)throw Error('Shared queue not initialized');state=tagCampaign(state);report.campaignId=CAMPAIGN_ID;
+  let state=await redis.get(KEY);if(!state)throw Error('Shared queue not initialized');state=tagCampaign(state);report.campaignId=CAMPAIGN_ID;report.campaignIds=state.campaigns.map(c=>c.id);
   const senders=cfg.accounts.map(a=>a.email);state.creations ||=state.records.filter(r=>r.draftId&&r.createdAt).map(r=>({id:r.id+':import',day:dayKey(r.createdAt),sender:r.sender,owner:r.owner,touch:r.sentTouches?Math.max(1,r.sentTouches):1}));
   // Recover a Gmail success whose final queue save was interrupted. Never create again.
   const pending=state.records.find(r=>r.status==='draft_creation_pending');
