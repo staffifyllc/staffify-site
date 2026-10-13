@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
       .lookup { margin:0 0 26px; }
-      .lookup input { width:100%; font-family:inherit; font-size:15.5px; color:#fff;
+      .lookup input { width:100%; font-family:inherit; font-size:15.5px; color:#1d1d1f;
         background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.10);
         border-radius:14px; padding:15px 18px; outline:none; }
       .lookup input:focus { border-color:#1abde1; background:rgba(255,255,255,0.06); }
@@ -21,19 +21,19 @@
       .lkcard { background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.09);
         border-radius:14px; padding:18px 20px; }
       .lkwho { font-size:19px; font-weight:800; letter-spacing:-0.01em; }
-      .lksub { font-size:13.5px; color:#9ba1ab; margin-top:3px; }
+      .lksub { font-size:13.5px; color:#6e6e73; margin-top:3px; }
       .lkflags { display:flex; flex-wrap:wrap; gap:7px; margin-top:11px; }
       .lkflag { font-size:11.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
         padding:4px 10px; border-radius:999px; }
       .lkflag.bad { color:#ffb4a2; background:rgba(255,120,90,.12); border:1px solid rgba(255,120,90,.34); }
       .lkflag.warn{ color:#e8c37a; background:rgba(232,195,122,.10); border:1px solid rgba(232,195,122,.30); }
-      .lkadvice { margin-top:12px; font-size:14.5px; line-height:1.55; color:#dfe4ea; }
+      .lkadvice { margin-top:12px; font-size:14.5px; line-height:1.55; color:#414146; }
       .lksay { margin-top:11px; padding:11px 13px; border-radius:10px; font-size:14px; line-height:1.5;
-        background:rgba(26,189,225,.07); border-left:2px solid #1abde1; color:#dfe4ea; }
+        background:rgba(26,189,225,.07); border-left:2px solid #1abde1; color:#414146; }
       .lksay b { display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
         color:#1abde1; margin-bottom:4px; font-weight:800; }
       .lkcall { display:inline-block; margin-top:13px; font-size:16px; font-weight:800; color:#1abde1; text-decoration:none; }
-      .lkempty { padding:14px 18px; font-size:14px; color:#9ba1ab;
+      .lkempty { padding:14px 18px; font-size:14px; color:#6e6e73;
         background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.10); border-radius:14px; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --bg:#050507; --white:#fff; --cyan:#1abde1; --cyan-hi:#5fe0fa; --cyan-dark:#0d82b8; --muted:#9ba1ab; --card:rgba(255,255,255,0.035); --card-border:rgba(255,255,255,0.09); }
@@ -87,7 +87,7 @@
         .sbtn:hover { border-color:rgba(255,255,255,0.3); }
         .sbtn.go { background:linear-gradient(100deg,#1abde1,#0d82b8); border:0; color:#03141c; }
         .lane.fd .sbtn.go { background:linear-gradient(100deg,#f5b95f,#d8842a); color:#241203; }
-        .sbtn.done { background:rgba(29,158,117,0.16); border-color:rgba(29,158,117,0.4); color:#7ef5c2; }
+        .sbtn.done { background:rgba(29,158,117,0.16); border-color:rgba(29,158,117,0.4); color:#28734b; }
         .qcount { font-size:12px; color:var(--muted); } .qcount b { color:var(--white); font-weight:700; }
         .lane-f { padding:12px 22px; border-top:1px solid var(--card-border); background:rgba(255,255,255,0.02);
                   display:flex; flex-wrap:wrap; gap:14px; font-size:12.5px; }
@@ -112,7 +112,7 @@
         .mod a { color:inherit; text-decoration:none; }
         .mod a:hover { color:var(--cyan-hi); }
         .st { font-size:10.5px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; white-space:nowrap; }
-        .st-ready { color:#7ef5c2; background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
+        .st-ready { color:#28734b; background:rgba(29,158,117,0.16); border:1px solid rgba(29,158,117,0.4); }
         .st-prog { color:var(--cyan-hi); background:rgba(26,189,225,0.12); border:1px solid rgba(26,189,225,0.35); }
         .st-soon { color:var(--muted); background:rgba(255,255,255,0.04); border:1px solid var(--card-border); }
         .tools { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -149,7 +149,7 @@
   @media (max-width:560px){ .wrap{padding:18px 16px} }
 </style>
     <script id="vtag-ai-js" async src="https://r2.leadsy.ai/tag.js" data-pid="17PMqPWtsqz2Rzt3y" data-version="062024"></script>
-</head>
+<link rel="stylesheet" href="/assets/css/portal.css?v=20261013"><script defer src="/assets/js/portal-shell.js?v=20261013"></script></head>
 <body>
 
 <header class="topbar">
@@ -299,9 +299,9 @@
       var cp=l.transcript?('<button class="cp-btn" data-cp="'+i+'">AI close plan</button><div class="cp-out" id="cp-'+i+'"></div>'):'';
       return '<div class="row"><div class="who"><div class="n">'+esc(l.company||l.name||'Lead')+'</div>'+
         (l.phone?'<div class="e"><a href="tel:'+esc(l.phone)+'">'+esc(l.phone)+'</a></div>':'')+
-        (l.summary?'<div style="font-size:12px;color:#9ba1ab;margin-top:3px;line-height:1.4">'+esc(l.summary)+'</div>':'')+
+        (l.summary?'<div style="font-size:12px;color:#6e6e73;margin-top:3px;line-height:1.4">'+esc(l.summary)+'</div>':'')+
         (l.recordingUrl?'<audio controls preload="none" style="width:100%;margin-top:8px;height:32px" src="'+esc(playableRecording(l.recordingUrl))+'"></audio>':'')+
-        (l.transcript?'<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--cyan-hi);font-size:11.5px;font-weight:700">Transcript</summary><div style="font-size:12px;color:#9ba1ab;margin-top:6px;max-height:170px;overflow:auto;white-space:pre-wrap;line-height:1.5">'+esc(l.transcript)+'</div></details>':'')+
+        (l.transcript?'<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--cyan-hi);font-size:11.5px;font-weight:700">Transcript</summary><div style="font-size:12px;color:#6e6e73;margin-top:6px;max-height:170px;overflow:auto;white-space:pre-wrap;line-height:1.5">'+esc(l.transcript)+'</div></details>':'')+
         cp+
         '</div>'+grade+'</div>';
     }).join('');
