@@ -21,6 +21,8 @@ export async function recoverExisting(item,{redis,siteReader,fetcher=fetch}={}){
  const r=await fetcher('https://campaign-dashboard-green.vercel.app/api/existing-lead-research',{method:'POST',headers:{Authorization:'Bearer '+process.env.EXISTING_LEAD_RESEARCH_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({email}),signal:AbortSignal.timeout(50000)});
  if(!r.ok){const failure=await r.json().catch(()=>({}));throw Error('Existing-lead search: '+String(failure.error||r.status).slice(0,150));}
  const data=await r.json();
- for(const candidate of data.results||[]){try{const evidence=await siteReader(candidate.url),match=recoveredIdentity(evidence,email,item.company);if(match){await redis.set(cache,match,{ex:30*86400});return match;}}catch{}}
+ let failedCandidates=0;
+ for(const candidate of data.results||[]){try{const evidence=await siteReader(candidate.url),match=recoveredIdentity(evidence,email,item.company);if(match){await redis.set(cache,match,{ex:30*86400});return match;}}catch{failedCandidates++;}}
+ if(failedCandidates)throw Error('Research candidate websites unavailable; retry required');
  const noMatch={unmatched:true,checkedAt:new Date().toISOString()};await redis.set(cache,noMatch,{ex:30*86400});return noMatch;
 }

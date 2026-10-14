@@ -9,6 +9,23 @@ async function load(){try{const [state,cloud,previews,results]=await Promise.all
  for(const c of results.campaigns){const row=el('tr','');for(const value of [c.name,c.recordedSends,c.contactsReached,c.humanReplyContacts,c.humanReplyRate===null?'No sample':c.humanReplyRate+'%']){const cell=el('td',value);cell.style.padding='10px 6px';row.append(cell);}table.append(row);const detail=el('details','');detail.append(el('summary',c.name+' · Evidence & limits'),el('p',c.coverage+' · '+c.comparison),el('p',c.replyDefinition),el('p',c.optOutHolds+' opt-out holds · '+c.bounceHolds+' bounce holds · '+c.autoReplyHolds+' automatic-reply holds'),el('p','Meetings: '+c.meetingEvidence+' · Revenue conversions: '+c.revenueEvidence));evidence.append(detail);}
  const scroll=el('div','');scroll.className='table-scroll';scroll.append(table);score.append(scroll,evidence,el('p',results.notes||''),el('p','Latest saved snapshot: '+(results.snapshot?.at?new Date(results.snapshot.at).toLocaleString():'Pending first cloud snapshot')));
  const hist=el('details','');hist.append(el('summary','Daily history and message revisions'));for(const h of results.history||[]){hist.append(el('h3',new Date(h.at).toLocaleDateString()+' · Revision '+h.revision));for(const c of h.campaigns)hist.append(el('p',c.name+': '+c.recordedSends+' recorded sends, '+c.contactsReached+' reached, '+c.humanReplyContacts+' human replies'));}score.append(hist);app.append(score);
+
+ const prep=cloud.leadPreparation;
+ const intake=el('section','');intake.className='card';intake.append(el('h2','Existing-lead preparation'));
+ if(!prep)intake.append(el('p','Waiting for a recorded cloud run.'));
+ else{
+  const stale=!prep.finishedAt||Date.now()-Date.parse(prep.finishedAt)>15*60000;
+  intake.append(el('p',(stale?'Needs attention: preparation overdue':prep.status)+' · Checked '+new Date(prep.finishedAt||prep.startedAt).toLocaleString()),el('p','Existing records first. Research and email verification run every five minutes in the cloud. Verification is not enrollment or sending.'));
+  const inv=prep.inventory;
+  if(inv)intake.append(el('p',`${inv.total} recovered records · ${inv.reviewed} reviewed · ${inv.pending} due for review`));
+  intake.append(el('p',`Latest run: ${prep.scanned||0} scanned · ${prep.recovered||0} identities recovered · ${prep.verified||0} verified · ${prep.imported||0} CRM contacts created · ${prep.held||0} held`));
+  const holds=el('details','');holds.append(el('summary','Why records are waiting or excluded'));
+  for(const [reason,count] of Object.entries(inv?.outcomes||prep.reasons||{}))holds.append(el('p',`${count} · ${reason}`));intake.append(holds);
+  const history=el('details','');history.append(el('summary','Recent cloud runs'));
+  for(const run of (cloud.leadPreparationHistory||[]).slice(0,24))history.append(el('p',`${new Date(run.startedAt).toLocaleString()} · ${run.status} · ${run.scanned||0} scanned · ${run.verified||0} verified · ${run.held||0} held`));
+  intake.append(history);
+ }
+ app.append(intake);
  for(const c of state.campaigns||[]){const rows=state.records.filter(r=>r.campaignId===c.id);const card=el('section','');card.className='card';card.append(el('h2',c.name),el('p',c.description));const recent=cloud.lastRun?.finishedAt&&Date.now()-Date.parse(cloud.lastRun.finishedAt)<5*60000;const running=['staffify-agency-outreach','staffify-tobit-outreach'].includes(c.id)&&cloud.enabled&&cloud.draftingEnabled&&cloud.sendingEnabled&&cloud.health?.ok&&recent&&cloud.lastRun.status!=='error';const health=el('p',running?'Running in the cloud':'Needs attention');health.className=running?'campaign-health good':'campaign-health warning';card.append(health);
  const counts=el('div','');counts.className='campaign-counts';for(const [value,label] of [[rows.length,'Prospects'],[rows.filter(r=>r.callReady).length,'Ready for a call'],[rows.filter(r=>r.status==='human_reply_hold').length,'Reply holds']]){const item=el('div','');item.append(el('strong',value),el('span',label));counts.append(item);}card.append(counts);
  const rules=el('details','');rules.append(el('summary','Schedule & automation details'),el('p','Latest worker: '+(cloud.lastRun?.finishedAt?new Date(cloud.lastRun.finishedAt).toLocaleString():'Not available')),el('p',`${c.maxEmails} emails maximum · At least ${c.minimumSpacingHours} hours apart · ${c.sendWindow}`),el('p','Preparation and reply checks run in the cloud. People handle replies and calls.'));card.append(rules);
