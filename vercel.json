@@ -54,6 +54,10 @@
     {
       "path": "/api/outreach-company-prep/",
       "schedule": "2-59/10 * * * *"
+    },
+    {
+      "path": "/api/playbook-reconcile/",
+      "schedule": "7,22,37,52 * * * *"
     }
   ],
   "rewrites": [
@@ -304,6 +308,9 @@
       "maxDuration": 300
     },
     "api/outreach-company-prep.js": {
+      "maxDuration": 300
+    },
+    "api/playbook-reconcile.js": {
       "maxDuration": 300
     }
   }

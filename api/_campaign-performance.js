@@ -6,7 +6,7 @@ export function performance(rows,confirmedReplies=[]){
   const events=(r.events||[]).filter(e=>e.kind==='sent'&&e.id&&e.at);
   if(r.sentTouches>0&&!events.length)missing.add(email);
   for(const e of events){const key=r.sender+':'+e.id;sends.set(key,e);reached.add(email);}
-  if(events.length&&confirmedReplies.includes(email))replied.add(email);
+  if(events.length&&(confirmedReplies.includes(email)||r.humanReplyConfirmedAt))replied.add(email);
   if(events.length&&r.status==='human_reply_hold'&&(r.replyReceivedAt||(r.events||[]).some(e=>e.kind==='received')))replied.add(email);
   const first=events.slice().sort((a,b)=>Date.parse(a.at)-Date.parse(b.at))[0];
   if(first?.body){const hash=createHash('sha256').update(first.subject+'\n'+first.body).digest('hex').slice(0,12);const v=variants.get(hash)||{id:hash,subject:first.subject,contacts:new Set(),firstSentAt:first.at};v.contacts.add(email);variants.set(hash,v);}
