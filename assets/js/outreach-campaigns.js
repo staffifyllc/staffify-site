@@ -10,6 +10,18 @@ async function load(){try{const [state,cloud,previews,results]=await Promise.all
  const scroll=el('div','');scroll.className='table-scroll';scroll.append(table);score.append(scroll,evidence,el('p',results.notes||''),el('p','Latest saved snapshot: '+(results.snapshot?.at?new Date(results.snapshot.at).toLocaleString():'Pending first cloud snapshot')));
  const hist=el('details','');hist.append(el('summary','Daily history and message revisions'));for(const h of results.history||[]){hist.append(el('h3',new Date(h.at).toLocaleDateString()+' · Revision '+h.revision));for(const c of h.campaigns)hist.append(el('p',c.name+': '+c.recordedSends+' recorded sends, '+c.contactsReached+' reached, '+c.humanReplyContacts+' human replies'));}score.append(hist);app.append(score);
 
+
+ const companyPrep=cloud.companyPreparation;
+ if(companyPrep){
+  const source=el('section','');source.className='card';source.append(el('h2','Saved companies → verified contacts'));
+  source.append(el('p',`${companyPrep.totalCompanies||0} companies already researched · ${companyPrep.nextOffset||0} processed · ${companyPrep.status}`));
+  const b=companyPrep.budget;if(b)source.append(el('p',`${b.remaining} included searches remaining · ${b.dailyTarget}/day target · Resets ${b.renewal}`));
+  source.append(el('p',`Latest cloud run: ${companyPrep.searched||0} searches · ${companyPrep.emailsFound||0} emails found · ${companyPrep.staged||0} added for verification`));
+  if(companyPrep.reason)source.append(el('p',companyPrep.reason));
+  const records=el('details','');records.append(el('summary','Recent companies and outcomes'));
+  const seen=new Set();for(const run of cloud.companyPreparationHistory||[])for(const r of run.records||[]){if(seen.has(r.domain)||seen.size>=40)continue;seen.add(r.domain);const p=el('p',`${r.company} · ${r.email||r.domain} · ${r.reason}`);const row=state.records.find(x=>x.recipient===r.email);if(row)p.append(el('span',` · Campaign: ${row.status} · ${row.verifiedSentTouches||0} confirmed sends`));records.append(p);}
+  source.append(records,el('p','Existing companies first. Email addresses must pass verification, client, reply and suppression checks before enrollment.'),el('p','Last checked: '+new Date(companyPrep.finishedAt||companyPrep.startedAt).toLocaleString()));app.append(source);
+ }
  const prep=cloud.leadPreparation;
  const intake=el('section','');intake.className='card';intake.append(el('h2','Existing-lead preparation'));
  if(!prep)intake.append(el('p','Waiting for a recorded cloud run.'));
