@@ -30,6 +30,17 @@ export function classify(messages,recipient,senders) {
 export function followup(record) {
  if(record.campaignId===TOBIT_ID)return tobitFollowup(record);
  if(record.lane==='deal_followup')return dealEmail(record,record.sentTouches);
+ if(record.sentTouches===1){
+  const experience=record.owner==='Madison'
+   ? 'I’d love to get to know you and hear what you’re building. Paul, our founder, built his own real estate media agency to seven figures. We’d be happy to share some game on what worked, including a few things he’d definitely skip the second time around.'
+   : 'I’d love to get to know you and hear what you’re building. I’ve built my own real estate media agency to seven figures, and I’m happy to share some game on what worked for us, including a few things I’d definitely skip the second time around.';
+  return ['Hey '+(record.verifiedFirstName||'there')+',',experience,
+   'We also refer a ton of business nationally, so it’s always good to know more solid people in the space.',
+   'Up for a quick 15-minute chat? Grab a time here:\nhttps://calendly.com/go-staffify/media-owner-workflow-chat',
+   (record.owner==='Madison'?'Madison':'Paul')+'\nStaffify',
+   'If you’d like me to kick rocks and leave you alone, just say so :)'].join('\n\n');
+ }
+
  const parts=[
  "Another simple handoff: have one person collect the shoot details before it goes on the calendar: address, access instructions, requested services, and delivery deadline. Missing details get flagged in one place. Is scheduling something you still handle yourself?",
  "For delivery, a short checklist can be enough: correct property, every promised file, working download link, and any revisions checked. Whoever owns delivery runs through it before the client gets the email. Does your team have someone doing that last check?",
