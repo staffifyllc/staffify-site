@@ -3,6 +3,7 @@ import {INVENTORY,emailKey,mergeInventory,inventorySummary,localBlock,dueInvento
 import {randomUUID} from 'node:crypto';
 const LOCK='staffify:lead-prep:lock',STATUS='staffify:lead-prep:last-run';
 export function makeLeadPrep(deps){
+ const recover=deps.recoverExisting||recoverExisting;
  const {redis,readBody,config,draftBlockReason,site,verifyEmail,isOptedOut,clientCheck,hs,KEY}=deps;
 async function find(email){const d=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'email',operator:'EQ',value:email}]}],properties:['email','company','website','firstname','lastname','city','state','country','rep_lifecycle_state'],limit:2});if(d.results.length>1)throw Error('Ambiguous CRM contact');return d.results[0]||null;}
 return async function handler(req,res){
@@ -39,7 +40,7 @@ return async function handler(req,res){
     if(!company||!website){
      if((report.recoveryAttempts||0)>=10){crmPageComplete=false;break;}
      report.recoveryAttempts=(report.recoveryAttempts||0)+1;
-     const recovered=await recoverExisting({...item,company,domain:website},{redis,siteReader:site});
+     const recovered=await recover({...item,company,domain:website},{redis,siteReader:site});
      item.recoveryVersion=1;
      if(!recovered.unmatched){company=company||recovered.company;website=website||recovered.domain;item.company=item.company||company;item.domain=item.domain||website;item.recoveryEvidence=recovered.evidence;report.recovered=(report.recovered||0)+1;}
      if(!company||!website){await finish('Missing company or website',7);continue;}
@@ -47,7 +48,16 @@ return async function handler(req,res){
     const row={recipient:item.email,company};
     if(c){blocked=await draftBlockReason(row,{requireVerified:false});if(blocked){await finish(blocked,1);continue;}}
     else{if(['trey tatro','mike haymes','blake watkins'].includes((item.first+' '+item.last).trim().toLowerCase())){await finish('Explicit exclusion',30);continue;}const client=await clientCheck({email:item.email,company});if(client.status!=='clear'){await finish('Client check: '+client.status,1);continue;}}
-    report.checked++;const evidence=await site(website);
+    report.checked++;let evidence;
+    try{evidence=await site(website);}catch(original){
+     // Known but dead websites need the same bounded research path as missing websites.
+     if((report.recoveryAttempts||0)>=10){report.status='yielded';crmPageComplete=false;break;}
+     report.recoveryAttempts=(report.recoveryAttempts||0)+1;
+     const recovered=await recover({...item,company,domain:website},{redis,siteReader:site});
+     if(recovered.unmatched){await finish('Website unavailable; research did not establish identity',7);continue;}
+     evidence=await site(recovered.domain);website=evidence.url;
+     item.recoveryEvidence=recovered.evidence;report.recovered=(report.recovered||0)+1;
+    }
     if(!/real[ -]estate.{0,50}(photograph|videograph|media)|(?:property|architectural) photography/i.test(evidence.text)){await finish('Website does not establish real estate media services',30);continue;}
     const agencyKey=new URL(evidence.url).hostname.replace(/^www\./,'');
     if(state.records.some(r=>r.recipient!==item.email&&(r.agencyKey===agencyKey||r.company?.toLowerCase()===company.toLowerCase()))||state.assignments.some(a=>a.email!==item.email&&a.agencyKey===agencyKey)){await finish('Company already assigned or enrolled',7);continue;}
@@ -77,7 +87,7 @@ return async function handler(req,res){
   if(crmPageComplete)await redis.set('staffify:lead-prep:list-cursor:v3',page.paging?.next?.after||null);
   if(report.status==='complete'&&report.retries&&report.retries===report.checked)report.status='retrying';
   report.crmInventory={scope:'All existing Staffify CRM contacts with an email',matchingContacts:page.total??null,pageSize:(page.results||[]).length,nextCursor:crmPageComplete?(page.paging?.next?.after||null):(cursor||null),cycleComplete:crmPageComplete&&!page.paging?.next?.after};
-  report.inventory=inventorySummary(inventory);report.finishedAt=new Date().toISOString();await redis.set(STATUS,report);return res.status(200).json(report);
+  report.inventory=inventorySummary(inventory);report.finishedAt=new Date().toISOString();await redis.set(STATUS,report);const runs=await redis.get('staffify:lead-prep:runs')||[];await redis.set('staffify:lead-prep:runs',[report,...runs].slice(0,288));return res.status(200).json(report);
  }catch(e){report.status='error';report.reason=e.message;await redis.set(STATUS,report);return res.status(503).json(report);}
  finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",[LOCK],[nonce]);}
 }
