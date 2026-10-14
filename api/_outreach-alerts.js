@@ -1,6 +1,6 @@
 const HUB='https://www.gostaffify.com/outreach-review/';
 const age=(v,now)=>v&&Number.isFinite(Date.parse(v))?now-Date.parse(v):Infinity;
-export function incidents({cfg,run,health,prep},now=Date.now()){
+export function incidents({cfg,run,health,prep,companyPrep},now=Date.now()){
  if(!cfg.enabled)return [];
  const issues=[];
  if(age(run?.finishedAt,now)>15*60000)issues.push({id:'worker-overdue',title:'Outreach checks are overdue',impact:'Sending and reply checks may not be progressing.',action:'Check the cloud worker schedule and execution logs.'});
@@ -8,6 +8,9 @@ export function incidents({cfg,run,health,prep},now=Date.now()){
  const failed=(health?.accounts||[]).filter(a=>!a.ok).map(a=>a.email).sort();
  if(failed.length)issues.push({id:'mailbox-access',title:'Mailbox connection needs attention',impact:'New introductions are paused because complete mailbox history is unavailable.',action:'Reconnect the affected mailboxes in the Hub.',accounts:failed});
  if(cfg.draftingEnabled!==false){
+ if(companyPrep&&age(companyPrep.finishedAt||companyPrep.startedAt,now)>30*60000)issues.push({id:'company-prep-overdue',title:'Saved-company research is overdue',impact:'Previously researched companies are not progressing toward verified contacts.',action:'Check the cloud company-research schedule and the Campaigns page.'});
+ else if(['error','needs_attention'].includes(companyPrep?.status))issues.push({id:'company-prep-error',title:'Saved-company research is blocked',impact:companyPrep.reason||'Company research did not complete.',action:'Check the research connection and included search balance in Campaigns.'});
+ 
  if(age(prep?.finishedAt||prep?.startedAt,now)>20*60000)issues.push({id:'prep-overdue',title:'Lead preparation is overdue',impact:'The existing-contact queue is not being refreshed.',action:'Check the lead-preparation schedule and execution logs.'});
  else if(['error','provider_unavailable','retrying'].includes(prep?.status))issues.push({id:'prep-error',title:'Lead preparation is blocked',impact:'New eligible contacts may not reach the outreach queue.',action:'Check CRM access and Findymail availability or remaining credits in the Hub.'});
  }

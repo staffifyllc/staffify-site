@@ -9,7 +9,7 @@ import {repFit,companyHost,publishedEmail,ownerOnSite,knownCompany} from './_com
 const LOCK='staffify:lead-prep:lock',STATUS='staffify:company-prep:last-run';
 async function bridge(path='',body){
  if(!process.env.EXISTING_LEAD_RESEARCH_TOKEN)throw Error('Research connection missing');
- const r=await fetch('https://campaign-dashboard-green.vercel.app/api/existing-company-research'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.EXISTING_LEAD_RESEARCH_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(50000)});const d=await r.json();if(!r.ok)throw Error(d.error||'Research service unavailable');return d;
+ const r=await fetch('https://campaign-dashboard-green.vercel.app/api/existing-company-research'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.EXISTING_LEAD_RESEARCH_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(75000)});const d=await r.json();if(!r.ok)throw Error(d.error||'Research service unavailable');return d;
 }
 async function findEmail(name,domain){
  const cache='staffify:company-finder:'+domain,saved=await redis.get(cache);if(saved&&Date.parse(saved.expiresAt)>Date.now())return saved.email;
@@ -29,13 +29,16 @@ export default async function handler(req,res){
   const cfg=await config();if(!cfg.enabled||cfg.draftingEnabled===false)return res.status(200).json({status:'paused'});
   const cursor=Number(await redis.get('staffify:company-prep:cursor')||0),page=await bridge('?offset='+cursor);report.budget=page.budget;report.totalCompanies=page.total;
   let offset=cursor;
-  for(const company of page.records){
+  const retryKey='staffify:company-prep:retries',retries=await redis.get(retryKey)||{};
+  const due=Object.values(retries).filter(r=>Date.parse(r.retryAt)<=Date.now()).slice(0,5).map(r=>({...r.company,retryItem:true}));
+  for(const company of [...due,...page.records.filter(c=>!due.some(r=>r.domain===c.domain))]){
    if(Date.now()-start>210000||report.searched>=10){report.status='yielded';break;}
    const domain=company.domain,k='staffify:company-prep:result:'+domain;
    const prior=await redis.get(k);
-   if(prior){offset++;continue;}
+   if(prior&&!company.retryItem){offset++;continue;}
    report.scanned++;
-   const save=async(reason,extra={})=>{const result={domain,company:company.name,reason,at:new Date().toISOString(),...extra};await redis.set(k,result);report.reasons[reason]=(report.reasons[reason]||0)+1;report.records.push(result);if(reason!=='Email staged for verification')report.held++;offset++;};
+   const advance=()=>{if(!company.retryItem)offset++;};
+   const save=async(reason,extra={})=>{const result={domain,company:company.name,reason,at:new Date().toISOString(),...extra};await redis.set(k,result);report.reasons[reason]=(report.reasons[reason]||0)+1;report.records.push(result);if(reason!=='Email staged for verification')report.held++;delete retries[domain];await redis.set(retryKey,retries);advance();};
    try{
     if(company.pool!=='REP'||company.klass!=='REP_OWNER'){await save('Outside real estate media campaign');continue;}
     const state=await redis.get(KEY);if(!state)throw Error('Outreach queue unavailable');
@@ -70,7 +73,14 @@ export default async function handler(req,res){
     const record={email,company:company.name,domain:'https://'+domain,first:name.split(' ')[0]||'',last:name.split(' ').slice(1).join(' '),fit_review:'existing_REP',known_history:''};
     const merged=mergeInventory(inv,[record]);const added=merged.records.find(r=>r.email===email);added.companyResearch={source:'existing-research-ledger',discoveredAt:company.discoveredAt,checkedAt:new Date().toISOString(),sources:candidates.map(p=>p.url),searchQuery:research.query,identity:'published_business_email_or_evidenced_owner'};
     await redis.set(INVENTORY,merged);report.staged++;await save('Email staged for verification',{email,sources:candidates.map(p=>p.url)});
-   }catch(e){report.status=/Daily included-search pace reached/.test(e.message)?'paced_until_next_day':'needs_attention';report.reason=e.message;report.reasons[e.message]=(report.reasons[e.message]||0)+1;break;}
+   }catch(e){
+    if(/timeout|aborted|cooling down|already running|Search provider unavailable/i.test(e.message)){
+     const retryAt=new Date(Date.now()+20*60000).toISOString();retries[domain]={company:{...company,retryItem:undefined},retryAt,reason:e.message};await redis.set(retryKey,retries);
+     await redis.set(k,{domain,company:company.name,reason:'Temporary research failure; retry scheduled',retryAt,at:new Date().toISOString()});
+     report.retries=(report.retries||0)+1;report.records.push({domain,company:company.name,reason:'Temporary research failure; retry scheduled',retryAt});advance();continue;
+    }
+    report.status=/Daily included-search pace reached/.test(e.message)?'paced_until_next_day':'needs_attention';report.reason=e.message;report.reasons[e.message]=(report.reasons[e.message]||0)+1;break;
+   }
   }
   await redis.set('staffify:company-prep:cursor',offset);report.nextOffset=offset;report.existingPoolExhausted=offset>=page.total;
   report.finishedAt=new Date().toISOString();await redis.set(STATUS,report);const runs=await redis.get('staffify:company-prep:runs')||[];await redis.set('staffify:company-prep:runs',[report,...runs].slice(0,288));return res.status(200).json(report);
