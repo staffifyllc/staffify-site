@@ -19,7 +19,7 @@ async function load(){try{const [state,cloud,previews,results]=await Promise.all
   source.append(el('p',`Latest cloud run: ${companyPrep.searched||0} searches · ${companyPrep.emailsFound||0} emails found · ${companyPrep.staged||0} added for verification`));
   if(companyPrep.reason)source.append(el('p',companyPrep.reason));
   const records=el('details','');records.append(el('summary','Recent companies and outcomes'));
-  const seen=new Set();for(const run of cloud.companyPreparationHistory||[])for(const r of run.records||[]){if(seen.has(r.domain)||seen.size>=40)continue;seen.add(r.domain);const p=el('p',`${r.company} · ${r.email||r.domain} · ${r.reason}`);const row=state.records.find(x=>x.recipient===r.email);if(row)p.append(el('span',` · Campaign: ${row.status} · ${row.verifiedSentTouches||0} confirmed sends`));records.append(p);}
+  const seen=new Set();for(const run of cloud.companyPreparationHistory||[])for(const r of run.records||[]){if(seen.has(r.domain)||seen.size>=40)continue;seen.add(r.domain);const p=el('p',`${r.company} · ${r.email||r.domain} · ${r.verificationOutcome||r.reason}`);const row=state.records.find(x=>x.recipient===r.email);if(row)p.append(el('span',` · Campaign: ${row.status} · ${row.verifiedSentTouches||0} confirmed sends`));records.append(p);}
   source.append(records,el('p','Existing companies first. Email addresses must pass verification, client, reply and suppression checks before enrollment.'),el('p','Last checked: '+new Date(companyPrep.finishedAt||companyPrep.startedAt).toLocaleString()));app.append(source);
  }
  const prep=cloud.leadPreparation;
