@@ -15,7 +15,8 @@ async function load(){try{const [state,cloud,previews,results]=await Promise.all
  if(companyPrep){
   const source=el('section','');source.className='card';source.append(el('h2','Saved companies → verified contacts'));
   source.append(el('p',`${companyPrep.totalCompanies||0} companies already researched · ${companyPrep.nextOffset||0} processed · ${companyPrep.status}`));
-  const b=companyPrep.budget;if(b)source.append(el('p',`${b.remaining} included searches remaining · ${b.dailyTarget}/day target · Resets ${b.renewal}`));
+  const b=companyPrep.budget;if(b)source.append(el('p',`${b.remaining} included searches remaining · ${b.dailyTarget}/day working target (${b.requiredDailyTarget||b.dailyTarget}/day required) · Resets ${b.renewal}`));
+  const pace=cloud.companyResearchPace;if(pace)source.append(el('p',pace.dailyRate!==undefined?`Actual provider pace: ${pace.dailyRate}/day over ${pace.measuredHours} hours · ${pace.status.replaceAll('_',' ')}`:'Measuring actual pace · needs three hours of provider history'));
   source.append(el('p',`Latest cloud run: ${companyPrep.searched||0} searches · ${companyPrep.emailsFound||0} emails found · ${companyPrep.staged||0} added for verification`));
   if(companyPrep.reason)source.append(el('p',companyPrep.reason));
   const records=el('details','');records.append(el('summary','Recent companies and outcomes'));
