@@ -1,5 +1,5 @@
 import {CAMPAIGN_ID} from './_outreach-campaign.js';
-import {introduction} from './_outreach-copy.js';
+import {introduction,INTRO_SUBJECT,INTRO_VERSION} from './_outreach-copy.js';
 import {supplyOwner} from './_outreach-inventory.js';
 import {redis,listReps} from './_auth.js';
 import {hubspotRequest} from './_outreach-hubspot.js';
@@ -28,7 +28,7 @@ export async function supply(state,cfg){
   const m=/real[ -]estate.{0,50}(photograph|videograph|media)|(?:property|architectural) photography/i.exec(evidence.text);if(!m){if(existing)existing.qualificationReason='Website does not establish real estate media services';continue;}
   const agencyKey=new URL(evidence.url).hostname.replace(/^www\./,'');if(state.assignments.some(a=>a.agencyKey===agencyKey&&a.email!==email)||state.records.some(r=>r.agencyKey===agencyKey&&r.recipient!==email))continue;
   const first=p.firstname&&evidence.text.toLowerCase().includes(p.firstname.toLowerCase())&&evidence.text.toLowerCase().includes(email)?p.firstname:'there';
-  Object.assign(row,{agencyKey,verifiedFirstName:first==='there'?null:first,qualificationApproved:true,copyVersion:'conversational-2026-10-04',subject:'The work between shoots',bodyText:introduction(owner,first==='there'?null:first),source:{url:evidence.url,checkedAt:new Date().toISOString(),excerpt:evidence.text.slice(Math.max(0,m.index-60),m.index+160)}});
+  Object.assign(row,{agencyKey,verifiedFirstName:first==='there'?null:first,qualificationApproved:true,copyVersion:INTRO_VERSION,subject:INTRO_SUBJECT,bodyText:introduction(owner,first==='there'?null:first),source:{url:evidence.url,checkedAt:new Date().toISOString(),excerpt:evidence.text.slice(Math.max(0,m.index-60),m.index+160)}});
   if(existing){Object.assign(existing,{legacyMailbox:{sender:existing.sender,threadId:existing.threadId,draftId:existing.draftId,messageId:existing.messageId,events:existing.events||[],status:existing.status},threadId:null,draftId:null,messageId:null,events:[],cloudHeld:false,verifiedSentTouches:0,lastSentAt:null,nextEligibleAt:null,callReady:false,qualificationCheckedAt:now,qualificationReason:'Approved for connected mailbox'},row);}else state.records.push(row);if(!assigned)state.assignments.push({hubspotId:c.id,email,company:p.company,agencyKey,owner,reservedAt:new Date().toISOString()});added++;
  }
  const rejected=priority.filter(email=>!state.records.some(r=>r.recipient===email));if(rejected.length)await redis.srem('staffify:lead-prep:ready',...rejected);
