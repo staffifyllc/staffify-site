@@ -7,13 +7,17 @@ export function copyIssue(row,body=row.bodyText,subject=row.subject){
  return null;
 }
 
+export const INTRO_SUBJECT = 'When a client needs something mid-shoot';
+export const INTRO_VERSION = 'client-service-2026-10-13';
 export function introduction(owner, firstName) {
- const intro=owner==='Madison'
-  ? "I'm Madison with Staffify. I work with Paul, who runs Flylisted, a real estate media agency. We help owners hand off the work around their shoots."
-  : "I'm Paul. I run Flylisted, a real estate media agency, and Staffify, where we help owners hand off the work around their shoots.";
- return ['Hi '+(firstName||'there')+',',intro,
-  "One small thing you can try: keep photo revision requests in one shared list, with a person and a due date beside each change. It gives the team one place to check before anything comes back to you.",
-  "We put together a few more practical handoffs here, if useful:\nhttps://www.gostaffify.com/blog/real-estate-photography-tasks-to-delegate/",
-  "What tends to pull you away from running the business most: scheduling, revisions, or client follow-ups?",
-  owner+'\nStaffify',"If you'd prefer no more emails, just let me know."].join('\n\n');
+ const experience=owner==='Madison'
+  ? "Paul, our founder, built Flylisted into a seven-figure agency. One thing he learned is that growth isn't just chasing the next client. It's badass customer service: putting out a fire quickly so an agent can get back to selling houses."
+  : "Building Flylisted into a seven-figure agency taught me that growth isn't just chasing the next client. It's badass customer service: putting out a fire quickly so an agent can get back to selling houses.";
+ return ['Hey '+(firstName||'there')+',',
+  'Ever had an agent text “can you fix this real quick?” while you’re halfway through a shoot? You’ve seen it, but doing anything about it has to wait until you’re back at your desk.',
+  experience,
+  'That’s where we help at Staffify. We recruit, train, and support someone who can stay on top of client messages, coordinate revisions, and keep things moving while you’re in the field.',
+  'Are you still the person everyone texts when something needs fixing?',
+  owner+'\nStaffify',
+  'If you’d like me to kick rocks and leave you alone, just say so :)'].join('\n\n');
 }
