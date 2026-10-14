@@ -32,6 +32,7 @@ export default async function handler(req,res){
  const save=()=>redis.set(key,rec);
  try{
   let stop=await isOptedOut({email})?'Global opt-out':state.suppressions?.includes(email)?'Global suppression':state.pausedOwners?.includes('Paul')?'Paul is paused':state.assignments?.some(a=>a.email===email&&a.owner!=='Paul')?'Assigned to another owner':sub.decision?'Decision recorded':old?.completed_at?'Previous sequence completed':old?.graduated_at?'Previously engaged':null;
+  if(!stop&&rec.manualFollowup)stop='Personal follow-up handled by Paul';
   if(!stop&&state.records?.some(r=>r.recipient===email))stop='Already tracked in another outreach campaign';
   if(!stop&&(await redis.hget('nurture:'+email,'enrolled_at')||await redis.zscore('disposition:pending',email)))stop='Meeting or human-owned follow-up';
   if(/@(gostaffify|staffifyhq|trystaffify|hirestaffify|flylisted)\.com$/i.test(email))stop='Internal address';
