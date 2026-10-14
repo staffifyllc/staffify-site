@@ -32,7 +32,7 @@ export default async function handler(req,res){
   const retryKey='staffify:company-prep:retries',retries=await redis.get(retryKey)||{};
   const due=Object.values(retries).filter(r=>Date.parse(r.retryAt)<=Date.now()).slice(0,5).map(r=>({...r.company,retryItem:true}));
   for(const company of [...due,...page.records.filter(c=>!due.some(r=>r.domain===c.domain))]){
-   if(Date.now()-start>210000||report.searched>=10){report.status='yielded';break;}
+   if(Date.now()-start>210000||report.searched>=30){report.status='yielded';break;}
    const domain=company.domain,k='staffify:company-prep:result:'+domain;
    const prior=await redis.get(k);
    if(prior&&!company.retryItem){offset++;continue;}
