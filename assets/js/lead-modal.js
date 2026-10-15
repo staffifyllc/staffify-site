@@ -45,10 +45,10 @@
         '.lead-modal ul li{font-size:15px;color:rgba(255,255,255,0.65);padding:5px 0;display:flex;gap:10px;align-items:flex-start;}' +
         '.lead-modal ul li::before{content:"\\2713";color:#1abde1;font-weight:700;flex-shrink:0;}' +
         '.lead-modal form{display:flex;gap:10px;flex-direction:column;margin:0;}' +
-        '@media(min-width:480px){.lead-modal form{flex-direction:row;}}' +
-        '.lead-modal input[type=email]{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:13px 20px;color:#fff;font-family:inherit;font-size:16px;outline:none;transition:border-color .2s;}' +
-        '.lead-modal input[type=email]::placeholder{color:rgba(255,255,255,0.35);}' +
-        '.lead-modal input[type=email]:focus{border-color:#1abde1;}' +
+        '.lead-modal label{font-size:13px;color:#c3c3ca;text-align:left;}' +
+        '.lead-modal input[type=email],.lead-modal input[type=tel]{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:13px 20px;color:#fff;font-family:inherit;font-size:16px;outline:none;transition:border-color .2s;}' +
+        '.lead-modal input[type=email]::placeholder,.lead-modal input[type=tel]::placeholder{color:rgba(255,255,255,0.35);}' +
+        '.lead-modal input[type=email]:focus,.lead-modal input[type=tel]:focus{border-color:#1abde1;}' +
         '.lead-modal button[type=submit]{background:#1abde1;color:#000;border:none;border-radius:999px;padding:13px 26px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap;transition:filter .2s;}' +
         '.lead-modal button[type=submit]:hover{filter:brightness(1.1);}' +
         '.lead-modal button[type=submit]:disabled{opacity:0.6;cursor:wait;}' +
@@ -79,7 +79,11 @@
                     '<li>How to hand off without dropping the ball</li>' +
                 '</ul>' +
                 '<form id="leadModalFormEl" novalidate>' +
-                    '<input type="email" name="email" placeholder="your@email.com" required autocomplete="email">' +
+                    '<label for="leadModalEmail">Email</label>' +
+                    '<input id="leadModalEmail" type="email" name="email" placeholder="your@email.com" required autocomplete="email">' +
+                    '<label for="leadModalPhone">Phone number (optional)</label>' +
+                    '<input id="leadModalPhone" type="tel" name="phone" placeholder="Include country code" autocomplete="tel" maxlength="40" aria-describedby="leadModalPhoneNote">' +
+                    '<span id="leadModalPhoneNote" style="font-size:12px;color:#a1a1a6;">We’ll email the playbook. Providing a phone number does not subscribe you to texts.</span>' +
                     '<input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">' +
                     '<button type="submit">Send me the framework →</button>' +
                 '</form>' +
@@ -164,6 +168,13 @@
             errBox.style.display = 'block';
             return;
         }
+        var phone = form.phone.value.trim();
+        var digits = phone.replace(/\D/g, '');
+        if (phone && (!/^\+?[0-9 ().-]+$/.test(phone) || digits.length < 7 || digits.length > 15)) {
+            errBox.textContent = 'Please enter a valid phone number, or leave it blank.';
+            errBox.style.display = 'block';
+            return;
+        }
         var btn = form.querySelector('button[type=submit]');
         btn.disabled = true;
         btn.textContent = 'Sending...';
@@ -171,7 +182,7 @@
         fetch(SUBSCRIBE_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email, source: 'delegation-popup', website: (form.website && form.website.value) || '' })
+            body: JSON.stringify({ email: email, phone: phone, source: 'delegation-popup', website: (form.website && form.website.value) || '' })
         }).then(function (r) {
             if (!r.ok) throw new Error('Status ' + r.status);
             return r.json();

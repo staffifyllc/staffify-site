@@ -163,7 +163,7 @@
 (function () {
     'use strict';
     var s = document.createElement('script');
-    s.src = '/assets/js/lead-modal.js?v=1';
+    s.src = '/assets/js/lead-modal.js?v=2';
     s.defer = true;
     document.head.appendChild(s);
 })();

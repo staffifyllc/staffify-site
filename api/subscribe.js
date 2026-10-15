@@ -164,6 +164,13 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'invalid_email' });
     }
 
+    const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+    const phoneDigits = phone.replace(/\D/g, '');
+    if ((body.phone != null && typeof body.phone !== 'string') || (phone &&
+        (phone.length > 40 || !/^\+?[0-9 ().-]+$/.test(phone) || phoneDigits.length < 7 || phoneDigits.length > 15))) {
+        return res.status(400).json({ error: 'invalid_phone' });
+    }
+
     const now = Date.now();
     const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim();
     const ua = (req.headers['user-agent'] || '').toString().slice(0, 256);
@@ -194,6 +201,8 @@ export default async function handler(req, res) {
             source,
             signed_up_at: existing || now,
             last_seen_at: now,
+            // Blank submissions preserve any phone already on file. No SMS consent inferred.
+            ...(phone ? { phone, phone_source: source, phone_updated_at: now } : {}),
             ip,
             ua,
         });
