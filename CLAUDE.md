@@ -1,3 +1,7 @@
+# Website release coordination
+
+Read `WEBSITE_RELEASE.md` before editing or publishing. It supersedes older deployment notes. Both agents use the shared checkout and current origin/main. Never deploy an old scratchpad with Vercel CLI.
+
 # staffify-site
 
 Marketing site and serverless backend for gostaffify.com. Staffify places vetted
