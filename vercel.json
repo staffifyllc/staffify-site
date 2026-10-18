@@ -41,7 +41,7 @@
     },
     {
       "path": "/api/outreach-lead-prep/",
-      "schedule": "*/5 * * * *"
+      "schedule": "0-59/10 * * * *"
     },
     {
       "path": "/api/outreach-health/",
@@ -53,7 +53,7 @@
     },
     {
       "path": "/api/outreach-company-prep/",
-      "schedule": "2-59/10 * * * *"
+      "schedule": "5-59/10 * * * *"
     },
     {
       "path": "/api/playbook-reconcile/",
