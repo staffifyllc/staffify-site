@@ -3,7 +3,9 @@ export function companyHost(url){return new URL(url.startsWith('http')?url:'http
 export function publishedEmail(page,domain){
  if(companyHost(page.url)!==domain)return null;
  const raw=String(page.html||'').replace(/&#64;|&commat;/g,'@');
- const addresses=[...new Set((raw.match(/[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g)||[]).map(e=>e.toLowerCase()))];
+ // Bound local parts and reject starting inside a token. Unbounded matching retried
+ // every position in embedded base64 assets, exhausting the entire worker runtime.
+ const addresses=[...new Set((raw.match(/(?<![a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-])[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[a-zA-Z0-9.-]{1,253}\.[a-zA-Z]{2,63}(?![a-zA-Z])/g)||[]).map(e=>e.toLowerCase()))];
  return addresses.find(e=>e.split('@')[1]===domain&&!/^(noreply|no-reply|privacy|abuse|support@wix)/.test(e))||null;
 }
 export function ownerOnSite(page){
