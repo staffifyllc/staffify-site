@@ -37,6 +37,8 @@ export default async function handler(req, res) {
     const b = readBody(req) || {};
     if (b.website) return res.status(200).json({ ok: true }); // honeypot: pretend success
 
+    if (String(b.source || '').startsWith('talent-marketplace')) return res.status(402).json({ error: 'Complete onboarding payment before requesting interviews.', checkout: '/browse-talent/checkout/' });
+
     const email = clean(b.email, 254);
     if (!isEmail(email)) return res.status(400).json({ error: 'valid_email_required' });
 

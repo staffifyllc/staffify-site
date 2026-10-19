@@ -9,3 +9,6 @@ The homepage section and footer link lead here. Role and free-text skill/tool fi
 Interview requests POST to the existing `/api/intake/` endpoint, storing `source=talent-marketplace` and candidate identity in the lead `note`, indexed under `leads:by_date` for the sales queue. Slack notification is awaited. A saved request is not an interview booking or a hire. No client-specific lander decision is changed and no candidate is contacted automatically. Tests mock storage and Slack; do not create real test leads.
 
 To add candidates: edit browse-talent/index.html with approved public details and current media; add matching ID/name to assets/js/talent-marketplace.js and the interview select. Keep role options consistent. To remove a candidate: remove the card, select option and JS ID together. Check actual availability before implying it. Do not automatically publish private recruiting records. Use WEBSITE_RELEASE.md for every release.
+
+## October 19 paid-checkout update
+The free interview form above is superseded by `/browse-talent/checkout/`. Candidate buttons now start onboarding. The old talent-marketplace intake source is rejected. See TALENT_CHECKOUT.md for prices, offer eligibility, required Stripe configuration and verified-payment fulfillment. No unpaid interview request is created by this new flow.
