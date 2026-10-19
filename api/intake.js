@@ -67,8 +67,8 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'store_failed' });
     }
 
-    slackNotify(
-        `:rocket: *New "Get to building" intake* — *${lead.company || lead.name || email}*`
+    await slackNotify(
+        `:rocket: *${lead.source === "talent-marketplace" ? "New talent interview request" : "New Get to building intake"}* — *${lead.company || lead.name || email}*`
         + `\n:email: ${email}` + (lead.phone ? `  ·  :telephone_receiver: ${lead.phone}` : '')
         + (lead.note ? `\n> ${lead.note.slice(0, 500)}` : '')
         + `\n:mag: Claim it in the hub: https://www.gostaffify.com/campaigns/  (Leads)`
