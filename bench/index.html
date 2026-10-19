@@ -207,7 +207,7 @@ aside.filters { position: sticky; top: 78px; }
     <a href="/" class="nav-logo"><img src="/assets/brand/logo-white.svg?v=3" alt="Staffify"></a>
     <span class="nav-tag">The Bench</span>
     <span class="nav-spacer"></span>
-    <a href="/how-it-works/" class="nav-cta">How it works</a>
+    <a href="/browse-talent/" class="nav-cta">Browse available talent</a>
 </nav>
 
 <div class="wrap">
@@ -500,7 +500,7 @@ aside.filters { position: sticky; top: 78px; }
                 if (res.j && res.j.error === 'no_longer_available') {
                     el('dBody').innerHTML = '<div class="done"><div class="big">&#9203;</div><h3>' + esc(p.first_name) + ' was just reserved</h3>'
                         + '<p>That is the honest answer rather than booking you a call for someone who is taken. Tell us the role and we will bring you three people like them inside a week.</p></div>';
-                    el('dFoot').innerHTML = '<a class="btn" href="/how-it-works/">Tell us the role</a>';
+                    el('dFoot').innerHTML = '<a class="btn" href="/browse-talent/">Browse available talent</a>';
                     load();
                     return;
                 }

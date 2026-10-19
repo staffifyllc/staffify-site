@@ -96,6 +96,11 @@
   ],
   "redirects": [
     {
+      "source": "/how-it-works/:path*",
+      "destination": "/browse-talent/",
+      "permanent": true
+    },
+    {
       "source": "/about-1-1",
       "destination": "/about/",
       "permanent": true
@@ -217,27 +222,27 @@
     },
     {
       "source": "/pricing/",
-      "destination": "/how-it-works/",
+      "destination": "/browse-talent/",
       "permanent": true
     },
     {
       "source": "/hourly-rates/",
-      "destination": "/how-it-works/",
+      "destination": "/browse-talent/",
       "permanent": true
     },
     {
       "source": "/faq/",
-      "destination": "/how-it-works/",
+      "destination": "/browse-talent/",
       "permanent": true
     },
     {
       "source": "/get-started/",
-      "destination": "/how-it-works/",
+      "destination": "/browse-talent/",
       "permanent": true
     },
     {
       "source": "/schedule/",
-      "destination": "/how-it-works/",
+      "destination": "/browse-talent/",
       "permanent": true
     },
     {
@@ -252,12 +257,12 @@
     },
     {
       "source": "/hire/",
-      "destination": "/how-it-works/",
+      "destination": "/browse-talent/",
       "permanent": true
     },
     {
       "source": "/find-talent/",
-      "destination": "/how-it-works/",
+      "destination": "/browse-talent/",
       "permanent": true
     },
     {
