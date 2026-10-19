@@ -109,7 +109,7 @@ export async function createRep({ email, name, rate, role, houseRate, hubspotOwn
         email: e,
         name: (name || e).toString().slice(0, 120),
         rate: String(rate || 35),
-        role: role === 'admin' ? 'admin' : 'rep',
+        role: ['admin','caller'].includes(role) ? role : 'rep',
         createdAt: String(Date.now()),
     };
     if (houseRate != null && houseRate !== '') rep.houseRate = String(houseRate);

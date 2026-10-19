@@ -21,3 +21,9 @@ test('unvalidated CRM numbers can enter live checks but are not labelled verifie
  const input=[row('crm',{callContact:{phone:'+15555550100',phoneStatus:'available'}}),row('listed')];
  assert.deepEqual(orderCallQueue(input,{campaign:'agency'}).map(r=>r.id),['listed','crm']);
 });
+
+test('shared queue includes both sales owners across campaigns while retaining explicit campaign filters',()=>{
+ const input=[row('paul'),row('madison',{owner:'Madison',campaignId:'ceo'}),row('stopped',{callReady:false})];
+ assert.deepEqual(orderCallQueue(input,{campaign:'all'}).map(r=>r.id),['madison','paul']);
+ assert.deepEqual(orderCallQueue(input,{campaign:'ceo'}).map(r=>r.id),['madison']);
+});

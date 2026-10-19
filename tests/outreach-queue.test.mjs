@@ -17,3 +17,16 @@ test('stale call-ready flag cannot survive reply, suppression or owner pause',()
  s.pausedOwners=['Paul'];assert.equal(visibleState(s,'all').records[0].callReady,false);
  s.pausedOwners=[];s.suppressions=[r.recipient];assert.equal(visibleState(s,'all').records[0].callReady,false);
 });
+
+import {canUseCallQueue,sharedCallState} from '../api/_outreach-queue.js';
+test('caller access does not confer sales owner access and shared queue excludes ineligible records',()=>{
+ const caller={email:'caller@example.com',role:'caller'};
+ assert.equal(canUseCallQueue(caller),true);assert.equal(ownerFor(caller),null);
+ assert.equal(canUseCallQueue({email:'outsider@example.com',role:'rep'}),false);
+ const due={...row,status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01'};
+ const s={revision:1,records:[due,{...due,id:'two',owner:'Madison',recipient:'b@example.com'},{...due,id:'reply',status:'human_reply_hold'}],assignments:[],pausedOwners:[],suppressions:[]};
+ assert.equal(sharedCallState(s).records.length,2);assert.equal(sharedCallState(s).assignments,undefined);
+ const next=controlState(s,{action:'call-outcome',id:'two',outcome:'connected'},'all',caller.email);
+ assert.equal(next.records[1].owner,'Madison');assert.equal(next.records[1].callHistory[0].caller,caller.email);
+ assert.equal(sharedCallState(next).records.length,1);
+});
