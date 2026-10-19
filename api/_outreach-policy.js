@@ -1,3 +1,4 @@
+import {TALENT_ID,talentFollowup} from './_talent-network-campaign.js';
 import {TOBIT_ID,tobitFollowup} from './_tobit-campaign.js';
 import {inCampaign} from './_outreach-campaign.js';
 import {dealEmail} from './_deal-followup-policy.js';
@@ -28,6 +29,7 @@ export function classify(messages,recipient,senders) {
  return {status:null,sent};
 }
 export function followup(record) {
+ if(record.campaignId===TALENT_ID)return talentFollowup(record);
  if(record.campaignId===TOBIT_ID)return tobitFollowup(record);
  if(record.lane==='deal_followup')return dealEmail(record,record.sentTouches);
  if(record.sentTouches===1){

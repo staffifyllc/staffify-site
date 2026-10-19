@@ -1,3 +1,4 @@
+import {campaignAllowed} from './_talent-network-campaign.js';
 import {inCampaign} from './_outreach-campaign.js';
 import {sendingWindow} from './_outreach-timezone.js';
 import {verificationGate} from './_outreach-verification.js';
@@ -33,7 +34,7 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(op?.messageId){const m=compactMessage(await gmail(tokens[row.sender],'messages/'+op.messageId+'?format=full'),row.sender);if(m.sent)applySent(row,state,m,op.id);}
   state=await save(state);
  }
- const candidates=fairCandidates(state.records.filter(r=>inCampaign(r)&&r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
+ const candidates=fairCandidates(state.records.filter(r=>campaignAllowed(r,cfg)&&inCampaign(r)&&r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
  const sentMailboxes=new Set();
  for(const row of candidates){
   if(sentMailboxes.has(row.sender)||sentMailboxes.size>=7)continue;
@@ -53,6 +54,7 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(!await verify(row,redis)){if(row.emailVerification?.status!=='unavailable')row.status='email_verification_hold';row.holdError='Email verification: '+(row.emailVerification?.reason||row.emailVerification?.status||'unconfirmed');report.verificationHeld=(report.verificationHeld||0)+1;state=await save(state);continue;}
   row.holdError=null;state=await save(state);
   const current=await config();if(!current.enabled||!current.sendingEnabled)return state;
+  if(!campaignAllowed(row,current))continue;
   if(!sendingWindow(row,Date.now(),current.sendWindow).allowed)continue;
   const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before send');
   const id=row.id+':'+(row.sentTouches+1),key='outreach:cloud:send:'+id;

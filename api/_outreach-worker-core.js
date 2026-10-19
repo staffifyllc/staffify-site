@@ -1,3 +1,4 @@
+import {campaignAllowed} from './_talent-network-campaign.js';
 import {tagCampaign,CAMPAIGN_ID} from './_outreach-campaign.js';
 import {copyIssue} from './_outreach-copy.js';
 import {fairCandidates} from './_outreach-fairness.js';
@@ -73,10 +74,10 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    if(await canDraft(row)){if(row.sentTouches&&row.lastSentAt)row.status='sent';else if(row.qualificationApproved)row.status='prepared';}
   }
   state=await save(state);
-  if(dealSupply&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000){try{report.dealFollowups=await dealSupply(state,cfg,tokens);state=await save(state);}catch(e){report.dealFollowupError=String(e.message).slice(0,120);}}
-  if(cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000&&state.records.filter(r=>r.status==='prepared').length<30){report.qualified=await supply(state,cfg);state=await save(state);}
+  if(!cfg.allowedCampaignIds&&dealSupply&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000){try{report.dealFollowups=await dealSupply(state,cfg,tokens);state=await save(state);}catch(e){report.dealFollowupError=String(e.message).slice(0,120);}}
+  if(!cfg.allowedCampaignIds&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000&&state.records.filter(r=>r.status==='prepared').length<30){report.qualified=await supply(state,cfg);state=await save(state);}
   if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report});
-  const candidates=fairCandidates(state.records.filter(r=>eligible(r,state)&&cfg.draftingEnabled!==false&&historyComplete),state.creations);
+  const candidates=fairCandidates(state.records.filter(r=>campaignAllowed(r,cfg)&&eligible(r,state)&&cfg.draftingEnabled!==false&&historyComplete),state.creations);
   const draftedMailboxes=new Set();
   for(const row of candidates){
    if(draftedMailboxes.has(row.sender))continue;
