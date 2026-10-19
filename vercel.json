@@ -96,6 +96,11 @@
   ],
   "redirects": [
     {
+      "source": "/how-it-works/",
+      "destination": "/browse-talent/",
+      "permanent": true
+    },
+    {
       "source": "/how-it-works/:path*",
       "destination": "/browse-talent/",
       "permanent": true
