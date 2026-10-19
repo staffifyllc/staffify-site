@@ -1,6 +1,6 @@
 import {createHash,createHmac,timingSafeEqual,randomBytes} from 'node:crypto';
 export const STANDARD=249900, INTRO=209900, TERMS='talent-2026-10-19';
-export const CANDIDATES={'hazel-m':'Hazel M.','jedno-p':'Jedno P.',both:'Hazel M. and Jedno P.'};
+export const CANDIDATES={'hazel-m':'Hazel M.','jedno-p':'Jedno P.','arnold-d-l':'Arnold D. L.','nancy-chi-t':'Nancy Chi T.',both:'Hazel M. and Jedno P.'};
 export const hash=s=>createHash('sha256').update(s).digest('hex');
 export const token=()=>randomBytes(24).toString('hex');
 export const ready=()=>process.env.TALENT_CHECKOUT_ENABLED==='true'&&!!process.env.STRIPE_SECRET_KEY&&!!process.env.STRIPE_TALENT_WEBHOOK_SECRET;

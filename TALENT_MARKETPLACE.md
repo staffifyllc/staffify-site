@@ -12,3 +12,7 @@ To add candidates: edit browse-talent/index.html with approved public details an
 
 ## October 19 paid-checkout update
 The free interview form above is superseded by `/browse-talent/checkout/`. Candidate buttons now start onboarding. The old talent-marketplace intake source is rejected. See TALENT_CHECKOUT.md for prices, offer eligibility, required Stripe configuration and verified-payment fulfillment. No unpaid interview request is created by this new flow.
+
+October 19: Added Arnold D. L., Real Estate Video Editor, from Paul's supplied candidate presentation. Added video-editing filter, professional summary, portrait, sample edit and checkout candidate mapping. Experience is candidate-reported; no client identity, negotiated rate, private assessment, or fixed availability claim is published. The legacy `both` shortlist still means Hazel and Jedno, preserving existing orders.
+
+Paul explicitly approved public name/photo/video/skills/onboarding for Arnold and requested the same for Nancy Chi T. Added Nancy with a studio-admin filter and introduction embed. Both new profiles show an approximate USD 2,000–2,600/month planning range for 40 hours/week; onboarding and optional benefits separate, final quote confirmed. No exact hourly rate or client-specific lander link is published.
