@@ -38,7 +38,7 @@ export function checkoutBody(o){return {
 };}
 export function verifiedPayment(o,s){
  const pi=s.payment_intent,c=pi?.latest_charge;
- return s.id===o.sessionId&&s.client_reference_id===o.id&&s.metadata?.talent_order===o.id&&s.mode==='payment'&&s.status==='complete'&&s.payment_status==='paid'&&s.currency==='usd'&&s.amount_total===o.amount&&pi?.status==='succeeded'&&pi.amount_received===o.amount&&pi.currency==='usd'&&pi.metadata?.talent_order===o.id&&c?.paid===true&&!c.refunded&&!c.disputed&&c.amount_refunded===0&&s.livemode===process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_');
+ return s.id===o.sessionId&&s.client_reference_id===o.id&&s.metadata?.talent_order===o.id&&s.mode==='payment'&&s.status==='complete'&&s.payment_status==='paid'&&s.currency==='usd'&&s.amount_total===o.amount&&pi?.status==='succeeded'&&pi.amount_received===o.amount&&pi.currency==='usd'&&pi.metadata?.talent_order===o.id&&c?.paid===true&&!c.refunded&&!c.disputed&&c.amount_refunded===0&&/^(sk|rk)_(live|test)_/.test(process.env.STRIPE_SECRET_KEY||'')&&s.livemode===/^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY||'');
 }
 export const retrieveSession=id=>stripe('checkout/sessions/'+encodeURIComponent(id)+'?expand%5B%5D=payment_intent.latest_charge');
 export function validSignature(raw,header,secret,now=Date.now()){
