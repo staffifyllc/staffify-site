@@ -68,6 +68,10 @@ export default async function handler(req, res) {
         const campaign = (req.query?.campaign || '').toString();
         const scope = campaign ? all.filter(r => r.campaignId === campaign) : all;
         const tried = new Set((await redis.get(TRIED)) || []);
+        // A named retry, for a lookup whose receipt was written but whose answer was lost. Only
+        // ever clears the addresses asked for, so it can never silently re-spend on the whole set.
+        const retry = Array.isArray(readBody(req).retry) ? readBody(req).retry : [];
+        for (const e of retry) tried.delete(String(e).toLowerCase());
         const inFlight = new Set(Object.keys((await redis.get(PENDING)) || {}));
         // A search already in flight is NOT re-fired. Dropping it from `tried` to keep it eligible
         // meant the next batch asked RocketReach for the same person again before the first answer
