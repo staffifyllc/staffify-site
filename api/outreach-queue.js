@@ -3,6 +3,7 @@ import {hubspotRequest} from './_outreach-hubspot.js';
 import { redis, requireAccess, adminAuthorized, SITE, readBody } from './_auth.js';
 import {config,access,gmail,compactMessage} from './_outreach-gmail.js';
 import {KEY,ownerFor,visibleState,mergeSnapshot,controlState,canUseCallQueue,sharedCallState} from './_outreach-queue.js';
+import {enrolInNurture} from './_nurture-enrol.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
@@ -35,8 +36,19 @@ export default async function handler(req,res) {
         // Re-validated against the freshly read queue, so a lead suppressed or already handled
         // between attempts is refused rather than written over.
         const candidate=controlState(fresh,body,owner,rep.email);
-        if(Number(await redis.eval(CAS,[KEY],[String(fresh?.revision||0),JSON.stringify(candidate)]))===1)
-          return res.status(200).json(view(candidate));
+        if(Number(await redis.eval(CAS,[KEY],[String(fresh?.revision||0),JSON.stringify(candidate)]))===1) {
+          // "Not now, try me next quarter" is a warm lead with a date on it. The caller just put
+          // it in writing, so the drip picks it up from here. Strictly after the disposition is
+          // safely saved, and never allowed to fail the save: enrolInNurture swallows its own
+          // errors and the gates live inside it.
+          let nurture=null;
+          if(body.action==='call-outcome'&&body.outcome==='timing') {
+            const row=(fresh?.records||[]).find(r=>r.id===body.id);
+            if(row)nurture=await enrolInNurture({redis,email:row.recipient,name:row.verifiedFirstName||'',
+              company:row.company||'',caller:rep.email,campaignId:row.campaignId||''});
+          }
+          return res.status(200).json({...view(candidate),...(nurture?{nurture}:{})});
+        }
       }
       return res.status(409).json({error:'The queue is busy right now. Your notes are still here; press save again.'});
     }

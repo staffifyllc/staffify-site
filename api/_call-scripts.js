@@ -176,7 +176,7 @@ function callTree(q, company) {
         },
         future: {
             say: "Understood. Would it be worth me trying you again further down the line, or would you rather I left it?",
-            note: 'If they give a window, log Not interested: timing with that date and they come back round when it arrives. Only use Not interested / stop if they want to be left alone.',
+            note: 'If they give a window, log Not interested: timing with that date. They come back round when it arrives AND they go into the email nurture meanwhile. Only use Not interested / stop if they want to be left alone.',
             log: 'timing',
         },
         busy: {
