@@ -62,7 +62,25 @@ const objections=[
  ['Wrong person / gatekeeper','Who handles the day-to-day operations for the business? Is there a better time to reach them?'],
  ['Not interested / stop','Understood. Thanks for letting me know. Use Not interested / stop below to exclude them from outreach.']
 ];
-function scripts(parent,b){section(parent,'Say this',b.opener,'say');section(parent,'The conversation','Ask one question, then listen. Do not assume they read the emails or need a remote team member.','sub');const stages=[['Understand the work',b.questions[0]],['Find the bottleneck',b.questions[1]],['Make it useful','If we could take one recurring task off your plate, what would make the biggest difference?'],['Agree a next step',b.questions[2]]];let step=0;const guide=el('div',null,'guide');const draw=()=>{guide.replaceChildren(el('div',`${step+1} / ${stages.length} · ${stages[step][0]}`,'gstep'),el('p',stages[step][1],'say'));const nav=el('div',null,'chip-row');if(step)nav.append(button('Previous',()=>{step--;draw();},'btn btn-ghost'));if(step<stages.length-1)nav.append(button('Next question',()=>{step++;draw();}));guide.append(nav);};draw();parent.append(guide);const track=details(parent,'Full conversation script');for(const [title,say] of stages){track.append(el('h3',title,'lbl'),el('p',say,'say'));}const help=details(parent,'Objections & voicemail',true);const chips=el('div',null,'objrow'),answer=el('div','', 'objsay');for(const [label,say] of objections)chips.append(button(label,()=>{answer.textContent=say;answer.classList.add('show');},'objchip'));help.append(chips,answer);section(help,'Voicemail',`Hi, this is ${b.callerName} with Staffify. We sent you over a few notes about the day-to-day work at ${b.company||'your agency'}. Just wanted to introduce myself. You can reply to our email if a conversation would be useful. Thanks.`, 'say');}
+function scripts(parent,b){
+ section(parent,'Say this',b.opener,'say');
+ section(parent,'The conversation','Ask one question, then listen. Do not assume they read the emails or need a remote team member.','sub');
+ // The brief picks these per campaign, so QC and revisions language only reaches media agency
+ // owners. Falls back to the generic questions if an older brief is still cached.
+ const stages=(b.stages&&b.stages.length)?b.stages.map(s=>[s.label,s.say]):[['Understand the work',b.questions[0]],['Find the bottleneck',b.questions[1]],['Make it useful',b.questions[2]],['Agree a next step',b.questions[3]||b.questions[2]]];
+ let step=0;const guide=el('div',null,'guide');
+ const draw=()=>{guide.replaceChildren(el('div',`${step+1} / ${stages.length} · ${stages[step][0]}`,'gstep'),el('p',stages[step][1],'say'));const nav=el('div',null,'chip-row');if(step)nav.append(button('Previous',()=>{step--;draw();},'btn btn-ghost'));if(step<stages.length-1)nav.append(button('Next question',()=>{step++;draw();}));guide.append(nav);};
+ draw();parent.append(guide);
+ const track=details(parent,'Full conversation script');for(const [title,say] of stages){track.append(el('h3',title,'lbl'),el('p',say,'say'));}
+ const help=details(parent,'Objections & voicemail',true);
+ const chips=el('div',null,'objrow'),answer=el('div','','objsay'),hint=el('div','','sub');
+ const bank=(b.objections&&b.objections.length)?b.objections:objections.map(([label,say])=>({label,say,note:''}));
+ // say is read aloud, note is for the caller only. They are separate so nobody reads an
+ // instruction down the phone, which the old single-string bank invited.
+ for(const o of bank)chips.append(button(o.label,()=>{answer.textContent=o.say;answer.classList.add('show');hint.textContent=o.note||'';},'objchip'));
+ help.append(chips,answer,hint);
+ section(help,'Voicemail',b.voicemail||`Hi, this is ${b.callerName} with Staffify. We sent you over a few notes about the day-to-day work at ${b.company||'your business'}. Just wanted to introduce myself. You can reply to our email if a conversation would be useful. Thanks.`,'say');
+}
 function renderCard(panel,row,b){panel.replaceChildren();const head=el('div',null,'headrow');head.append(el('h2',b.company||row.company,'company'),button('Skip for now',()=>{if(busy)return;skipped.add(row.id);showNext();},'btn btn-ghost'));panel.append(head,el('p',[b.name,b.location,'Shared caller queue', 'Sales owner: '+b.owner, row.callOwner?('Call owner: '+row.callOwner+(row.mine?' (you)':'')):'Unclaimed · first outcome claims it', 'Campaign: '+row.campaignId].filter(Boolean).join(' · '),'sub'));
  const grid=el('div',null,'cardgrid'),main=el('div',null,'cardmain'),side=el('div',null,'cardside'),toolsArea=el('div',null,'cardtools');grid.append(main,side,toolsArea);panel.append(grid);const tools=details(toolsArea,'Research, email history & booking links',true);
  section(main,'Prospect details',`${b.name}\n${row.recipient}\n${b.location||'Location not recorded'}\n${row.sentTouches} emails sent · Last sent ${new Date(row.lastSentAt).toLocaleString()}`).style.whiteSpace='pre-wrap';
