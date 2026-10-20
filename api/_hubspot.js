@@ -226,6 +226,7 @@ export async function logNote({ contactId, body, at }) {
 const STATUS = {
     interested: 'OPEN_DEAL', booked: 'OPEN_DEAL', won: 'OPEN_DEAL',
     callback: 'IN_PROGRESS', gatekeeper: 'IN_PROGRESS', voicemail: 'IN_PROGRESS', no_answer: 'ATTEMPTED_TO_CONTACT',
+    timing: 'IN_PROGRESS',
     not_interested: 'UNQUALIFIED', bad_number: 'UNQUALIFIED',
 };
 export async function setLeadStatus(contactId, outcome) {

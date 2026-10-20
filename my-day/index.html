@@ -62,7 +62,7 @@ const el = (t, text, cls) => { const e = document.createElement(t); if (text != 
 const get = async url => { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw Object.assign(Error('HTTP ' + r.status), { status: r.status }); return r.json(); };
 const when = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }); };
 
-const OUTCOME = { connected: 'Connected', callback: 'Callback', no_answer: 'No answer', voicemail: 'Voicemail', wrong_number: 'Wrong number' };
+const OUTCOME = { connected: 'Connected', callback: 'Callback', timing: 'Not now, timing', no_answer: 'No answer', voicemail: 'Voicemail', wrong_number: 'Wrong number' };
 
 function stat(n, label) { const d = el('div', null, 'stat'); d.append(el('b', String(n)), el('span', label)); return d; }
 

@@ -19,6 +19,7 @@ test('stale call-ready flag cannot survive reply, suppression or owner pause',()
 });
 
 import {canUseCallQueue,sharedCallState} from '../api/_outreach-queue.js';
+import {callReady} from '../api/_outreach-policy.js';
 test('caller access does not confer sales owner access and shared queue excludes ineligible records',()=>{
  const caller={email:'caller@example.com',role:'caller'};
  assert.equal(canUseCallQueue(caller),true);assert.equal(ownerFor(caller),null);
@@ -58,4 +59,32 @@ test('first recorded outcome claims the follow-up and a later caller cannot stea
  assert.equal(second.records[0].callOwnerAt,stamped);
  assert.equal(second.records[0].callHistory.length,2);
  assert.equal(second.records[0].callHistory[1].caller,'second@example.com');
+});
+
+test('"not interested: timing" is a yes later, not a suppression',()=>{
+ const due={...row,status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01'};
+ const s={revision:1,records:[due],assignments:[],pausedOwners:[],suppressions:[]};
+ const quarter=new Date(Date.now()+90*864e5).toISOString();
+
+ // It needs a future date, exactly like a callback.
+ assert.throws(()=>controlState(s,{action:'call-outcome',id:due.id,outcome:'timing',nextCallAt:'2020-01-01'},'all','m@x.com'),/future callback time/);
+
+ const next=controlState(s,{action:'call-outcome',id:due.id,outcome:'timing',nextCallAt:quarter},'all','m@x.com');
+ const r=next.records[0];
+ assert.equal(r.callOutcome,'timing');
+ assert.equal(r.nextCallAt,quarter);
+ // Never suppressed: they did not ask to be left alone.
+ assert.equal(next.suppressions.length,0);
+ assert.ok(!/suppress/.test(r.status||''),'status must not be suppressed');
+ // And it claims the follow-up like any other worked call.
+ assert.equal(r.callOwner,'m@x.com');
+});
+
+test('a timing lead comes back round when its date arrives, and not before',()=>{
+ const base={...row,status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01',callOutcome:'timing'};
+ const soon=new Date(Date.now()+30*864e5).toISOString();
+ const past=new Date(Date.now()-864e5).toISOString();
+ assert.equal(callReady({...base,nextCallAt:soon}),false,'not due yet');
+ assert.equal(callReady({...base,nextCallAt:past}),true,'due now');
+ assert.equal(callReady({...base,nextCallAt:null}),false,'no date means it never returns blindly');
 });

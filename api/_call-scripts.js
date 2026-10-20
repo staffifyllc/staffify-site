@@ -166,8 +166,8 @@ function callTree(q, company) {
         },
         future: {
             say: "Understood. Would it be worth me trying you again further down the line, or would you rather I left it?",
-            note: 'If they give a time, log Callback with that date. If they would rather be left, use Not interested / stop.',
-            log: 'callback',
+            note: 'If they give a window, log Not interested: timing with that date and they come back round when it arrives. Only use Not interested / stop if they want to be left alone.',
+            log: 'timing',
         },
         busy: {
             say: "Totally fair, I've caught you cold. Is there a better time later this week, or would you rather I left you to it?",
