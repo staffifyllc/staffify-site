@@ -18,10 +18,37 @@
 // from and that it is not carrier-verified.
 import { redis, requireAccess, SITE, readBody } from './_auth.js';
 import { KEY, ownerFor, visibleState } from './_outreach-queue.js';
-import { account, lookupByEmail, rrConfigured } from './_rocketreach.js';
+import { account, lookupByEmail, checkStatus, rrConfigured } from './_rocketreach.js';
 
 const VENDOR = email => 'staffify:call-phone-vendor:' + String(email).toLowerCase();
 const TRIED = 'staffify:rocketreach:tried';
+// Lookups RocketReach charged for but had not finished. Collected free on the next run, because
+// the credit is gone whether or not we ever read the answer.
+const PENDING = 'staffify:rocketreach:pending';
+
+async function collectPending(redis) {
+    const map = (await redis.get(PENDING)) || {};
+    const ids = Object.values(map).map(v => v && v.id).filter(Boolean);
+    if (!ids.length) return { collected: 0, stillWaiting: 0 };
+    const status = await checkStatus(ids);
+    let collected = 0, stillWaiting = 0;
+    for (const [email, v] of Object.entries(map)) {
+        const got = status[String(v.id)];
+        if (!got || !got.done) { stillWaiting++; continue; }
+        if (got.found) {
+            const best = got.phones.find(p => p.recommended) || got.phones[0];
+            await redis.set(VENDOR(email), {
+                phone: best.number, type: best.type || null, source: 'RocketReach',
+                checkedAt: new Date().toISOString(), name: got.name || null, title: got.title || null,
+                alternates: got.phones.slice(1, 4).map(p => p.number),
+            });
+            collected++;
+        }
+        delete map[email];
+    }
+    await redis.set(PENDING, map);
+    return { collected, stillWaiting };
+}
 const BATCH = 10;
 const BUDGET_MS = 40000;
 
@@ -45,6 +72,8 @@ export default async function handler(req, res) {
 
         // Free. Proves the key and reads the balance before anything is spent.
         const acct = await account();
+        // Also free: anything already paid for and still unresolved is harvested before new spend.
+        const harvested = await collectPending(redis);
 
         if (req.method === 'GET') {
             return res.status(200).json({
@@ -54,6 +83,7 @@ export default async function handler(req, res) {
                 missingPhone: scope.filter(needsPhone).length,
                 alreadyLookedUp: scope.filter(r => tried.has(r.recipient.toLowerCase())).length,
                 wouldLookUp: pending.length,
+                harvested,
                 note: 'POST with confirm=yes to spend credits. Each lookup is charged whether or not a number comes back.',
             });
         }
@@ -76,6 +106,14 @@ export default async function handler(req, res) {
             // The receipt goes down either way. A lookup that found nothing still cost a credit and
             // must never be paid for twice.
             if (!r.retryable) tried.add(email);
+            if (r.pending && r.id) {
+                // Charged and still searching. Recorded so a later run collects it for free, and NOT
+                // written off as tried, or the spend is lost twice over.
+                const map = (await redis.get(PENDING)) || {};
+                map[email] = { id: r.id, at: new Date().toISOString(), company: row.company };
+                await redis.set(PENDING, map);
+                tried.delete(email);
+            }
             if (!r.found) { none.push({ company: row.company, why: r.reason || 'no number', pending: !!r.pending }); continue; }
             const best = r.phones.find(p => p.recommended) || r.phones[0];
             await redis.set(VENDOR(email), {
@@ -89,7 +127,8 @@ export default async function handler(req, res) {
         await redis.set(TRIED, [...tried].slice(-20000));
 
         return res.status(200).json({
-            spentLookups: found.length + none.filter(n => !n.pending).length,
+            harvestedFromEarlierRuns: harvested,
+            spentLookups: found.length + none.length,
             numbersFound: found.length, found,
             noNumber: none,
             remaining: Math.max(0, pending.length - (found.length + none.length)),
