@@ -21,7 +21,10 @@ function errorBox(e){const box=el('div',e.message,'brief');box.setAttribute('rol
 // live check, and no outcome buttons appear because the call is still refused.
 function renderBlocked(panel,row,p,message){
  panel.replaceChildren();
- panel.append(el('h2',p.company||row.company||row.recipient,'company'));
+ const bhead=el('div',null,'headrow');
+ bhead.append(el('h2',p.company||row.company||row.recipient,'company'));
+ const btag=industryTag(p.industry);if(btag)bhead.append(btag);
+ panel.append(bhead);
  const warn=el('div',message,'brief');warn.setAttribute('role','alert');panel.append(warn);
  panel.append(el('p','Reply, opt-out and client exclusions could NOT be re-checked just now, so this prospect is not callable yet. Everything below is from the last queue sync'+(p.syncedAt?' at '+new Date(p.syncedAt).toLocaleString():'')+'.','sub'));
  const grid=el('div',null,'cardgrid'),main=el('div',null,'cardmain'),tools=el('div',null,'cardtools');grid.append(main,tools);panel.append(grid);
@@ -107,7 +110,41 @@ function scripts(parent,b){
  help.append(chips,answer,hint);
  section(help,'Voicemail',b.voicemail||`Hi, this is ${b.callerName} with Staffify. We sent you over a few notes about the day-to-day work at ${b.company||'your business'}. Just wanted to introduce myself. You can reply to our email if a conversation would be useful. Thanks.`,'say');
 }
-function renderCard(panel,row,b){panel.replaceChildren();const head=el('div',null,'headrow');head.append(el('h2',b.company||row.company,'company'),button('Skip for now',()=>{if(busy)return;skipped.add(row.id);showNext();},'btn btn-ghost'));panel.append(head,el('p',[b.name,b.location,'Shared caller queue', 'Sales owner: '+b.owner, row.callOwner?('Call owner: '+row.callOwner+(row.mine?' (you)':'')):'Unclaimed · first outcome claims it', 'Campaign: '+row.campaignId].filter(Boolean).join(' · '),'sub'));
+// Industry tag. A caller glancing at a card should know in one beat whether this is a real estate
+// photographer or the CEO of a security company, because the opener changes completely.
+const ICON={
+ 're-media':'M3 5h18v14H3z M8 5v14 M3 10h5 M3 15h5',
+ 'construction':'M3 21h18 M5 21V9l7-5 7 5v12 M10 21v-6h4v6',
+ 'property':'M3 21h18 M6 21V8l6-4 6 4v13 M10 13h4v8h-4z',
+ 'health':'M12 4v16 M4 12h16',
+ 'finance':'M3 21h18 M5 21V9 M9 21V6 M13 21v-9 M17 21V4',
+ 'software':'M8 6l-5 6 5 6 M16 6l5 6-5 6',
+ 'education':'M3 9l9-5 9 5-9 5z M7 12v5c0 1 2 2 5 2s5-1 5-2v-5',
+ 'marketing':'M4 10v4h3l5 4V6L7 10z M16 9a4 4 0 010 6',
+ 'nonprofit':'M12 20s-7-4.5-7-9a4 4 0 017-2.5A4 4 0 0119 11c0 4.5-7 9-7 9z',
+ 'legal':'M12 3v18 M5 7h14 M5 7l-2 6h4z M19 7l2 6h-4z',
+ 'logistics':'M3 7h11v9H3z M14 10h4l3 3v3h-7z M7 19a2 2 0 100-4 2 2 0 000 4 M18 19a2 2 0 100-4 2 2 0 000 4',
+ 'hospitality':'M7 3v8a3 3 0 006 0V3 M10 11v10 M17 3c-1.5 2-2 4-2 6s.5 3 2 3v9',
+ 'home-services':'M14 7a4 4 0 00-5.5 5.5L4 17l3 3 4.5-4.5A4 4 0 0017 10',
+ 'other':'M12 3a9 9 0 100 18 9 9 0 000-18 M12 8v5 M12 16h.01'
+};
+function industryTag(ind){
+ if(!ind||!ind.label)return null;
+ const wrap=el('span',null,'indtag');
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','15');svg.setAttribute('height','15');
+ svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');
+ svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');
+ const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+ path.setAttribute('d',ICON[ind.key]||ICON.other);svg.append(path);
+ wrap.append(svg,el('span',ind.label));
+ // Where the tag came from, so a wrong one is traceable rather than mysterious.
+ wrap.title=ind.source==='CRM'?'Industry from the CRM record'
+   :ind.source==='campaign'?'This campaign is the real estate media list'
+   :'Inferred from their own website';
+ return wrap;
+}
+function renderCard(panel,row,b){panel.replaceChildren();const head=el('div',null,'headrow');head.append(el('h2',b.company||row.company,'company'),industryTag(b.industry)||el('span'),button('Skip for now',()=>{if(busy)return;skipped.add(row.id);showNext();},'btn btn-ghost'));panel.append(head,el('p',[b.name,b.location,'Shared caller queue', 'Sales owner: '+b.owner, row.callOwner?('Call owner: '+row.callOwner+(row.mine?' (you)':'')):'Unclaimed · first outcome claims it', 'Campaign: '+row.campaignId].filter(Boolean).join(' · '),'sub'));
  const grid=el('div',null,'cardgrid'),main=el('div',null,'cardmain'),side=el('div',null,'cardside'),toolsArea=el('div',null,'cardtools');grid.append(main,side,toolsArea);panel.append(grid);const tools=details(toolsArea,'Research, email history & booking links',true);
  section(main,'Prospect details',`${b.name}\n${row.recipient}\n${b.location||'Location not recorded'}\n${row.sentTouches} emails sent · Last sent ${new Date(row.lastSentAt).toLocaleString()}`).style.whiteSpace='pre-wrap';
  const phone=section(main,'Call from your business line',null,'phone');if(b.phone){phone.append(link(b.phone,'tel:'+b.phone),link('Call now','tel:'+b.phone,'call'),button('Copy number',async()=>{try{await navigator.clipboard.writeText(b.phone);}catch{phone.append(el('p','Select and copy the number above.'));}},'btn btn-ghost'));}else phone.append(el('p','Number not confirmed. Research before calling.'));main.append(el('p','On iPhone, tap Call now and use your business line. The Hub does not detect or record iPhone calls automatically.','sub'));
