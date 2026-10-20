@@ -57,6 +57,7 @@
 // dialer rotation. These are read from the SAME shared queue every caller already sees; nothing
 // here is a second source of truth and no new endpoint was added.
 const CAMPAIGN = 'staffify-tobit-outreach';
+const DISCOVERY_LINK = 'https://calendly.com/go-staffify/discovery-call';
 const $ = id => document.getElementById(id);
 const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 const link = (label, href, cls = 'btn btn-ghost') => { const a = el('a', label, cls); a.href = href; a.target = '_blank'; a.rel = 'noopener'; return a; };
@@ -104,6 +105,9 @@ const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/
         if (r.source && r.source.url) acts.append(link('Their website', href(r.source.url)));
         if (r.crmContactId) acts.append(link('Open CRM contact', 'https://app.hubspot.com/contacts/51666712/record/0-1/' + r.crmContactId));
         acts.append(link('Email them', 'mailto:' + r.recipient, 'btn'));
+        // Same discovery link the dialer offers, so a CEO who replies can be booked without
+        // hunting for it in another tab.
+        acts.append(link('Book the discovery call', DISCOVERY_LINK));
         if (!(r.callContact && r.callContact.phone)) acts.append(el('span', 'no direct line', 'pill'));
         a.append(acts);
 

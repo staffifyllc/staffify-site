@@ -22,6 +22,11 @@ const opener = (caller, company) =>
     + `We sent you over a few notes by email about handing off recurring work at ${company}. `
     + `Do you have a quick second?`;
 
+// Paul's discovery call, the same link the pitch pages use. Server-supplied so a caller always
+// has a working one: the live Calendly fetch can come back empty, and "no confirmed discovery
+// link available" in the middle of a good call is the worst possible moment to find that out.
+export const DISCOVERY_LINK = 'https://calendly.com/go-staffify/discovery-call';
+
 const CLOSE = "Would it be worth half an hour to map out what that role actually looks like? No pitch, I genuinely just want to see whether it's a fit.";
 
 const SCRIPTS = {
@@ -198,6 +203,7 @@ export function callScript({ campaignId, caller, company, firstName }) {
         stages: (STAGE_LABELS[pick.questions.length] || STAGE_LABELS[4]).map((label, i) => ({ label, say: pick.questions[i] })).filter(s => s.say),
         objections: OBJECTIONS.map(([label, say, note]) => ({ label, say, note })),
         voicemail: voicemail(caller, who),
+        bookingUrl: DISCOVERY_LINK,
         tree: callTree(pick.questions, company),
     };
 }
