@@ -10,7 +10,6 @@
  more.append(menu);nav.append(more);if(old)old.replaceWith(nav);else header.append(nav);
  document.addEventListener('click',e=>{if(!more.contains(e.target))more.open=false;});document.addEventListener('keydown',e=>{if(e.key==='Escape'){more.open=false;summary.focus();}});
  const logo=header.querySelector('img');if(logo&&!logo.closest('a')){const a=make('','/hub/');a.setAttribute('aria-label','Staffify home');logo.replaceWith(a);a.append(logo);}
- fetch('/api/auth-me/',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(d?.rep?.workspace==='/sales-workspace/'){nav.replaceChildren(...[['My workspace','/sales-workspace/'],['Team calls','/dialer/'],['Training','/sales-workspace/#training'],['My pay','/sales-workspace/#pay'],['Updates','/sales-workspace/#updates']].map(x=>make(...x)));const home=header.querySelector('a[aria-label="Staffify home"]');if(home)home.href='/sales-workspace/';}}).catch(()=>{});
  header.classList.add('portal-header');
  const content=document.querySelector('main,#app,.wrap,.page,.shell');if(content){if(!content.id)content.id='portal-content';const skip=make('Skip to content','#'+content.id);skip.className='portal-skip';document.body.prepend(skip);}
  if(location.hostname==='127.0.0.1'||location.hostname==='localhost'){const note=document.createElement('aside');note.className='portal-preview';note.textContent='Design preview · Sample or saved data. ';note.append(make('Open live Staffify','https://www.gostaffify.com'+location.pathname+location.search));document.body.prepend(note);}

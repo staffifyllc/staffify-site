@@ -1,4 +1,3 @@
-import {miltonIdentity} from './_milton-plan.js';
 // GET /api/auth-google-callback?code=...&state=...
 //
 // Google sends the browser back here. We swap the code for an id_token over a server-to-server call
@@ -73,6 +72,6 @@ export default async function handler(req, res) {
 
     const sid = await createSession(email);
     setSessionCookie(res, sid);
-    res.writeHead(302, { Location: miltonIdentity(rep) ? '/sales-workspace/' : rep.role === 'admin' ? '/hub/' : '/my-day/' });
+    res.writeHead(302, { Location: rep.role === 'admin' ? '/hub/' : '/my-day/' });
     return res.end();
 }
