@@ -55,7 +55,7 @@ test('objections separate what is said from the caller note',()=>{
 });
 
 test('the call tree is complete: every branch leads somewhere and ends on a real disposition',()=>{
- const OUTCOMES=new Set(['connected','callback','no_answer','voicemail','wrong_number','suppress']);
+ const OUTCOMES=new Set(['connected','callback','timing','no_answer','voicemail','wrong_number','suppress']);
  for(const id of ['staffify-agency-outreach','staffify-tobit-outreach','staffify-talent-network-outreach']){
   const t=callScript({campaignId:id,caller:'Milton',company:'Picture KC',firstName:'Joel'}).tree;
   assert.ok(t.open,'has an entry node');
@@ -111,5 +111,20 @@ test('the close asks for the meeting at every question count',()=>{
   const s=callScript({campaignId:id,caller:'M',company:'C',firstName:'J'});
   assert.ok(/half an hour/i.test(s.tree.close.say),id+' close must ask for the meeting, got: '+s.tree.close.say);
   assert.equal(s.tree.close.say,s.questions[s.questions.length-1]);
+ }
+});
+
+test('the reason beat is said before any question, on every route in',()=>{
+ for(const id of ['staffify-agency-outreach','staffify-tobit-outreach','staffify-talent-network-outreach']){
+  const s=callScript({campaignId:id,caller:'Milton',company:'Picture KC',firstName:'Joel'});
+  assert.ok(s.reason,'reason present');
+  assert.ok(/only call a few people/i.test(s.reason),'the pattern interrupt');
+  assert.ok(/six million/i.test(s.reason),'the founder credential');
+  // Both ways into the conversation go through it before discovery.
+  assert.equal(s.tree.open.choices[0][1],'reason','"go ahead" hits the reason first');
+  assert.equal(s.tree.context.choices[0][1],'reason','"what is this about" rejoins at the reason');
+  assert.equal(s.tree.reason.choices[0][1],'discover','and it leads into the first question');
+  // It is a statement, not a discovery question, so it must not be counted as a stage.
+  assert.ok(!s.stages.some(st=>st.say===s.reason),'never rendered as a question stage');
  }
 });

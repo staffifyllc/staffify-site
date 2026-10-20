@@ -68,6 +68,9 @@ const objections=[
 ];
 function scripts(parent,b){
  section(parent,'Say this',b.opener,'say');
+ // The beat between the opener and the first question. Its own section so a caller sees it
+ // before they start asking, rather than finding it buried in the branching guide.
+ if(b.reason)section(parent,'Then say this',b.reason,'say');
  section(parent,'The conversation','Ask one question, then listen. Do not assume they read the emails or need a remote team member.','sub');
  // The brief picks these per campaign, so QC and revisions language only reaches media agency
  // owners. Falls back to the generic questions if an older brief is still cached.
