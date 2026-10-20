@@ -1,48 +1,63 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {callerPlan, planSummary, ELIGIBILITY} from '../api/_caller-plan.js';
+import {callerPlan, planSummary, ELIGIBILITY, emailMismatch} from '../api/_caller-plan.js';
 
-const MILTON='miltion@trystaffify.com';
+// Source: Staffify_Agreement_Milton_Signed.pdf, signed 2026-10-20. Section 15 supersedes earlier
+// proposals including "different base compensation amounts", so anything relayed verbally loses.
+const CONTRACT='milton@trystaffify.com';
 
-test('the plan matches the terms Paul confirmed, exactly',()=>{
- const p=callerPlan(MILTON);
- assert.equal(p.weeklyBase,160);
- assert.equal(p.biweeklyBase,320);
- assert.equal(p.onboardingCommission,650);
- assert.equal(p.residualPerHour,0,'no trial residuals');
- assert.equal(p.trialStart,'2026-10-26');
- assert.equal(p.trialEnd,'2026-11-24');
- assert.match(p.schedule,/UTC-5/);
- assert.ok(!/eastern/i.test(p.schedule),'fixed offset, not daylight-shifting Eastern');
+test('the figures are the signed ones, not the ones relayed beforehand',()=>{
+ const p=callerPlan(CONTRACT);
+ assert.equal(p.weeklyBase,200,'5.1: $200 a week');
+ assert.equal(p.biweeklyBase,400,'5.1: $400 biweekly');
+ assert.equal(p.onboardingCommission,400,'5.2: flat $400 per collected onboarding fee');
+ assert.equal(p.weeklyHours,20);
+ // The superseded numbers must not survive anywhere in the plan.
+ const values=Object.values(p).filter(v=>typeof v==='number');
+ for(const wrong of [160,320,650]) assert.ok(!values.includes(wrong),`${wrong} is superseded and must not appear`);
 });
 
-test('the dates Paul left open stay open, never invented',()=>{
- const p=callerPlan(MILTON);
- assert.equal(p.firstPayday,null);
+test('the trial runs the dates the agreement sets',()=>{
+ const p=callerPlan(CONTRACT);
+ assert.equal(p.trialStart,'2026-10-20','1: services begin October 20');
+ assert.equal(p.trialEnd,'2026-11-18','1: 30-day trial ends November 18');
+ assert.match(p.schedule,/UTC-5/);
+ assert.ok(!/daylight/i.test(p.schedule));
+});
+
+test('no residuals, no appointment fee, no cap',()=>{
+ const p=callerPlan(CONTRACT);
+ assert.equal(p.residualPerHour,0,'5.4: no residuals during the trial');
+ assert.equal(p.appointmentFee,0,'5.4: no separate appointment fee');
+ assert.equal(p.commissionCapped,false,'5.2: no cap');
+ assert.equal(p.mustClosePersonally,false,'5.2: need not close personally');
+});
+
+test('what the agreement leaves open stays open',()=>{
+ const p=callerPlan(CONTRACT);
+ assert.equal(p.firstPayday,null,'5.3: calendar provided before services begin');
  assert.equal(p.payrollCutoff,null);
  assert.equal(planSummary(p).paydayKnown,false);
 });
 
-test('the address is the one provisioned, and case does not matter',()=>{
- assert.ok(callerPlan('Miltion@TryStaffify.com'),'case insensitive');
- // The deliberate misspelling is the real login; the obvious spelling is not.
- assert.equal(callerPlan('milton@trystaffify.com'),null);
- for(const e of ['hello@gostaffify.com','madison@gostaffify.com','',null]) assert.equal(callerPlan(e),null);
+test('the provisioned login resolves, and the mismatch is reported not hidden',()=>{
+ // Section 14 names milton@; the Hub account was created as "miltion".
+ assert.ok(callerPlan('miltion@trystaffify.com'),'he can still see his own pay');
+ assert.ok(callerPlan('Milton@TryStaffify.com'),'case insensitive');
+ const m=emailMismatch('miltion@trystaffify.com');
+ assert.equal(m.onContract,CONTRACT);
+ assert.equal(emailMismatch(CONTRACT),null,'no mismatch when signed in as the contract address');
+ assert.equal(callerPlan('someone@else.com'),null);
 });
 
-test('the gap between calling and the written trial is surfaced, not resolved',()=>{
- const p=callerPlan(MILTON);
- const during=planSummary(p,new Date('2026-10-22T12:00:00Z'));
- assert.equal(during.callingBeforeTrial,true,'flagged in the six day gap');
- assert.equal(during.started,false,'the written trial has not opened');
- const after=planSummary(p,new Date('2026-10-28T12:00:00Z'));
- assert.equal(after.callingBeforeTrial,false);
- assert.equal(after.started,true);
-});
-
-test('the bar for a fee is stated, including the upfront rule',()=>{
+test('eligibility states that collection, not signature, earns the fee',()=>{
  const all=ELIGIBILITY.join(' ').toLowerCase();
- assert.ok(/cleared/.test(all),'funds must clear');
- assert.ok(/separate/.test(all),'one fee, one commission');
- assert.ok(/no financing|instalments|discounts/.test(all),'the upfront rule');
+ assert.ok(/cleared funds/.test(all),'5.2: in full, in cleared funds');
+ assert.ok(/does not create a payable commission/.test(all),'a signed agreement alone earns nothing');
+ assert.ok(/instalments toward one fee/.test(all),'5.2: instalments are one commission');
+ assert.ok(/hubspot/.test(all),'6: HubSpot is the attribution record');
+});
+
+test('the post-trial attribution window is the contractual 90 days',()=>{
+ assert.equal(callerPlan(CONTRACT).postTrialAttributionDays,90);
 });

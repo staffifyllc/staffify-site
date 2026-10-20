@@ -30,8 +30,16 @@ export const DISCOVERY_LINK = 'https://calendly.com/go-staffify/discovery-call';
 // A caller books onto their OWN calendar. Sending every prospect to the same link puts meetings
 // in front of whoever owns that one, which is not the person who just had the conversation.
 // Keyed by the signed-in address, with Paul's shared link as the fallback for anyone unmapped.
+// EMPTY ON PURPOSE. Section 4 of Milton's signed agreement (2026-10-20) requires every discovery
+// call to be booked through Paul's link and states the Representative "must not use another
+// scheduling link without the Company's written authorization". Section 6 then ties his commission
+// attribution to the booking being recorded under Section 4, so routing him to his own link would
+// put his own fee at risk, not just breach the clause.
+//
+// His link exists and works (calendly.com/go-staffify/milton). Add the entry back the moment Paul
+// gives that authorization in writing, and every surface picks it up from here.
 const CALLER_LINKS = {
-    'miltion@trystaffify.com': 'https://calendly.com/go-staffify/milton',
+    // 'milton@trystaffify.com': 'https://calendly.com/go-staffify/milton',
 };
 export const bookingLinkFor = email => CALLER_LINKS[String(email || '').trim().toLowerCase()] || DISCOVERY_LINK;
 

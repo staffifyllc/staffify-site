@@ -129,19 +129,18 @@ test('the reason beat is said before any question, on every route in',()=>{
  }
 });
 
-test('a caller books onto their own calendar',async()=>{
+test('everyone books through the contract link until a caller is authorized otherwise',async()=>{
  const {bookingLinkFor}=await import('../api/_call-scripts.js');
- assert.equal(bookingLinkFor('miltion@trystaffify.com'),'https://calendly.com/go-staffify/milton');
- // The address is the one provisioned, spelling and all, and case must not matter.
- assert.equal(bookingLinkFor('Miltion@TryStaffify.com'),'https://calendly.com/go-staffify/milton');
- // Anyone unmapped falls back to the shared link rather than to nothing.
- for(const e of ['hello@gostaffify.com','someone@else.com','',null,undefined])
-  assert.equal(bookingLinkFor(e),'https://calendly.com/go-staffify/discovery-call',`${e} should fall back`);
+ const CONTRACT='https://calendly.com/go-staffify/discovery-call';
+ // Section 4 of the signed agreement requires Paul's link; Section 6 ties attribution to the
+ // booking being recorded under it, so a personal link would risk the caller's own commission.
+ for(const e of ['milton@trystaffify.com','miltion@trystaffify.com','hello@gostaffify.com','',null,undefined])
+  assert.equal(bookingLinkFor(e),CONTRACT,`${e} must use the contract link`);
 });
 
-test('the brief hands the caller their own link',()=>{
- const milton=callScript({campaignId:'staffify-agency-outreach',caller:'Milton',callerEmail:'miltion@trystaffify.com',company:'C',firstName:'J'});
- assert.equal(milton.bookingUrl,'https://calendly.com/go-staffify/milton');
+test('the brief hands out the contract booking link',()=>{
+ const milton=callScript({campaignId:'staffify-agency-outreach',caller:'Milton',callerEmail:'milton@trystaffify.com',company:'C',firstName:'J'});
+ assert.equal(milton.bookingUrl,'https://calendly.com/go-staffify/discovery-call');
  const other=callScript({campaignId:'staffify-agency-outreach',caller:'Paul',callerEmail:'hello@gostaffify.com',company:'C',firstName:'J'});
  assert.equal(other.bookingUrl,'https://calendly.com/go-staffify/discovery-call');
  // No identity at all still yields a usable link.
