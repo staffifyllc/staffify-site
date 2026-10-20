@@ -6,7 +6,7 @@ const drafts=new Map(), skipped=new Set();
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!=null)e.textContent=text;if(cls)e.className=cls;return e;};
 const button=(label,fn,cls='btn')=>{const b=el('button',label,cls);b.onclick=fn;return b;};
 const link=(label,url,cls='btn btn-ghost')=>{const a=el('a',label,cls);a.href=url;if(!url.startsWith('tel:')){a.target='_blank';a.rel='noopener';}return a;};
-async function api(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Could not load current data');return j;}
+async function api(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});const j=await r.json();if(!r.ok){const err=Error(j.error||'Could not load current data');err.payload=j;err.status=r.status;throw err;}return j;}
 const rows=()=>orderCallQueue(state.records,{campaign:selectedCampaign,owner:selectedOwner,search,research});
 const positionKey=()=>`staffify-call-position:${selectedCampaign}:${selectedOwner}:${research}`;
 function remember(id){try{sessionStorage.setItem(positionKey(),id);}catch{}}
@@ -15,6 +15,26 @@ function move(offset){if(busy)return;const list=rows(),index=list.findIndex(r=>r
 
 function stash(){if(!current)return;const notes=document.getElementById('call-notes'),due=document.getElementById('callback-at');if(notes)drafts.set(current.id,{notes:notes.value,due:due?.value||'',outcome:document.querySelector('[data-outcome].sel')?.dataset.outcome||''});}
 function errorBox(e){const box=el('div',e.message,'brief');box.setAttribute('role','alert');return box;}
+// A prospect we will not call is not a prospect with nothing to show. The queue already holds the
+// research, the website and the full email trail from the last worker sync, so render it read only
+// with the date it was gathered. Stale evidence is labelled as stale; it is never passed off as a
+// live check, and no outcome buttons appear because the call is still refused.
+function renderBlocked(panel,row,p,message){
+ panel.replaceChildren();
+ panel.append(el('h2',p.company||row.company||row.recipient,'company'));
+ const warn=el('div',message,'brief');warn.setAttribute('role','alert');panel.append(warn);
+ panel.append(el('p','Reply, opt-out and client exclusions could NOT be re-checked just now, so this prospect is not callable yet. Everything below is from the last queue sync'+(p.syncedAt?' at '+new Date(p.syncedAt).toLocaleString():'')+'.','sub'));
+ const grid=el('div',null,'cardgrid'),main=el('div',null,'cardmain'),tools=el('div',null,'cardtools');grid.append(main,tools);panel.append(grid);
+ section(main,'Prospect details',[p.recipient,(p.sentTouches||0)+' emails sent',p.lastSentAt?'Last sent '+new Date(p.lastSentAt).toLocaleString():''].filter(Boolean).join('\n')).style.whiteSpace='pre-wrap';
+ if(p.website)main.append(link('Their website',/^https?:\/\//.test(p.website)?p.website:'https://'+p.website));
+ if(p.source?.url&&/^https?:\/\//.test(p.source.url))main.append(link('Research source',p.source.url));
+ if(p.source?.excerpt)section(main,'Business context',p.source.excerpt);
+ const trail=details(tools,'Past emails · '+(p.events||[]).length+' messages',true);
+ for(const e of p.events||[]){const m=details(trail,e.kind+' · '+new Date(e.at).toLocaleString()+' · '+(e.subject||'')); m.append(el('p',e.mailbox||'','sub'));const b=el('pre',e.body||'');b.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;font:inherit';m.append(b);}
+ const hist=details(tools,'Previous calls · '+(p.callHistory||[]).length,true);
+ for(const c of p.callHistory||[])hist.append(el('p',new Date(c.at).toLocaleString()+' · '+(c.caller||'')+' · '+c.outcome),el('p',c.notes||'No notes'));
+ panel.append(button('Retry this prospect',()=>show(row)),button('Skip to next',()=>{skipped.add(row.id);showNext();},'btn btn-ghost'));
+}
 function toolbar(){const bar=el('div',null,'toprow');const title=el('div');title.append(el('div','SHARED CALL WORKSPACE','eyebrow'),el('h1','Team calls'),el('p','One shared queue · All sales owners · One prospect at a time.','sub'));bar.append(title);const tools=el('div',null,'chip-row');const campaign=el('select');campaign.setAttribute('aria-label','Campaign');const names={'all':'All campaigns','staffify-agency-outreach':'Staffify agency outreach','staffify-tobit-outreach':'CEO b2b outreach','staffify-talent-network-outreach':'Talent network outreach'};for(const id of new Set(['all',selectedCampaign,...(state?.records||[]).map(r=>r.campaignId)])){const o=el('option',names[id]||id);o.value=id;campaign.append(o);}campaign.value=selectedCampaign;campaign.onchange=()=>{stash();selectedCampaign=campaign.value;syncUrl();skipped.clear();current=null;showNext();};const ownerSel=el('select');ownerSel.setAttribute('aria-label','Sales owner');for(const [label,value] of [['All sales owners','all'],['Paul','Paul'],['Madison','Madison']]){const o=el('option',label);o.value=value;ownerSel.append(o);}ownerSel.value=selectedOwner;ownerSel.onchange=()=>{stash();selectedOwner=ownerSel.value;syncUrl();skipped.clear();current=null;showNext();};const find=el('input');find.placeholder='Find company, email or number';find.setAttribute('aria-label','Find prospect');find.value=search;find.onchange=()=>{stash();search=find.value;showNext();};tools.append(link('Campaign overview','/campaigns/'),campaign,ownerSel,find,button('Refresh queue',()=>refresh().catch(fail),'btn btn-ghost'));const filters=el('details',null,'queue-options');filters.append(el('summary','Queue options'),tools);bar.append(filters);return bar;}
 
 function fail(e){app.replaceChildren(toolbar(),errorBox(e),button('Retry',()=>refresh().catch(fail)));}
@@ -28,7 +48,7 @@ async function refresh(){stash();state=await api('/api/outreach-queue/?view=call
 async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id));if(row)return show(row);current=null;shell();const empty=el('section',null,'card');empty.append(el('h2',list.length?'You’ve reached the end':'You’re caught up'),el('p',list.length?'Your skipped prospects are still in this queue. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Review skipped prospects',()=>{skipped.clear();showNext();}));app.append(empty);}
 
 async function show(row){stash();current=row;remember(row.id);const version=++requestId;shell();const panel=el('section',null,'card');app.append(panel);panel.append(el('h2',row.company||row.recipient,'company'),el('p','Checking live mailboxes, CRM, exclusions and business number…','brief'),button('Skip for now',()=>{if(busy)return;skipped.add(row.id);showNext();},'btn btn-ghost'));
- try{const brief=await api('/api/outreach-call-brief/?id='+encodeURIComponent(row.id));if(version!==requestId)return;renderCard(panel,row,brief);}catch(e){if(version!==requestId)return;panel.append(errorBox(e),button('Retry this prospect',()=>show(row)));}}
+ try{const brief=await api('/api/outreach-call-brief/?id='+encodeURIComponent(row.id));if(version!==requestId)return;renderCard(panel,row,brief);}catch(e){if(version!==requestId)return;if(e.payload&&e.payload.callable===false)return renderBlocked(panel,row,e.payload,e.message);panel.append(errorBox(e),button('Retry this prospect',()=>show(row)));}}
 function section(parent,title,text,cls='brief'){parent.append(el('h2',title,'lbl'));const content=el('div',text,cls);parent.append(content);return content;}
 // A filtered queue is a shareable link again: ?campaign= and ?owner= survive a reload and a paste.
 function syncUrl(){const u=new URL(location.href);selectedCampaign==='all'?u.searchParams.delete('campaign'):u.searchParams.set('campaign',selectedCampaign);selectedOwner==='all'?u.searchParams.delete('owner'):u.searchParams.set('owner',selectedOwner);history.replaceState(null,'',u);}
