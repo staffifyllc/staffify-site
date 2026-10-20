@@ -12,6 +12,10 @@ export const CALLER_PLANS = {
     'milton@trystaffify.com': Object.freeze({
         name: 'Milton',
         legalName: 'Milton Hodgson Gaitan',
+        // How this person is written on a client account in the finance ledger
+        // (finance:account-owners:v1 -> rep). It is what ties the signed plan below to the QBO
+        // evidence, so one attribution decides both his view and Paul's.
+        handle: 'milton',
         version: '2026-10-20-signed',
         source: 'Sales Representative Services Agreement, signed 2026-10-20',
 
@@ -62,6 +66,21 @@ export const callerPlan = email => {
     return CALLER_PLANS[e] || null;
 };
 export const hasCallerPlan = email => !!callerPlan(email);
+
+// By ledger handle rather than by login, for the finance side.
+const BY_HANDLE = Object.fromEntries(Object.values(CALLER_PLANS).filter(p => p.handle).map(p => [p.handle, p]));
+export const callerPlanByHandle = handle => BY_HANDLE[String(handle || '').trim().toLowerCase()] || null;
+export const CALLER_HANDLES = Object.keys(BY_HANDLE);
+
+/**
+ * 5.2: a FLAT fee per qualifying onboarding fee collected, not a share of it. Returns the dollar
+ * amount for a rep on a flat trial plan, or null for a percentage rep (Paul, Madison), which is
+ * what the commission ladder keys off.
+ */
+export const flatOnboardingCommission = handle => {
+    const plan = callerPlanByHandle(handle);
+    return plan && Number.isFinite(plan.onboardingCommission) ? plan.onboardingCommission : null;
+};
 export const emailMismatch = email =>
     String(email || '').trim().toLowerCase() === PROVISIONED_ALIAS
         ? { signedIn: PROVISIONED_ALIAS, onContract: CONTRACT_EMAIL }

@@ -9,12 +9,16 @@
 // does not compute company totals, and there is no parameter that lets a caller ask about anyone
 // but themselves.
 //
+// It reads the SAME ledger the owner view reads, filtered to his own accounts, so his page and
+// Paul's page can never disagree about what he has earned. The earlier version read a separate
+// hand-entered store that nothing ever wrote, which is why both screens showed nothing at all.
+//
 // GET /api/my-commissions/ -> { plan, credited:[], totals, notes }
 import { requireAccess, redis } from './_auth.js';
 import { callerPlan, planSummary, emailMismatch } from './_caller-plan.js';
 
-// Written only by the owner attribution path. A caller can read their own row and nothing more.
-const CREDITED_KEY = 'finance:caller-onboardings:v1';
+// Built by /api/account-commissions/ from QBO invoices, payments and verified settlements.
+const LEDGER = 'finance:account-ledger:v1';
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store');
@@ -27,40 +31,58 @@ export default async function handler(req, res) {
         const plan = callerPlan(email);
         if (!plan) return res.status(404).json({ error: 'No trial plan is on file for this account', name: rep.name || null });
 
-        // Their own credited fees. Filtered by the session's address, never by a parameter, so
-        // there is no shape of request that returns somebody else's.
-        let credited = [];
+        // His own accounts, by the handle on his plan. Filtered from the session's plan, never from
+        // a parameter, so there is no shape of request that returns somebody else's.
+        let mine = [], ledgerAt = null, ledgerReadable = true;
         try {
-            const raw = (await redis.hgetall(CREDITED_KEY)) || {};
-            credited = Object.values(raw)
-                .map(v => (typeof v === 'string' ? JSON.parse(v) : v))
-                .filter(x => x && String(x.email || '').toLowerCase() === email)
-                .sort((a, b) => String(b.clearedAt || '').localeCompare(String(a.clearedAt || '')));
-        } catch { credited = []; }
+            const snap = await redis.get(LEDGER);
+            if (!snap || !Array.isArray(snap.accounts)) ledgerReadable = false;
+            else {
+                ledgerAt = snap.updatedAt || null;
+                mine = snap.accounts.filter(a => String(a.rep || '').toLowerCase() === plan.handle);
+            }
+        } catch { ledgerReadable = false; }
 
+        // One line per invoice that carries a commission. Only his own fields are copied across:
+        // no company revenue, no other rep, no customer list.
+        const credited = mine.flatMap(a => (a.invoices || [])
+            .filter(i => (i.placementEarned || 0) > 0 || (i.placementPending || 0) > 0)
+            .map(i => ({
+                client: a.contactName ? a.contactName + ' / ' + a.name : a.name,
+                invoice: i.number || null,
+                date: i.date || null,
+                status: (i.placementEarned || 0) > 0 ? 'cleared' : 'pending',
+                amount: i.placementEarned || 0,
+                awaiting: (i.placementEarned || 0) > 0 ? 0 : (i.placementPending || 0),
+                collection: i.status || null,
+                funds: i.cashStatus || null,
+                earliestPayroll: i.payrollDate || null,
+                holds: Array.isArray(i.holds) ? i.holds : [],
+            })))
+            .sort((x, y) => String(y.date || '').localeCompare(String(x.date || '')));
+
+        const sum = k => Math.round(mine.reduce((n, a) => n + (a[k] || 0), 0) * 100) / 100;
         const summary = planSummary(plan);
         const mismatch = emailMismatch(email);
-        const earned = credited.filter(c => c.status === 'cleared').length * plan.onboardingCommission;
-        const pending = credited.filter(c => c.status !== 'cleared').length;
 
         return res.status(200).json({
             name: plan.name,
             plan: summary,
-            credited: credited.map(c => ({
-                client: c.client || null, status: c.status || 'pending',
-                bookedAt: c.bookedAt || null, clearedAt: c.clearedAt || null,
-                amount: c.status === 'cleared' ? plan.onboardingCommission : 0,
-            })),
+            ledger: { readable: ledgerReadable, updatedAt: ledgerAt, accounts: mine.length },
+            credited,
             emailOnRecord: mismatch,
             totals: {
-                commissionCleared: earned,
-                awaitingClearance: pending,
+                commissionCleared: sum('placementEarned'),
+                awaitingCollection: sum('placementPending'),
+                clearedForPayroll: sum('placementCashEligible'),
                 // Base pay is owed for hours worked and is not computed here. Showing a running
                 // base total would imply this page is the payroll record, and it is not.
                 baseWeekly: plan.weeklyBase, baseBiweekly: plan.biweeklyBase,
             },
             source: plan.source,
             notes: [
+                ...(ledgerReadable ? [] : ['The finance ledger could not be read just now, so these figures are not current. They are not a statement that you have earned nothing.']),
+                ...(ledgerReadable && !mine.length ? ['No client account is attributed to you yet. A commission appears here once Paul attributes the account and the onboarding fee is collected.'] : []),
                 'Eligible commission is not proof of payout. Payroll confirms every payment.',
                 'There are no automatic bank transfers from this view.',
                 // 5.3: the company owes him this before services begin, so the gap is named.

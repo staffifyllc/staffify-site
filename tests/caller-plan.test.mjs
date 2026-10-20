@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {callerPlan, planSummary, ELIGIBILITY, emailMismatch} from '../api/_caller-plan.js';
+import {callerPlan, planSummary, ELIGIBILITY, emailMismatch, CALLER_PLANS, CALLER_HANDLES, callerPlanByHandle} from '../api/_caller-plan.js';
 
 // Source: Staffify_Agreement_Milton_Signed.pdf, signed 2026-10-20. Section 15 supersedes earlier
 // proposals including "different base compensation amounts", so anything relayed verbally loses.
@@ -60,4 +60,15 @@ test('eligibility states that collection, not signature, earns the fee',()=>{
 
 test('the post-trial attribution window is the contractual 90 days',()=>{
  assert.equal(callerPlan(CONTRACT).postTrialAttributionDays,90);
+});
+
+test('the plan carries the ledger handle that ties it to the QBO evidence', () => {
+ // Without this, his commission has no way to reach either screen: the finance ledger attributes a
+ // client account to a rep handle, and nothing matched him.
+ const plan = CALLER_PLANS['milton@trystaffify.com'];
+ assert.equal(plan.handle, 'milton');
+ assert.equal(callerPlanByHandle('milton'), plan);
+ assert.equal(callerPlanByHandle('Milton'), plan);
+ assert.equal(callerPlanByHandle('paul'), null, 'a percentage rep has no trial plan');
+ assert.deepEqual(CALLER_HANDLES, ['milton']);
 });

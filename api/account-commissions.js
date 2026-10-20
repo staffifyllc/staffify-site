@@ -5,6 +5,10 @@ import {applyPayrollGate} from './_commission-payroll.js';
 import {hirePrompts} from './_commission-hires.js';
 import {hoursByClient} from './_hubstaff.js';
 import {accountLedger,matchServiceHours} from './_account-commissions.js';
+import {CALLER_HANDLES,callerPlanByHandle} from './_caller-plan.js';
+// Paul and Madison earn a share of the fee. A caller on a signed trial plan earns a flat fee per
+// collected fee. Both are assignable here, because one attribution store has to decide both.
+const REPS=['paul','madison',...CALLER_HANDLES];
 const KEY='finance:account-owners:v1',SNAP='finance:account-ledger:v1';
 const parse=x=>typeof x==='string'?JSON.parse(x):x;
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -30,7 +34,10 @@ async function refresh(){
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const payroll=applyPayrollGate(ledger,clearances,today);
  const talent=await hirePrompts({redis,accounts}).catch(e=>({connected:false,error:e.message,prompts:[]}));
- const snapshot={payroll,talent,updatedAt:new Date().toISOString(),accounts:ledger,hubstaffConnected:!!hours.connected&&!hours.truncated,customers:customers.map(c=>({id:String(c.Id),name:c.DisplayName})),missing,status:'complete'};
+ // So the screen can state a flat rep's terms from the signed agreement instead of printing a
+ // percentage that does not apply to him.
+ const plans=Object.fromEntries(CALLER_HANDLES.map(h=>{const p=callerPlanByHandle(h);return [h,{name:p.name,onboardingCommission:p.onboardingCommission,weeklyBase:p.weeklyBase,biweeklyBase:p.biweeklyBase,weeklyHours:p.weeklyHours,trialStart:p.trialStart,trialEnd:p.trialEnd,source:p.source,capped:p.commissionCapped,residualPerHour:p.residualPerHour}];}));
+ const snapshot={payroll,talent,plans,updatedAt:new Date().toISOString(),accounts:ledger,hubstaffConnected:!!hours.connected&&!hours.truncated,customers:customers.map(c=>({id:String(c.Id),name:c.DisplayName})),missing,status:'complete'};
  await redis.set(SNAP,snapshot);return snapshot;
 }
 export default async function handler(req,res){
@@ -40,9 +47,9 @@ export default async function handler(req,res){
  if(req.method==='POST'){
   if(!machine&&req.headers.origin!==SITE)return res.status(403).json({error:'Only Paul can change account ownership'});
   const b=readBody(req);
-  if(b.action==='confirm-hire'){const s=await redis.get(SNAP);const prompt=s?.talent?.prompts?.find(p=>p.id===b.id);if(!prompt?.customerId||!prompt.rep||!prompt.source)return res.status(400).json({error:'Assign the client and lead source first'});if(!canEdit&&prompt.rep!=='madison')return res.status(403).json({error:'Confirm only your own placements'});if(prompt.roleKind==='needs_review'&&!['new_role','replacement'].includes(b.kind))return res.status(400).json({error:'Confirm whether this is a new paid role or replacement'});const record={rep:prompt.rep,source:prompt.source,customerId:prompt.customerId,roleId:prompt.roleId,hiredAt:prompt.hiredAt,roleKind:prompt.roleKind==='needs_review'?b.kind:prompt.roleKind,confirmedAt:new Date().toISOString(),by:who?.email||'Paul'};await redis.hsetnx('finance:hire-confirmations:v1',prompt.id,JSON.stringify(record));prompt.state='confirmed';prompt.confirmation=record;await redis.set(SNAP,s);return res.json({...s,canEdit,viewer:who?.email==='madison@gostaffify.com'?'madison':'paul'});}
+  if(b.action==='confirm-hire'){const s=await redis.get(SNAP);const prompt=s?.talent?.prompts?.find(p=>p.id===b.id);if(!prompt?.customerId||!prompt.rep||!(prompt.source||callerPlanByHandle(prompt.rep)))return res.status(400).json({error:'Assign the client and lead source first'});if(!canEdit&&prompt.rep!=='madison')return res.status(403).json({error:'Confirm only your own placements'});if(prompt.roleKind==='needs_review'&&!['new_role','replacement'].includes(b.kind))return res.status(400).json({error:'Confirm whether this is a new paid role or replacement'});const record={rep:prompt.rep,source:prompt.source,customerId:prompt.customerId,roleId:prompt.roleId,hiredAt:prompt.hiredAt,roleKind:prompt.roleKind==='needs_review'?b.kind:prompt.roleKind,confirmedAt:new Date().toISOString(),by:who?.email||'Paul'};await redis.hsetnx('finance:hire-confirmations:v1',prompt.id,JSON.stringify(record));prompt.state='confirmed';prompt.confirmation=record;await redis.set(SNAP,s);return res.json({...s,canEdit,viewer:who?.email==='madison@gostaffify.com'?'madison':'paul'});}
   if(!canEdit)return res.status(403).json({error:'Only Paul can change account ownership'});
-  if(!['paul','madison'].includes(b.rep)||!['self','house',''].includes(b.source)||!/^\d{4}-\d{2}-\d{2}$/.test(b.since||''))return res.status(400).json({error:'Rep, lead source and start date required'});
+  if(!REPS.includes(b.rep)||!['self','house',''].includes(b.source)||!/^\d{4}-\d{2}-\d{2}$/.test(b.since||''))return res.status(400).json({error:'Rep, lead source and start date required'});
   const snapshot=await redis.get(SNAP),customer=snapshot?.customers?.find(c=>c.id===String(b.customerId));if(!customer)return res.status(400).json({error:'Choose a verified QBO customer'});
   const before=await redis.hget(KEY,customer.id);const after={customerId:customer.id,name:customer.name,qboName:customer.name,rep:b.rep,source:b.source,since:b.since,by:who?.email||'Paul instruction',at:new Date().toISOString()};
   await redis.lpush('finance:account-owner-audit:v1',JSON.stringify({before,after}));await redis.hset(KEY,{[customer.id]:JSON.stringify(after)});
