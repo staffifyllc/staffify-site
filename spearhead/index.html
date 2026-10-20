@@ -57,7 +57,9 @@
 // dialer rotation. These are read from the SAME shared queue every caller already sees; nothing
 // here is a second source of truth and no new endpoint was added.
 const CAMPAIGN = 'staffify-tobit-outreach';
-const DISCOVERY_LINK = 'https://calendly.com/go-staffify/discovery-call';
+// Filled from auth-me so a caller books onto their OWN calendar. The fallback is the shared
+// link, which is still better than no link if the identity call fails.
+let DISCOVERY_LINK = 'https://calendly.com/go-staffify/discovery-call';
 const $ = id => document.getElementById(id);
 const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 const link = (label, href, cls = 'btn btn-ghost') => { const a = el('a', label, cls); a.href = href; a.target = '_blank'; a.rel = 'noopener'; return a; };
@@ -66,6 +68,7 @@ const day = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleD
 const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/^\/+/, '');
 
 (async () => {
+    try { const me = await (await fetch('/api/auth-me/', { cache: 'no-store' })).json(); if (me?.rep?.bookingUrl) DISCOVERY_LINK = me.rep.bookingUrl; } catch { /* shared link stands */ }
     let q;
     try { q = await (await fetch('/api/outreach-queue/?view=calls', { cache: 'no-store' })).json(); }
     catch { $('sub').textContent = 'Could not load the queue. Sign in and try again.'; return; }

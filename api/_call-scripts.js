@@ -27,6 +27,14 @@ const opener = (caller, company) =>
 // link available" in the middle of a good call is the worst possible moment to find that out.
 export const DISCOVERY_LINK = 'https://calendly.com/go-staffify/discovery-call';
 
+// A caller books onto their OWN calendar. Sending every prospect to the same link puts meetings
+// in front of whoever owns that one, which is not the person who just had the conversation.
+// Keyed by the signed-in address, with Paul's shared link as the fallback for anyone unmapped.
+const CALLER_LINKS = {
+    'miltion@trystaffify.com': 'https://calendly.com/go-staffify/milton',
+};
+export const bookingLinkFor = email => CALLER_LINKS[String(email || '').trim().toLowerCase()] || DISCOVERY_LINK;
+
 // Paul, 2026-10-20. Said straight after they let you continue, before any question. The first
 // half takes the edge off a cold call by being honest about it; the second is the only credential
 // that matters to a media owner, and it is his own, not a claim about the product.
@@ -203,7 +211,7 @@ function callTree(q, company) {
 }
 
 /** Everything the card needs to run the call, chosen by campaign. */
-export function callScript({ campaignId, caller, company, firstName }) {
+export function callScript({ campaignId, caller, callerEmail, company, firstName }) {
     const pick = SCRIPTS[campaignId] || SCRIPTS[TOBIT_ID];
     const who = company || 'your business';
     return {
@@ -214,7 +222,7 @@ export function callScript({ campaignId, caller, company, firstName }) {
         objections: OBJECTIONS.map(([label, say, note]) => ({ label, say, note })),
         voicemail: voicemail(caller, who),
         reason: REASON,
-        bookingUrl: DISCOVERY_LINK,
+        bookingUrl: bookingLinkFor(callerEmail),
         tree: callTree(pick.questions, company),
     };
 }

@@ -128,3 +128,23 @@ test('the reason beat is said before any question, on every route in',()=>{
   assert.ok(!s.stages.some(st=>st.say===s.reason),'never rendered as a question stage');
  }
 });
+
+test('a caller books onto their own calendar',async()=>{
+ const {bookingLinkFor}=await import('../api/_call-scripts.js');
+ assert.equal(bookingLinkFor('miltion@trystaffify.com'),'https://calendly.com/go-staffify/milton');
+ // The address is the one provisioned, spelling and all, and case must not matter.
+ assert.equal(bookingLinkFor('Miltion@TryStaffify.com'),'https://calendly.com/go-staffify/milton');
+ // Anyone unmapped falls back to the shared link rather than to nothing.
+ for(const e of ['hello@gostaffify.com','someone@else.com','',null,undefined])
+  assert.equal(bookingLinkFor(e),'https://calendly.com/go-staffify/discovery-call',`${e} should fall back`);
+});
+
+test('the brief hands the caller their own link',()=>{
+ const milton=callScript({campaignId:'staffify-agency-outreach',caller:'Milton',callerEmail:'miltion@trystaffify.com',company:'C',firstName:'J'});
+ assert.equal(milton.bookingUrl,'https://calendly.com/go-staffify/milton');
+ const other=callScript({campaignId:'staffify-agency-outreach',caller:'Paul',callerEmail:'hello@gostaffify.com',company:'C',firstName:'J'});
+ assert.equal(other.bookingUrl,'https://calendly.com/go-staffify/discovery-call');
+ // No identity at all still yields a usable link.
+ assert.equal(callScript({campaignId:'staffify-agency-outreach',caller:'X',company:'C',firstName:'J'}).bookingUrl,
+              'https://calendly.com/go-staffify/discovery-call');
+});

@@ -150,6 +150,13 @@ function panel(title, hint) {
         recent.append(ul);
     }
 
+    // Their own booking link, on the page they start the day from.
+    if (me.bookingUrl) {
+        const bk = panel('Your booking link', 'Send this when a prospect agrees to a call. It books onto your calendar, not the team one.');
+        bk.append(Object.assign(el('a', 'Open your Calendly', 'btn'), { href: me.bookingUrl, target: '_blank', rel: 'noopener' }));
+        bk.append(el('p', me.bookingUrl, 'hint'));
+    }
+
     // Spearhead: the CEO cohort is a different motion and is worked by name, not dialled.
     const spear = records.filter(r => r.campaignId === 'staffify-tobit-outreach');
     if (spear.length) {
