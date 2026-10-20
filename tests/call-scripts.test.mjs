@@ -51,3 +51,36 @@ test('objections separate what is said from the caller note',()=>{
  const stop=s.objections.find(o=>o.label==='Not interested / stop');
  assert.ok(stop.note.toLowerCase().includes('exclusion is recorded'));
 });
+
+test('the call tree is complete: every branch leads somewhere and ends on a real disposition',()=>{
+ const OUTCOMES=new Set(['connected','callback','no_answer','voicemail','wrong_number','suppress']);
+ for(const id of ['staffify-agency-outreach','staffify-tobit-outreach','staffify-talent-network-outreach']){
+  const t=callScript({campaignId:id,caller:'Milton',company:'Picture KC',firstName:'Joel'}).tree;
+  assert.ok(t.open,'has an entry node');
+  // no dangling branches
+  for(const [node,def] of Object.entries(t))
+   for(const [label,to] of def.choices||[])
+    assert.ok(t[to],`${id}: "${label}" on ${node} points at missing node ${to}`);
+  // every node is reachable from open
+  const seen=new Set(['open']),stack=['open'];
+  while(stack.length){for(const [,to] of (t[stack.pop()].choices||[]))if(!seen.has(to)){seen.add(to);stack.push(to);}}
+  for(const node of Object.keys(t)) assert.ok(seen.has(node),`${id}: ${node} is unreachable`);
+  // every leaf tells the caller what to log, with an outcome the card accepts
+  for(const [node,def] of Object.entries(t)){
+   if((def.choices||[]).length) continue;
+   assert.ok(def.log,`${id}: leaf ${node} has no disposition`);
+   assert.ok(OUTCOMES.has(def.log),`${id}: leaf ${node} logs "${def.log}" which is not a real outcome`);
+  }
+  // a prospect who did not opt out is never suppressed
+  assert.equal(t.nothing.log,'connected','no current need is not an opt-out');
+  assert.equal(t.stop.log,'suppress');
+ }
+});
+
+test('the tree asks the campaign-correct discovery question',()=>{
+ const media=callScript({campaignId:'staffify-agency-outreach',caller:'M',company:'C',firstName:'J'});
+ assert.ok(/QC and revisions/.test(media.tree.discover.say));
+ const b2b=callScript({campaignId:'staffify-tobit-outreach',caller:'M',company:'C',firstName:'J'});
+ assert.ok(!/QC|revisions/i.test(b2b.tree.discover.say));
+ assert.ok(!/QC|revisions/i.test(Object.values(b2b.tree).map(n=>n.say||'').join(' ')));
+});

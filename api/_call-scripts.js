@@ -94,6 +94,74 @@ const voicemail = (caller, company) =>
     + `work at ${company}. Nothing urgent, I just wanted to put a voice to it. If it's useful, replying `
     + `to that email is the easiest way to reach me. Thanks.`;
 
+// WHERE THE CALL GOES AFTER THE OPENER.
+// Paul, 2026-10-20: "would [you like] to help direct where the call goes after this?"
+// A linear next-question stepper is not how a call works. Each node is what to SAY, and the
+// buttons are what THEY just said, so a caller always has the next move in front of them
+// instead of improvising. Terminal nodes name the outcome to log, which is why `log` only ever
+// uses the six dispositions the card actually accepts.
+function callTree(q, company) {
+    const them = company || 'your business';
+    return {
+        open: { choices: [['Go ahead', 'discover'], ["What's this about?", 'context'], ['Bad time', 'busy'], ['Not interested', 'stop'], ['Wrong person', 'gate']] },
+        context: {
+            say: `Fair enough. We place dedicated remote team members with owners like you, people who sit on the editing queue, the client follow-up, the scheduling. I'm not selling you anything on this call. I just wanted to find out whether any of that is actually a problem at ${them}.`,
+            choices: [['Go ahead', 'discover'], ['Not interested', 'stop']],
+        },
+        discover: { say: q[0], choices: [["Yes, that's me", 'dig'], ["No, that's handled", 'elsewhere'], ["It's just me / too small", 'solo']] },
+        dig: { say: q[1], choices: [['They named something', 'quantify'], ['They were vague', 'quantify']] },
+        elsewhere: {
+            say: "Good, that's rarer than you'd think. What's left then? The scheduling, the invoicing, the inbox?",
+            choices: [['They named something', 'quantify'], ['Genuinely nothing', 'nothing']],
+        },
+        solo: {
+            say: "That's completely fine, almost everyone we work with started exactly there. The question is usually whether you want to still be doing the admin yourself as it grows.",
+            choices: [['Open to it', 'quantify'], ['Not right now', 'future']],
+        },
+        quantify: {
+            say: "Roughly how many hours a week do you reckon that's costing you?",
+            note: 'Write the number in your notes. It is the single most useful thing you can bring back from this call.',
+            choices: [['They gave a number', 'close'], ["They don't know", 'close']],
+        },
+        close: { say: q[3], choices: [['Yes', 'booked'], ['Maybe, send something', 'sendinfo'], ['No', 'future']] },
+        booked: {
+            say: "Brilliant. Before I let you go, is there anything you want covered on that call so I turn up prepared?",
+            note: 'Log Connected / interested. Put the booking link in the notes and record exactly what they asked for.',
+            log: 'connected',
+        },
+        sendinfo: {
+            say: "No problem. So I send something useful rather than a brochure, what should I aim it at?",
+            note: 'Log Connected / interested with the specific ask. Create a human follow-up. Do not promise a send you cannot make.',
+            log: 'connected',
+        },
+        future: {
+            say: "Understood. Would it be worth me trying you again further down the line, or would you rather I left it?",
+            note: 'If they give a time, log Callback with that date. If they would rather be left, use Not interested / stop.',
+            log: 'callback',
+        },
+        busy: {
+            say: "Totally fair, I've caught you cold. Is there a better time later this week, or would you rather I left you to it?",
+            note: 'Log Callback with the time they give.',
+            log: 'callback',
+        },
+        gate: {
+            say: 'No problem, I may well have the wrong person. Who looks after the day-to-day there? And is there a decent time to catch them?',
+            note: 'Log Callback. Put the name and the time in the notes.',
+            log: 'callback',
+        },
+        nothing: {
+            say: "That's a good place to be, honestly. I'll leave you to it. If it ever gets heavy, you know where we are.",
+            note: 'Log Connected / interested and note that there is no current need. They did not opt out, so do not suppress them.',
+            log: 'connected',
+        },
+        stop: {
+            say: "Understood, and I appreciate you telling me straight. I'll take you off the list.",
+            note: 'Use Not interested / stop so the exclusion is recorded. Never argue this one.',
+            log: 'suppress',
+        },
+    };
+}
+
 /** Everything the card needs to run the call, chosen by campaign. */
 export function callScript({ campaignId, caller, company, firstName }) {
     const pick = SCRIPTS[campaignId] || SCRIPTS[TOBIT_ID];
@@ -105,5 +173,6 @@ export function callScript({ campaignId, caller, company, firstName }) {
         stages: STAGE_LABELS.map((label, i) => ({ label, say: pick.questions[i] })),
         objections: OBJECTIONS.map(([label, say, note]) => ({ label, say, note })),
         voicemail: voicemail(caller, who),
+        tree: callTree(pick.questions, company),
     };
 }

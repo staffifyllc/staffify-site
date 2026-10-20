@@ -68,9 +68,34 @@ function scripts(parent,b){
  // The brief picks these per campaign, so QC and revisions language only reaches media agency
  // owners. Falls back to the generic questions if an older brief is still cached.
  const stages=(b.stages&&b.stages.length)?b.stages.map(s=>[s.label,s.say]):[['Understand the work',b.questions[0]],['Find the bottleneck',b.questions[1]],['Make it useful',b.questions[2]],['Agree a next step',b.questions[3]||b.questions[2]]];
- let step=0;const guide=el('div',null,'guide');
- const draw=()=>{guide.replaceChildren(el('div',`${step+1} / ${stages.length} · ${stages[step][0]}`,'gstep'),el('p',stages[step][1],'say'));const nav=el('div',null,'chip-row');if(step)nav.append(button('Previous',()=>{step--;draw();},'btn btn-ghost'));if(step<stages.length-1)nav.append(button('Next question',()=>{step++;draw();}));guide.append(nav);};
- draw();parent.append(guide);
+ const guide=el('div',null,'guide');
+ // A call branches, it does not step. Each node is what to SAY; the buttons are what THEY just
+ // said. The caller always has the next move in front of them instead of improvising, and a
+ // terminal node names the disposition to log. Older cached briefs with no tree fall back to the
+ // linear stepper so nothing breaks mid-shift.
+ const LOGLABEL={connected:'Connected / interested',callback:'Callback / gatekeeper',suppress:'Not interested / stop'};
+ if(b.tree&&b.tree.open){
+  const path=['open'];
+  const draw=()=>{
+   const node=b.tree[path[path.length-1]]||{},parts=[];
+   parts.push(el('div',path.length===1?'They have just heard the opener. What did they say?':'What did they say?','gstep'));
+   if(node.say)parts.push(el('p',node.say,'say'));
+   if(node.note)parts.push(el('div',node.note,'sub'));
+   if(node.log)parts.push(el('div','Log this call as: '+(LOGLABEL[node.log]||node.log),'lbl'));
+   const nav=el('div',null,'chip-row');
+   for(const [label,to] of node.choices||[])nav.append(button(label,()=>{path.push(to);draw();},'objchip'));
+   if(path.length>1)nav.append(button('Back',()=>{path.pop();draw();},'btn btn-ghost'));
+   if(path.length>1&&!(node.choices||[]).length)nav.append(button('Start over',()=>{path.length=1;draw();},'btn btn-ghost'));
+   parts.push(nav);
+   guide.replaceChildren(...parts);
+  };
+  draw();
+ } else {
+  let step=0;
+  const draw=()=>{guide.replaceChildren(el('div',`${step+1} / ${stages.length} · ${stages[step][0]}`,'gstep'),el('p',stages[step][1],'say'));const nav=el('div',null,'chip-row');if(step)nav.append(button('Previous',()=>{step--;draw();},'btn btn-ghost'));if(step<stages.length-1)nav.append(button('Next question',()=>{step++;draw();}));guide.append(nav);};
+  draw();
+ }
+ parent.append(guide);
  const track=details(parent,'Full conversation script');for(const [title,say] of stages){track.append(el('h3',title,'lbl'),el('p',say,'say'));}
  const help=details(parent,'Objections & voicemail',true);
  const chips=el('div',null,'objrow'),answer=el('div','','objsay'),hint=el('div','','sub');
