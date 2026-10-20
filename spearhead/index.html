@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spearhead accounts — Staffify Sales</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/portal.css">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#050507;--white:#fff;--cyan:#1abde1;--cyan-hi:#5fe0fa;--muted:#9ba1ab;--card:rgba(255,255,255,0.035);--card-border:rgba(255,255,255,0.09);--warn:#ffb74d}
+  body{font-family:"Inter",-apple-system,sans-serif;background:var(--bg);color:var(--white);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .topbar{position:sticky;top:0;z-index:10;background:rgba(5,5,7,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--card-border);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .topbar img{height:22px}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px clamp(16px,3vw,40px)}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.3em;color:var(--cyan);text-transform:uppercase;margin-bottom:10px}
+  h1{font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;font-weight:800}
+  .sub{color:var(--muted);font-size:15px;margin-top:6px;max-width:72ch}
+  .note{background:rgba(255,183,77,.08);border:1px solid rgba(255,183,77,.35);border-radius:12px;padding:14px 16px;margin:22px 0;font-size:14px}
+  .note b{color:var(--warn)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  article{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:16px 18px}
+  article h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
+  .who{color:var(--muted);font-size:13.5px;margin-top:2px}
+  dl{margin:12px 0 0;font-size:13.5px}
+  dl div{display:flex;gap:8px;padding:3px 0}
+  dt{color:var(--muted);min-width:92px}
+  dd{overflow-wrap:anywhere}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+  .btn{font-size:12.5px;font-weight:700;color:#04222b;background:var(--cyan);border:none;border-radius:999px;padding:7px 14px;text-decoration:none;cursor:pointer}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--card-border)}
+  .pill{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 9px;border:1px solid rgba(255,183,77,.45);color:var(--warn);background:rgba(255,183,77,.1)}
+  details{margin-top:11px;border-top:1px solid var(--card-border);padding-top:10px}
+  summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted)}
+  pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:12.5px;color:var(--muted);margin-top:8px}
+  .empty{color:var(--muted)}
+  .err{color:#ff9f9f}
+</style>
+</head>
+<body>
+<header class="topbar"><img src="/assets/img/staffify-wordmark.svg" alt="Staffify" onerror="this.outerHTML='<strong>Staffify</strong>'"></header>
+<div class="wrap">
+  <div class="eyebrow">Spearhead accounts</div>
+  <h1>CEO outreach</h1>
+  <p class="sub" id="sub">Loading…</p>
+  <div id="note"></div>
+  <div class="grid" id="grid"></div>
+</div>
+<script src="/assets/js/portal-shell.js"></script>
+<script type="module">
+// The tobit cohort: recruiter-sourced CEOs at real companies. A completely different motion from
+// the 779 media agencies, which is why it gets its own view instead of being mixed into the
+// dialer rotation. These are read from the SAME shared queue every caller already sees; nothing
+// here is a second source of truth and no new endpoint was added.
+const CAMPAIGN = 'staffify-tobit-outreach';
+const $ = id => document.getElementById(id);
+const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const link = (label, href, cls = 'btn btn-ghost') => { const a = el('a', label, cls); a.href = href; a.target = '_blank'; a.rel = 'noopener'; return a; };
+const row = (k, v) => { const d = el('div'); d.append(el('dt', k), el('dd', v)); return d; };
+const day = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/^\/+/, '');
+
+(async () => {
+    let q;
+    try { q = await (await fetch('/api/outreach-queue/?view=calls', { cache: 'no-store' })).json(); }
+    catch { $('sub').textContent = 'Could not load the queue. Sign in and try again.'; return; }
+
+    const rows = (q.records || []).filter(r => r.campaignId === CAMPAIGN);
+    const withPhone = rows.filter(r => r.callContact && r.callContact.phone).length;
+    $('sub').textContent = `${rows.length} CEO accounts, four emails sent to each and no reply. These are not a dial-down list: they are worked one at a time, by name.`;
+
+    // Said plainly rather than letting a caller discover it card by card. A CEO's direct line is
+    // not published, so the phone enrichment that feeds the dialer finds nothing for this cohort.
+    if (rows.length && !withPhone) {
+        const n = el('div', null, 'note');
+        n.append(el('b', 'No direct numbers on file. '),
+            document.createTextNode('None of these contacts has a phone number in the CRM, and a CEO’s direct line is not published on a corporate site, so the dialer cannot route them. Work them by email reply, LinkedIn, or by asking for them by name on the company switchboard.'));
+        $('note').append(n);
+    }
+
+    if (!rows.length) { $('grid').append(el('p', 'No CEO accounts are in the queue right now.', 'empty')); return; }
+
+    for (const r of rows) {
+        const a = el('article');
+        a.append(el('h2', r.company || r.recipient));
+        a.append(el('div', [r.verifiedFirstName, r.recipient].filter(Boolean).join(' · '), 'who'));
+
+        const dl = el('dl');
+        dl.append(row('Emails', `${r.sentTouches || 0} sent${r.lastSentAt ? ', last ' + day(r.lastSentAt) : ''}`));
+        if (r.prospectTimezone) dl.append(row('Timezone', r.prospectTimezone));
+        if (r.callOwner) dl.append(row('Owner', r.callOwner + (r.mine ? ' (you)' : '')));
+        dl.append(row('Phone', r.callContact && r.callContact.phone ? r.callContact.phone : 'none on file'));
+        a.append(dl);
+
+        const acts = el('div', null, 'acts');
+        if (r.source && r.source.url) acts.append(link('Their website', href(r.source.url)));
+        if (r.crmContactId) acts.append(link('Open CRM contact', 'https://app.hubspot.com/contacts/51666712/record/0-1/' + r.crmContactId));
+        acts.append(link('Email them', 'mailto:' + r.recipient, 'btn'));
+        if (!(r.callContact && r.callContact.phone)) acts.append(el('span', 'no direct line', 'pill'));
+        a.append(acts);
+
+        // What we actually sent. The queue stores no message trail for this cohort, but it does
+        // keep the copy, so a caller can see exactly what this person has already read.
+        const bodies = [r.bodyText, ...(Array.isArray(r.followupBodies) ? r.followupBodies : [])].filter(Boolean);
+        if (bodies.length) {
+            const d = el('details');
+            d.append(el('summary', `What we sent · ${bodies.length} message${bodies.length === 1 ? '' : 's'}`));
+            for (const b of bodies) d.append(el('pre', b));
+            a.append(d);
+        }
+        $('grid').append(a);
+    }
+})();
+</script>
+</body>
+</html>

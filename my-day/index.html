@@ -150,6 +150,13 @@ function panel(title, hint) {
         recent.append(ul);
     }
 
+    // Spearhead: the CEO cohort is a different motion and is worked by name, not dialled.
+    const spear = records.filter(r => r.campaignId === 'staffify-tobit-outreach');
+    if (spear.length) {
+        const sp = panel('Spearhead accounts', `${spear.length} CEO accounts from the Tobit list. Four emails sent to each, no direct numbers, worked one at a time by name.`);
+        sp.append(Object.assign(el('a', 'Open spearhead accounts', 'btn btn-ghost'), { href: '/spearhead/' }));
+    }
+
     // Training
     const tr = panel('Training', 'The Staffify sales playbook: the offer, who buys, discovery, the close and the objection bank.');
     try {
