@@ -10,9 +10,13 @@ import {industryFor} from './_industry.js';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store');
  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed'});
+ // Hoisted so the catch below can still answer with what we hold. A thrown error used to return a
+ // bare message, which is the blank card all over again: on 2026-10-20 HubSpot rate limited and
+ // EVERY prospect in the queue rendered "Call check unavailable" with nothing behind it.
+ let state=null,row=null,stored=async()=>({callable:false});
  try{
   const rep=await requireAccess(req);const owner=canUseCallQueue(rep)?'all':null;const caller=rep?.role==='admin'?'[your name]':rep?.name||'[your name]';if(!owner)return res.status(401).json({error:'Sign in to the Hub'});
-  const state=await redis.get(KEY),row=visibleState(state,owner).records.find(r=>r.id===req.query.id);
+  state=await redis.get(KEY);row=visibleState(state,owner).records.find(r=>r.id===req.query.id);
   if(!row)return res.status(404).json({error:'Record not available'});
   // What we already know about this prospect, from the last worker sync. Shown even when the live
  // check refuses the call, because a caller still needs to see the proof, the site and the emails
@@ -21,7 +25,7 @@ export default async function handler(req,res){
  // HubSpot, so a blocked prospect still gets their website, company, location and number rather
  // than an empty card. Fetched on its own and wrapped, because a CRM outage must not take the
  // fallback down too: a card with the email trail still beats a card with nothing.
- const stored=async()=>{
+ stored=async()=>{
    let p={},crmId=null;
    try{const c=await contact(row.recipient);p=c?.properties||{};crmId=c?.id||null;}catch{/* CRM unavailable; stored evidence still renders */}
    return {callable:false,
@@ -78,5 +82,12 @@ export default async function handler(req,res){
   return res.status(200).json({callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
    industry:industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle}),
    staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:phoneEvidence.status==='business_listed'?phoneEvidence.phone:null,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||(await contact(row.recipient)).id),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,company:p.company||row.company||'your business',firstName:p.firstname}),events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
- }catch(e){return res.status(503).json({error:'Call check unavailable. Do not call yet. '+e.message});}
+ }catch(e){
+  // Degrade, do not go blank. The research, the website and the email trail live on the queue
+  // record and owe nothing to whichever system just failed.
+  const detail='Call check unavailable. Do not call yet. '+String((e&&e.message)||e);
+  if(!row)return res.status(503).json({error:detail});
+  try{return res.status(503).json({error:detail,...await stored()});}
+  catch{return res.status(503).json({error:detail});}
+ }
 }
