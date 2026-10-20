@@ -28,5 +28,45 @@
   document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const a=data.accounts.find(a=>a.customerId===b.dataset.edit);document.getElementById('assignment').open=true;for(const k of ['customerId','rep','source','since'])form.elements[k].value=a[k];form.scrollIntoView({behavior:'smooth'});});}
  }
  async function load(){try{const r=await fetch('/api/account-commissions/',{cache:'no-store'});if(!r.headers.get('content-type')?.includes('application/json'))throw Error('The financial service is temporarily unavailable. Please refresh shortly.');const j=await r.json();if(!r.ok)throw Error(j.error||'Sign in to view commissions');data=j;if(view===null)view=j.viewer||'paul';render();}catch(e){app.innerHTML='<h1>Clients & commissions</h1><p>'+esc(e.message)+'</p><a href="/hub/">Sign in to the Hub</a>';}}
- app.innerHTML='<h1>Clients & commissions</h1><p>Loading verified account ledger…</p>';load();setInterval(()=>{if(!document.getElementById('assignment')?.open&&!document.querySelector('details[open]'))load();},60000);
+ // A caller is not an owner and must not see this ledger, but they are not a stranger either.
+ // Before falling through to the owner view (and its correct refusal), ask whether this session
+ // has a trial plan of its own and render that instead.
+ async function callerView(){
+  try{
+   const r=await fetch('/api/my-commissions/',{cache:'no-store'});
+   if(!r.ok)return false;
+   const d=await r.json();
+   if(!d||!d.plan)return false;
+   const money=n=>'$'+Number(n||0).toLocaleString();
+   const p=d.plan;
+   const rows=(d.credited||[]).map(c=>
+     `<tr><td>${c.client||'—'}</td><td>${c.status==='cleared'?'Cleared':'Awaiting cleared funds'}</td><td style="text-align:right">${c.amount?money(c.amount):'—'}</td></tr>`).join('')
+     || '<tr><td colspan="3">No onboarding fees credited yet.</td></tr>';
+   app.innerHTML=`
+     <h1>Your pay</h1>
+     <p>${p.name} &middot; trial ${p.trialStart} to ${p.trialEnd} &middot; ${p.schedule}</p>
+     <section>
+       <h2>Your plan</h2>
+       <ul>
+         <li><strong>${money(p.weeklyBase)}</strong> a week, <strong>${money(p.biweeklyBase)}</strong> every two weeks.</li>
+         <li><strong>${money(p.onboardingCommission)}</strong> for each separate qualifying onboarding fee, once the funds have cleared.</li>
+         <li>No residuals during the trial.</li>
+         <li>First payday and payroll cutoff: ${p.firstPayday||'not set yet'}${p.payrollCutoff?' / '+p.payrollCutoff:''}.</li>
+       </ul>
+     </section>
+     <section>
+       <h2>What makes a fee qualify</h2>
+       <ul>${(p.eligibility||[]).map(x=>`<li>${x}</li>`).join('')}</ul>
+     </section>
+     <section>
+       <h2>Your onboarding fees</h2>
+       <table><thead><tr><th>Client</th><th>Status</th><th style="text-align:right">Commission</th></tr></thead><tbody>${rows}</tbody></table>
+       <p>Cleared commission: <strong>${money((d.totals||{}).commissionCleared)}</strong>${(d.totals||{}).awaitingClearance?` &middot; ${d.totals.awaitingClearance} awaiting cleared funds`:''}</p>
+     </section>
+     ${(d.notes||[]).length?`<section><h2>Worth knowing</h2><ul>${d.notes.map(n=>`<li>${n}</li>`).join('')}</ul></section>`:''}`;
+   return true;
+  }catch{return false;}
+ }
+ app.innerHTML='<h1>Clients &amp; commissions</h1><p>Loading…</p>';
+ callerView().then(shown=>{ if(shown)return; load();setInterval(()=>{if(!document.getElementById('assignment')?.open&&!document.querySelector('details[open]'))load();},60000); });
 })();
