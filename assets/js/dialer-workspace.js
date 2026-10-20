@@ -25,8 +25,9 @@ function renderBlocked(panel,row,p,message){
  const warn=el('div',message,'brief');warn.setAttribute('role','alert');panel.append(warn);
  panel.append(el('p','Reply, opt-out and client exclusions could NOT be re-checked just now, so this prospect is not callable yet. Everything below is from the last queue sync'+(p.syncedAt?' at '+new Date(p.syncedAt).toLocaleString():'')+'.','sub'));
  const grid=el('div',null,'cardgrid'),main=el('div',null,'cardmain'),tools=el('div',null,'cardtools');grid.append(main,tools);panel.append(grid);
- section(main,'Prospect details',[p.recipient,(p.sentTouches||0)+' emails sent',p.lastSentAt?'Last sent '+new Date(p.lastSentAt).toLocaleString():''].filter(Boolean).join('\n')).style.whiteSpace='pre-wrap';
+ section(main,'Prospect details',[p.name,p.recipient,p.crmPhone,p.location,(p.sentTouches||0)+' emails sent',p.lastSentAt?'Last sent '+new Date(p.lastSentAt).toLocaleString():''].filter(Boolean).join('\n')).style.whiteSpace='pre-wrap';
  if(p.website)main.append(link('Their website',/^https?:\/\//.test(p.website)?p.website:'https://'+p.website));
+ if(p.crmUrl)main.append(link('Open CRM contact',p.crmUrl));
  if(p.source?.url&&/^https?:\/\//.test(p.source.url))main.append(link('Research source',p.source.url));
  if(p.source?.excerpt)section(main,'Business context',p.source.excerpt);
  const trail=details(tools,'Past emails · '+(p.events||[]).length+' messages',true);

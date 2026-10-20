@@ -16,11 +16,26 @@ export default async function handler(req,res){
   // What we already know about this prospect, from the last worker sync. Shown even when the live
  // check refuses the call, because a caller still needs to see the proof, the site and the emails
  // rather than a bare error. callable:false means the outcome buttons stay off.
- const stored=()=>({callable:false,company:row.company||row.recipient,recipient:row.recipient,
-   website:row.website||row.source?.url||null,source:row.source||null,sentTouches:row.sentTouches,lastSentAt:row.lastSentAt||null,
-   events:(row.events||[]).filter(e=>e.kind!=='draft').map(e=>({kind:e.kind,at:e.at,subject:e.subject,body:e.body,mailbox:e.from||row.sender})),
-   callHistory:row.callHistory||[],syncedAt:state?.queueUpdatedAt||state?.updatedAt||null});
- const reject=async error=>{await redis.set('staffify:call-block:'+row.id,{error,lastSentAt:row.lastSentAt,checkedAt:new Date().toISOString()},{ex:86400});return res.status(409).json({error,...stored()});};
+ // The CRM is a different system from the mailbox. An expired Gmail token says nothing about
+ // HubSpot, so a blocked prospect still gets their website, company, location and number rather
+ // than an empty card. Fetched on its own and wrapped, because a CRM outage must not take the
+ // fallback down too: a card with the email trail still beats a card with nothing.
+ const stored=async()=>{
+   let p={},crmId=null;
+   try{const c=await contact(row.recipient);p=c?.properties||{};crmId=c?.id||null;}catch{/* CRM unavailable; stored evidence still renders */}
+   return {callable:false,
+     company:p.company||row.company||row.recipient,recipient:row.recipient,
+     name:[p.firstname,p.lastname].filter(Boolean).join(' ')||null,
+     location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,
+     // Shown as a detail, never as a dial button: this prospect is not callable yet.
+     crmPhone:p.phone||p.mobilephone||null,
+     crmUrl:(row.hubspotId||crmId)?'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||crmId):null,
+     website:p.website||row.website||row.source?.url||null,source:row.source||null,
+     sentTouches:row.sentTouches,lastSentAt:row.lastSentAt||null,
+     events:(row.events||[]).filter(e=>e.kind!=='draft').map(e=>({kind:e.kind,at:e.at,subject:e.subject,body:e.body,mailbox:e.from||row.sender})),
+     callHistory:row.callHistory||[],syncedAt:state?.queueUpdatedAt||state?.updatedAt||null};
+ };
+ const reject=async error=>{await redis.set('staffify:call-block:'+row.id,{error,lastSentAt:row.lastSentAt,checkedAt:new Date().toISOString()},{ex:86400});return res.status(409).json({error,...await stored()});};
   if(!row.callReady)return reject('This prospect is not due for an unanswered-email call');
   const block=await draftBlockReason(row);if(block)return reject('Do not call: '+block);
   const accounts=(await config()).accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
