@@ -51,17 +51,29 @@ export default async function handler(req,res){
   // The prospect's OWN sender is where the four sent emails and the reply window are proven, so
   // without it there is no evidence and the block stands. Another mailbox being unreadable only
   // weakens the cross-mailbox reply check, which is reported rather than hidden.
-  if(unreadable.includes(row.sender))return reject('Mailbox authorization expired for '+row.sender+'. Reconnect that mailbox in the Hub before calling this prospect.');
+  // Paul, 2026-10-20: that mailbox became Milton's and is being rewired, "we can still go
+  // through". So an unreadable SENDER no longer blocks the call. What it costs is stated on the
+  // card rather than hidden: the four-email proof falls back to the verification the worker
+  // stored while the mailbox was still readable, and a reply sent TO that mailbox since then
+  // cannot be seen by anyone, the worker included. Every other check is untouched: the six
+  // readable mailboxes are still swept for replies, and suppressions, opt-outs and client
+  // exclusions live in the queue state and the CRM, not in Gmail.
+  const senderUnreadable=unreadable.includes(row.sender);
   const all=reads.flatMap(r=>r.messages);
   const verdict=classify(all,row.recipient,accounts.map(a=>a.email));
   if(verdict.status)return reject('Do not call from this queue: '+verdict.status+'. A human must review the conversation.');
   const sent=all.filter(m=>m.mailbox===row.sender&&m.sent&&m.to.includes(row.recipient));
-  if(!callReady({...row,verifiedSentTouches:sent.length,lastSentAt:sent.length?new Date(Math.max(...sent.map(m=>m.date))).toISOString():null}))throw Error('Four sent emails and the reply window could not be verified');
+  // With the sender readable this re-proves the four emails live. Without it, the stored
+  // verifiedSentTouches from the last good sync is the evidence, and callReady still has to pass
+  // on it: an unreadable mailbox lowers confidence, it does not waive the rule.
+  if(!callReady(senderUnreadable?row:{...row,verifiedSentTouches:sent.length,lastSentAt:sent.length?new Date(Math.max(...sent.map(m=>m.date))).toISOString():null}))
+   throw Error(senderUnreadable?'The stored four-email verification for this prospect is incomplete':'Four sent emails and the reply window could not be verified');
   const latest=await redis.get(KEY);if(!visibleState(latest,owner).records.find(r=>r.id===row.id)?.callReady)throw Error('Queue changed; refresh before calling');
   await redis.del('staffify:call-block:'+row.id);
   const p=(await contact(row.recipient)).properties;
   const phoneEvidence=await checkBusinessPhone({phone:p.phone||p.mobilephone,website:p.website,fetchSite:site});
   await redis.set('staffify:call-phone-evidence:'+row.recipient,phoneEvidence,{ex:86400});
-  return res.status(200).json({callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||null,unreadableMailboxes:unreadable,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:phoneEvidence.status==='business_listed'?phoneEvidence.phone:null,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||(await contact(row.recipient)).id),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,company:p.company||row.company||'your business',firstName:p.firstname}),events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
+  return res.status(200).json({callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||null,unreadableMailboxes:unreadable,
+   staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:phoneEvidence.status==='business_listed'?phoneEvidence.phone:null,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||(await contact(row.recipient)).id),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,company:p.company||row.company||'your business',firstName:p.firstname}),events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
  }catch(e){return res.status(503).json({error:'Call check unavailable. Do not call yet. '+e.message});}
 }
