@@ -2,27 +2,38 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {excerptFrom} from '../api/outreach-research.js';
 
-test('the excerpt prefers the sentence that says what the business does',()=>{
- const page='Home About Contact We are a full service real estate photography and video studio serving Kansas City since 2014. Book now.';
+// Real text shapes taken from the first backfill batch against live sites.
+test('a nav strip never becomes the excerpt',()=>{
+ const nav='Real Estate Photography - Eastside Pics Click here to see our 5-Star reviews on Google Home Gallery Our Services Pricing The Team Agent Login More Home Gallery';
+ const out=excerptFrom(nav);
+ assert.ok(!/Agent Login|Open Menu|Close Menu/.test(out),'no menu items: '+out);
+});
+
+test('it prefers the sentence that describes the business',()=>{
+ const page='Home Services About Contact. We are a full service real estate photography and video studio serving Kansas City since 2014. Book now.';
  const out=excerptFrom(page);
- assert.ok(out.includes('real estate photography'),'captures the ICP sentence');
- assert.ok(out.length<=220);
+ assert.ok(out.includes('real estate photography and video studio'),out);
+ assert.ok(!out.startsWith('Home Services'),out);
 });
 
-test('it falls back to the opening of the page when nothing matches',()=>{
- const page='Acme Consulting helps mid sized manufacturers tighten their operations. '.repeat(6);
- const out=excerptFrom(page);
- assert.ok(out.startsWith('Acme Consulting helps'));
- assert.ok(out.length<=200);
+test('a descriptive title is used when there is no prose',()=>{
+ const out=excerptFrom('AK Media - Real Estate Photography, Aerial/Drone, 3D Virtual Tours, Video Skip to content Welcome Real Estate Media Photography Marketing Kit');
+ assert.ok(/Real Estate Photography/.test(out),out);
 });
 
-test('a page with nothing readable yields no excerpt, never a guess',()=>{
- for(const junk of ['','   ','Home'])
-  assert.equal(excerptFrom(junk),'',`"${junk}" must not produce an excerpt`);
+test('nothing readable yields nothing, never a guess',()=>{
+ for(const junk of ['','   ','Home','Open Menu Close Menu Our Services Order Now Open Menu Close Menu'])
+  assert.equal(excerptFrom(junk),'',`"${junk.slice(0,30)}" must not produce an excerpt`);
 });
 
-test('whitespace is normalised so the card does not render a wall of newlines',()=>{
- const out=excerptFrom('Drone   and\n\n  matterport\t tours for listings across the metro area, booked online.');
+test('a generic business page with no media signal still gets its own sentence',()=>{
+ const out=excerptFrom('Acme Consulting. We help mid sized manufacturers tighten up their operations and reporting across the business. Contact us.');
+ assert.ok(/mid sized manufacturers/.test(out),out);
+});
+
+test('whitespace is normalised and the excerpt stays short',()=>{
+ const out=excerptFrom('Nav. We shoot   drone\n\n and  matterport tours for listings right across the metro area, booked entirely online by our agents.');
  assert.ok(!/\s{2,}/.test(out));
+ assert.ok(out.length<=220,'length '+out.length);
  assert.ok(/matterport/.test(out));
 });

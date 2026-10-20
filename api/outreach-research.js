@@ -31,16 +31,46 @@ const BUDGET_MS = 40000;
 // What the business actually says about itself. Prefer the sentence that explains what they do,
 // fall back to the opening of the page. Never fabricated: if the page gave us nothing readable,
 // the record keeps its empty context.
-const ICP = /real[ -]estate.{0,60}(photograph|videograph|media|market)|(?:property|architectural|interior) photograph|drone|matterport|virtual (?:tour|staging)|floor ?plan|listing (?:photo|video|media)/i;
+const ICP = /real[ -]estate|photograph|videograph|drone|aerial|matterport|virtual (?:tour|staging)|floor ?plan|listing|property marketing|twilight|3d tour/i;
+
+// site() strips tags and joins everything, so the raw text opens with the nav menu: "Home Gallery
+// Our Services Pricing The Team Agent Login". That is not something a caller can open a call with.
+// Score candidate sentences and keep the one that actually describes the business.
+const NAVVY = /^(home|about|services|pricing|contact|gallery|blog|portfolio|login|menu|book now|order now|skip to|our services|open menu|close menu)\b/i;
+function looksLikeProse(s) {
+    const words = s.split(/\s+/).filter(Boolean);
+    if (words.length < 8 || words.length > 60) return false;
+    if (NAVVY.test(s)) return false;
+    // A nav strip is almost all Capitalised words. Prose is not.
+    const capped = words.filter(w => /^[A-Z]/.test(w)).length;
+    if (capped / words.length > 0.6) return false;
+    // Real sentences contain small connecting words.
+    return /\b(we|our|is|are|a|the|for|with|to|and|that|your|you)\b/i.test(s);
+}
+
 export function excerptFrom(text) {
     const clean = String(text || '').replace(/\s+/g, ' ').trim();
     if (clean.length < 40) return '';
-    const m = ICP.exec(clean);
-    if (m) return clean.slice(Math.max(0, m.index - 60), m.index + 160).trim();
-    return clean.slice(0, 200).trim();
+    // The page title is the first thing in the stripped text and is usually a real description.
+    const title = clean.slice(0, 110).split(/[|·—]/)[0].trim();
+    const sentences = clean.split(/(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean);
+    const scored = sentences
+        .filter(looksLikeProse)
+        .map(x => ({ x, score: (ICP.test(x) ? 2 : 0) + (/\b(we|our)\b/i.test(x) ? 1 : 0) }))
+        .sort((a, b) => b.score - a.score);
+    const best = scored.length && scored[0].score > 0 ? scored[0].x.slice(0, 220) : '';
+    if (best) return best;
+    // No prose worth quoting. Fall back to the title only when it says what they do, never to a
+    // nav strip, because a meaningless excerpt is worse than an empty one.
+    if (title.length >= 15 && ICP.test(title)) return title;
+    return '';
 }
 
 const needsResearch = r => !(r && r.source && r.source.url);
+// A record already stamped by an earlier, worse extraction can be redone by passing redoAfter:
+// anything researched at or after that timestamp is treated as missing again. Bounded on purpose,
+// so a re-run can never rewrite research the supply path gathered at enrolment.
+const stale = (r, redoAfter) => !!redoAfter && !!r?.source?.checkedAt && r.source.checkedAt >= redoAfter;
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store');
@@ -51,7 +81,9 @@ export default async function handler(req, res) {
 
         const state = await redis.get(KEY);
         const all = visibleState(state, 'all').records;
-        const pending = all.filter(needsResearch);
+        const redoAfter = typeof req.query?.redoAfter === 'string' ? req.query.redoAfter : null;
+        const wanted = r => needsResearch(r) || stale(r, redoAfter);
+        const pending = all.filter(wanted);
 
         if (req.method === 'GET') {
             return res.status(200).json({
@@ -92,7 +124,7 @@ export default async function handler(req, res) {
                 const next = {
                     ...fresh, revision: (fresh?.revision || 0) + 1,
                     records: (fresh?.records || []).map(r => {
-                        if (!found[r.id] || !needsResearch(r)) return r;
+                        if (!found[r.id] || !wanted(r)) return r;
                         written++;
                         return { ...r, source: found[r.id] };
                     }),
