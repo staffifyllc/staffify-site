@@ -98,7 +98,11 @@ export default async function handler(req, res) {
 
         const started = Date.now();
         const found = {}, skipped = [];
-        for (const row of pending.slice(0, Math.max(1, Math.min(BATCH, Number(body.max) || BATCH)))) {
+        // The time budget is the real limit, not the count: eight sites take about twelve seconds, so
+        // a caller-driven run can ask for more and the loop still stops at BUDGET_MS. Capped at 30
+        // so one request can never sit on the function for longer than Vercel allows.
+        const want = Math.max(1, Math.min(30, Number(body.max) || BATCH));
+        for (const row of pending.slice(0, want)) {
             if (Date.now() - started > BUDGET_MS) break;
             let website = '';
             try { website = ((await contact(row.recipient))?.properties?.website || '').trim(); }
