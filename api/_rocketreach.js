@@ -34,13 +34,17 @@ export async function account() {
     const r = await call('/account');
     if (!r.ok) return { ok: false, error: r.error || `http ${r.status}`, status: r.status };
     const b = r.body || {};
+    // The live account payload carries credit_usage and rate_limits rather than a flat balance,
+    // and the shape differs by plan, so both are passed through untouched. Guessing at a single
+    // "remaining" number on a metered API is how you spend more than you meant to.
+    const u = b.credit_usage || {};
     return {
         ok: true,
-        plan: b.plan_name || b.plan || null,
-        // RocketReach has moved this field around between plan shapes, so report whatever is there
-        // rather than asserting a number that might be wrong.
-        lookupsRemaining: b.lookup_credit_balance ?? b.lookups_remaining ?? b.credits ?? null,
-        raw: Object.keys(b),
+        plan: b.plan_name || b.plan || u.plan || null,
+        lookupsRemaining: u.lookup_credit_balance ?? u.remaining ?? u.credits_remaining ?? null,
+        creditUsage: u,
+        rateLimits: b.rate_limits || null,
+        accountState: b.state || null,
     };
 }
 
