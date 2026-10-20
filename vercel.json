@@ -62,10 +62,6 @@
   ],
   "rewrites": [
     {
-      "source": "/my-day/",
-      "destination": "/hub/"
-    },
-    {
       "source": "/pilot/",
       "destination": "/hub/"
     },

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My day — Staffify Sales</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/portal.css">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#050507;--white:#fff;--cyan:#1abde1;--cyan-hi:#5fe0fa;--cyan-dark:#0d82b8;--muted:#9ba1ab;--card:rgba(255,255,255,0.035);--card-border:rgba(255,255,255,0.09);--green:#1d9e75;--green-hi:#7ef5c2}
+  body{font-family:"Inter",-apple-system,sans-serif;background:var(--bg);color:var(--white);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .topbar{position:sticky;top:0;z-index:10;background:rgba(5,5,7,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--card-border);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .topbar img{height:22px}
+  .wrap{max-width:1100px;margin:0 auto;padding:26px clamp(16px,3vw,40px)}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.3em;color:var(--cyan);text-transform:uppercase;margin-bottom:10px}
+  h1{font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;font-weight:800}
+  .sub{color:var(--muted);font-size:15px;margin-top:6px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:26px 0}
+  .stat{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:16px 18px}
+  .stat b{display:block;font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat span{color:var(--muted);font-size:13px}
+  section.card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:20px 22px;margin-bottom:16px}
+  h2{font-size:17px;font-weight:800;margin-bottom:4px}
+  .hint{color:var(--muted);font-size:13.5px;margin-bottom:12px}
+  .btn{display:inline-block;font-size:13.5px;font-weight:700;color:#04222b;background:var(--cyan);border:none;border-radius:999px;padding:9px 17px;cursor:pointer;text-decoration:none}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--card-border)}
+  ul.rows{list-style:none}
+  ul.rows li{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--card-border);font-size:14px;flex-wrap:wrap}
+  ul.rows li:last-child{border-bottom:none}
+  ul.rows .who{font-weight:700}
+  ul.rows .meta{color:var(--muted);font-size:13px}
+  .empty{color:var(--muted);font-size:14px;padding:6px 0}
+  .pill{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 10px;border:1px solid rgba(26,189,225,.4);color:var(--cyan);background:rgba(26,189,225,.08)}
+  .pill.due{border-color:rgba(255,183,77,.45);color:#ffb74d;background:rgba(255,183,77,.1)}
+  .err{color:#ff9f9f;font-size:14px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <img src="/assets/img/staffify-wordmark.svg" alt="Staffify" onerror="this.outerHTML='<strong>Staffify</strong>'">
+</header>
+<div class="wrap">
+  <div class="eyebrow">Your workspace</div>
+  <h1 id="greeting">My day</h1>
+  <p class="sub" id="sub">Loading your queue…</p>
+  <div class="stats" id="stats"></div>
+  <div id="panels"></div>
+</div>
+<script src="/assets/js/portal-shell.js"></script>
+<script type="module">
+// Milton, and anyone else on the caller seat, lands here. It deliberately shows ONLY their own
+// work: the shared pool they can pick from, the follow-ups they personally own, and what they
+// logged. No owner finance, no other rep's numbers, no company totals. The server already refuses
+// those endpoints for a caller; this page simply never asks for them.
+const $ = id => document.getElementById(id);
+const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const get = async url => { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw Object.assign(Error('HTTP ' + r.status), { status: r.status }); return r.json(); };
+const when = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }); };
+
+const OUTCOME = { connected: 'Connected', callback: 'Callback', no_answer: 'No answer', voicemail: 'Voicemail', wrong_number: 'Wrong number' };
+
+function stat(n, label) { const d = el('div', null, 'stat'); d.append(el('b', String(n)), el('span', label)); return d; }
+
+function panel(title, hint) {
+    const s = el('section', null, 'card');
+    s.append(el('h2', title));
+    if (hint) s.append(el('p', hint, 'hint'));
+    $('panels').append(s);
+    return s;
+}
+
+(async () => {
+    let me = null;
+    try { me = (await get('/api/auth-me/')).rep; }
+    catch { $('sub').textContent = 'Sign in with your Staffify account to see your day.'; $('panels').append(Object.assign(el('a', 'Sign in', 'btn'), { href: '/hub/' })); return; }
+
+    const first = String(me.name || me.email).trim().split(/\s+/)[0];
+    $('greeting').textContent = `Good to see you, ${first}`;
+
+    let queue = null, qErr = null;
+    try { queue = await get('/api/outreach-queue/?view=calls'); } catch (e) { qErr = e; }
+
+    const mine = String(me.email || '').toLowerCase();
+    const records = (queue && queue.records) || [];
+    const owned = records.filter(r => String(r.callOwner || '').toLowerCase() === mine);
+    const unclaimed = records.filter(r => r.unclaimed);
+    const dueForMe = records.filter(r => r.dueForMe);
+
+    // Everything this caller personally logged, newest first. The history is on the record, so
+    // this needs no extra endpoint and cannot show anyone else's calls.
+    const logged = records.flatMap(r => (r.callHistory || [])
+        .filter(c => String(c.caller || '').toLowerCase() === mine)
+        .map(c => ({ ...c, company: r.company || r.recipient })))
+        .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    const today = new Date().toDateString();
+    const loggedToday = logged.filter(c => new Date(c.at).toDateString() === today);
+
+    $('sub').textContent = qErr
+        ? 'Your call queue could not be loaded just now.'
+        : 'One shared pool. Work anything unclaimed, and whatever you work becomes yours to follow up.';
+
+    $('stats').append(
+        stat(loggedToday.length, 'calls you logged today'),
+        stat(dueForMe.length, 'follow-ups due for you'),
+        stat(owned.length, 'prospects you own'),
+        stat(unclaimed.length, 'unclaimed in the pool'),
+    );
+
+    // Calls
+    const calls = panel('Team calls', qErr ? null : `${unclaimed.length} prospects are unclaimed right now. Opening a card claims nothing; logging an outcome makes the follow-up yours.`);
+    if (qErr) calls.append(el('p', qErr.status === 401 ? 'Sign in again to load the queue.' : 'The queue is unavailable right now. Nothing has been lost.', 'err'));
+    calls.append(Object.assign(el('a', 'Open team calls', 'btn'), { href: '/dialer/' }));
+
+    // Follow-ups this caller owns and that are due
+    const fu = panel('Your follow-ups', 'Prospects you have already worked that are due again.');
+    if (!dueForMe.length) fu.append(el('p', 'Nothing due. Anything you work today will show up here when its callback comes round.', 'empty'));
+    else {
+        const ul = el('ul', null, 'rows');
+        for (const r of dueForMe.slice(0, 15)) {
+            const li = el('li');
+            const left = el('div');
+            left.append(el('div', r.company || r.recipient, 'who'), el('div', r.recipient, 'meta'));
+            const right = el('div');
+            right.append(el('span', r.nextCallAt ? 'Due ' + when(r.nextCallAt) : 'Due now', 'pill due'));
+            li.append(left, right);
+            ul.append(li);
+        }
+        fu.append(ul, Object.assign(el('a', 'Work them in the dialer', 'btn btn-ghost'), { href: '/dialer/' }));
+    }
+
+    // What they logged
+    const recent = panel('Your recent calls', 'Only yours. Nobody else’s calls appear here.');
+    if (!logged.length) recent.append(el('p', 'No calls logged yet.', 'empty'));
+    else {
+        const ul = el('ul', null, 'rows');
+        for (const c of logged.slice(0, 12)) {
+            const li = el('li');
+            const left = el('div');
+            left.append(el('div', c.company, 'who'), el('div', c.notes || 'No notes', 'meta'));
+            const right = el('div');
+            right.append(el('span', OUTCOME[c.outcome] || c.outcome, 'pill'), el('div', when(c.at), 'meta'));
+            li.append(left, right);
+            ul.append(li);
+        }
+        recent.append(ul);
+    }
+
+    // Training
+    const tr = panel('Training', 'The Staffify sales playbook: the offer, who buys, discovery, the close and the objection bank.');
+    try {
+        const t = await get('/api/training-progress');
+        const done = Object.values((t.me && t.me.done) || {}).filter(Boolean).length;
+        tr.append(el('p', `${done} of 8 modules marked complete.`, 'hint'));
+    } catch { /* progress is a nicety; the link is the point */ }
+    tr.append(Object.assign(el('a', 'Open the playbook', 'btn btn-ghost'), { href: '/training/sales/' }));
+})();
+</script>
+</body>
+</html>
