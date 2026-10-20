@@ -26,7 +26,36 @@ test('caller access does not confer sales owner access and shared queue excludes
  const due={...row,status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01'};
  const s={revision:1,records:[due,{...due,id:'two',owner:'Madison',recipient:'b@example.com'},{...due,id:'reply',status:'human_reply_hold'}],assignments:[],pausedOwners:[],suppressions:[]};
  assert.equal(sharedCallState(s).records.length,2);assert.equal(sharedCallState(s).assignments,undefined);
+ // Nothing is claimed until somebody records an outcome, so both are offered as work.
+ assert.equal(sharedCallState(s,caller.email).records.filter(r=>r.unclaimed).length,2);
  const next=controlState(s,{action:'call-outcome',id:'two',outcome:'connected'},'all',caller.email);
  assert.equal(next.records[1].owner,'Madison');assert.equal(next.records[1].callHistory[0].caller,caller.email);
- assert.equal(sharedCallState(next).records.length,1);
+ // Working it claims the follow-up without touching the sales owner.
+ assert.equal(next.records[1].callOwner,caller.email);
+ assert.equal(next.records[1].owner,'Madison');
+ // Still VISIBLE to the team, but no longer offered as unclaimed work to anyone.
+ const seen=sharedCallState(next,caller.email);
+ assert.equal(seen.records.length,2);
+ assert.equal(seen.records.filter(r=>r.unclaimed).length,1);
+ const claimed=seen.records.find(r=>r.id==='two');
+ assert.equal(claimed.claimed,true);assert.equal(claimed.mine,true);assert.equal(claimed.unclaimed,false);
+ // A different teammate sees the owner, and it is not offered to them either.
+ const other=sharedCallState(next,'someone.else@example.com').records.find(r=>r.id==='two');
+ assert.equal(other.callOwner,caller.email);assert.equal(other.mine,false);assert.equal(other.unclaimed,false);
+});
+
+test('first recorded outcome claims the follow-up and a later caller cannot steal it',()=>{
+ const due={...row,status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01'};
+ const s={revision:1,records:[due],assignments:[],pausedOwners:[],suppressions:[]};
+ const soon=new Date(Date.now()+864e5).toISOString();
+ const first=controlState(s,{action:'call-outcome',id:due.id,outcome:'no_answer',nextCallAt:soon},'all','first@example.com');
+ assert.equal(first.records[0].callOwner,'first@example.com');
+ const stamped=first.records[0].callOwnerAt;
+ // A second caller covering the callback appends history but ownership does not move.
+ const second=controlState({...first,records:first.records.map(r=>({...r,callOutcome:undefined,nextCallAt:null}))},
+   {action:'call-outcome',id:due.id,outcome:'voicemail',nextCallAt:soon},'all','second@example.com');
+ assert.equal(second.records[0].callOwner,'first@example.com');
+ assert.equal(second.records[0].callOwnerAt,stamped);
+ assert.equal(second.records[0].callHistory.length,2);
+ assert.equal(second.records[0].callHistory[1].caller,'second@example.com');
 });

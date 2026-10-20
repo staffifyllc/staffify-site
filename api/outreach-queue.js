@@ -8,7 +8,7 @@ export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
   try {
     const rep=await requireAccess(req);const calls=req.query?.view==='calls';const owner=calls&&canUseCallQueue(rep)?'all':ownerFor(rep);
-    const view=s=>calls?sharedCallState(s):visibleState(s,owner);
+    const view=s=>calls?sharedCallState(s,rep.email):visibleState(s,owner);
     if(!owner)return res.status(401).json({error:'Sign in with your Staffify account'});
     const state=await redis.get(KEY);
     if(req.method==='GET'){
@@ -20,8 +20,26 @@ export default async function handler(req,res) {
     if(!machine&&req.headers.origin!==SITE)return res.status(403).json({error:'Invalid origin'});
     const body=readBody(req);
     if(calls&&!['call-outcome','suppress'].includes(body.action))return res.status(403).json({error:'Caller access is limited to call outcomes and exclusions'});
-    if(calls&&!sharedCallState(state).records.some(r=>body.action==='suppress'?r.recipient===String(body.email||'').toLowerCase():r.id===body.id))return res.status(409).json({error:'This prospect is no longer in the call queue'});
-    if(body.expectedRevision!==(state?.revision||0))return res.status(409).json({error:'Queue changed; reload before retrying'});
+    if(calls&&!sharedCallState(state,rep.email).records.some(r=>body.action==='suppress'?r.recipient===String(body.email||'').toLowerCase():r.id===body.id))return res.status(409).json({error:'This prospect is no longer in the call queue'});
+    // A caller action is the one write a HUMAN makes here, and typing call notes takes longer than
+    // a minute. The outreach worker rewrites this key every minute and saves up to sixteen times a
+    // run, so a whole-queue revision check guaranteed the caller lost the race and could never
+    // record the call. For these actions the meaningful conflict is the RECORD, which controlState
+    // re-validates on every attempt (still due, not suppressed, not paused), so re-read and
+    // re-apply rather than bouncing the person who is on the phone.
+    const callerAction=['call-outcome','suppress'].includes(body.action);
+    if(!callerAction&&body.expectedRevision!==(state?.revision||0))return res.status(409).json({error:'Queue changed; reload before retrying'});
+    if(callerAction) {
+      for(let attempt=0;attempt<6;attempt++) {
+        const fresh=attempt?await redis.get(KEY):state;
+        // Re-validated against the freshly read queue, so a lead suppressed or already handled
+        // between attempts is refused rather than written over.
+        const candidate=controlState(fresh,body,owner,rep.email);
+        if(Number(await redis.eval(CAS,[KEY],[String(fresh?.revision||0),JSON.stringify(candidate)]))===1)
+          return res.status(200).json(view(candidate));
+      }
+      return res.status(409).json({error:'The queue is busy right now. Your notes are still here; press save again.'});
+    }
     let next;
     if(body.action==='refresh-history') {
       if(!machine)return res.status(403).json({error:'Worker authorization required'});

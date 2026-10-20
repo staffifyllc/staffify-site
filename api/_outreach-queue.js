@@ -45,7 +45,11 @@ export function controlState(previous, {action,owner,email,id,outcome,notes,next
     if(!callReady(row)||previous.pausedOwners?.includes(row.owner)||previous.suppressions?.includes(row.recipient))throw Error('Call is no longer due');
     if(['no_answer','voicemail','callback'].includes(outcome)&&!(Date.parse(nextCallAt)>Date.now()))throw Error('Choose a future callback time');
     const at=new Date().toISOString(),entry={outcome,notes:String(notes||'').slice(0,4000),at,caller:callerIdentity,nextCallAt:nextCallAt||null};
-    return {...previous,revision:previous.revision+1,records:previous.records.map(r=>r.id===id?{...r,callOutcome:outcome,nextCallAt:entry.nextCallAt,callHistory:[...(r.callHistory||[]),entry],...(outcome==='connected'?{status:'human_reply_hold'}:outcome==='wrong_number'?{status:'call_research_hold'}:{})}:r)};
+    // Paul, 2026-10-20: "after a teammate works the call, they own it". The FIRST recorded outcome
+    // claims the follow-up; opening a card claims nothing. Set once and never overwritten, so a
+    // second caller covering a callback appends history without stealing ownership. This is the
+    // CALL owner only: r.owner (the sending sales owner) and commission attribution are untouched.
+    return {...previous,revision:previous.revision+1,records:previous.records.map(r=>r.id===id?{...r,callOutcome:outcome,nextCallAt:entry.nextCallAt,callOwner:r.callOwner||callerIdentity,callOwnerAt:r.callOwnerAt||at,callHistory:[...(r.callHistory||[]),entry],...(outcome==='connected'?{status:'human_reply_hold'}:outcome==='wrong_number'?{status:'call_research_hold'}:{})}:r)};
   }
   if(action==='suppress') {
     email=String(email||'').toLowerCase();
@@ -59,8 +63,20 @@ export function controlState(previous, {action,owner,email,id,outcome,notes,next
 export function canUseCallQueue(rep) {
   return !!ownerFor(rep) || rep?.role === 'caller';
 }
-export function sharedCallState(state) {
+// The pool is a free-for-all until somebody works a lead. After that it is still VISIBLE to the
+// whole team, with the owner and the history on the card, but it stops being offered as unclaimed
+// work to anyone except the person who owns the follow-up.
+export function sharedCallState(state, viewer=null) {
   const s=visibleState(state,'all');
-  return {revision:s.revision,updatedAt:s.updatedAt,workerFresh:s.workerFresh,
-    records:s.records.filter(r=>r.callReady).map(r=>({...r,callQueue:'shared',salesOwner:r.owner}))};
+  const me=String(viewer||'').toLowerCase();
+  return {revision:s.revision,updatedAt:s.updatedAt,workerFresh:s.workerFresh,viewer:me||null,
+    records:s.records.filter(r=>r.callReady||r.callOwner).map(r=>{
+      const callOwner=r.callOwner||null;
+      const mine=!!callOwner&&String(callOwner).toLowerCase()===me;
+      return {...r,callQueue:'shared',salesOwner:r.owner,callOwner,callOwnerAt:r.callOwnerAt||null,
+        // claimed: somebody owns the follow-up. unclaimed work is what a caller should be handed next.
+        claimed:!!callOwner,mine,
+        unclaimed:!!r.callReady&&!callOwner,
+        dueForMe:!!r.callReady&&mine};
+    })};
 }

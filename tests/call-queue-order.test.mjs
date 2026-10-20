@@ -27,3 +27,18 @@ test('shared queue includes both sales owners across campaigns while retaining e
  assert.deepEqual(orderCallQueue(input,{campaign:'all'}).map(r=>r.id),['madison','paul']);
  assert.deepEqual(orderCallQueue(input,{campaign:'ceo'}).map(r=>r.id),['madison']);
 });
+
+test('a lead another teammate claimed is never handed out as work, and my own follow-up still is',()=>{
+ const base={campaignId:'c',owner:'Paul',callContact:{phoneStatus:'business_listed',phone:'1'},lastSentAt:'2026-01-01'};
+ const rows=[
+  {...base,id:'open',callReady:true,unclaimed:true,dueForMe:false},
+  {...base,id:'theirs',callReady:true,unclaimed:false,dueForMe:false,callOwner:'other@example.com'},
+  {...base,id:'mine',callReady:true,unclaimed:false,dueForMe:true,callOwner:'me@example.com'},
+  {...base,id:'done',callReady:false,unclaimed:false,dueForMe:false,callOwner:'other@example.com'},
+ ];
+ const ids=orderCallQueue(rows,{campaign:'all'}).map(r=>r.id);
+ assert.ok(ids.includes('open'));
+ assert.ok(ids.includes('mine'));
+ assert.ok(!ids.includes('theirs'));
+ assert.ok(!ids.includes('done'));
+});
