@@ -68,7 +68,14 @@ export default async function handler(req, res) {
         const campaign = (req.query?.campaign || '').toString();
         const scope = campaign ? all.filter(r => r.campaignId === campaign) : all;
         const tried = new Set((await redis.get(TRIED)) || []);
-        const pending = scope.filter(r => needsPhone(r) && !tried.has(r.recipient.toLowerCase()));
+        const inFlight = new Set(Object.keys((await redis.get(PENDING)) || {}));
+        // A search already in flight is NOT re-fired. Dropping it from `tried` to keep it eligible
+        // meant the next batch asked RocketReach for the same person again before the first answer
+        // had landed, so the same contact was looked up three times over.
+        const pending = scope.filter(r => {
+            const e = r.recipient.toLowerCase();
+            return needsPhone(r) && !tried.has(e) && !inFlight.has(e);
+        });
 
         // Free. Proves the key and reads the balance before anything is spent.
         const acct = await account();
@@ -112,7 +119,6 @@ export default async function handler(req, res) {
                 const map = (await redis.get(PENDING)) || {};
                 map[email] = { id: r.id, at: new Date().toISOString(), company: row.company };
                 await redis.set(PENDING, map);
-                tried.delete(email);
             }
             if (!r.found) { none.push({ company: row.company, why: r.reason || 'no number', pending: !!r.pending }); continue; }
             const best = r.phones.find(p => p.recommended) || r.phones[0];
