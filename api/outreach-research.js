@@ -104,12 +104,20 @@ export default async function handler(req, res) {
             try { website = ((await contact(row.recipient))?.properties?.website || '').trim(); }
             catch { skipped.push({ id: row.id, why: 'CRM unavailable' }); continue; }
             if (!website) { skipped.push({ id: row.id, why: 'no website on the CRM record' }); continue; }
-            let evidence;
+            // Most of these are small studio sites behind bot protection or rendered client side,
+            // so the fetch fails or yields no prose. The URL from the CRM is still real and a
+            // clickable "Their website" beats an empty card, so it is stored either way and the
+            // context is left genuinely empty rather than filled with a guess. `unverified` marks
+            // the ones we could not actually read.
+            const fallbackUrl = /^https?:\/\//i.test(website) ? website : 'https://' + website.replace(/^\/+/, '');
+            let evidence = null;
             try { evidence = await site(website); }
-            catch (e) { skipped.push({ id: row.id, why: String((e && e.message) || e).slice(0, 80) }); continue; }
-            const excerpt = excerptFrom(evidence.text);
-            if (!excerpt) { skipped.push({ id: row.id, why: 'site returned nothing readable' }); continue; }
-            found[row.id] = { url: evidence.url, checkedAt: new Date().toISOString(), excerpt };
+            catch (e) { skipped.push({ id: row.id, why: String((e && e.message) || e).slice(0, 80) }); }
+            const excerpt = evidence ? excerptFrom(evidence.text) : '';
+            if (evidence && !excerpt) skipped.push({ id: row.id, why: 'site returned nothing readable' });
+            found[row.id] = excerpt
+                ? { url: evidence.url, checkedAt: new Date().toISOString(), excerpt }
+                : { url: (evidence && evidence.url) || fallbackUrl, checkedAt: new Date().toISOString(), excerpt: '', unverified: true };
         }
 
         // Written against a freshly read queue, because the outreach worker rewrites this key every
