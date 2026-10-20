@@ -91,7 +91,11 @@ const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/
 
         const dl = el('dl');
         dl.append(row('Emails', `${r.sentTouches || 0} sent${r.lastSentAt ? ', last ' + day(r.lastSentAt) : ''}`));
-        if (r.prospectTimezone) dl.append(row('Timezone', r.prospectTimezone));
+        // prospectTimezone is {timeZone, source, checkedAt}, not a string. Only shown when a real
+        // zone was resolved; "needs confirmation" is noise on a card you work by name.
+        const tz = r.prospectTimezone && r.prospectTimezone.timeZone;
+        if (tz) dl.append(row('Timezone', tz));
+        if (r.subject) dl.append(row('Subject', r.subject));
         if (r.callOwner) dl.append(row('Owner', r.callOwner + (r.mine ? ' (you)' : '')));
         dl.append(row('Phone', r.callContact && r.callContact.phone ? r.callContact.phone : 'none on file'));
         a.append(dl);
@@ -105,7 +109,12 @@ const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/
 
         // What we actually sent. The queue stores no message trail for this cohort, but it does
         // keep the copy, so a caller can see exactly what this person has already read.
-        const bodies = [r.bodyText, ...(Array.isArray(r.followupBodies) ? r.followupBodies : [])].filter(Boolean);
+        // followupBodies is an object keyed by touch, not an array, so an isArray check silently
+        // dropped every follow-up even though all 21 records carry them.
+        const follow = r.followupBodies && typeof r.followupBodies === 'object'
+            ? Object.entries(r.followupBodies).sort((a, b) => String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true })).map(([, v]) => v)
+            : [];
+        const bodies = [r.bodyText, ...follow].filter(b => typeof b === 'string' && b.trim());
         if (bodies.length) {
             const d = el('details');
             d.append(el('summary', `What we sent · ${bodies.length} message${bodies.length === 1 ? '' : 's'}`));
