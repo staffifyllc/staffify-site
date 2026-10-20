@@ -108,7 +108,7 @@ export async function createRep({ email, name, rate, role, houseRate, hubspotOwn
     const rep = {
         email: e,
         name: (name || e).toString().slice(0, 120),
-        rate: String(rate || 35),
+        rate: String(rate ?? 35),
         role: ['admin','caller'].includes(role) ? role : 'rep',
         createdAt: String(Date.now()),
     };

@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {miltonIdentity,MILTON_PLAN,miltonCommission} from '../api/_milton-plan.js';
+import {readFileSync} from 'node:fs';
+const record={id:'1',invoiceId:'1',client:'Example',customerId:'42'};
+const invoice={customerId:'42',fullyPaid:true,currency:'USD',receipts:[{id:'p',amount:1000}]};
+const proofs={p:{status:'cleared',evidenceRef:'bank:1',customerId:'42',amount:1000,clearedDate:'2026-10-30'}};
+test('only exact supplied email gets private identity',()=>{assert(miltonIdentity({email:'miltion@trystaffify.com'}));for(const email of ['milton@trystaffify.com','madison@gostaffify.com','guest'])assert(!miltonIdentity({email}));assert(!miltonIdentity(null));});
+test('trial has no residuals and correct base',()=>{assert.equal(MILTON_PLAN.weeklyBase,160);assert.equal(MILTON_PLAN.residualPerHour,0);assert.equal(MILTON_PLAN.onboardingCommission,650);});
+test('full cleared payment earns exactly one fee',()=>assert.equal(miltonCommission(record,invoice,proofs,true).commission,650));
+test('partial, stale, mismatched customer, missing proof never earn',()=>{for(const [inv,p,f] of [[{...invoice,fullyPaid:false},proofs,true],[invoice,proofs,false],[{...invoice,customerId:'99'},proofs,true],[invoice,{},true],[invoice,{p:{...proofs.p,customerId:'99'}},true],[invoice,{p:{...proofs.p,amount:999}},true],[{...invoice,currency:'CAD'},proofs,true]])assert.equal(miltonCommission(record,inv,p,f).commission,0);});
+test('public HTML does not disclose compensation or private content',()=>{const html=readFileSync(new URL('../sales-workspace/index.html',import.meta.url),'utf8');assert(!html.includes('$650'));assert(!html.includes('$160'));assert(!html.includes('miltion@'));});
