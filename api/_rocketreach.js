@@ -85,3 +85,30 @@ export async function lookupByEmail(email) {
         phones,
     };
 }
+
+/**
+ * Collect lookups that came back as "searching". RocketReach charges the credit at request time
+ * and resolves asynchronously, so without this the money is spent and the answer thrown away.
+ * checkStatus is free: it reads results already paid for and never starts a new search.
+ */
+export async function checkStatus(ids) {
+    const list = [...new Set((ids || []).filter(Boolean))].slice(0, 100);
+    if (!list.length) return {};
+    const r = await call(`/person/checkStatus?ids=${list.join(',')}`);
+    if (!r.ok) return {};
+    const rows = Array.isArray(r.body) ? r.body : (Array.isArray(r.body?.profiles) ? r.body.profiles : []);
+    const out = {};
+    for (const b of rows) {
+        if (!b || b.id == null) continue;
+        const done = !/progress|searching|pending/i.test(String(b.status || ''));
+        const phones = (Array.isArray(b.phones) ? b.phones : [])
+            .map(p => (typeof p === 'string' ? { number: p, type: null } : p))
+            .map(p => ({ number: digits(p.number || p.phone), type: p.type || p.phone_type || null, recommended: !!p.recommended }))
+            .filter(p => p.number.length >= 10);
+        out[String(b.id)] = {
+            done, found: done && !!phones.length, phones,
+            name: b.name || null, title: b.current_title || b.title || null,
+        };
+    }
+    return out;
+}
