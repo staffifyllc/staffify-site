@@ -20,7 +20,7 @@ import { TALENT_ID } from './_talent-network-campaign.js';
 const opener = (caller, company) =>
     `Hi {first}, this is ${caller} with Staffify. I'll be straight with you, this is a cold call. `
     + `We sent you over a few notes by email about handing off recurring work at ${company}. `
-    + `Have I caught you in the middle of something?`;
+    + `Do you have a quick second?`;
 
 const CLOSE = "Would it be worth half an hour to map out what that role actually looks like? No pitch, I genuinely just want to see whether it's a fit.";
 
@@ -30,6 +30,10 @@ const SCRIPTS = {
         audience: 'media agency owner',
         questions: [
             "If you don't mind me asking, do you still get pulled into the QC and revisions side of things, or have you got that off your plate by now?",
+            // Paul, 2026-10-20: the pain point worth asking a media owner. It works whether or not
+            // they are still doing QC themselves, which is why it sits after the opening probe
+            // rather than competing with it, and it asks for a number rather than a feeling.
+            "And when a client comes back with a problem, a reshoot or a correction, how long does it usually take you to get that resolved?",
             "And when a heavy week hits, what's the first thing to slip? Is it the editing turnaround, the client follow-up, or the scheduling?",
             'If you could hand one of those off on Monday and genuinely stop thinking about it, which one would you pick?',
             CLOSE,
@@ -58,7 +62,12 @@ const SCRIPTS = {
     },
 };
 
-const STAGE_LABELS = ['Understand the work', 'Find the bottleneck', 'Make it useful', 'Agree a next step'];
+// The media script asks one more question than the others, so the labels are chosen by length
+// rather than fixed at four. A stage with no question behind it would render blank.
+const STAGE_LABELS = {
+    4: ['Understand the work', 'Find the bottleneck', 'Make it useful', 'Agree a next step'],
+    5: ['Understand the work', 'How long clients wait', 'Find the bottleneck', 'Make it useful', 'Agree a next step'],
+};
 
 /**
  * `say` is read aloud. `note` is for the caller only and is never spoken. They are separate
@@ -102,18 +111,34 @@ const voicemail = (caller, company) =>
 // uses the six dispositions the card actually accepts.
 function callTree(q, company) {
     const them = company || 'your business';
+    // Indexing q[1] and q[3] by hand broke the moment the media script gained a fifth question:
+    // the close node started asking "which would you hand off" instead of asking for the meeting.
+    // The roles are resolved by position-from-the-ends, which holds at any length.
+    const open = q[0];
+    const close = q[q.length - 1];
+    const middle = q.slice(1, -1);
+    // Five questions means the media script, which asks how long a client issue takes to resolve.
+    // Counting the middle was wrong: a four-question script also has two middles.
+    const resolve = q.length >= 5 ? middle[0] : null;
+    const bottleneck = resolve ? middle[1] : middle[0];
     return {
         open: { choices: [['Go ahead', 'discover'], ["What's this about?", 'context'], ['Bad time', 'busy'], ['Not interested', 'stop'], ['Wrong person', 'gate']] },
         context: {
             say: `Fair enough. We place dedicated remote team members with owners like you, people who sit on the editing queue, the client follow-up, the scheduling. I'm not selling you anything on this call. I just wanted to find out whether any of that is actually a problem at ${them}.`,
             choices: [['Go ahead', 'discover'], ['Not interested', 'stop']],
         },
-        discover: { say: q[0], choices: [["Yes, that's me", 'dig'], ["No, that's handled", 'elsewhere'], ["It's just me / too small", 'solo']] },
-        dig: { say: q[1], choices: [['They named something', 'quantify'], ['They were vague', 'quantify']] },
+        discover: { say: open, choices: [["Yes, that's me", resolve ? 'resolve' : 'dig'], ["No, that's handled", 'elsewhere'], ["It's just me / too small", 'solo']] },
+        // Only built when the campaign asks it. It works whether or not they still do the QC
+        // themselves, which is exactly why both branches above run through it.
+        ...(resolve ? { resolve: { say: resolve, note: 'Listen for a number. "However long it takes" is the answer you want, and it is the whole pitch.', choices: [['Same day', 'dig'], ['A day or two', 'dig'], ['Longer, or it depends', 'dig']] } } : {}),
+        dig: { say: bottleneck, choices: [['They named something', 'quantify'], ['They were vague', 'quantify']] },
         elsewhere: {
             say: "Good, that's rarer than you'd think. What's left then? The scheduling, the invoicing, the inbox?",
-            choices: [['They named something', 'quantify'], ['Genuinely nothing', 'nothing']],
+            // A named pain still runs through the resolution question where the campaign asks it.
+            // "Genuinely nothing" is a polite exit and must stay one.
+            choices: [['They named something', resolve ? 'resolve' : 'quantify'], ['Genuinely nothing', 'nothing']],
         },
+
         solo: {
             say: "That's completely fine, almost everyone we work with started exactly there. The question is usually whether you want to still be doing the admin yourself as it grows.",
             choices: [['Open to it', 'quantify'], ['Not right now', 'future']],
@@ -123,7 +148,7 @@ function callTree(q, company) {
             note: 'Write the number in your notes. It is the single most useful thing you can bring back from this call.',
             choices: [['They gave a number', 'close'], ["They don't know", 'close']],
         },
-        close: { say: q[3], choices: [['Yes', 'booked'], ['Maybe, send something', 'sendinfo'], ['No', 'future']] },
+        close: { say: close, choices: [['Yes', 'booked'], ['Maybe, send something', 'sendinfo'], ['No', 'future']] },
         booked: {
             say: "Brilliant. Before I let you go, is there anything you want covered on that call so I turn up prepared?",
             note: 'Log Connected / interested. Put the booking link in the notes and record exactly what they asked for.',
@@ -170,7 +195,7 @@ export function callScript({ campaignId, caller, company, firstName }) {
         audience: pick.audience,
         opener: opener(caller, who).replace('{first}', firstName || 'there'),
         questions: pick.questions,
-        stages: STAGE_LABELS.map((label, i) => ({ label, say: pick.questions[i] })),
+        stages: (STAGE_LABELS[pick.questions.length] || STAGE_LABELS[4]).map((label, i) => ({ label, say: pick.questions[i] })).filter(s => s.say),
         objections: OBJECTIONS.map(([label, say, note]) => ({ label, say, note })),
         voicemail: voicemail(caller, who),
         tree: callTree(pick.questions, company),

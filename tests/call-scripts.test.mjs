@@ -27,9 +27,11 @@ test('every campaign opens the same way, names the company and offers an exit',(
   assert.ok(s.opener.startsWith('Hi Joel,'),'uses the first name');
   assert.ok(s.opener.includes('Picture KC'),'names the company');
   assert.ok(s.opener.includes('cold call'),'is honest about the call');
-  assert.ok(/middle of something\?$/.test(s.opener),'hands them the exit');
-  assert.equal(s.questions.length,4);
-  assert.equal(s.stages.length,4);
+  assert.ok(/quick second\?$/.test(s.opener),'hands them the exit');
+  // The media script asks one more than the others, so this is a floor, not a fixed number.
+  assert.ok(s.questions.length>=4,'at least four questions');
+  assert.equal(s.stages.length,s.questions.length,'a stage per question, none blank');
+  for(const st of s.stages) assert.ok(st.label&&st.say,'every stage has a label and a line');
   assert.ok(s.voicemail.includes('Picture KC'));
  }
 });
@@ -83,4 +85,31 @@ test('the tree asks the campaign-correct discovery question',()=>{
  const b2b=callScript({campaignId:'staffify-tobit-outreach',caller:'M',company:'C',firstName:'J'});
  assert.ok(!/QC|revisions/i.test(b2b.tree.discover.say));
  assert.ok(!/QC|revisions/i.test(Object.values(b2b.tree).map(n=>n.say||'').join(' ')));
+});
+
+test('media owners are asked how long a client issue takes to resolve',()=>{
+ const m=callScript({campaignId:'staffify-agency-outreach',caller:'M',company:'Picture KC',firstName:'J'});
+ assert.equal(m.questions.length,5);
+ assert.ok(m.questions.some(q=>/how long it|how long you|how long/i.test(q)&&/resolved/i.test(q)),'asks the resolution question');
+ assert.ok(m.tree.resolve,'the tree has a node for it');
+ // Both discovery branches reach it, directly when they admit they are in it and via
+ // "what's left then" when they say it is handled, because the question works either way.
+ assert.equal(m.tree.discover.choices[0][1],'resolve');
+ assert.equal(m.tree.discover.choices[1][1],'elsewhere');
+ assert.equal(m.tree.elsewhere.choices[0][1],'resolve');
+ assert.equal(m.tree.elsewhere.choices[1][1],'nothing','a happy prospect still gets a polite exit');
+ // The other campaigns are not asked it and get no node.
+ for(const id of ['staffify-tobit-outreach','staffify-talent-network-outreach']){
+  const o=callScript({campaignId:id,caller:'M',company:'C',firstName:'J'});
+  assert.equal(o.questions.length,4);
+  assert.equal(o.tree.resolve,undefined,id+' must not get the media resolution node');
+ }
+});
+
+test('the close asks for the meeting at every question count',()=>{
+ for(const id of ['staffify-agency-outreach','staffify-tobit-outreach','staffify-talent-network-outreach']){
+  const s=callScript({campaignId:id,caller:'M',company:'C',firstName:'J'});
+  assert.ok(/half an hour/i.test(s.tree.close.say),id+' close must ask for the meeting, got: '+s.tree.close.say);
+  assert.equal(s.tree.close.say,s.questions[s.questions.length-1]);
+ }
 });
