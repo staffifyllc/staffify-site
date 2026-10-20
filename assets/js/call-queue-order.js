@@ -1,6 +1,8 @@
 // Stable call order: due callbacks first, then the oldest fourth-email handoff.
 export function orderCallQueue(records,{campaign,owner='all',search='',research=false}={}){
- const candidate=r=>['business_listed','available'].includes(r.callContact?.phoneStatus)&&!!r.callContact?.phone;
+ // A vendor direct dial counts as dialable. It sorts BELOW a number published on the business's
+ // own site, because that one is corroborated and this one is a vendor's claim.
+ const candidate=r=>['business_listed','available','vendor_direct'].includes(r.callContact?.phoneStatus)&&!!r.callContact?.phone;
  const time=r=>{const n=Date.parse(r.nextCallAt||r.lastSentAt||'');return Number.isFinite(n)?n:Number.MAX_SAFE_INTEGER;};
  // Work offered to THIS caller: anything nobody has worked yet, plus the follow-ups they own.
  // A lead another teammate claimed stays visible on the board but is never handed out as work.

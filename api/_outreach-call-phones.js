@@ -10,6 +10,19 @@ export async function withCallPhones(state,{redis,crm,now=Date.now()}){
  }catch{for(const email of missing)if(!phones.has(email))phones.set(email,{phone:null,phoneStatus:'unavailable'});}
  const evidence=new Map();for(const row of due){const v=await redis.get('staffify:call-phone-evidence:'+row.recipient);if(v)evidence.set(row.recipient,v);}
  for(const [email,v] of evidence){const c=phones.get(email)||{};phones.set(email,{...c,phone:v.status==='business_listed'?v.phone:null,phoneStatus:v.status,phoneSource:v.status==='business_listed'?'Listed on business website':'Number needs confirmation',phoneEvidence:v});}
+ // A vendor direct dial, for contacts whose number is published nowhere: enterprise CEOs mostly.
+ // Applied ONLY where nothing else produced a number, and never under the business_listed label,
+ // which means "we found this on their own website" and must keep meaning exactly that. The
+ // provenance travels with it so the card can say where it came from.
+ for(const row of due){
+  const current=phones.get(row.recipient);
+  if(current&&current.phone)continue;
+  const v=await redis.get('staffify:call-phone-vendor:'+row.recipient.toLowerCase());
+  if(!v||!v.phone)continue;
+  phones.set(row.recipient,{...(current||{}),phone:v.phone,phoneStatus:'vendor_direct',
+   phoneSource:v.source||'vendor',phoneType:v.type||null,phoneCheckedAt:v.checkedAt||null,
+   phoneDetail:'Direct dial supplied by '+(v.source||'a data vendor')+'. Not published on the business website and not carrier-verified, so treat it as a direct line rather than a confirmed mobile.'});
+ }
  const blocked=new Map();for(const row of due){const v=await redis.get('staffify:call-block:'+row.id);if(v&&v.lastSentAt===row.lastSentAt)blocked.set(row.id,v);}
  return {...state,records:state.records.map(r=>r.callReady?{...r,callReady:!blocked.has(r.id),callBlock:blocked.get(r.id)||null,callContact:phones.get(r.recipient)||{phone:null,phoneStatus:'missing'}}:r)};
 }
