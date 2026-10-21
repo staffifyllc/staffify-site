@@ -101,8 +101,18 @@ export async function listCalls({ actorId, direction, from, to, maxPages = 40 } 
 
 // A call connected when the far end picked up. `status` alone is not enough: `completed` is also
 // what a call that rang out and went to voicemail ends as, so answeredAt is the honest signal.
+// answeredAt means SOMETHING picked up the line. A person, a gatekeeper, or an answering machine
+// all set it, so a high connect rate on short calls is not evidence of conversations. The tally
+// reports the average and the longest alongside it so the number cannot be read as more than it is.
 export const connected = c => !!c?.answeredAt;
 export const talkSeconds = c => (connected(c) ? Math.max(0, Number(c?.duration) || 0) : 0);
+
+/** The outside number on a call, for telling eight prospects apart from one number dialled eight times. */
+export const counterparty = c => {
+    const parts = Array.isArray(c?.participants) ? c.participants : [];
+    const outside = parts.find(p => p && !p.actorId && p.phoneNumber) || parts.find(p => p && p.phoneNumber);
+    return outside ? String(outside.phoneNumber) : null;
+};
 
 /** Counts for one set of calls, with every definition stated in the output. */
 export function tally(calls, { actorId } = {}) {
@@ -120,6 +130,7 @@ export function tally(calls, { actorId } = {}) {
         if (connected(c)) byDay[day].connected++;
         byDay[day].talkSeconds += talkSeconds(c);
     }
+    const numbers = new Set(placed.map(counterparty).filter(Boolean));
     return {
         dials: placed.length,
         connected: answered.length,
@@ -128,12 +139,18 @@ export function tally(calls, { actorId } = {}) {
         talkSeconds: seconds,
         talkMinutes: Math.round(seconds / 6) / 10,
         longestSeconds: placed.reduce((n, c) => Math.max(n, talkSeconds(c)), 0),
+        // Eight dials to eight people is prospecting. Eight dials to one number is a test or a
+        // chase, and the dial count alone cannot tell them apart.
+        uniqueNumbers: numbers.size,
+        repeatDials: placed.length - numbers.size,
+        avgAnsweredSeconds: answered.length ? Math.round(seconds / answered.length) : null,
         inboundReturned: incoming.length,
         byDay,
         definitions: {
             dials: 'Outgoing calls this person placed, counted once each, including ones nobody picked up.',
-            connected: 'Dials where the far end answered (answeredAt is set). A call that rang out to voicemail is not a connect.',
+            connected: 'Dials where the line was picked up (answeredAt is set). An answering machine or a gatekeeper picking up also counts, so read this with avgAnsweredSeconds: short answered calls are not conversations.',
             talkSeconds: 'Time on answered dials only. Ringing time is not counted.',
+            uniqueNumbers: 'Distinct outside numbers dialled. Compare with dials to see repeat attempts or test calls.',
         },
     };
 }

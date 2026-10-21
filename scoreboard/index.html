@@ -120,13 +120,17 @@
     var rows=reps.length?reps.map(function(x,i){
       var mins=(x.talkMinutes!=null?x.talkMinutes:0);
       return '<div class="lead-row"><div class="rank">'+(i+1)+'</div><div class="rname">'+esc(x.rep&&x.rep.name||'Rep')+'</div>'+
-        '<div class="rstat">Dials <b>'+(x.dials||0)+'</b> &middot; Connected <b>'+(x.connected||0)+'</b>'+
-        (x.connectRate!=null?' ('+x.connectRate+'%)':'')+' &middot; Talk <b>'+mins+' min</b>'+
+        '<div class="rstat">Dials <b>'+(x.dials||0)+'</b>'+
+        (x.uniqueNumbers!=null?' to <b>'+x.uniqueNumbers+'</b> numbers':'')+
+        ' &middot; Picked up <b>'+(x.connected||0)+'</b>'+(x.connectRate!=null?' ('+x.connectRate+'%)':'')+
+        (x.avgAnsweredSeconds!=null?' averaging <b>'+x.avgAnsweredSeconds+'s</b>':'')+
+        ' &middot; Talk <b>'+mins+' min</b>'+
         (x.truncated?' &middot; <span style="opacity:.6">partial</span>':'')+'</div></div>';
     }).join(''):'<div class="empty">Nobody has dialled through Quo in this window.</div>';
     box.innerHTML='<div class="lbl2">Dialled in Quo &middot; '+esc(d.window&&d.window.from||'')+(d.window&&d.window.to!==d.window.from?' to '+esc(d.window.to):'')+'</div>'+
       rows+
-      '<p class="sub" style="margin-top:10px">'+esc(d.caveat||'')+' Counted separately from the dispositions above, never added to them.</p>';
+      '<p class="sub" style="margin-top:10px">'+esc(d.caveat||'')+' Counted separately from the dispositions above, never added to them. '+
+      'Picked up means the line was answered by anything, a gatekeeper or an answering machine included, so read it with the average length beside it.</p>';
   }
 
   function render(s){

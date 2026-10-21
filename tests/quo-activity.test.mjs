@@ -118,6 +118,26 @@ test('dials, connects and talk time are counted the way a caller would count the
     assert.equal(body.totalDials, 4);
 });
 
+test('eight dials to one number is not eight prospects, and the payload says so', async () => {
+    // The distinction the dial count alone cannot make. Milton's first live numbers were eight
+    // answered calls averaging 33 seconds, which is either eight gatekeepers or one test number.
+    const to = n => ({ participants: [{ phoneNumber: n, actorId: null }] });
+    stubQuo({ calls: [
+        call({ ...to('+15615550001'), duration: 40 }),
+        call({ ...to('+15615550001'), duration: 30 }),
+        call({ ...to('+15615550001'), duration: 20 }),
+        call({ ...to('+15615550002'), duration: 30 }),
+    ] });
+    const { body } = await run({ rep: 'milton@trystaffify.com', from: '2026-10-21', to: '2026-10-21' });
+    const r = body.reps[0];
+    assert.equal(r.dials, 4);
+    assert.equal(r.uniqueNumbers, 2, 'two people, not four');
+    assert.equal(r.repeatDials, 2);
+    assert.equal(r.avgAnsweredSeconds, 30, 'thirty seconds is not a conversation, and the number is shown');
+    assert.match(r.definitions.connected, /answering machine or a gatekeeper/,
+        'a 100% connect rate must not read as a win');
+});
+
 test('a Quo failure is reported as a failure, never as zero calls', async () => {
     stubQuo({ fail: 500 });
     const { code, body } = await run({ rep: 'milton@trystaffify.com' });
