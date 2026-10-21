@@ -81,6 +81,18 @@ export const flatOnboardingCommission = handle => {
     const plan = callerPlanByHandle(handle);
     return plan && Number.isFinite(plan.onboardingCommission) ? plan.onboardingCommission : null;
 };
+/**
+ * Every address one person might be signed in as. The Hub account was provisioned with a
+ * misspelling, and his Quo seat could carry either spelling, so a lookup has to try both or his
+ * calls read as zero.
+ */
+export const loginAliases = email => {
+    const e = String(email || '').trim().toLowerCase();
+    if (!e) return [];
+    if (e === PROVISIONED_ALIAS) return [PROVISIONED_ALIAS, CONTRACT_EMAIL];
+    if (e === CONTRACT_EMAIL) return [CONTRACT_EMAIL, PROVISIONED_ALIAS];
+    return [e];
+};
 export const emailMismatch = email =>
     String(email || '').trim().toLowerCase() === PROVISIONED_ALIAS
         ? { signedIn: PROVISIONED_ALIAS, onContract: CONTRACT_EMAIL }

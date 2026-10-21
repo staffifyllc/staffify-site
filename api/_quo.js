@@ -1,0 +1,154 @@
+// Quo's API, for reading who actually made which calls.
+// ------------------------------------------------------------------
+// Quo is OpenPhone. The product was renamed in 2025 and the API moved to api.quo.com, which is why
+// the onboarding page lists both names in one stack line. The existing OPENPHONE_API_KEY is a Quo
+// key and is reused here; no new credential is needed.
+//
+// This talks to the 2026-03-30 version of the API, NOT the legacy /v1 routes the rest of the
+// codebase uses. The reason matters: legacy GET /v1/calls REQUIRES phoneNumberId AND participants,
+// one conversation at a time, so it structurally cannot answer "how many calls did this rep make
+// today". The 2026-03-30 GET /calls has no required parameters and takes actorId plus a createdAt
+// range, which is exactly that question.
+//
+// Docs: https://www.quo.com/docs/2026-03-30/calls/list-calls
+//       https://www.quo.com/docs/2026-03-30/users/list-users
+const BASE = 'https://api.quo.com';
+const VERSION = '2026-03-30';
+
+export const quoKey = () => process.env.QUO_API_KEY || process.env.OPENPHONE_API_KEY || '';
+export const quoConfigured = () => !!quoKey();
+
+/**
+ * One request. THROWS on any failure, and the error carries the status.
+ *
+ * This is deliberate. The existing /api/openphone-calls swallows a failed list and returns
+ * `connected: true, total: 0`, so a broken request and a genuinely quiet day look identical on the
+ * dashboard. A rep's call count is exactly the figure where that is unacceptable: zero is an
+ * accusation. An error has to surface as an error.
+ */
+export async function quoFetch(path, params = {}) {
+    const key = quoKey();
+    if (!key) {
+        const e = new Error('No Quo API key is set (QUO_API_KEY or OPENPHONE_API_KEY)');
+        e.status = 0;
+        throw e;
+    }
+    const url = new URL(BASE + path);
+    for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null || v === '') continue;
+        url.searchParams.set(k, String(v));
+    }
+    const res = await fetch(url, {
+        headers: { Authorization: key, 'Quo-Api-Version': VERSION, 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        let detail = body.slice(0, 300);
+        try { const j = JSON.parse(body); detail = j.message || j.title || detail; } catch { /* keep the text */ }
+        const e = new Error(`Quo ${res.status}: ${detail}`);
+        e.status = res.status;
+        throw e;
+    }
+    return res.json();
+}
+
+/** Every page of a cursor-paginated list, bounded so a bad cursor cannot loop for ever. */
+async function pages(path, params, { maxPages = 40 } = {}) {
+    const out = [];
+    let after = null;
+    for (let i = 0; i < maxPages; i++) {
+        const j = await quoFetch(path, { ...params, limit: 50, after });
+        const batch = Array.isArray(j?.data) ? j.data : [];
+        out.push(...batch);
+        after = j?.nextCursor || null;
+        if (!after || !batch.length) return { items: out, complete: true };
+    }
+    // Hit the page ceiling. Say so rather than presenting a truncated count as the total.
+    return { items: out, complete: false };
+}
+
+/** Everyone with a Quo seat. id is the actorId the call list filters on. */
+export async function listUsers() {
+    const { items } = await pages('/users', {});
+    return items.map(u => ({
+        actorId: u.id,
+        email: String(u.email || '').toLowerCase(),
+        name: [u.firstName, u.lastName].filter(Boolean).join(' ') || String(u.email || ''),
+        role: u.role || null,
+    }));
+}
+
+/**
+ * A rep's Quo seat, by any address they might be signed in as. Returns null rather than guessing:
+ * attributing one person's calls to another is worse than reporting that the seat was not found.
+ */
+export function findSeat(users, emails = []) {
+    const want = emails.map(e => String(e || '').trim().toLowerCase()).filter(Boolean);
+    for (const e of want) {
+        const hit = users.find(u => u.email === e);
+        if (hit) return { ...hit, matchedOn: e };
+    }
+    return null;
+}
+
+/** Calls in a window, newest first, optionally for one actor and direction. */
+export async function listCalls({ actorId, direction, from, to, maxPages = 40 } = {}) {
+    const params = { actorId, direction };
+    if (from) params['createdAt[gte]'] = from;
+    if (to) params['createdAt[lte]'] = to;
+    return pages('/calls', params, { maxPages });
+}
+
+// A call connected when the far end picked up. `status` alone is not enough: `completed` is also
+// what a call that rang out and went to voicemail ends as, so answeredAt is the honest signal.
+export const connected = c => !!c?.answeredAt;
+export const talkSeconds = c => (connected(c) ? Math.max(0, Number(c?.duration) || 0) : 0);
+
+/** Counts for one set of calls, with every definition stated in the output. */
+export function tally(calls, { actorId } = {}) {
+    const outgoing = calls.filter(c => c.direction === 'outgoing');
+    const incoming = calls.filter(c => c.direction === 'incoming');
+    const placed = actorId ? outgoing.filter(c => !c.initiatedBy || c.initiatedBy === actorId) : outgoing;
+    const answered = placed.filter(connected);
+    const seconds = placed.reduce((n, c) => n + talkSeconds(c), 0);
+    const byDay = {};
+    for (const c of placed) {
+        const day = etDay(c.createdAt);
+        if (!day) continue;
+        byDay[day] = byDay[day] || { dials: 0, connected: 0, talkSeconds: 0 };
+        byDay[day].dials++;
+        if (connected(c)) byDay[day].connected++;
+        byDay[day].talkSeconds += talkSeconds(c);
+    }
+    return {
+        dials: placed.length,
+        connected: answered.length,
+        noAnswer: placed.length - answered.length,
+        connectRate: placed.length ? Math.round((answered.length / placed.length) * 1000) / 10 : null,
+        talkSeconds: seconds,
+        talkMinutes: Math.round(seconds / 6) / 10,
+        longestSeconds: placed.reduce((n, c) => Math.max(n, talkSeconds(c)), 0),
+        inboundReturned: incoming.length,
+        byDay,
+        definitions: {
+            dials: 'Outgoing calls this person placed, counted once each, including ones nobody picked up.',
+            connected: 'Dials where the far end answered (answeredAt is set). A call that rang out to voicemail is not a connect.',
+            talkSeconds: 'Time on answered dials only. Ringing time is not counted.',
+        },
+    };
+}
+
+/** The calendar day in Eastern time, which is the day a rep thinks in. */
+export function etDay(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return null;
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
+/** An ET calendar day as the UTC instants that bound it, for createdAt[gte]/[lte]. */
+export function etDayBounds(day) {
+    // ET is UTC-4 or UTC-5. Taking a generous bound and filtering by etDay afterwards is correct in
+    // both, and never drops a call that sits near midnight.
+    return { from: new Date(Date.parse(day + 'T00:00:00Z') - 6 * 3600e3).toISOString(),
+             to: new Date(Date.parse(day + 'T23:59:59Z') + 6 * 3600e3).toISOString() };
+}

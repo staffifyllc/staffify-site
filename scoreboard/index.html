@@ -93,7 +93,40 @@
     ME=repGet();
     tbRight.innerHTML=nameChip(); wireChip();
     var s=null; try{ var r=await fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); if(r.ok) s=await r.json(); }catch(e){}
-    if(!s){app.innerHTML='<div class="empty">Call reporting is unavailable. Refresh to try again. No zero totals are assumed.</div>';return;}render(s);
+    if(!s){app.innerHTML='<div class="empty">Call reporting is unavailable. Refresh to try again. No zero totals are assumed.</div>';return;}
+    render(s);
+    loadQuo();
+  }
+
+  // What the phone system itself recorded, which is a different number from the dispositions above.
+  // A dial with no disposition logged still happened; a disposition logged without a dial did not.
+  // Seeing both side by side is the point, so they are never added together.
+  async function loadQuo(){
+    var box=document.getElementById('quo'); if(!box) return;
+    var d=null, code=0;
+    try{
+      // Paul and Madison get the whole team; a rep gets their own line and nothing else.
+      var r=await fetch('/api/quo-activity/?team=1',{cache:'no-store'}); code=r.status;
+      if(r.status===403){ r=await fetch('/api/quo-activity/',{cache:'no-store'}); code=r.status; }
+      d=await r.json();
+      if(!r.ok) d={ error:(d&&d.error)||('Quo returned '+r.status), detail:d&&d.detail };
+    }catch(e){ d={ error:'Quo could not be reached.', detail:String(e&&e.message||e) }; }
+    if(code===401){ box.innerHTML=''; return; }   // not signed in: show nothing rather than zeros
+    if(!d||d.error){
+      box.innerHTML='<div class="lbl2">Dialled in Quo</div><div class="empty">'+esc((d&&d.error)||'Quo could not be read.')+' This is not a count of zero calls.'+((d&&d.detail)?' <span style="opacity:.6">'+esc(d.detail)+'</span>':'')+'</div>';
+      return;
+    }
+    var reps=d.reps||[];
+    var rows=reps.length?reps.map(function(x,i){
+      var mins=(x.talkMinutes!=null?x.talkMinutes:0);
+      return '<div class="lead-row"><div class="rank">'+(i+1)+'</div><div class="rname">'+esc(x.rep&&x.rep.name||'Rep')+'</div>'+
+        '<div class="rstat">Dials <b>'+(x.dials||0)+'</b> &middot; Connected <b>'+(x.connected||0)+'</b>'+
+        (x.connectRate!=null?' ('+x.connectRate+'%)':'')+' &middot; Talk <b>'+mins+' min</b>'+
+        (x.truncated?' &middot; <span style="opacity:.6">partial</span>':'')+'</div></div>';
+    }).join(''):'<div class="empty">Nobody has dialled through Quo in this window.</div>';
+    box.innerHTML='<div class="lbl2">Dialled in Quo &middot; '+esc(d.window&&d.window.from||'')+(d.window&&d.window.to!==d.window.from?' to '+esc(d.window.to):'')+'</div>'+
+      rows+
+      '<p class="sub" style="margin-top:10px">'+esc(d.caveat||'')+' Counted separately from the dispositions above, never added to them.</p>';
   }
 
   function render(s){
@@ -126,6 +159,7 @@
       cards+
       '<div class="conv"><span>Pickup rate <b>'+pct(t.answers,t.dials)+'</b></span><span>Interest rate <b>'+pct(t.interested,t.answers)+'</b></span></div>'+
       '<div class="lbl2">Rep leaderboard</div>'+board+
+      '<div id="quo"></div>'+
       '<p><a class="btn" href="/commissions/">View your commissions and payroll</a></p>';
   }
 

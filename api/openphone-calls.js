@@ -157,13 +157,20 @@ export default async function handler(req, res) {
         params.set('sortDirection', 'desc');
         const j = await opFetch(`/calls?${params.toString()}`, apiKey);
         rawCalls = Array.isArray(j?.data) ? j.data : (Array.isArray(j) ? j : []);
-    } catch {
-        // Key was set but the list call failed: stay connected, return empties.
+    } catch (e) {
+        // The key was set but the list failed. This used to answer `connected: true, total: 0`,
+        // which reads on the dashboard as "nobody called today" when the truth is "we could not
+        // ask". An error has to say it is an error. Note the cause is usually structural, not
+        // transient: legacy GET /v1/calls requires phoneNumberId AND a single participant, so it
+        // cannot list a whole line. /api/quo-activity uses the 2026-03-30 route that can.
         return res.status(200).json({
             connected: true,
+            ok: false,
+            error: 'Quo could not be read, so this is not a count of zero calls.',
+            detail: String((e && e.message) || e).slice(0, 200),
             calls: [],
             positives: [],
-            stats: { ...EMPTY_STATS },
+            stats: null,
         });
     }
 
