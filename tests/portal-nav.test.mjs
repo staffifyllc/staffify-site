@@ -80,6 +80,14 @@ test('the tab marks itself current when you are on the page', () => {
     assert.equal(elsewhere.active, false);
 });
 
+test('Lost deals is reachable, under More', () => {
+    // Paul asked for a place for people who met us and did not convert. It is a worked list rather
+    // than a daily destination, so it sits in More next to the other lists.
+    const { links, moreLinks } = build();
+    assert.ok(moreLinks.some(l => l.href === '/lost-deals/'), 'it is in the menu');
+    assert.equal([...links, ...moreLinks].filter(l => l.href === '/lost-deals/').length, 1, 'exactly once');
+});
+
 test('nothing else fell out of the bar', () => {
     const { links, moreLinks } = build();
     for (const href of ['/hub/', '/campaigns/', '/dialer/', '/pipeline/', '/commissions/'])

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lost deals — Staffify Sales</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/portal.css">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#050507;--white:#fff;--cyan:#1abde1;--cyan-hi:#5fe0fa;--muted:#9ba1ab;--card:rgba(255,255,255,0.035);--card-border:rgba(255,255,255,0.09);--warn:#ffb74d}
+  body{font-family:"Inter",-apple-system,sans-serif;background:var(--bg);color:var(--white);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .topbar{position:sticky;top:0;z-index:10;background:rgba(5,5,7,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--card-border);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .topbar img{height:22px}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px clamp(16px,3vw,40px)}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.3em;color:var(--cyan);text-transform:uppercase;margin-bottom:10px}
+  h1{font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;font-weight:800}
+  .sub{color:var(--muted);font-size:15px;margin-top:6px;max-width:72ch}
+  .note{background:rgba(255,183,77,.08);border:1px solid rgba(255,183,77,.35);border-radius:12px;padding:14px 16px;margin:22px 0;font-size:14px}
+  .note b{color:var(--warn)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  article{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:16px 18px}
+  article h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
+  .who{color:var(--muted);font-size:13.5px;margin-top:2px}
+  dl{margin:12px 0 0;font-size:13.5px}
+  dl div{display:flex;gap:8px;padding:3px 0}
+  dt{color:var(--muted);min-width:92px}
+  dd{overflow-wrap:anywhere}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+  .btn{font-size:12.5px;font-weight:700;color:#04222b;background:var(--cyan);border:none;border-radius:999px;padding:7px 14px;text-decoration:none;cursor:pointer}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--card-border)}
+  .pill{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 9px;border:1px solid rgba(255,183,77,.45);color:var(--warn);background:rgba(255,183,77,.1)}
+  details{margin-top:11px;border-top:1px solid var(--card-border);padding-top:10px}
+  summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted)}
+  pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:12.5px;color:var(--muted);margin-top:8px}
+  .empty{color:var(--muted)}
+  .err{color:#ff9f9f}
+  .flag{background:rgba(255,183,77,.1);border:1px solid rgba(255,183,77,.35);border-radius:9px;padding:9px 11px;margin-top:11px;font-size:12.5px;color:var(--warn)}
+  .stale{color:var(--muted);font-size:12.5px;margin-top:6px}
+  .branch{border-left:2px solid var(--card-border);padding-left:11px;margin-top:9px}
+  .branch b{font-size:12.5px;color:var(--cyan)}
+  .branch p{font-size:13px;margin-top:3px}
+  .branch .why{color:var(--muted);font-size:12px;margin-top:3px}
+  h3{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:13px}
+  .script p{font-size:13.5px;margin-top:4px}
+  .tabs{display:flex;gap:8px;margin:18px 0 4px;flex-wrap:wrap}
+  .tab{font-size:12.5px;font-weight:700;border-radius:999px;padding:6px 13px;border:1px solid var(--card-border);background:transparent;color:var(--muted);cursor:pointer}
+  .tab[aria-pressed="true"]{background:var(--cyan);color:#04222b;border-color:transparent}
+</style>
+</head>
+<body>
+<header class="topbar"><img src="/assets/img/staffify-wordmark.svg" alt="Staffify" onerror="this.outerHTML='<strong>Staffify</strong>'"></header>
+<div class="wrap">
+  <div class="eyebrow">Lost deals</div>
+  <h1>People who met us and did not buy</h1>
+  <p class="sub" id="sub">Loading…</p>
+  <div id="note"></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="grid" id="grid"></div>
+</div>
+<script src="/assets/js/portal-shell.js"></script>
+<script type="module">
+// Built from Calendly, because an attended meeting is the only hard evidence that a sales
+// conversation happened. A CRM stage records what somebody typed; a Calendly event records that a
+// meeting existed, when, and what the person wrote to get it.
+//
+// The page shows the exclusions rather than hiding them. Clients, opt-outs and no-shows are each a
+// decision somebody may want to overturn, and a list that silently drops people is a list nobody
+// can trust.
+const $ = id => document.getElementById(id);
+const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const link = (label, href, cls = 'btn btn-ghost') => { const a = el('a', label, cls); a.href = href; a.target = '_blank'; a.rel = 'noopener'; return a; };
+const row = (k, v) => { const d = el('div'); d.append(el('dt', k), el('dd', v)); return d; };
+
+let DATA = null, VIEW = 'toCall';
+
+function card(p) {
+  const a = el('article');
+  a.append(el('h2', p.name || p.company || p.email));
+  a.append(el('div', [p.company, p.email].filter(Boolean).join(' \u00b7 '), 'who'));
+
+  const dl = el('dl');
+  const met = p.script && p.script.met;
+  dl.append(row('Met', met ? `${met.label} ${met.year}` + (met.monthsAgo != null ? ` \u00b7 ${met.monthsAgo} months ago` : '') : 'date unknown'));
+  if (p.eventName) dl.append(row('Booked', p.eventName));
+  if (p.meetings > 1) dl.append(row('Meetings', String(p.meetings)));
+  dl.append(row('Topic', (p.script && p.script.verified.topic) || 'no record of what it was about'));
+  a.append(dl);
+
+  if (p.clientNote) a.append(el('div', p.clientNote, 'flag'));
+  if (p.script && p.script.staleness) a.append(el('p', p.script.staleness, 'stale'));
+
+  const acts = el('div', null, 'acts');
+  acts.append(link('Email them', 'mailto:' + p.email, 'btn'));
+  if (p.script && p.script.bookingUrl) acts.append(link('Book the call', p.script.bookingUrl));
+  a.append(acts);
+
+  if (p.script) {
+    const d = el('details', null, 'script');
+    d.append(el('summary', `Call script${DATA.callerIs && DATA.callerIs.name ? ' for ' + DATA.callerIs.name : ''}`));
+    d.append(el('h3', 'Open'));
+    d.append(el('p', p.script.opener));
+    d.append(el('h3', 'What you may safely say'));
+    d.append(el('p', p.script.verified.note, p.script.verified.topic ? null : 'stale'));
+    d.append(el('h3', 'Where it goes next'));
+    for (const b of p.script.branches) {
+      const w = el('div', null, 'branch');
+      w.append(el('b', b.label), el('p', b.say), el('p', b.note, 'why'));
+      d.append(w);
+    }
+    d.append(el('h3', 'The ask'));
+    d.append(el('p', p.script.close));
+    d.append(el('h3', 'Voicemail'));
+    d.append(el('p', p.script.voicemail));
+    a.append(d);
+  }
+  return a;
+}
+
+function render() {
+  const lists = {
+    toCall: DATA.toCall || [],
+    noShows: DATA.noShows || [],
+  };
+  $('tabs').replaceChildren();
+  for (const [key, label] of [['toCall', `Met us \u00b7 ${lists.toCall.length}`], ['noShows', `Booked, never showed \u00b7 ${lists.noShows.length}`]]) {
+    const b = el('button', label, 'tab');
+    b.setAttribute('aria-pressed', String(VIEW === key));
+    b.onclick = () => { VIEW = key; render(); };
+    $('tabs').append(b);
+  }
+  const rows = lists[VIEW];
+  $('grid').replaceChildren();
+  if (!rows.length) { $('grid').append(el('p', VIEW === 'toCall' ? 'Nobody met us and failed to convert in this window.' : 'Nobody booked and failed to show.', 'empty')); return; }
+  for (const p of rows) $('grid').append(card(p));
+}
+
+(async () => {
+  let d;
+  try {
+    const r = await fetch('/api/lost-deals/?days=365', { cache: 'no-store' });
+    d = await r.json();
+    if (!r.ok) throw new Error(d.error ? d.error + (d.detail ? ' ' + d.detail : '') : 'Could not load');
+  } catch (e) {
+    $('sub').textContent = String(e.message || e);
+    $('sub').className = 'sub err';
+    return;
+  }
+  DATA = d;
+  $('sub').textContent = `${(d.toCall || []).length} people sat on a call with us in the last year and did not become clients. ${d.meetingsRead} meetings read.`;
+
+  const ex = d.excluded || {};
+  const bits = [];
+  if ((ex.alreadyClients || []).length) bits.push(`${ex.alreadyClients.length} left out because they became clients`);
+  if ((ex.optedOut || []).length) bits.push(`${ex.optedOut.length} left out for opting out`);
+  if (d.truncated) bits.push('the calendar was not read in full, so this is a partial list');
+  if (bits.length) {
+    const n = el('div', null, 'note');
+    n.append(el('b', 'Left out: '), document.createTextNode(bits.join(', ') + '.'));
+    $('note').append(n);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
