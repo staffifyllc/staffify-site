@@ -151,3 +151,22 @@ test('the script is written in the voice of whoever will make the call', async (
     assert.match(s.reason, /our CEO started his own agencies/);
     assert.match(s.reason, /We help folks just like Diebold Nixdorf\./);
 });
+
+// ------------------------------------------------------------------
+// Milton, 2026-10-22, on the Spearhead page: "I am ready to call but no leads." Paul saw 21
+// accounts, Milton saw 0. The call queue had refused him and the page drew the refusal as an empty
+// list, which is the same class of bug as a failed sweep reporting nobody opted out.
+test('a signed caller can use the call queue, and a stranger cannot', async () => {
+    process.env.KV_REST_API_URL = process.env.KV_REST_API_URL || 'https://example.invalid';
+    process.env.KV_REST_API_TOKEN = process.env.KV_REST_API_TOKEN || 'test';
+    const { canUseCallQueue } = await import('../api/_outreach-queue.js');
+
+    // Access follows the signed plan, not a hand-set role field that was already mis-provisioned
+    // once for this person: he signs in as the misspelled address.
+    assert.equal(canUseCallQueue({ email: 'miltion@trystaffify.com', role: 'rep' }), true, 'the provisioned spelling');
+    assert.equal(canUseCallQueue({ email: 'milton@trystaffify.com', role: 'rep' }), true, 'and the contract spelling');
+    assert.equal(canUseCallQueue({ email: 'hello@gostaffify.com', role: 'rep' }), true, 'Paul keeps his access');
+    assert.equal(canUseCallQueue({ email: 'stranger@example.com', role: 'rep' }), false, 'nobody else gets in');
+    assert.equal(canUseCallQueue({ email: '', role: 'rep' }), false);
+    assert.equal(canUseCallQueue(null), false);
+});

@@ -1,5 +1,6 @@
 import {tagCampaign} from './_outreach-campaign.js';
 import {callReady} from './_outreach-policy.js';
+import {hasCallerPlan} from './_caller-plan.js';
 export const KEY = 'staffify:outreach-review:v1';
 export const SENDERS = ['paul@trystaffify.com','paul@staffifyhq.com','hello@gostaffify.com','paul@hirestaffify.com','madison@gostaffify.com','madison@staffifyhq.com','madison@trystaffify.com','madison@hirestaffify.com','madison.sterling@trystaffify.com'];
 export function ownerFor(rep) {
@@ -63,7 +64,15 @@ export function controlState(previous, {action,owner,email,id,outcome,notes,next
 
 // Call access is separate from sales ownership and commission permissions.
 export function canUseCallQueue(rep) {
-  return !!ownerFor(rep) || rep?.role === 'caller';
+  // Milton, 2026-10-22, on the Spearhead page: "I am ready to call but no leads." He was seeing
+  // zero accounts while Paul saw twenty-one. ownerFor() returns null for anyone who is not Paul or
+  // Madison, and his rep record carries role 'rep' rather than 'caller', so the queue refused him
+  // and the page rendered the refusal as an empty list.
+  //
+  // Access now also follows the signed caller plan. That is deliberate: a hand-set role field was
+  // already mis-provisioned once for this same person, and tying the call queue to the agreement
+  // that says he is a caller is harder to get wrong than remembering to set a flag.
+  return !!ownerFor(rep) || rep?.role === 'caller' || hasCallerPlan(rep?.email);
 }
 // The pool is a free-for-all until somebody works a lead. After that it is still VISIBLE to the
 // whole team, with the owner and the history on the card, but it stops being offered as unclaimed

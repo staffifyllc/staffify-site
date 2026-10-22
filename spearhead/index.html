@@ -70,8 +70,18 @@ const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/
 (async () => {
     try { const me = await (await fetch('/api/auth-me/', { cache: 'no-store' })).json(); if (me?.rep?.bookingUrl) DISCOVERY_LINK = me.rep.bookingUrl; } catch { /* shared link stands */ }
     let q;
-    try { q = await (await fetch('/api/outreach-queue/?view=calls', { cache: 'no-store' })).json(); }
-    catch { $('sub').textContent = 'Could not load the queue. Sign in and try again.'; return; }
+    try {
+        const r = await fetch('/api/outreach-queue/?view=calls', { cache: 'no-store' });
+        q = await r.json();
+        // A refusal is not an empty list. Milton was shown "0 CEO accounts" when the queue had
+        // actually turned him away, so he sat there ready to call with nothing on screen and no
+        // idea why. An error has to read as an error.
+        if (!r.ok || q.error) throw new Error(q.error || `The queue answered ${r.status}`);
+    } catch (e) {
+        $('sub').textContent = String(e.message || e) + ' This is not a statement that the queue is empty.';
+        $('sub').className = 'sub err';
+        return;
+    }
 
     // A script per account, built from the sector and the emails we actually sent. One request for
     // all of them. If it fails the cards still render, because a card without a script beats no
