@@ -18,6 +18,7 @@ import { openIdentity, redis, readBody } from './_auth.js';
 import { slackNotify } from './_slack.js';
 import { configured as hsReady, findOrCreateContact, logText } from './_hubspot.js';
 import { isOptedOut } from './_optout.js';
+import { mayText } from './_sms-consent.js';
 
 const OP_API = 'https://api.openphone.com/v1/messages';
 const SENT_KEY = 'text:sent';        // hash phone -> when/who, so a lead is never texted twice
@@ -82,11 +83,17 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method_not_allowed' });
 
-    // RETIRED 2026-09-15. This texted a lead after a no-answer ("Hey {first}, it's {rep}. Just tried you..."),
-    // with no consent from the person being texted. Paul: "Proceed with consent-based OpenPhone texting. Do not
-    // build or enable cold SMS." Quo prohibits messaging without consent. Texts now go only to people who asked
-    // for one, through the Staffify automation line (campaign-dashboard /api/sms-lane).
-    return res.status(200).json({ ok: true, sent: false, reason: 'Texting now needs the person\'s consent first. No-answer texts are off.' });
+    // Paul, 2026-10-22: "wire up our hub so that we can send messages out (text messages) one click
+    // via openphone, ensuring they are all personalized".
+    //
+    // This endpoint was retired on 2026-09-15 because it texted people after a NO-ANSWER, which is
+    // the absence of a conversation rather than consent to one. Paul then: "Proceed with
+    // consent-based OpenPhone texting. Do not build or enable cold SMS."
+    //
+    // So the one click is back and the blanket refusal is gone, but the gate decides. A send now
+    // needs evidence that this person wanted a text: they opened a conversation with us, or a
+    // caller recorded them asking on a call. Every other guard below is untouched, because those
+    // protect the person on the other end rather than the wording.
 
     const who = await openIdentity(req).catch(() => null);
     const b = readBody(req);
@@ -124,6 +131,12 @@ export default async function handler(req, res) {
         if (n === 1) await redis.expire(bucket, 3700);
         if (n > HOURLY_CAP) return res.status(200).json({ ok: true, sent: false, reason: 'rate_limited' });
     } catch (e) { /* do not block on counter failure */ }
+
+    // The consent gate. It fails closed: an unverifiable consent carries the same risk as none.
+    const consent = await mayText({ redis, email: String(b.email || '').toLowerCase(), phone: to });
+    if (!consent.allowed) {
+        return res.status(200).json({ ok: false, sent: false, error: 'no_consent', reason: consent.reason });
+    }
 
     const apiKey = process.env.OPENPHONE_API_KEY;
     const fromRaw = (process.env.OPENPHONE_PHONE_NUMBER_ID || '').trim();
