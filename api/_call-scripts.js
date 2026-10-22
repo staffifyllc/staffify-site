@@ -48,7 +48,7 @@ export const bookingLinkFor = email => CALLER_LINKS[String(email || '').trim().t
 // that matters to a media owner, and it is his own, not a claim about the product.
 const REASON = "Hey, real quick, I don't make calls like this all day. I only call a few people, "
     + "and you looked like a good fit. So the reason I'm calling: our CEO owns a real estate media "
-    + "agency, he grew it past six million, and one of the biggest things he did was hire brilliant "
+    + "agency, he grew it to seven figures, and one of the biggest things he did was hire brilliant "
     + "overseas talent. That's the whole reason this company exists.";
 
 const CLOSE = "Would it be worth half an hour to map out what that role actually looks like? No pitch, I genuinely just want to see whether it's a fit.";

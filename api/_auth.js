@@ -10,6 +10,7 @@ export const redis = new Redis({
     token: process.env.KV_REST_API_TOKEN,
 });
 
+import { loginAliases } from './_login-aliases.js';
 export const SESSION_COOKIE = 'sfy_sess';
 const SESSION_TTL = 60 * 60 * 24 * 30; // 30 days
 const MAGIC_TTL = 60 * 20;             // 20 minutes
@@ -88,7 +89,17 @@ export async function getRep(email) {
     const e = normEmail(email);
     if (!e) return null;
     const rep = await redis.hgetall(`rep:${e}`);
-    return rep && rep.email ? rep : null;
+    if (rep && rep.email) return rep;
+    // A rep provisioned under a misspelling of their own address is still that rep. Without this
+    // they sign in with the correct address, match no record, and are told they are not set up.
+    // The record that is found stays canonical, so their history does not split across two
+    // identities. See api/_login-aliases.js.
+    for (const alt of loginAliases(e)) {
+        if (alt === e) continue;
+        const other = await redis.hgetall(`rep:${alt}`);
+        if (other && other.email) return other;
+    }
+    return null;
 }
 
 export async function listReps() {
