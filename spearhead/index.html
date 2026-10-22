@@ -73,6 +73,13 @@ const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/
     try { q = await (await fetch('/api/outreach-queue/?view=calls', { cache: 'no-store' })).json(); }
     catch { $('sub').textContent = 'Could not load the queue. Sign in and try again.'; return; }
 
+    // A script per account, built from the sector and the emails we actually sent. One request for
+    // all of them. If it fails the cards still render, because a card without a script beats no
+    // card: the caller can still see who they are calling and what we sent.
+    let scripts = {};
+    try { scripts = (await (await fetch('/api/spearhead-scripts/', { cache: 'no-store' })).json()).scripts || {}; }
+    catch { scripts = {}; }
+
     const rows = (q.records || []).filter(r => r.campaignId === CAMPAIGN);
     const withPhone = rows.filter(r => r.callContact && r.callContact.phone).length;
     $('sub').textContent = `${rows.length} CEO accounts, four emails sent to each and no reply. These are not a dial-down list: they are worked one at a time, by name.`;
@@ -126,6 +133,28 @@ const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/
             const d = el('details');
             d.append(el('summary', `What we sent · ${bodies.length} message${bodies.length === 1 ? '' : 's'}`));
             for (const b of bodies) d.append(el('pre', b));
+            a.append(d);
+        }
+        // The script for THIS company. A bank, a builder and a children's charity do not share a
+        // question, and the one generic business-owner script said nothing to any of them.
+        const sc = scripts[r.recipient];
+        if (sc) {
+            const d = el('details', null, 'script');
+            d.append(el('summary', `Call script · ${sc.sector.label}`));
+            const note = el('p', sc.sectorNote, 'sub');
+            d.append(note);
+            d.append(el('h3', 'Open'));
+            d.append(el('p', sc.opener));
+            d.append(el('h3', 'The reason you called'));
+            d.append(el('p', sc.reason));
+            d.append(el('h3', 'Then ask, one at a time'));
+            const ol = el('ol');
+            for (const st of sc.stages) { const li = el('li'); li.append(el('b', st.label), el('p', st.say)); ol.append(li); }
+            d.append(ol);
+            d.append(el('h3', 'What we can safely reference'));
+            d.append(el('p', sc.sourcedFact || sc.sourcedFactNote, sc.sourcedFact ? null : 'sub'));
+            d.append(el('h3', 'Voicemail'));
+            d.append(el('p', sc.voicemail));
             a.append(d);
         }
         $('grid').append(a);
