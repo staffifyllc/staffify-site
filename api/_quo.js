@@ -91,6 +91,23 @@ export function findSeat(users, emails = []) {
     return null;
 }
 
+/**
+ * Inbound texts in a window. This is what the STOP sweep reads.
+ *
+ * The legacy route it used before (/v1/messages) demands a phoneNumberId AND a single participant,
+ * so the sweep had to walk every conversation one at a time and ask about each person separately.
+ * On 2026-10-22 that returned 0 incoming messages across 81 threads on an inbox that visibly held
+ * an inbound "Stop", and reported it as "nothing found" rather than as a failure. This route takes
+ * direction=incoming directly and needs no participant, so there is nothing to walk and nothing to
+ * miss.
+ */
+export async function listMessages({ direction = 'incoming', from, to, phoneNumberId, after: since, until, maxPages = 40 } = {}) {
+    const params = { direction, from, to, phoneNumberId };
+    if (since) params['createdAt[gt]'] = since;
+    if (until) params['createdAt[lt]'] = until;
+    return pages('/messages', params, { maxPages });
+}
+
 /** Calls in a window, newest first, optionally for one actor and direction. */
 export async function listCalls({ actorId, direction, from, to, maxPages = 40 } = {}) {
     const params = { actorId, direction };

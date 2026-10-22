@@ -1,7 +1,7 @@
 // Do-not-contact management.
 //   GET  /api/optout/                 -> { count, numbers, emails, recent }
 //   GET  /api/optout/?check=+1555...  -> { optedOut: true|false }
-//   GET  /api/optout/?scan=1          -> sweep OpenPhone for replies that say STOP and suppress them
+//   GET  /api/optout/?scan=1          -> sweep Quo for inbound replies that say STOP and suppress them
 //   POST /api/optout/ {phone,email,reason}       -> suppress by hand
 //   POST /api/optout/ {phone, restore:true}      -> undo, if someone was suppressed in error
 //
@@ -10,108 +10,80 @@
 
 import { adminAuthorized, currentRep, readBody, redis } from './_auth.js';
 import { optOut, optOutEverywhere, isOptedOut, optOutList, looksLikeOptOut, last10 } from './_optout.js';
+import { listMessages, quoConfigured } from './_quo.js';
 
-const SEEN = 'optout:scan:seen';
-const OP = 'https://api.openphone.com/v1';
+// How far back the first sweep looks, and the watermark it keeps afterwards. A date is a far
+// better bookmark than a per-thread "have I read this" map: it cannot drift, and widening it is one
+// query parameter rather than a cache to clear.
+const WATERMARK = 'optout:scan:since';
+const FIRST_RUN_DAYS = Number(process.env.OPTOUT_SCAN_BACKFILL_DAYS || 45);
 
+/**
+ * Sweep Quo for inbound texts that say STOP and suppress the sender everywhere.
+ *
+ * Rewritten 2026-10-22. The previous version walked conversations on the legacy /v1/messages
+ * route, which requires a phoneNumberId AND one participant per request. It read 81 threads, found
+ * ZERO incoming messages on an inbox that plainly contained an inbound "Stop", and returned
+ * ok: true with an empty list. A compliance sweep that cannot see inbound mail reporting "nothing
+ * to do" is worse than one that is switched off, because it looks like it is working.
+ *
+ * The 2026-03-30 route takes direction=incoming and a createdAt range directly, so there is nothing
+ * to walk. If it cannot be read, this says so instead of returning an empty result.
+ */
 export async function scanOpenPhone(limit, debug) {
-    // Resumable and incremental. A conversation is only re-read when it has new activity, and the
-    // sweep remembers where it got to, so a big inbox is worked through across runs instead of
-    // restarting on the same first few threads every time and never reaching the rest.
     const started = Date.now();
-    const BUDGET_MS = Number(process.env.OPTOUT_SCAN_BUDGET_MS || 20000);
-    const key = process.env.OPENPHONE_API_KEY;
-    if (!key) return { ok: false, reason: 'openphone_not_configured' };
-    const headers = { Authorization: key, 'Content-Type': 'application/json' };
+    if (!quoConfigured()) return { ok: false, reason: 'quo_not_configured' };
 
-    let seen = {};
-    try { seen = (await redis.hgetall(SEEN)) || {}; } catch { seen = {}; }
-    const touched = {};
+    let since = null;
+    try { since = await redis.get(WATERMARK); } catch { since = null; }
+    if (!since) since = new Date(Date.now() - FIRST_RUN_DAYS * 86400000).toISOString();
+    // Overlap by an hour so a message that landed mid-sweep is never stranded between runs.
+    const windowFrom = new Date(Date.parse(since) - 3600000).toISOString();
 
+    let items = [], complete = true;
     try {
-        const nr = await fetch(`${OP}/phone-numbers`, { headers });
-        if (!nr.ok) return { ok: false, reason: 'phone_numbers_' + nr.status };
-        const numJson = await nr.json();
-        const numbers = ((numJson.data || [])).map(n => n.id).filter(Boolean);
-        const diag = { numbers: numbers.length, convos: 0, checked: 0, skipped: 0, incoming: 0, samples: [] };
-        if (!numbers.length) return { ok: false, reason: 'no_numbers', diag };
-
-        const found = [];
-        let out = false;
-        for (const pn of numbers) {
-            let pageToken = null;
-            do {
-                const cu = `${OP}/conversations?phoneNumberId=${encodeURIComponent(pn)}&maxResults=100` +
-                           (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
-                const cr = await fetch(cu, { headers });
-                if (!cr.ok) break;
-                const cj = await cr.json();
-                const convos = cj.data || [];
-                pageToken = cj.nextPageToken || (cj.totalItems && convos.length === 100 ? cj.nextPageToken : null) || null;
-                diag.convos += convos.length;
-
-                for (const c of convos) {
-                    if (Date.now() - started > BUDGET_MS) { diag.timedOut = out = true; break; }
-                    const stamp = String(c.lastActivityAt || c.updatedAt || '');
-                    // Nothing has happened in this thread since we last read it, so there is no new reply to find.
-                    if (c.id && seen[c.id] && seen[c.id] === stamp) { diag.skipped++; continue; }
-
-                    const participant = (c.participants || []).find(p => p && p !== c.phoneNumber) || (c.participants || [])[0];
-                    if (!participant) { if (c.id) touched[c.id] = stamp; continue; }
-
-                    // OpenPhone takes participants as a plain repeated param. Verified against the live
-                    // API: participants[] and participants[0] both 400 with "Expected array".
-                    const mUrl = `${OP}/messages?phoneNumberId=${encodeURIComponent(pn)}` +
-                                 `&participants=${encodeURIComponent(participant)}&maxResults=20`;
-                    const mr = await fetch(mUrl, { headers });
-                    diag.checked++;
-                    if (!mr.ok) {
-                        diag.msgFail = (diag.msgFail || 0) + 1;
-                        if (!diag.msgError) diag.msgError = mr.status + ' ' + (await mr.text().catch(() => '')).slice(0, 180);
-                        continue; // not marked seen, so a failed read is retried next run
-                    }
-                    const msgs = (await mr.json()).data || [];
-                    for (const m of msgs) {
-                        if ((m.direction || '').toLowerCase() !== 'incoming') continue;
-                        diag.incoming++;
-                        const body = m.text || m.body || '';
-                        if (diag.samples.length < 8) diag.samples.push({ text: String(body).slice(0, 40), from: m.from || '' });
-                        if (!looksLikeOptOut(body)) continue;
-                        found.push({ phone: m.from || participant, text: String(body).slice(0, 120), at: m.createdAt || '' });
-                        break;
-                    }
-                    if (c.id) touched[c.id] = stamp;
-                    if (limit && found.length >= limit) { out = true; break; }
-                }
-                if (out) break;
-            } while (pageToken);
-            if (out) break;
-        }
-
-        const added = [];
-        for (const f of found) {
-            const already = await isOptedOut({ phone: f.phone });
-            const r = await optOutEverywhere({ phone: f.phone, reason: 'replied stop', source: 'openphone scan', text: f.text });
-            if (r.ok && !already) added.push({ phone: r.phone, text: f.text });
-        }
-        // Only recorded once the threads were genuinely read, so a crash mid-sweep re-reads rather than skips.
-        if (Object.keys(touched).length) { try { await redis.hset(SEEN, touched); } catch {} }
-
-        return {
-            ok: true,
-            scanned: found.length,
-            newlySuppressed: added.length,
-            added,
-            threadsRead: diag.checked,
-            threadsUnchanged: diag.skipped,
-            incomplete: !!diag.timedOut,
-            note: diag.timedOut ? 'Time budget reached. Run again to pick up where this left off.' : undefined,
-            ...(debug ? { diag } : {}),
-        };
+        ({ items, complete } = await listMessages({ direction: 'incoming', after: windowFrom }));
     } catch (e) {
-        if (Object.keys(touched).length) { try { await redis.hset(SEEN, touched); } catch {} }
-        return { ok: false, reason: 'error', detail: String((e && e.message) || e).slice(0, 160) };
+        // Loud. A failed sweep must never read as "nobody opted out".
+        return { ok: false, reason: 'quo_read_failed', detail: String((e && e.message) || e).slice(0, 200), scannedFrom: windowFrom };
     }
+
+    const diag = { messages: items.length, incoming: items.length, samples: [], from: windowFrom };
+    const found = [];
+    for (const m of items) {
+        const body = m.text || m.body || '';
+        if (diag.samples.length < 8) diag.samples.push({ text: String(body).slice(0, 40), from: m.from || '', at: m.createdAt || '' });
+        if (!looksLikeOptOut(body)) continue;
+        found.push({ phone: m.from || '', text: String(body).slice(0, 120), at: m.createdAt || '' });
+        if (limit && found.length >= limit) break;
+    }
+
+    const added = [], failed = [];
+    for (const f of found) {
+        if (!f.phone) continue;
+        const already = await isOptedOut({ phone: f.phone });
+        const r = await optOutEverywhere({ phone: f.phone, reason: 'replied stop', source: 'quo scan', text: f.text });
+        if (!r.ok) { failed.push({ phone: f.phone, reason: r.reason }); continue; }
+        if (!already) added.push({ phone: r.phone, text: f.text, at: f.at });
+    }
+
+    // Only move the watermark when the window was read in full and every suppression landed.
+    // Moving it past a message we failed to act on would lose that opt-out for good.
+    if (complete && !failed.length) {
+        try { await redis.set(WATERMARK, new Date(started).toISOString()); } catch { /* re-reads next run */ }
+    }
+
+    return {
+        ok: true,
+        scannedFrom: windowFrom,
+        messagesRead: items.length,
+        optOutsFound: found.length,
+        added,
+        ...(failed.length ? { failed, note: 'Some suppressions did not store. The watermark was held back so the next run retries them.' } : {}),
+        incomplete: !complete,
+        ...(complete ? {} : { note: 'Page ceiling reached before the window was finished. Run again.' }),
+        ...(debug ? { diag } : {}),
+    };
 }
 
 export default async function handler(req, res) {
