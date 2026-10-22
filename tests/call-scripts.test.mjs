@@ -154,3 +154,38 @@ test('the brief hands out the contract booking link',()=>{
  assert.equal(callScript({campaignId:'staffify-agency-outreach',caller:'X',company:'C',firstName:'J'}).bookingUrl,
               'https://calendly.com/go-staffify/discovery-call');
 });
+
+// Paul, 2026-10-22: "can we wire up the spearheads account to behave exactly like the other call
+// format". Spearhead now runs through this same function and the same workspace, so the sector has
+// to survive the move without breaking the branching tree.
+test('the CEO cohort gets sector questions in the shape its tree expects',()=>{
+ const bank=callScript({campaignId:'staffify-tobit-outreach',caller:'M',company:'Jefferson Bank',firstName:'K'});
+ const builder=callScript({campaignId:'staffify-tobit-outreach',caller:'M',company:'Boot Civil',firstName:'K'});
+ const charity=callScript({campaignId:'staffify-tobit-outreach',caller:'M',company:'HeartGift',firstName:'K'});
+
+ assert.match(bank.questions[0],/reconciliation|onboarding files/,'a bank is asked about a bank');
+ assert.match(builder.questions[0],/submittals|RFIs|takeoffs/,'a builder about building');
+ assert.match(charity.questions[0],/donor|grant/,'a charity about its mission');
+ assert.notEqual(bank.questions[0],builder.questions[0]);
+
+ // FOUR questions, not five. The tree assigns choice labels by position: a five-question script
+ // picks up the media-only resolution node, whose Same day / A day or two buttons are nonsense
+ // under "who picks it up when it backs up", and a caller mid-call reads buttons that do not
+ // match what they just asked.
+ for(const s of [bank,builder,charity]){
+  assert.equal(s.questions.length,4,'same shape as the campaign always had');
+  assert.equal(s.tree.resolve,undefined,'no media resolution node');
+  assert.equal(s.tree.close.say,s.questions[3]);
+  assert.ok(s.sector&&s.sector.label,'the card can say which sector it assumed');
+ }
+ // An unclassifiable company still gets a full script rather than a broken one.
+ const unknown=callScript({campaignId:'staffify-tobit-outreach',caller:'M',company:'T. Kerr Group',firstName:'K'});
+ assert.equal(unknown.questions.length,4);
+ assert.equal(unknown.sector.key,null);
+
+ // And the media script is untouched by any of this.
+ const media=callScript({campaignId:'staffify-agency-outreach',caller:'M',company:'Picture KC',firstName:'J'});
+ assert.equal(media.questions.length,5);
+ assert.ok(media.tree.resolve,'media keeps its resolution node');
+ assert.equal(media.sector,undefined,'and is not given a sector it never asked for');
+});

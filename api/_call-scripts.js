@@ -12,6 +12,7 @@
 // campaign. A CEO on the b2b list has no revisions queue, and a talent-network prospect must
 // never hear anything sourced from a resume.
 import { CAMPAIGN_ID } from './_outreach-campaign.js';
+import { sectorFor } from './_sectors.js';
 import { TOBIT_ID } from './_tobit-campaign.js';
 import { TALENT_ID } from './_talent-network-campaign.js';
 
@@ -224,11 +225,24 @@ function callTree(q, company) {
 }
 
 /** Everything the card needs to run the call, chosen by campaign. */
-export function callScript({ campaignId, caller, callerEmail, company, firstName }) {
-    const pick = SCRIPTS[campaignId] || SCRIPTS[TOBIT_ID];
+export function callScript({ campaignId, caller, callerEmail, company, firstName, website = '', excerpt = '', crmIndustry = '', title = '' }) {
+    const base = SCRIPTS[campaignId] || SCRIPTS[TOBIT_ID];
     const who = company || 'your business';
+    // Paul, 2026-10-22: "can we wire up the spearheads account to behave exactly like the other
+    // call format". It does now, which means the Spearhead cohort comes through this function
+    // rather than its own page. The one thing that had to survive that move is the sector: a bank,
+    // a builder and a children's charity do not share a question, and the generic business-owner
+    // set said nothing to any of them.
+    const sector = campaignId === TOBIT_ID ? sectorFor({ company, website, excerpt, crmIndustry, title }) : null;
+    // Three questions and the close, which is the shape this campaign already had. NOT four: the
+    // branching tree assigns its choice labels by position, and a five-question script gets the
+    // media-only "how long until it is resolved" node with its Same day / A day or two buttons.
+    // Under a sector question like "who picks it up when it backs up" those answers are nonsense,
+    // and a caller mid-conversation would be reading buttons that do not match what was asked.
+    const pick = sector ? { audience: sector.label.toLowerCase(), questions: [...sector.questions.slice(0, 2), sector.questions[3], CLOSE] } : base;
     return {
         audience: pick.audience,
+        ...(sector ? { sector: { key: sector.key, label: sector.label, source: sector.source } } : {}),
         opener: opener(caller, who).replace('{first}', firstName || 'there'),
         questions: pick.questions,
         stages: (STAGE_LABELS[pick.questions.length] || STAGE_LABELS[4]).map((label, i) => ({ label, say: pick.questions[i] })).filter(s => s.say),
