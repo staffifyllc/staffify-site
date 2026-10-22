@@ -81,9 +81,28 @@ export default async function handler(req,res){
   const crmContact=await contact(row.recipient);const p=crmContact.properties;const contactId=crmContact.id;
   const phoneEvidence=await checkBusinessPhone({phone:p.phone||p.mobilephone,website:p.website,fetchSite:site});
   await redis.set('staffify:call-phone-evidence:'+row.recipient,phoneEvidence,{ex:86400});
+  // Paul, 2026-10-22: "our sales people shouldn't have to do this." The card used to hand over a
+  // number ONLY when the CRM number was found printed on the prospect's own website, and otherwise
+  // showed nothing plus "Research before calling". Meanwhile the direct dials already bought from
+  // RocketReach sat unread. Same evidence, ranked and surfaced rather than discarded: the caller
+  // always gets the best number we hold and one line saying how good it is.
+  const [vendorDial,sitePhone]=await Promise.all([
+   redis.get('staffify:call-phone-vendor:'+row.recipient.toLowerCase()).catch(()=>null),
+   redis.get('staffify:call-site-phone:'+row.recipient.toLowerCase()).catch(()=>null),
+  ]);
+  const crmPhone=String(p.phone||'').trim()||String(p.mobilephone||'').trim()||null;
+  const dial=phoneEvidence.status==='business_listed'
+   ?{number:phoneEvidence.phone,label:'Published on their own website',detail:phoneEvidence.detail,sourceUrl:phoneEvidence.sourceUrl||null,alternates:[]}
+   :vendorDial&&vendorDial.phone
+   ?{number:vendorDial.phone,label:'Direct dial'+(vendorDial.type?' ('+vendorDial.type+')':''),detail:'Direct dial from '+(vendorDial.source||'a contact data vendor')+'. Not carrier-verified.',sourceUrl:null,alternates:(vendorDial.alternates||[]).slice(0,3)}
+   :sitePhone&&sitePhone.phone
+   ?{number:sitePhone.phone,label:'Main line published on their website',detail:'Ask for them by name. This is the number the business publishes, not a personal line.',sourceUrl:sitePhone.sourceUrl||null,alternates:(sitePhone.alternates||[]).slice(0,3)}
+   :crmPhone
+   ?{number:crmPhone,label:'From the CRM, not corroborated',detail:'Came with the list and is not on their website, so expect a main line or a front desk. Ask for them by name.',sourceUrl:phoneEvidence.sourceUrl||null,alternates:[]}
+   :null;
   return res.status(200).json({callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
    industry:industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle}),
-   staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:phoneEvidence.status==='business_listed'?phoneEvidence.phone:null,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname}),events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
+   staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:dial&&dial.number||null,dial,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname}),events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
  }catch(e){
   // Degrade, do not go blank. The research, the website and the email trail live on the queue
   // record and owe nothing to whichever system just failed.
