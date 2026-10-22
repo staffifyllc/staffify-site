@@ -46,7 +46,10 @@ test('every account in the cohort gets a complete, usable script', () => {
         assert.equal(s.stages.length, 5, company);
         assert.ok(s.voicemail.includes(company), company);
         assert.ok(s.bookingUrl.startsWith('https://'), company);
-        assert.ok(s.reason.includes('seven figures'), company);
+        assert.ok(s.reason.includes('started his own agencies'), company);
+        assert.ok(s.reason.includes('over 500 employees'), company);
+        // The beat has to end on the company being called, not on Staffify.
+        assert.ok(s.reason.includes('We help folks just like ' + company), company);
     }
 });
 
@@ -121,4 +124,30 @@ test('a missing first name degrades politely rather than printing a blank', () =
     assert.match(s.opener, /Hi there, this is Milton/);
     assert.ok(!s.opener.includes('Hi , '));
     assert.ok(!s.voicemail.includes('Hi , '));
+});
+
+// ------------------------------------------------------------------
+// Paul, 2026-10-22, reading a script that opened "this is Paul Chareth with Staffify":
+// "its going to be Milton with Staffify, I will not be calling."
+//
+// The script was named after whoever was LOOKING at the page. Paul reviews these lists and does
+// not dial them, so the viewer is the last place the name should come from.
+test('the script is written in the voice of whoever will make the call', async () => {
+    const { designatedCaller, callerPlan } = await import('../api/_caller-plan.js');
+    assert.equal(designatedCaller('staffify-tobit-outreach'), 'milton@trystaffify.com',
+        'the Spearhead calls belong to Milton');
+    assert.equal(callerPlan(designatedCaller('staffify-tobit-outreach')).name, 'Milton');
+    assert.equal(designatedCaller('some-other-campaign'), null, 'nothing is assigned by accident');
+    assert.equal(designatedCaller(''), null);
+    assert.equal(designatedCaller(undefined), null);
+
+    // And the name actually lands in the words he says.
+    const s = spearheadScript({ company: 'Diebold Nixdorf', firstName: 'Octavio', caller: 'Milton', sentTouches: 4, subject: 'A quick hello, Octavio' });
+    assert.match(s.opener, /this is Milton with Staffify/);
+    assert.ok(!/Paul Chareth/.test(s.opener), 'never the reviewer');
+    assert.match(s.voicemail, /Milton/);
+
+    // The reason beat still refers to Paul in the third person, which is the point of it.
+    assert.match(s.reason, /our CEO started his own agencies/);
+    assert.match(s.reason, /We help folks just like Diebold Nixdorf\./);
 });

@@ -185,10 +185,15 @@ function opener({ caller, company, firstName, sentTouches, subject }) {
     return `Hi ${who}, this is ${caller || 'a caller'} with Staffify. I will be straight with you, this is a cold call. ${sent} Have I caught you in the middle of something?`;
 }
 
-const REASON = "Real quick, I do not make calls like this all day, I only call a few people. "
-    + "So the reason I am calling you specifically: our CEO owns a real estate media agency, he grew "
-    + "it to seven figures, and one of the biggest things he did was hire brilliant overseas talent. "
-    + "That is the whole reason this company exists.";
+// Paul's own words, 2026-10-22: "our CEO started his own agencies that needed this talent, many of
+// those agencies operate at 7-8 figures today using this workforce which is how we've grown to over
+// 500 employees we help folks just like (their company)". The company name lands at the end, which
+// is the part that makes it a reason for calling THEM rather than a company blurb.
+const reasonFor = company => "Real quick, I do not make calls like this all day, I only call a few "
+    + "people. So the reason I am calling you specifically: our CEO started his own agencies that "
+    + "needed this exact talent. A lot of those agencies are doing seven and eight figures today "
+    + "using this workforce, and that is how we have grown to over 500 employees. We help folks "
+    + "just like " + (company || 'your business') + ".";
 
 const CLOSE = "Look, I am not going to pitch you on a cold call. What I would rather do is put twenty "
     + "minutes in the diary with Paul, our CEO, and he will walk you through exactly how he would staff "
@@ -214,7 +219,7 @@ export function spearheadScript({ company, firstName, website = '', excerpt = ''
             ? 'No sector could be determined, so these are the general questions. Ask, do not assume.'
             : 'Sector inferred from their name and website. Treat it as a starting point, not something to assert.',
         opener: opener({ caller, company: name, firstName, sentTouches, subject }),
-        reason: REASON,
+        reason: reasonFor(name),
         questions,
         stages: labels.map((label, i) => ({ label, say: questions[i] })).filter(s => s.say),
         // Only present when a real sourced sentence exists. Never filled with a guess.

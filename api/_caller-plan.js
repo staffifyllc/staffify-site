@@ -90,6 +90,19 @@ export const emailMismatch = email =>
         ? { signedIn: PROVISIONED_ALIAS, onContract: CONTRACT_EMAIL }
         : null;
 
+// Who actually works a campaign's calls.
+// ------------------------------------------------------------------
+// Paul, 2026-10-22, reading a Spearhead script that opened "this is Paul Chareth with Staffify":
+// "its going to be Milton with Staffify, I will not be calling."
+//
+// The script was naming whoever was LOOKING at the page. Paul reviews these lists; he does not
+// dial them. A script that puts the reviewer's name in the caller's mouth is wrong on the page and
+// wrong on the phone, so the name comes from who will make the call, never from who is reading.
+export const CAMPAIGN_CALLERS = Object.freeze({
+    'staffify-tobit-outreach': 'milton@trystaffify.com',
+});
+export const designatedCaller = campaignId => CAMPAIGN_CALLERS[String(campaignId || '').trim()] || null;
+
 /** 5.2 and 6: everything that must be true before a commission is owed. */
 export const ELIGIBILITY = Object.freeze([
     'The business is attributed to you in HubSpot, from the discovery call you booked and recorded.',

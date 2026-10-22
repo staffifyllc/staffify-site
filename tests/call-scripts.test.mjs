@@ -119,10 +119,14 @@ test('the reason beat is said before any question, on every route in',()=>{
   const s=callScript({campaignId:id,caller:'Milton',company:'Picture KC',firstName:'Joel'});
   assert.ok(s.reason,'reason present');
   assert.ok(/only call a few people/i.test(s.reason),'the pattern interrupt');
-  // Milton, 2026-10-22: "We can change the words 'past six million' to maybe 'seven figures'".
-  // His call, he is the one saying it, and six million is seven figures either way.
-  assert.ok(/seven figures/i.test(s.reason),'the founder credential');
-  assert.ok(!/six million/i.test(s.reason),'the specific number is no longer quoted');
+  // Paul, 2026-10-22, rewrote this beat in his own words. The claim is no longer one agency and a
+  // number, it is the agencies he started, what they run at now, and the headcount that came of it.
+  assert.ok(/started his own agencies/i.test(s.reason),'the founder credential');
+  assert.ok(/seven and eight figures/i.test(s.reason),'what those agencies run at today');
+  assert.ok(/over 500 employees/i.test(s.reason),'the scale it grew into');
+  assert.ok(!/six million/i.test(s.reason),'the specific number is not quoted');
+  // It has to end on THEM, or it is a company blurb rather than a reason for calling.
+  assert.ok(/We help folks just like /i.test(s.reason),'it names who it is for');
   // Both ways into the conversation go through it before discovery.
   assert.equal(s.tree.open.choices[0][1],'reason','"go ahead" hits the reason first');
   assert.equal(s.tree.context.choices[0][1],'reason','"what is this about" rejoins at the reason');

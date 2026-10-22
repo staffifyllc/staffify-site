@@ -46,10 +46,15 @@ export const bookingLinkFor = email => CALLER_LINKS[String(email || '').trim().t
 // Paul, 2026-10-20. Said straight after they let you continue, before any question. The first
 // half takes the edge off a cold call by being honest about it; the second is the only credential
 // that matters to a media owner, and it is his own, not a claim about the product.
-const REASON = "Hey, real quick, I don't make calls like this all day. I only call a few people, "
-    + "and you looked like a good fit. So the reason I'm calling: our CEO owns a real estate media "
-    + "agency, he grew it to seven figures, and one of the biggest things he did was hire brilliant "
-    + "overseas talent. That's the whole reason this company exists.";
+// Rewritten in Paul's own words, 2026-10-22: "our CEO started his own agencies that needed this
+// talent, many of those agencies operate at 7-8 figures today using this workforce which is how
+// we've grown to over 500 employees we help folks just like (their company)". It now names the
+// company at the end, which is why it takes one.
+const reasonFor = company => "Hey, real quick, I don't make calls like this all day. I only call a few "
+    + "people, and you looked like a good fit. So the reason I'm calling: our CEO started his own "
+    + "agencies that needed this exact talent. A lot of those agencies are doing seven and eight "
+    + "figures today using this workforce, and that is how we have grown to over 500 employees. "
+    + "We help folks just like " + (company || 'your business') + ".";
 
 const CLOSE = "Would it be worth half an hour to map out what that role actually looks like? No pitch, I genuinely just want to see whether it's a fit.";
 
@@ -153,7 +158,7 @@ function callTree(q, company) {
     return {
         open: { choices: [['Go ahead', 'reason'], ["What's this about?", 'context'], ['Bad time', 'busy'], ['Not interested', 'stop'], ['Wrong person', 'gate']] },
         // Said before the first question, every time. One beat, then straight into discovery.
-        reason: { say: REASON, note: 'Say it once and stop talking. The question after this is what the call is for.', choices: [['Keep going', 'discover'], ['They pushed back', 'busy']] },
+        reason: { say: reasonFor(company), note: 'Say it once and stop talking. The question after this is what the call is for.', choices: [['Keep going', 'discover'], ['They pushed back', 'busy']] },
         context: {
             say: `Fair enough. We place dedicated remote team members with owners like you, people who sit on the editing queue, the client follow-up, the scheduling. I'm not selling you anything on this call. I just wanted to find out whether any of that is actually a problem at ${them}.`,
             choices: [['Go ahead', 'reason'], ['Not interested', 'stop']],
@@ -229,7 +234,7 @@ export function callScript({ campaignId, caller, callerEmail, company, firstName
         stages: (STAGE_LABELS[pick.questions.length] || STAGE_LABELS[4]).map((label, i) => ({ label, say: pick.questions[i] })).filter(s => s.say),
         objections: OBJECTIONS.map(([label, say, note]) => ({ label, say, note })),
         voicemail: voicemail(caller, who),
-        reason: REASON,
+        reason: reasonFor(who),
         bookingUrl: bookingLinkFor(callerEmail),
         tree: callTree(pick.questions, company),
     };
