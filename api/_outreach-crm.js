@@ -22,6 +22,12 @@ export async function contact(email){await assertPortal();const found=await hs('
 export async function draftBlockReason(row,{requireVerified=true}={}){
  if(await isOptedOut({email:row.recipient}))return 'Global opt-out';
  const c=await contact(row.recipient),p=c.properties;row.prospectTimezone={...resolveTimezone(p),checkedAt:new Date().toISOString()};row.phone=String(p.phone||'').trim()||String(p.mobilephone||'').trim()||null;const name=(p.firstname+' '+p.lastname).toLowerCase();
+ // A STOP arrives as a phone number, and this gate keys on email. The bridge between them is the
+ // CRM record, and on 2026-10-22 all eight recovered opt-outs linked to NO email at all: the
+ // contacts the texts reached carry a number and nothing else. So the number is checked here in
+ // its own right. Without this, somebody who texted STOP stays callable and keeps receiving the
+ // sequence for as long as their CRM record has no address on it.
+ if(row.phone&&await isOptedOut({phone:row.phone}))return 'Global opt-out: this number replied STOP';
  if(['trey tatro','mike haymes','blake watkins'].some(n=>name.includes(n)))return 'Explicit exclusion';
  if(requireVerified&&p.rep_email_verified!=='verified')return 'Email verification: '+(p.rep_email_verified||'missing');
  if(p.rep_last_reply_at)return 'CRM records a reply';

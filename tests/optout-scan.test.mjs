@@ -128,3 +128,47 @@ test('a message with no sender cannot suppress an empty number', async () => {
     assert.equal(out.added.length, 1);
     assert.ok(!(sets['optout:numbers'] || new Set()).has(''));
 });
+
+// ------------------------------------------------------------------
+// The second hole, found the same night. All eight recovered opt-outs were suppressed by PHONE and
+// linked to NO email: the contacts those texts reached carry a number and nothing else. Every
+// outbound gate keys on email, so each of those eight stayed callable and kept their sequence.
+test('a number that replied STOP blocks the call and the send, even with no email linked', async () => {
+    const calls = [];
+    const crm = await import('../api/_outreach-crm.js');
+    const optout = await import('../api/_optout.js');
+
+    // Suppressed by phone only, exactly as the sweep leaves them.
+    const suppressedNumbers = new Set(['2399007772']);
+    const realIsOptedOut = optout.isOptedOut;
+    assert.equal(typeof realIsOptedOut, 'function');
+
+    // Drive the real gate through its own CRM call, with the contact the sweep actually produced:
+    // a phone number and an empty email.
+    globalThis.fetch = async (url, opts) => {
+        const u = new URL(String(url));
+        if (u.host === 'api.hubapi.com') {
+            calls.push(u.pathname);
+            if (u.pathname.includes('/account-info')) return { ok: true, status: 200, json: async () => ({ portalId: 51666712 }) };
+            return { ok: true, status: 200, json: async () => ({ total: 1, results: [{ id: '248485814606', properties: { email: '', phone: '+1 239 900-7772', firstname: 'Leo', lastname: 'W' } }] }) };
+        }
+        // Upstash: the number is on the list, the address is not.
+        const encoded = (opts?.headers || {})['Upstash-Encoding'] === 'base64';
+        const b64 = v => (typeof v === 'string' ? Buffer.from(v, 'utf8').toString('base64') : v);
+        const batch = JSON.parse(opts?.body || '[]');
+        const answer = cmd => {
+            const verb = String(cmd[0] || '').toUpperCase(), key = String(cmd[1] || '');
+            if (verb === 'SISMEMBER') return key === 'optout:numbers' && suppressedNumbers.has(String(cmd[2])) ? 1 : 0;
+            return null;
+        };
+        const enc = r => (!encoded ? r : Array.isArray(r) ? r.map(b64) : b64(r));
+        const payload = Array.isArray(batch[0]) ? batch.map(c => ({ result: enc(answer(c)) })) : { result: enc(answer(batch)) };
+        const text = JSON.stringify(payload);
+        return { ok: true, status: 200, headers: { get: () => null }, text: async () => text, json: async () => payload };
+    };
+    process.env.HUBSPOT_TOKEN = 'test-token';
+
+    const reason = await crm.draftBlockReason({ recipient: 'leopaul@example.com', company: 'Realty Media 360' }, { requireVerified: false });
+    assert.match(String(reason), /replied STOP/, 'the number alone is enough to stop us');
+    delete process.env.HUBSPOT_TOKEN;
+});
