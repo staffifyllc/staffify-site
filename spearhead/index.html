@@ -60,6 +60,8 @@ const CAMPAIGN = 'staffify-tobit-outreach';
 // Filled from auth-me so a caller books onto their OWN calendar. The fallback is the shared
 // link, which is still better than no link if the identity call fails.
 let DISCOVERY_LINK = 'https://calendly.com/go-staffify/discovery-call';
+// Whoever is actually calling, so a text signs with the same name the script says out loud.
+let CALLER_NAME = 'Staffify';
 const $ = id => document.getElementById(id);
 const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 const link = (label, href, cls = 'btn btn-ghost') => { const a = el('a', label, cls); a.href = href; a.target = '_blank'; a.rel = 'noopener'; return a; };
@@ -87,8 +89,12 @@ const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/
     // all of them. If it fails the cards still render, because a card without a script beats no
     // card: the caller can still see who they are calling and what we sent.
     let scripts = {};
-    try { scripts = (await (await fetch('/api/spearhead-scripts/', { cache: 'no-store' })).json()).scripts || {}; }
-    catch { scripts = {}; }
+    try {
+        const sj = await (await fetch('/api/spearhead-scripts/', { cache: 'no-store' })).json();
+        scripts = sj.scripts || {};
+        if (sj.callerIs && sj.callerIs.name) CALLER_NAME = sj.callerIs.name;
+        else if (sj.writtenFor && sj.writtenFor.name) CALLER_NAME = sj.writtenFor.name;
+    } catch { scripts = {}; }
 
     const rows = (q.records || []).filter(r => r.campaignId === CAMPAIGN);
     const withPhone = rows.filter(r => r.callContact && r.callContact.phone).length;
@@ -128,6 +134,36 @@ const href = u => /^https?:\/\//i.test(u) ? u : 'https://' + String(u).replace(/
         // Same discovery link the dialer offers, so a CEO who replies can be booked without
         // hunting for it in another tab.
         acts.append(link('Book the discovery call', DISCOVERY_LINK));
+
+        // One click, personalised from this record. Paul, 2026-10-22. The draft is shown before it
+        // goes and can be edited, because the person sending it is the one accountable for it.
+        const phone = r.callContact && r.callContact.phone;
+        if (phone) {
+            const btn = el('button', 'Text them', 'btn btn-ghost');
+            btn.onclick = async () => {
+                const first = (r.verifiedFirstName || '').trim();
+                const draft = `Hey ${first || 'there'}, it's ${CALLER_NAME} at Staffify. Just tried you.`
+                    + ` I sent you ${r.sentTouches === 1 ? 'an email' : (r.sentTouches || 4) + ' emails'} a little while back.`
+                    + ` We help companies like ${r.company} hand off the recurring work that eats their team's week.`
+                    + ` Worth a quick conversation?`;
+                const message = window.prompt('Send this text to ' + phone + '?', draft);
+                if (message == null) return;
+                btn.disabled = true; btn.textContent = 'Sending…';
+                try {
+                    const res = await fetch('/api/send-text/', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone, first, company: r.company, email: r.recipient,
+                            motion: 'outreach', emails: r.sentTouches || 0, message }),
+                    });
+                    const j = await res.json();
+                    // sent:false comes back with a reason rather than an error, so it has to be
+                    // read as a failure or a blocked send looks exactly like a successful one.
+                    btn.textContent = j.sent ? 'Sent' : (j.reason || j.error || 'Not sent');
+                    if (!j.sent) btn.disabled = false;
+                } catch (e) { btn.textContent = 'Failed'; btn.disabled = false; }
+            };
+            acts.append(btn);
+        }
         if (!(r.callContact && r.callContact.phone)) acts.append(el('span', 'no direct line', 'pill'));
         a.append(acts);
 

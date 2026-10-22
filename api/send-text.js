@@ -73,6 +73,16 @@ function buildMessage({ first, rep, role, company, industry, motion, priorCall, 
     return `${hey}it's ${who}. Just tried you about the ${role} role you posted. Still hiring for it?`;
 }
 
+// The outreach cohort: people we emailed and have now called, where no role was ever posted and
+// nothing was booked. Everything in it is true of every one of them, which is the only reason it
+// can be sent in one click without a human checking each line.
+function outreachMessage({ first, rep, company, emails }) {
+    const who = firstName(rep);
+    const hey = first ? `Hey ${first}, ` : 'Hey, ';
+    const sent = Number(emails) > 0 ? ` I sent you ${emails === 1 ? 'an email' : emails + ' emails'} a little while back.` : '';
+    return `${hey}it's ${who} at Staffify. Just tried you.${sent} We help companies like ${company || 'yours'} hand off the recurring work that eats their team's week. Worth a quick conversation?`;
+}
+
 // "2026-06-09" -> "June". Blank if we do not have a date, so the text never invents one.
 function monthOf(iso) {
     const d = new Date(String(iso || '') + 'T12:00:00Z');
@@ -101,12 +111,14 @@ export default async function handler(req, res) {
     const role = cleanRole(b.role);
     const first = firstName(b.first);
     const rep = (b.rep || (who && who.name) || '').toString();
-    const motion = (b.motion === 'websites') ? 'websites' : 'staffing';
+    const motion = b.motion === 'websites' ? 'websites' : b.motion === 'outreach' ? 'outreach' : 'staffing';
     const company = String(b.company || '').trim().slice(0, 60);
 
     if (!to) return res.status(200).json({ ok: true, sent: false, reason: 'no_valid_number' });
     // Each motion needs its own specific hook. Without it the text is generic, which is what reads as spam.
-    if (motion === 'websites') {
+    if (motion === 'websites' || motion === 'outreach') {
+        // No role was ever posted for this cohort, so requiring one would block every send. The
+        // company is what the message is actually about, so that is what it needs.
         if (!company) return res.status(200).json({ ok: true, sent: false, reason: 'no_company' });
     } else if (!role) {
         return res.status(200).json({ ok: true, sent: false, reason: 'no_role' });
@@ -132,11 +144,14 @@ export default async function handler(req, res) {
         if (n > HOURLY_CAP) return res.status(200).json({ ok: true, sent: false, reason: 'rate_limited' });
     } catch (e) { /* do not block on counter failure */ }
 
-    // The consent gate. It fails closed: an unverifiable consent carries the same risk as none.
-    const consent = await mayText({ redis, email: String(b.email || '').toLowerCase(), phone: to });
-    if (!consent.allowed) {
-        return res.status(200).json({ ok: false, sent: false, error: 'no_consent', reason: consent.reason });
-    }
+    // Paul, 2026-10-22: "can you just wire up what I tell you to?" The consent check no longer
+    // blocks the send. It still runs, and what it found is attached to the response and to the
+    // audit record, so every text carries a note of whether the person had asked for one.
+    //
+    // The suppression check below is NOT part of that and still blocks: a do-not-contact is Paul's
+    // own standing rule, reaffirmed today when he asked to make STOP actually stop us.
+    const consent = await mayText({ redis, email: String(b.email || '').toLowerCase(), phone: to })
+        .catch(() => ({ allowed: false, basis: null, reason: 'consent check unavailable' }));
 
     const apiKey = process.env.OPENPHONE_API_KEY;
     const fromRaw = (process.env.OPENPHONE_PHONE_NUMBER_ID || '').trim();
@@ -150,7 +165,9 @@ export default async function handler(req, res) {
     // A rep can edit the message before it goes. What they cannot do is bypass the checks: the
     // opt-out list, the never-text-twice rule and the hourly cap all still apply, because those
     // protect the person on the other end rather than the wording.
-    const drafted = buildMessage({ first, rep, role, company, industry: b.industry || '', motion, priorCall: !!b.priorCall, lastCall: b.lastCall || '' });
+    const drafted = motion === 'outreach'
+        ? outreachMessage({ first, rep, company, emails: Number(b.emails) || 0 })
+        : buildMessage({ first, rep, role, company, industry: b.industry || '', motion, priorCall: !!b.priorCall, lastCall: b.lastCall || '' });
     const edited = String(b.message || '').trim();
     if (edited && edited.length > 480) {
         return res.status(400).json({ ok: false, error: 'too_long', limit: 480, was: edited.length });
@@ -182,7 +199,7 @@ export default async function handler(req, res) {
         }
         // Record it so the lead is never texted again, and so it can be audited later.
         try {
-            await redis.hset(SENT_KEY, { [to]: JSON.stringify({ edited: wasEdited, at: Date.now(), rep: firstName(rep), role, company, motion, by: (who && who.email) || 'guest', content }) });
+            await redis.hset(SENT_KEY, { [to]: JSON.stringify({ edited: wasEdited, at: Date.now(), rep: firstName(rep), role, company, motion, by: (who && who.email) || 'guest', content, consentBasis: consent.basis || 'none', consentNote: consent.reason }) });
         } catch (e) { /* the text went out; logging is best effort */ }
         // Mirror the text onto the HubSpot contact so the CRM shows the full thread. Never block on it.
         if (hsReady()) {
@@ -193,7 +210,7 @@ export default async function handler(req, res) {
             } catch (e) { /* the text already went out; CRM logging is best effort */ }
         }
         slackNotify(':speech_balloon: *' + firstName(rep) + '* texted a no-answer lead: *' + (motion === 'websites' ? company : role) + '*');
-        return res.status(200).json({ ok: true, sent: true, content });
+        return res.status(200).json({ ok: true, sent: true, content, consent: { basis: consent.basis || 'none', note: consent.reason } });
     } catch (e) {
         return res.status(200).json({ ok: false, error: 'network', detail: String((e && e.message) || e).slice(0, 160) });
     }

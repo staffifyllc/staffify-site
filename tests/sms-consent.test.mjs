@@ -97,12 +97,33 @@ test('consent is per person, not a blanket switch', async () => {
     assert.equal(no.allowed, false, 'a different number gets no benefit from theirs');
 });
 
-test('the sender refuses without the gate, and keeps every older guard', async () => {
+// Paul, 2026-10-22: "can you just wire up what I tell you to?" The consent check no longer blocks
+// a send. It still runs and is recorded, and the suppression list still blocks outright, because
+// that one is his own rule rather than a judgement of mine.
+test('the send is not blocked by consent, but every send carries what it found', async () => {
     const src = (await import('node:fs')).readFileSync(new URL('../api/send-text.js', import.meta.url), 'utf8');
-    assert.match(src, /const consent = await mayText\(/);
-    assert.ok(src.indexOf('await mayText(') < src.indexOf('const apiKey = process.env.OPENPHONE_API_KEY'),
-        'consent is decided before anything is sent');
-    // The guards that were already there and must not have been lost in the rewiring.
-    for (const guard of ['isOptedOut', 'UNSUPPORTABLE', 'too_long'])
+    assert.match(src, /const consent = await mayText\(/, 'it is still checked');
+    assert.ok(!/if \(!consent\.allowed\)[\s\S]{0,120}return/.test(src), 'and no longer blocks');
+    assert.match(src, /consentBasis: consent\.basis/, 'the basis is written into the audit record');
+    assert.match(src, /consent: \{ basis: consent\.basis/, 'and returned to whoever sent it');
+});
+
+test('the guards that are Paul\'s own rules still block', async () => {
+    const src = (await import('node:fs')).readFileSync(new URL('../api/send-text.js', import.meta.url), 'utf8');
+    // A do-not-contact stops the send outright. He asked for that today.
+    assert.match(src, /if \(await isOptedOut\(\{ phone: to \}\)\)/);
+    // And the rest of the original guards survived the rewiring.
+    for (const guard of ['UNSUPPORTABLE', 'too_long', 'SENT_KEY'])
         assert.ok(src.includes(guard), 'still guarded by ' + guard);
+});
+
+test('the outreach text is true of everyone it can be sent to', async () => {
+    const src = (await import('node:fs')).readFileSync(new URL('../api/send-text.js', import.meta.url), 'utf8');
+    const fn = src.slice(src.indexOf('function outreachMessage'), src.indexOf('function monthOf'));
+    // No role is claimed, because nobody in this cohort posted one. That exact claim got
+    // "where for you see the role posted" back within a minute on 2026-08-12.
+    assert.ok(!/role/.test(fn), 'it never mentions a role');
+    assert.ok(!/you posted/.test(fn), 'and never claims they posted anything');
+    assert.match(fn, /Just tried you/, 'the call just happened, which is true');
+    assert.match(fn, /emails/, 'the email count comes from the record');
 });
