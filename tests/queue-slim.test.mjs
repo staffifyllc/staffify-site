@@ -17,7 +17,7 @@ const BODY = 'Hi Krista, '.repeat(200);
 const rec = (i, over = {}) => ({
     id: 'r' + i, recipient: `p${i}@x.com`, sender: 'paul@gostaffify.com', owner: 'Paul', company: 'Co ' + i, threadId: 't' + i,
     status: 'sent', subject: 'Hello', bodyText: BODY, followupBodies: { 2: BODY, 3: BODY, 4: BODY }, followupSubjects: { 2: 'Re' },
-    source: { list: 'apollo', raw: BODY }, emailVerification: { outcome: 'deliverable', provider: 'x', raw: BODY }, sendWindow: { open: '09:00', close: '17:00', zone: 'America/Chicago' },
+    source: { list: 'apollo', raw: BODY }, emailVerification: { status: 'verified', reason: null, checkedAt: '2026-10-20T12:00:00Z', provider: 'x', raw: BODY }, sendWindow: { nextOpenAt: '2026-10-23T13:00:00Z', reason: 'outside hours', timeZone: 'America/Chicago', raw: BODY },
     prospectTimezone: 'America/Chicago', replyId: null, holdError: null, callReady: true, callContact: { phone: '+15125551000', phoneStatus: 'available' }, callHistory: [{ at: '2026-10-20T20:00:00Z', outcome: 'no_answer' }],
     events: [
         { id: 'e1', kind: 'sent', at: '2026-10-20T14:00:00Z', from: 'paul@gostaffify.com', to: `p${i}@x.com`, subject: 'Hello', body: BODY },
@@ -46,11 +46,17 @@ test('what the page shows is identical over the slim shape', () => {
 test('the mail itself is gone, and so is everything else the page never reads', () => {
     const slim = slimState(structuredClone(FULL));
     for (const r of slim.records) {
-        for (const k of ['bodyText', 'followupBodies', 'followupSubjects', 'source', 'sendWindow', 'prospectTimezone']) assert.ok(!(k in r), k + ' stripped');
+        for (const k of ['bodyText', 'followupBodies', 'followupSubjects', 'source', 'prospectTimezone']) assert.ok(!(k in r), k + ' stripped');
         for (const e of r.events) { assert.ok(!('body' in e), 'event body stripped'); assert.deepEqual(Object.keys(e).sort(), ['at', 'from', 'id', 'kind', 'subject', 'to']); }
         for (const k of ['id', 'recipient', 'sender', 'owner', 'company', 'threadId', 'status', 'callReady', 'callContact', 'callHistory', 'replyId', 'holdError']) assert.ok(k in r, k + ' kept');
+        assert.equal(r.hasDraft, true, 'the Inbox is told there is a draft to open');
+        // The Inbox reads these three off the verification and these three off the window. Nothing else.
+        assert.deepEqual(Object.keys(r.emailVerification).sort(), ['checkedAt', 'reason', 'status']);
+        assert.deepEqual(Object.keys(r.sendWindow).sort(), ['nextOpenAt', 'reason', 'timeZone']);
+        assert.equal(r.sendWindow.timeZone, 'America/Chicago');
     }
     assert.ok(!('creations' in slim), 'creation logs are not shipped');
+    assert.ok(!('assignments' in slim), 'assignments are not shipped; no page reads them');
     assert.ok(!('dry_run' in Object.fromEntries(slim.sends.map(s => [s.status, 1]))), 'a dry run is not a send');
     assert.ok(slim.sends.every(s => !('body' in s) && !('subject' in s)));
     const before = JSON.stringify(FULL).length, after = JSON.stringify(slim).length;
@@ -62,4 +68,13 @@ test('a record with no events and an empty state both survive', () => {
     const one = slimState({ revision: 1, records: [{ id: 'a', recipient: 'a@x.com', status: 'sent' }] }).records[0];
     assert.deepEqual(one.events, []);
     assert.equal(one.emailVerification, null);
+    assert.equal(one.hasDraft, false);
+});
+
+test('send receipts are shipped for the last three ET days only', () => {
+    const now = Date.parse('2026-10-23T15:00:00Z');
+    const s = slimState({ revision: 1, records: [], sends: [
+        { status: 'verified', day: '2026-10-23', sender: 'a' }, { status: 'verified', day: '2026-10-21', sender: 'a' },
+        { status: 'verified', day: '2026-10-20', sender: 'a' }, { status: 'verified', day: '2026-09-01', sender: 'a' }] }, now);
+    assert.deepEqual(s.sends.map(x => x.day), ['2026-10-23', '2026-10-21'], 'three days back from today, inclusive');
 });

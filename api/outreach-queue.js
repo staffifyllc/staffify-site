@@ -11,12 +11,17 @@ const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=c
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
   try {
-    const rep=await requireAccess(req);const calls=req.query?.view==='calls';const slim=req.query?.view==='slim';const owner=calls&&canUseCallQueue(rep)?'all':ownerFor(rep);
+    const rep=await requireAccess(req);const calls=req.query?.view==='calls';const slim=req.query?.view==='slim'||calls;const owner=calls&&canUseCallQueue(rep)?'all':ownerFor(rep);
     const view=s=>calls?sharedCallState(s,rep.email):visibleState(s,owner);
     if(!owner)return res.status(401).json({error:'Sign in with your Staffify account'});
     const state=await redis.get(KEY);
     if(req.method==='GET'){
       const crm=async(path,body)=>{const response=await hubspotRequest('https://api.hubapi.com'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined},{redis});if(!response.ok)throw Error('CRM unavailable');return response.json();};
+      // One full record, for a page that lists slim rows and opens the mail on demand. Scoped by the
+      // same view as the list, so nobody reads a thread outside what their list would show. No phone
+      // ladder: a body does not need a number.
+      if(req.query?.record){const id=String(req.query.record);const row=view(state).records.find(r=>r.id===id);
+       if(!row)return res.status(404).json({error:'That record is not in your view of the queue'});return res.status(200).json({record:row});}
       const decorated=await withCallPhones(view(state),{redis,crm});
       // view=slim: the same rows and the same callReady, without the mail bodies. See slimState.
       return res.status(200).json(slim?slimState(decorated):decorated);
@@ -73,7 +78,7 @@ export default async function handler(req,res) {
               if(wrongNumber.ok)await redis.del(ATTEMPTS(e)).catch(()=>{});
             }
           }
-          return res.status(200).json({...view(candidate),...(nurture?{nurture}:{}),...(callbackTask?{callbackTask}:{}),...(wrongNumber?{wrongNumber}:{})});
+          return res.status(200).json({...(slim?slimState(view(candidate)):view(candidate)),...(nurture?{nurture}:{}),...(callbackTask?{callbackTask}:{}),...(wrongNumber?{wrongNumber}:{})});
         }
       }
       return res.status(409).json({error:'The queue is busy right now. Your notes are still here; press save again.'});
@@ -95,6 +100,6 @@ export default async function handler(req,res) {
     } else next=controlState(state,body,owner,rep.email);
     const saved=await redis.eval(CAS,[KEY],[String(state?.revision||0),JSON.stringify(next)]);
     if(Number(saved)!==1)return res.status(409).json({error:'Queue changed; reload before retrying'});
-    return res.status(200).json(view(next));
+    return res.status(200).json(slim?slimState(view(next)):view(next));
   } catch(e) {return res.status(503).json({error:'Queue unavailable; no action completed'});}
 }

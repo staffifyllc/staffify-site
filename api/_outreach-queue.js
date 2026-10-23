@@ -100,15 +100,21 @@ export function sharedCallState(state, viewer=null) {
 // page is the same count the Inbox shows. The Inbox and the dialer still take the full record,
 // because they show the mail itself.
 export const SLIM_EVENT = e => ({ id: e.id, kind: e.kind, at: e.at, from: e.from, to: e.to, subject: e.subject });
-export function slimState(state) {
-  const { sends, creations, ...rest } = state;
-  const sendsToday = (sends || []).filter(s => s && s.status === 'verified');
+export function slimState(state, now = Date.now()) {
+  // No page reads assignments (234 KB) or the creation log; the worker owns both.
+  const { sends, creations, assignments, ...rest } = state;
+  // Receipts are read for "today" only; three ET days covers a page left open across midnight.
+  const day = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(d));
+  const since = day(now - 2 * 86400000);
   return { ...rest,
-    sends: sendsToday.map(s => ({ status: s.status, day: s.day, sender: s.sender })),
+    sends: (sends || []).filter(s => s && s.status === 'verified' && String(s.day || '') >= since).map(s => ({ status: s.status, day: s.day, sender: s.sender })),
     records: (state.records || []).map(r => {
-      const { bodyText, followupBodies, followupSubjects, source, emailVerification, sendWindow, prospectTimezone, creations: _c, ...keep } = r;
+      const { bodyText, followupBodies, followupSubjects, source, emailVerification: ev, sendWindow: sw, prospectTimezone, creations: _c, ...keep } = r;
       return { ...keep,
-        emailVerification: emailVerification ? { outcome: emailVerification.outcome ?? emailVerification.status ?? null } : null,
+        // The Inbox opens the draft and the mail on demand through ?record=<id>; this says there is one.
+        hasDraft: !!bodyText,
+        emailVerification: ev ? { status: ev.status ?? null, reason: ev.reason ?? null, checkedAt: ev.checkedAt ?? null } : null,
+        sendWindow: sw ? { nextOpenAt: sw.nextOpenAt ?? null, reason: sw.reason ?? null, timeZone: sw.timeZone ?? null } : null,
         events: (r.events || []).map(SLIM_EVENT) };
     }) };
 }
