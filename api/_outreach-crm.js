@@ -18,7 +18,12 @@ async function assertPortal(){
  if(String(account.portalId)!=='51666712')throw Error('Wrong CRM portal');
  portalChecked=true;
 }
-export async function contact(email){await assertPortal();const found=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'email',operator:'EQ',value:email}]}],properties,limit:2});if(!found.results.length)throw Error('CRM contact missing');if(found.results.length!==1)throw Error('CRM contact ambiguous');return found.results[0];}
+// The brief asks for the same contact twice per card (the eligibility gate, then the card), and a
+// warm function answers many cards. A 20-second memo turns four HubSpot calls into two without
+// anyone reading a stale number: nothing on a contact changes inside a card open.
+const recentContacts=new Map();const CONTACT_MEMO_MS=20000;
+export async function contact(email){const k=String(email||'').toLowerCase();const hit=recentContacts.get(k);if(hit&&Date.now()-hit.at<CONTACT_MEMO_MS)return structuredClone(hit.value);const value=await contactLive(email);recentContacts.set(k,{at:Date.now(),value:structuredClone(value)});if(recentContacts.size>500)recentContacts.delete(recentContacts.keys().next().value);return value;}
+async function contactLive(email){await assertPortal();const found=await hs('/crm/v3/objects/contacts/search',{filterGroups:[{filters:[{propertyName:'email',operator:'EQ',value:email}]}],properties,limit:2});if(!found.results.length)throw Error('CRM contact missing');if(found.results.length!==1)throw Error('CRM contact ambiguous');return found.results[0];}
 export async function draftBlockReason(row,{requireVerified=true}={}){
  if(await isOptedOut({email:row.recipient}))return 'Global opt-out';
  const c=await contact(row.recipient),p=c.properties;row.prospectTimezone={...resolveTimezone(p),checkedAt:new Date().toISOString()};row.phone=String(p.phone||'').trim()||String(p.mobilephone||'').trim()||null;const name=(p.firstname+' '+p.lastname).toLowerCase();

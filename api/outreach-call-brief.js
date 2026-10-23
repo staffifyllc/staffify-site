@@ -15,8 +15,9 @@ export default async function handler(req,res){
  // EVERY prospect in the queue rendered "Call check unavailable" with nothing behind it.
  let state=null,row=null,stored=async()=>({callable:false});
  try{
+  const t0=Date.now(),timings={};const mark=k=>{timings[k]=Date.now()-t0;};
   const rep=await requireAccess(req);const owner=canUseCallQueue(rep)?'all':null;const caller=rep?.role==='admin'?'[your name]':rep?.name||'[your name]';if(!owner)return res.status(401).json({error:'Sign in to the Hub'});
-  state=await redis.get(KEY);row=visibleState(state,owner).records.find(r=>r.id===req.query.id);
+  state=await redis.get(KEY);row=visibleState(state,owner).records.find(r=>r.id===req.query.id);mark('state');
   if(!row)return res.status(404).json({error:'Record not available'});
   // What we already know about this prospect, from the last worker sync. Shown even when the live
  // check refuses the call, because a caller still needs to see the proof, the site and the emails
@@ -43,7 +44,7 @@ export default async function handler(req,res){
  };
  const reject=async error=>{await redis.set('staffify:call-block:'+row.id,{error,lastSentAt:row.lastSentAt,checkedAt:new Date().toISOString()},{ex:86400});return res.status(409).json({error,...await stored()});};
   if(!row.callReady)return reject('This prospect is not due for an unanswered-email call');
-  const block=await draftBlockReason(row);if(block)return reject('Do not call: '+block);
+  const block=await draftBlockReason(row);if(block)return reject('Do not call: '+block);mark('block');
   const accounts=(await config()).accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
   if(!accounts.some(a=>a.email===row.sender))throw Error('Sending mailbox is not active');
   // Each mailbox is read on its own. This used to be one Promise.all, so a single expired token
@@ -77,11 +78,17 @@ export default async function handler(req,res){
   // on it: an unreadable mailbox lowers confidence, it does not waive the rule.
   if(!callReady(senderUnreadable?row:{...row,verifiedSentTouches:sent.length,lastSentAt:sent.length?new Date(Math.max(...sent.map(m=>m.date))).toISOString():null}))
    throw Error(senderUnreadable?'The stored four-email verification for this prospect is incomplete':'Four sent emails and the reply window could not be verified');
-  const latest=await redis.get(KEY);if(!visibleState(latest,owner).records.find(r=>r.id===row.id)?.callReady)throw Error('Queue changed; refresh before calling');
+  // Freshness. This re-read the whole state (7.9 MB) to learn one thing. Every writer bumps
+  // revision and revision is the first key in the stored JSON, so the first bytes say whether
+  // anything changed since the read above; only a changed or unreadable head costs the full read.
+  mark('gmail');
+  const head=await redis.getrange(KEY,0,48).catch(()=>null);const rev=typeof head==='string'&&/^\{"revision":(\d+)/.exec(head);
+  if(!(rev&&Number(rev[1])===Number(state?.revision))){const latest=await redis.get(KEY);if(!visibleState(latest,owner).records.find(r=>r.id===row.id)?.callReady)throw Error('Queue changed; refresh before calling');}
+  mark('freshness');
   await redis.del('staffify:call-block:'+row.id);
   // One lookup, reused. This used to fetch the same contact a second time just to build the
   // CRM link whenever hubspotId was absent, doubling the cost of every such card.
-  const crmContact=await crmPromise;const p=crmContact.properties;const contactId=crmContact.id;
+  const crmContact=await crmPromise;const p=crmContact.properties;const contactId=crmContact.id;mark('crm');
   // Phone evidence is READ here, never fetched. This used to fetch up to three pages of the
   // prospect's website live on every first open, which was most of the 2.1 seconds a caller waited
   // per card. The background research pass does that check now and stores the result; a record it
@@ -120,7 +127,7 @@ export default async function handler(req,res){
    :crmPhone
    ?{number:crmPhone,label:'From the CRM, not corroborated',detail:'Came with the list and is not on their website, so expect a main line or a front desk. Ask for them by name.',sourceUrl:phoneEvidence.sourceUrl||null,alternates:[]}
    :null;
-  return res.status(200).json({callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
+  return res.status(200).json({timings:(mark('done'),timings),callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
    industry:industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle}),
    staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:dial&&dial.number||null,dial,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname,website:p.website||row.website||row.source?.url||'',excerpt:row.source?.excerpt||'',crmIndustry:p.industry||'',title:p.jobtitle||'',igBranch:instagram&&instagram.branch}),instagram,events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
  }catch(e){
