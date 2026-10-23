@@ -95,7 +95,8 @@ export default async function handler(req,res){
   // too, so this is only the window between a lookup and HubSpot catching up, plus provenance.
   let identity={status:p.firstname?'crm':'unknown'};
   if(!p.firstname){const known=await knownIdentity(redis,row.recipient);
-   if(known){p.firstname=known.firstName;p.lastname=p.lastname||known.lastName;p.jobtitle=p.jobtitle||known.title||'';identity={status:'researched',source:known.source,checkedAt:known.checkedAt};}
+   if(known&&known.kind==='inferred'){identity={status:'inferred',askFor:[known.firstName,known.lastName].filter(Boolean).join(' '),title:known.title||null,linkedin:known.linkedin||null,source:known.source,checkedAt:known.checkedAt,company:known.company||null};}
+   else if(known){p.firstname=known.firstName;p.lastname=p.lastname||known.lastName;p.jobtitle=p.jobtitle||known.title||'';identity={status:'researched',source:known.source,checkedAt:known.checkedAt};}
    else{const tried=await redis.get(TRIED_KEY(row.recipient)).catch(()=>null);identity={status:'unknown',reason:tried&&tried.at?('Looked up on '+(tried.source||'RocketReach')+' '+new Date(tried.at).toLocaleDateString('en-US')+': not found.'):'A lookup is queued.'};}}
   // Phone evidence is READ here, never fetched. This used to fetch up to three pages of the
   // prospect's website live on every first open, which was most of the 2.1 seconds a caller waited

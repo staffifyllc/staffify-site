@@ -1,7 +1,7 @@
 // Finding a person behind an email, without inventing one or overwriting one.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { splitName, needsName, researchIdentity, knownIdentity, triedRecently, IDENTITY_KEY, TRIED_KEY } from '../api/_contact-identity.js';
+import { splitName, needsName, researchIdentity, knownIdentity, triedRecently, isGenericAddress, pickDecider, IDENTITY_KEY, TRIED_KEY } from '../api/_contact-identity.js';
 
 const store = () => { const m = new Map(); return { m, async get(k) { return m.has(k) ? m.get(k) : null; }, async set(k, v) { m.set(k, v); return 'OK'; } }; };
 const NOW = Date.parse('2026-10-23T15:00:00Z');
@@ -16,17 +16,17 @@ test('names split the way a CRM wants them', () => {
 
 test('a vendor answer already paid for is used first, fills only the blank CRM fields, and says where it came from', async () => {
     const redis = store(); const fills = [];
-    const r = await researchIdentity({ redis, email: 'Together@McKinstry.com', contactId: '77', now: NOW,
+    const r = await researchIdentity({ redis, email: 'Dean.Allen@McKinstry.com', contactId: '77', now: NOW,
         vendorCached: { phone: '+1', name: 'Dean Allen', title: 'CEO', source: 'RocketReach' },
         lookup: async () => { throw new Error('must not spend a credit'); },
         fill: async (id, wanted) => { fills.push([id, wanted]); return { ok: true, filled: ['firstname', 'lastname'] }; } });
     assert.equal(r.found, true); assert.equal(r.credit, false);
     assert.equal(r.firstName, 'Dean'); assert.equal(r.lastName, 'Allen'); assert.equal(r.title, 'CEO');
     assert.deepEqual(fills, [['77', { firstname: 'Dean', lastname: 'Allen', jobtitle: 'CEO' }]]);
-    const known = await knownIdentity(redis, 'together@mckinstry.com');
-    assert.equal(known.source, 'RocketReach'); assert.equal(known.checkedAt, '2026-10-23T15:00:00.000Z'); assert.deepEqual(known.crm, { filled: ['firstname', 'lastname'] });
-    assert.equal(await triedRecently(redis, 'together@mckinstry.com', NOW + 86400000), true);
-    assert.equal(await triedRecently(redis, 'together@mckinstry.com', NOW + 40 * 86400000), false, 'a month later it may be tried again');
+    const known = await knownIdentity(redis, 'dean.allen@mckinstry.com');
+    assert.equal(known.source, 'RocketReach'); assert.equal(known.kind, 'person'); assert.equal(known.checkedAt, '2026-10-23T15:00:00.000Z'); assert.deepEqual(known.crm, { filled: ['firstname', 'lastname'] });
+    assert.equal(await triedRecently(redis, 'dean.allen@mckinstry.com', NOW + 86400000), true);
+    assert.equal(await triedRecently(redis, 'dean.allen@mckinstry.com', NOW + 40 * 86400000), false, 'a month later it may be tried again');
 });
 
 test('a lookup that finds nobody is remembered as tried, stores no identity, and is not retried for a month', async () => {
@@ -63,4 +63,34 @@ test('with no vendor record and no lookup allowed, nothing is claimed', async ()
     const r = await researchIdentity({ redis, email: 'a@b.com', contactId: '5', now: NOW, lookup: null, fill: async () => ({ ok: true }) });
     assert.equal(r.found, false); assert.equal(r.credit, false);
     assert.equal(await knownIdentity(redis, 'a@b.com'), null);
+});
+
+
+test('a shared inbox is recognised, and the lookup credit is not spent on it', () => {
+    for (const a of ['together@mckinstry.com', 'INFO@zenoti.com', 'contact-us@x.com', 'front.desk@x.com', 'hello@x.com']) assert.equal(isGenericAddress(a), true, a);
+    for (const a of ['tom@rileyjonesrem.com', 'dean.allen@mckinstry.com', 'priya@loft.com', '']) assert.equal(isGenericAddress(a), false, a);
+});
+
+test('for a shared inbox the question becomes who runs the company; the answer is inferred, kept for the card, never written to the CRM', async () => {
+    const redis = store(); const fills = []; let lookups = 0;
+    const r = await researchIdentity({ redis, email: 'together@mckinstry.com', contactId: '9', company: 'McKinstry', now: NOW,
+        lookup: async () => { lookups++; return { found: true, name: 'Nobody' }; },
+        search: async ({ company }) => ({ profiles: [
+            { id: 1, name: 'Sam Lee', current_title: 'Marketing Coordinator', current_employer: company },
+            { id: 2, name: 'Dean Allen', current_title: 'Chief Executive Officer', current_employer: company, linkedin_url: 'https://linkedin.com/in/dean' },
+            { id: 3, name: 'Ana Ruiz', current_title: 'Founder', current_employer: company } ] }),
+        fill: async (id, wanted) => { fills.push(wanted); return { ok: true, filled: Object.keys(wanted) }; } });
+    assert.equal(lookups, 0, 'no email lookup for an inbox');
+    assert.equal(r.found, true); assert.equal(r.kind, 'inferred'); assert.equal(r.firstName, 'Dean'); assert.equal(r.title, 'Chief Executive Officer');
+    assert.deepEqual(fills, [], 'the CRM contact is the inbox, so nothing is written to it');
+    const known = await knownIdentity(redis, 'together@mckinstry.com');
+    assert.equal(known.kind, 'inferred'); assert.equal(known.source, 'RocketReach search'); assert.equal(known.linkedin, 'https://linkedin.com/in/dean');
+    assert.equal(pickDecider([{ name: 'A', current_title: 'Owner' }, { name: 'B', current_title: 'CEO' }]).name, 'B', 'a CEO outranks an owner');
+    assert.equal(pickDecider([{ name: 'A', current_title: 'Account Executive' }]), null, 'a junior title is not a decision-maker');
+    // Nobody senior in the results: tried is recorded, nothing is claimed.
+    const r2 = await researchIdentity({ redis, email: 'info@x.com', company: 'X', now: NOW, search: async () => ({ profiles: [{ name: 'A', current_title: 'Intern' }] }) });
+    assert.equal(r2.found, false); assert.match(r2.reason, /no decision-maker/); assert.equal(await triedRecently(redis, 'info@x.com', NOW + 1), true);
+    // No company to search with: nothing is tried, nothing is spent.
+    const r3 = await researchIdentity({ redis, email: 'info@y.com', company: '', now: NOW, search: async () => ({ profiles: [] }) });
+    assert.equal(r3.found, false); assert.equal(await triedRecently(redis, 'info@y.com', NOW + 1), false);
 });

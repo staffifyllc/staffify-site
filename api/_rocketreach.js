@@ -15,12 +15,14 @@ const BASE = 'https://api.rocketreach.co/api/v2';
 export const rrKey = () => process.env.ROCKETREACH_KEY || process.env.ROCKETREACH_API_KEY || process.env.ROCKET_REACH_KEY || '';
 export const rrConfigured = () => !!rrKey();
 
-async function call(path, { timeout = 15000 } = {}) {
+async function call(path, { timeout = 15000, method = 'GET', payload = undefined } = {}) {
     const key = rrKey();
     if (!key) return { ok: false, status: 0, error: 'ROCKETREACH_KEY not set' };
     try {
         const r = await fetch(BASE + path, {
-            headers: { 'Api-Key': key, Accept: 'application/json' },
+            method,
+            headers: { 'Api-Key': key, Accept: 'application/json', ...(payload !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+            body: payload !== undefined ? JSON.stringify(payload) : undefined,
             signal: AbortSignal.timeout(timeout),
         });
         const text = await r.text();
@@ -111,4 +113,32 @@ export async function checkStatus(ids) {
         };
     }
     return out;
+}
+
+/** Company names as RocketReach spells them, for a loose match: "McKinstry Co." ~ "mckinstry". */
+const norm = s => String(s || '').toLowerCase().replace(/\b(inc|llc|ltd|co|corp|corporation|company|group|holdings|the)\b\.?/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const sameCompany = (a, b) => { const x = norm(a), y = norm(b); return !!x && !!y && (x === y || x.startsWith(y) || y.startsWith(x) || x.includes(y) || y.includes(x)); };
+
+/**
+ * Who works at a company, by title. POST /api/v2/person/search returns profiles WITHOUT contact
+ * data (name, current_title, current_employer, linkedin_url) and the docs reserve credits for the
+ * lookup call, so this is the question to ask about a shared inbox. Profiles from a different
+ * employer with a similar name are dropped rather than passed off as the company's people.
+ * @returns {{profiles:object[], retryable?:boolean, reason?:string}}
+ */
+export async function searchPeople({ company, titles = ['CEO', 'Chief Executive Officer', 'Owner', 'Founder', 'Co-Founder', 'President', 'Managing Director', 'Principal', 'COO', 'General Manager'], size = 10 } = {}) {
+    const name = String(company || '').trim();
+    if (!name) return { profiles: [], reason: 'no company' };
+    const r = await call('/person/search', { method: 'POST', payload: { query: { company_name: [name], current_title: titles }, start: 1, page_size: size, order_by: 'relevance' } });
+    if (!r.ok) {
+        if (r.status === 429) return { profiles: [], retryable: true, reason: 'rate limited' };
+        if (r.status === 401 || r.status === 403) return { profiles: [], reason: 'key rejected', fatal: true };
+        if (r.status >= 500 || r.status === 0) return { profiles: [], retryable: true, reason: r.error || ('http ' + r.status) };
+        return { profiles: [], reason: r.error || ('http ' + r.status) };
+    }
+    const body = r.body;
+    const list = Array.isArray(body) ? body : Array.isArray(body && body.profiles) ? body.profiles : Array.isArray(body && body.results) ? body.results : [];
+    const profiles = list.filter(p => p && p.name && (!p.current_employer || sameCompany(p.current_employer, name))).map(p => ({
+        id: p.id || null, name: p.name, current_title: p.current_title || p.title || null, current_employer: p.current_employer || null, linkedin_url: p.linkedin_url || null, location: p.location || null }));
+    return { profiles, total: list.length };
 }

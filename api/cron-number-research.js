@@ -21,7 +21,7 @@ import { checkBusinessPhone } from './_outreach-phone-evidence.js';
 import { contact } from './_outreach-crm.js';
 import { fillBlankContactProps } from './_hubspot.js';
 import { researchIdentity, needsName, triedRecently } from './_contact-identity.js';
-import { lookupByEmail, rrConfigured } from './_rocketreach.js';
+import { lookupByEmail, rrConfigured, searchPeople } from './_rocketreach.js';
 import { ATTEMPTS, decide, noteAttempt, websiteOf } from './_number-research.js';
 import { loadBad, isBad } from './_bad-numbers.js';
 import { SITE_PHONE } from './outreach-site-phone.js';
@@ -184,8 +184,9 @@ export default async function handler(req, res) {
             const vendorCached = await redis.get(VENDOR(e)).catch(() => null);
             const canSpend = rrConfigured() && vendorSpend < VENDOR_PER_RUN;
             try {
-                const r = await researchIdentity({ redis, email: e, contactId: c.id, vendorCached,
-                    lookup: canSpend ? (async a => { vendorSpend++; idn.credits++; return lookupByEmail(a); }) : null, fill: fillBlankContactProps });
+                const r = await researchIdentity({ redis, email: e, contactId: c.id, vendorCached, company: (c.properties && c.properties.company) || row.company || '',
+                    lookup: canSpend ? (async a => { vendorSpend++; idn.credits++; return lookupByEmail(a); }) : null,
+                    search: rrConfigured() ? searchPeople : null, fill: fillBlankContactProps });
                 if (r.found) idn.found++;
             } catch (err) { out.failures.push({ company: row.company || row.recipient, why: 'identity: ' + String((err && err.message) || err).slice(0, 90) }); }
         }

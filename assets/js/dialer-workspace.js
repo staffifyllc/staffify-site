@@ -166,6 +166,8 @@ function renderWho(pane,row,b){
  const name=p.name&&p.name!==row.recipient?p.name:(row.verifiedFirstName||'');
  if(name){const who=el('div',name+(p.title?' · '+p.title:''),'dw-person');const hearWho=hearButton(name);if(hearWho)who.append(hearWho);head.append(who);
   if(p.identity&&p.identity.status==='researched')who.append(el('span','Name from '+p.identity.source+(p.identity.checkedAt?', '+new Date(p.identity.checkedAt).toLocaleDateString():''),'dw-prov'));}
+ else if(b&&p.identity&&p.identity.status==='inferred'&&p.identity.askFor){const who=el('div',null,'dw-person');who.append(document.createTextNode('Ask for '+p.identity.askFor+(p.identity.title?', '+p.identity.title:'')));const hearWho=hearButton(p.identity.askFor);if(hearWho)who.append(hearWho);
+  const prov=el('span','Shared inbox on file; this person was found by '+p.identity.source+(p.identity.checkedAt?', '+new Date(p.identity.checkedAt).toLocaleDateString():'')+'. ','dw-prov');if(p.identity.linkedin){prov.append(link('LinkedIn',p.identity.linkedin));}who.append(prov);head.append(who);}
  else if(b){const who=el('div',p.identity&&p.identity.status==='unknown'&&p.identity.reason?'No name on file. '+p.identity.reason:'No name on file. A lookup is queued.','dw-person dw-noname');head.append(who);}
  const meta=el('div',null,'dw-meta');
  const tag=industryTag(p.industry);if(tag)meta.append(tag);
