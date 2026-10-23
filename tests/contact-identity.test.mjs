@@ -90,7 +90,8 @@ test('for a shared inbox the question becomes who runs the company; the answer i
     // Nobody senior in the results: tried is recorded, nothing is claimed.
     const r2 = await researchIdentity({ redis, email: 'info@x.com', company: 'X', now: NOW, search: async () => ({ profiles: [{ name: 'A', current_title: 'Intern' }] }) });
     assert.equal(r2.found, false); assert.match(r2.reason, /no decision-maker/); assert.equal(await triedRecently(redis, 'info@x.com', NOW + 1), true);
-    // No company to search with: nothing is tried, nothing is spent.
+    // No company to search with: that is an answer (the card can say so), nothing is spent, and it is retried the next day.
     const r3 = await researchIdentity({ redis, email: 'info@y.com', company: '', now: NOW, search: async () => ({ profiles: [] }) });
-    assert.equal(r3.found, false); assert.equal(await triedRecently(redis, 'info@y.com', NOW + 1), false);
+    assert.equal(r3.found, false); assert.match(r3.reason, /no company name/); assert.equal(await triedRecently(redis, 'info@y.com', NOW + 1), true);
+    assert.match((await researchIdentity({ redis, email: 'info@z.com', company: 'Z', now: NOW, search: null })).reason, /no people search is configured/);
 });

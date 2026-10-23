@@ -21,6 +21,7 @@ import { checkBusinessPhone } from './_outreach-phone-evidence.js';
 import { contact } from './_outreach-crm.js';
 import { fillBlankContactProps } from './_hubspot.js';
 import { researchIdentity, needsName, triedRecently } from './_contact-identity.js';
+export const LAST_RUN_KEY = 'staffify:number-research:last-run';
 import { lookupByEmail, rrConfigured, searchPeople } from './_rocketreach.js';
 import { ATTEMPTS, decide, noteAttempt, websiteOf } from './_number-research.js';
 import { loadBad, isBad } from './_bad-numbers.js';
@@ -37,6 +38,9 @@ const SITE_PER_RUN = Number(process.env.NUMBER_RESEARCH_SITE_PER_RUN || 25);
 const IG_PER_RUN = Number(process.env.INSTAGRAM_RESEARCH_PER_RUN || 12);
 const EVIDENCE_PER_RUN = Number(process.env.PHONE_EVIDENCE_PER_RUN || 25);
 const IDENTITY_PER_RUN = Number(process.env.IDENTITY_RESEARCH_PER_RUN || 10);
+// Names run FIRST and on their own clock. Two runs in a row never reached McKinstry because the
+// shared 45 seconds went on number research and website fetches ahead of it.
+const IDENTITY_BUDGET_MS = Number(process.env.IDENTITY_RESEARCH_BUDGET_MS || 15000);
 
 const crm = async (path, body) => {
     const response = await hubspotRequest('https://api.hubapi.com' + path, {
@@ -68,6 +72,38 @@ export default async function handler(req, res) {
     }
 
     let vendorSpend = 0, siteFetches = 0;
+    // Who is this. Paul, 2026-10-23: a card that says "McKinstry" and no person is not enough to
+    // call on; "the system should be capable of conducting research based on incomplete data."
+    // For due records whose CRM contact has no first name: a vendor answer already paid for is
+    // used first, then a RocketReach lookup inside the same per-run vendor budget as the numbers.
+    // What is found fills the BLANK CRM fields only. The CEO cohort goes first; it is worked by name.
+    const idn = { checked: 0, found: 0, credits: 0, skipped: 0 };
+    try {
+        const state = await redis.get(KEY);
+        const due = visibleState(state, 'all').records.filter(r => r.callReady && r.recipient)
+            .sort((a, b) => Number(b.campaignId === 'staffify-tobit-outreach') - Number(a.campaignId === 'staffify-tobit-outreach'));
+        for (const row of due) {
+            if (Date.now() - started > IDENTITY_BUDGET_MS) break;
+            if (idn.checked >= IDENTITY_PER_RUN) break;
+            const e = row.recipient.toLowerCase();
+            if (await triedRecently(redis, e)) { idn.skipped++; continue; }
+            let c = null;
+            try { c = await contact(row.recipient); } catch { continue; }
+            if (!c || !needsName(c.properties)) continue;
+            idn.checked++;
+            const vendorCached = await redis.get(VENDOR(e)).catch(() => null);
+            const canSpend = rrConfigured() && vendorSpend < VENDOR_PER_RUN;
+            try {
+                const r = await researchIdentity({ redis, email: e, contactId: c.id, vendorCached, company: (c.properties && c.properties.company) || row.company || '',
+                    lookup: canSpend ? (async a => { vendorSpend++; idn.credits++; return lookupByEmail(a); }) : null,
+                    search: rrConfigured() ? searchPeople : null, fill: fillBlankContactProps });
+                if (r.found) idn.found++;
+            } catch (err) { out.failures.push({ company: row.company || row.recipient, why: 'identity: ' + String((err && err.message) || err).slice(0, 90) }); }
+        }
+    } catch (e) {
+        out.failures.push({ company: 'identity pass', why: String((e && e.message) || e).slice(0, 120) });
+    }
+
     for (const row of due) {
         if (Date.now() - started > BUDGET_MS) break;
         out.checked++;
@@ -136,38 +172,6 @@ export default async function handler(req, res) {
         }
     }
 
-    // Who is this. Paul, 2026-10-23: a card that says "McKinstry" and no person is not enough to
-    // call on; "the system should be capable of conducting research based on incomplete data."
-    // For due records whose CRM contact has no first name: a vendor answer already paid for is
-    // used first, then a RocketReach lookup inside the same per-run vendor budget as the numbers.
-    // What is found fills the BLANK CRM fields only. The CEO cohort goes first; it is worked by name.
-    const idn = { checked: 0, found: 0, credits: 0, skipped: 0 };
-    try {
-        const state = await redis.get(KEY);
-        const due = visibleState(state, 'all').records.filter(r => r.callReady && r.recipient)
-            .sort((a, b) => Number(b.campaignId === 'staffify-tobit-outreach') - Number(a.campaignId === 'staffify-tobit-outreach'));
-        for (const row of due) {
-            if (Date.now() - started > BUDGET_MS) break;
-            if (idn.checked >= IDENTITY_PER_RUN) break;
-            const e = row.recipient.toLowerCase();
-            if (await triedRecently(redis, e)) { idn.skipped++; continue; }
-            let c = null;
-            try { c = await contact(row.recipient); } catch { continue; }
-            if (!c || !needsName(c.properties)) continue;
-            idn.checked++;
-            const vendorCached = await redis.get(VENDOR(e)).catch(() => null);
-            const canSpend = rrConfigured() && vendorSpend < VENDOR_PER_RUN;
-            try {
-                const r = await researchIdentity({ redis, email: e, contactId: c.id, vendorCached, company: (c.properties && c.properties.company) || row.company || '',
-                    lookup: canSpend ? (async a => { vendorSpend++; idn.credits++; return lookupByEmail(a); }) : null,
-                    search: rrConfigured() ? searchPeople : null, fill: fillBlankContactProps });
-                if (r.found) idn.found++;
-            } catch (err) { out.failures.push({ company: row.company || row.recipient, why: 'identity: ' + String((err && err.message) || err).slice(0, 90) }); }
-        }
-    } catch (e) {
-        out.failures.push({ company: 'identity pass', why: String((e && e.message) || e).slice(0, 120) });
-    }
-
     // Phone evidence: is the CRM number published on the business's own site? This used to run
     // live on first card open, up to three page fetches, and was most of the 2.1 seconds a caller
     // waited. It now runs here, bounded, newest-due first, and the card reads the stored answer.
@@ -225,8 +229,10 @@ export default async function handler(req, res) {
         out.failures.push({ company: 'instagram pass', why: String((e && e.message) || e).slice(0, 120) });
     }
 
-    return res.status(200).json({
+    const summary = {
         ...out, instagram: ig, evidence: ev, identity: idn, backlog: due.length, ranAt: new Date().toISOString(),
         note: 'A record that gained a number is promoted on the next queue read, where call eligibility is recomputed in full. Nothing is promoted past the four-email rule or the exclusions.',
-    });
+    };
+    try { await redis.set(LAST_RUN_KEY, { ...summary, failures: (summary.failures || []).slice(0, 8) }, { ex: 7 * 86400 }); } catch { /* the response still reports */ }
+    return res.status(200).json(summary);
 }

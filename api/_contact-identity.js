@@ -61,7 +61,11 @@ export async function researchIdentity({ redis, email, contactId, company = '', 
     // A shared inbox: find who runs the company instead. The answer is INFERRED, so it is kept
     // for the card ("ask for ...") and never written into the CRM as the inbox's own name.
     if (isGenericAddress(addr)) {
-        if (!String(company || '').trim() || typeof search !== 'function') return { ok: true, found: false, reason: 'shared inbox, no company to search', credit: false };
+        if (!String(company || '').trim() || typeof search !== 'function') {
+            const why = typeof search !== 'function' ? 'shared inbox; no people search is configured' : 'shared inbox; no company name to search by';
+            try { await redis.set(TRIED_KEY(addr), { at: new Date(now).toISOString(), found: false, credit: false, source: 'RocketReach search', kind: 'inferred', reason: why }, { ex: 86400 }); } catch { /* still an answer */ }
+            return { ok: true, found: false, reason: why, credit: false };
+        }
         let r = null;
         try { r = await search({ company: String(company).trim() }); } catch (e) { return { ok: false, found: false, reason: String((e && e.message) || e).slice(0, 120), retryable: true }; }
         if (!r || r.retryable) return { ok: false, found: false, reason: (r && r.reason) || 'no answer', retryable: true };

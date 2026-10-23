@@ -97,7 +97,10 @@ export default async function handler(req,res){
   if(!p.firstname){const known=await knownIdentity(redis,row.recipient);
    if(known&&known.kind==='inferred'){identity={status:'inferred',askFor:[known.firstName,known.lastName].filter(Boolean).join(' '),title:known.title||null,linkedin:known.linkedin||null,source:known.source,checkedAt:known.checkedAt,company:known.company||null};}
    else if(known){p.firstname=known.firstName;p.lastname=p.lastname||known.lastName;p.jobtitle=p.jobtitle||known.title||'';identity={status:'researched',source:known.source,checkedAt:known.checkedAt};}
-   else{const tried=await redis.get(TRIED_KEY(row.recipient)).catch(()=>null);identity={status:'unknown',reason:tried&&tried.at?('Looked up on '+(tried.source||'RocketReach')+' '+new Date(tried.at).toLocaleDateString('en-US')+': not found.'):'A lookup is queued.'};}}
+   else{const [tried,run]=await Promise.all([redis.get(TRIED_KEY(row.recipient)).catch(()=>null),redis.get('staffify:number-research:last-run').catch(()=>null)]);
+    const when=d=>new Date(d).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    const ran=run&&run.ranAt?('Research last ran '+when(run.ranAt)+' ET'+(run.identity?('; names checked '+(run.identity.checked||0)+', found '+(run.identity.found||0)):'')+'.'):'Research has not run since this card was added.';
+    identity={status:'unknown',reason:tried&&tried.at?((tried.reason?tried.reason.charAt(0).toUpperCase()+tried.reason.slice(1):'Looked up on '+(tried.source||'RocketReach'))+' ('+when(tried.at)+' ET)'+(tried.found===false&&!tried.reason?': not found.':'.')):'A lookup is queued. '+ran};}}
   // Phone evidence is READ here, never fetched. This used to fetch up to three pages of the
   // prospect's website live on every first open, which was most of the 2.1 seconds a caller waited
   // per card. The background research pass does that check now and stores the result; a record it
