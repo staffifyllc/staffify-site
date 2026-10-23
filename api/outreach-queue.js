@@ -9,6 +9,7 @@ import {markBad} from './_bad-numbers.js';
 import {ATTEMPTS} from './_number-research.js';
 import {listTasks,addTask,completeTask} from './_rep-tasks.js';
 import {classified} from './_campaigns-model.js';
+import {recordActivity} from './_hub-activity.js';
 import {INDUSTRY_KEY} from './_campaign-industry.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
@@ -45,8 +46,8 @@ export default async function handler(req,res) {
     const body=readBody(req);
     if(calls&&!['call-outcome','suppress','task-add','task-done'].includes(body.action))return res.status(403).json({error:'Caller access is limited to call outcomes, exclusions and their own tasks'});
     // A rep's own tasks never touch the queue state, so they skip the revision dance below.
-    if(body.action==='task-add'){const r=await addTask(redis,{rep,title:body.title,dueAt:body.dueAt,notes:body.notes,recordId:body.id||null,company:body.company||'',recipient:body.recipient||null,campaignId:body.campaignId||null,contactId:body.contactId||null});return res.status(r.ok?200:400).json(r);}
-    if(body.action==='task-done'){const r=await completeTask(redis,{email:rep.email,id:String(body.taskId||''),done:body.done!==false});return res.status(r.ok?200:404).json(r);}
+    if(body.action==='task-add'){const r=await addTask(redis,{rep,title:body.title,dueAt:body.dueAt,notes:body.notes,recordId:body.id||null,company:body.company||'',recipient:body.recipient||null,campaignId:body.campaignId||null,contactId:body.contactId||null});if(r.ok)await recordActivity(redis,{email:rep.email,kind:'task_added',page:'/dialer/',detail:r.task.company||null});return res.status(r.ok?200:400).json(r);}
+    if(body.action==='task-done'){const r=await completeTask(redis,{email:rep.email,id:String(body.taskId||''),done:body.done!==false});if(r.ok&&body.done!==false)await recordActivity(redis,{email:rep.email,kind:'task_done',page:'/dialer/',detail:r.task&&r.task.company||null});return res.status(r.ok?200:404).json(r);}
     if(calls&&!sharedCallState(state,rep.email).records.some(r=>body.action==='suppress'?r.recipient===String(body.email||'').toLowerCase():r.id===body.id))return res.status(409).json({error:'This prospect is no longer in the call queue'});
     // A caller action is the one write a HUMAN makes here, and typing call notes takes longer than
     // a minute. The outreach worker rewrites this key every minute and saves up to sixteen times a
@@ -67,6 +68,12 @@ export default async function handler(req,res) {
           // it in writing, so the drip picks it up from here. Strictly after the disposition is
           // safely saved, and never allowed to fail the save: enrolInNurture swallows its own
           // errors and the gates live inside it.
+          // The event log: a call outcome, notes if any were written, a callback if one was set.
+          if(body.action==='call-outcome'){const row=(fresh?.records||[]).find(r=>r.id===body.id);const co=row&&row.company||null;
+           await recordActivity(redis,{email:rep.email,kind:'call_outcome',page:'/dialer/',detail:[co,body.outcome].filter(Boolean).join(' · ')});
+           if(String(body.notes||'').trim())await recordActivity(redis,{email:rep.email,kind:'note_saved',page:'/dialer/',detail:co});
+           if(body.outcome==='callback'&&body.nextCallAt)await recordActivity(redis,{email:rep.email,kind:'callback_set',page:'/dialer/',detail:co});}
+          if(body.action==='suppress')await recordActivity(redis,{email:rep.email,kind:'suppress',page:'/dialer/',detail:null});
           let nurture=null;
           if(body.action==='call-outcome'&&body.outcome==='timing') {
             const row=(fresh?.records||[]).find(r=>r.id===body.id);

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activity — Staffify Sales</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="stylesheet" href="/assets/css/portal.css?v=20261013">
+<style>
+  .act-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 18px}
+  .act-head h1{margin:0}
+  .act-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .act-controls select,.act-controls input{min-height:40px}
+  .act-note{font-size:13px;color:#6e6e73;max-width:760px;margin:0 0 20px;line-height:1.55}
+  .act-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 20px}
+  .act-stat{background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:16px 18px}
+  .act-stat b{display:block;font-size:26px;font-weight:600;letter-spacing:-.6px}
+  .act-stat span{font-size:12.5px;color:#6e6e73}
+  table.act{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e5e5ea;border-radius:14px;overflow:hidden}
+  table.act th{font-size:11.5px;letter-spacing:1px;text-transform:uppercase;color:#6e6e73;font-weight:650}
+  table.act td,table.act th{padding:11px 12px;border-bottom:1px solid #ececf0;font-variant-numeric:tabular-nums;vertical-align:top}
+  table.act tr:last-child td{border-bottom:0}
+  table.act td.dim{color:#6e6e73}
+  table.act button{min-height:32px;padding:4px 10px;font-size:12.5px}
+  .act-events{margin:10px 0 0;padding:0;list-style:none}
+  .act-events li{display:grid;grid-template-columns:86px 1fr;gap:10px;padding:7px 0;border-top:1px solid #ececf0;font-size:13.5px}
+  .act-events li:first-child{border-top:0}
+  .act-events .t{color:#6e6e73;font-variant-numeric:tabular-nums}
+  .act-events .d{color:#6e6e73}
+  .act-sess{font-size:12.5px;color:#6e6e73;margin:6px 0 0}
+  .act-empty{color:#6e6e73;padding:18px;background:#fafafa;border-radius:12px}
+  .act-tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:#845400;background:#fff7e5;border:1px solid #ecd8aa;border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:middle}
+  @media(max-width:760px){.act-grid{grid-template-columns:1fr 1fr}table.act{display:block;overflow-x:auto}}
+</style>
+<script defer src="/assets/js/portal-shell.js?v=20261013"></script>
+</head>
+<body>
+<header class="topbar"><img src="/assets/brand/logo-blue.svg" alt="Staffify"><nav class="nav"><a href="/hub/">Hub</a></nav><div class="tb-right" id="tbRight"></div></header>
+<main class="wrap" id="app"><p class="act-note">Loading…</p></main>
+<script type="module">
+// Hub activity, per person, per day. Reps see their own; owners and admins pick anyone.
+// Every number is an estimate of time in a Hub tab, labelled as such, and never payroll.
+const app = document.getElementById('app');
+const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const get = async url => { const r = await fetch(url, { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json(); if (!r.ok) throw Object.assign(Error(j.error || 'HTTP ' + r.status), { status: r.status }); return j; };
+const mins = n => (n >= 60 ? Math.floor(n / 60) + 'h ' + (n % 60) + 'm' : n + 'm');
+const dayLabel = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const timeET = iso => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+const params = new URLSearchParams(location.search);
+const weekStart = d => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7)); return x.toISOString().slice(0, 10); };
+const addDays = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const todayET = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+(async () => {
+  let me;
+  try { me = (await get('/api/auth-me/')).rep; } catch { app.replaceChildren(el('p', 'Sign in with your Staffify account to see activity.', 'act-note')); return; }
+  const owner = me.role === 'admin' || !!me.financeAccess;
+  let user = params.get('user') || me.email;
+  let from = params.get('from') || weekStart(todayET);
+  let to = params.get('to') || (addDays(from, 6) > todayET ? todayET : addDays(from, 6));
+
+  async function render() {
+    app.replaceChildren();
+    const head = el('div', null, 'act-head');
+    const t = el('div'); t.append(el('div', 'Hub activity', 'eyebrow'), el('h1', owner && user !== me.email ? user : 'Your Hub activity'));
+    head.append(t);
+    const ctl = el('div', null, 'act-controls');
+    if (owner) {
+      const sel = el('select'); sel.setAttribute('aria-label', 'Person');
+      let reps = [];
+      try { reps = (await get('/api/activity/?users=1&from=' + from + '&to=' + to)).users.map(u => u.email); } catch { reps = [user]; }
+      for (const e of new Set([user, ...reps])) { const o = el('option', e); o.value = e; sel.append(o); }
+      sel.value = user; sel.onchange = () => { user = sel.value; sync(); render(); };
+      ctl.append(sel);
+    }
+    const prev = el('button', '← Week'); prev.type = 'button'; prev.onclick = () => { from = addDays(from, -7); to = addDays(to, -7); sync(); render(); };
+    const next = el('button', 'Week →'); next.type = 'button'; next.onclick = () => { from = addDays(from, 7); to = addDays(from, 6) > todayET ? todayET : addDays(from, 6); sync(); render(); };
+    next.disabled = addDays(from, 7) > todayET;
+    ctl.append(prev, el('span', dayLabel(from) + ' to ' + dayLabel(to)), next);
+    head.append(ctl); app.append(head);
+
+    let a;
+    try { a = await get('/api/activity/?user=' + encodeURIComponent(user) + '&from=' + from + '&to=' + to); }
+    catch (e) { app.append(el('p', e.status === 403 ? 'You can see your own activity only.' : 'Activity could not be read: ' + e.message, 'act-empty')); return; }
+
+    app.append(el('p', 'Active time is an estimate: minutes with a Hub tab visible and in use, counted once across tabs and devices. It misses phone calls and anything outside the Hub. Idle is time in a session with no interaction. This is not payroll; Hubstaff is the source for paid hours.', 'act-note'));
+    const g = el('div', null, 'act-grid');
+    for (const [v, l] of [[mins(a.totals.activeMinutes), 'active, estimate'], [mins(a.totals.idleMinutes), 'idle in session'], [mins(a.totals.elapsedMinutes), 'elapsed in sessions'], [String(a.totals.meaningful), 'actions recorded']]) { const s = el('div', null, 'act-stat'); s.append(el('b', v), el('span', l)); g.append(s); }
+    app.append(g);
+
+    const table = el('table', null, 'act'); const thead = el('thead'); const hr = el('tr');
+    for (const h of ['Day', 'Active (est.)', 'Idle', 'Elapsed', 'Sessions', 'First seen', 'Last seen', 'Actions', '']) hr.append(el('th', h));
+    thead.append(hr); table.append(thead); const tb = el('tbody');
+    for (const d of a.days) {
+      const tr = el('tr');
+      if (!d.measured) { tr.append(el('td', dayLabel(d.day))); const td = el('td', 'Not measured: before tracking started, or no Hub use that day.', 'dim'); td.colSpan = 8; tr.append(td); tb.append(tr); continue; }
+      tr.append(el('td', dayLabel(d.day)), el('td', mins(d.activeMinutes)), el('td', mins(d.idleMinutes)), el('td', mins(d.elapsedMinutes)), el('td', String(d.sessions)), el('td', d.firstSeen ? timeET(d.firstSeen) : '', 'dim'), el('td', d.lastSeen ? timeET(d.lastSeen) : '', 'dim'), el('td', String(d.meaningful)));
+      const td = el('td'); const btn = el('button', 'Events'); btn.type = 'button';
+      btn.onclick = () => { const open = tr.nextSibling && tr.nextSibling.classList && tr.nextSibling.classList.contains('drill'); if (open) { tr.nextSibling.remove(); btn.textContent = 'Events'; return; } const dr = el('tr', null, 'drill'); const cell = el('td'); cell.colSpan = 9; cell.append(drill(d)); dr.append(cell); tr.after(dr); btn.textContent = 'Hide'; };
+      td.append(btn); tr.append(td); tb.append(tr);
+    }
+    table.append(tb); app.append(table);
+    const what = el('details'); what.append(el('summary', 'What is measured, and what is not'));
+    for (const t of a.definitions.measured) what.append(el('p', t, 'act-note'));
+    what.append(el('p', 'Heartbeat every ' + Math.round(a.definitions.heartbeatMs / 1000) + ' s while a tab is visible and used; idle after ' + Math.round(a.definitions.idleCutoffMs / 60000) + ' quiet minutes; a session ends after ' + Math.round(a.definitions.sessionGapMs / 60000) + ' quiet minutes or when the tab is closed; kept ' + a.definitions.retainDays + ' days; times in ' + a.definitions.timezone + '.', 'act-note'));
+    app.append(what);
+  }
+  function drill(d) {
+    const box = el('div');
+    if (d.sessionList && d.sessionList.length) box.append(el('p', 'Sessions: ' + d.sessionList.map(s => timeET(s.start) + ' to ' + timeET(s.lastSeen) + (s.reason === 'open' ? ' (open)' : s.reason === 'left' ? ' (left)' : ' (timed out)')).join(' · '), 'act-sess'));
+    const evs = [...(d.events || [])].sort((x, y) => Date.parse(x.at) - Date.parse(y.at));
+    if (!evs.length) { box.append(el('p', 'No events recorded.', 'act-sess')); return box; }
+    const ul = el('ul', null, 'act-events');
+    for (const e of evs) { const li = el('li'); li.append(el('span', timeET(e.at), 't')); const w = el('span'); w.append(document.createTextNode(e.label || e.kind)); if (e.detail) w.append(el('span', ' · ' + e.detail, 'd')); if (e.page && e.kind === 'page_view') w.append(el('span', ' · ' + e.page, 'd')); li.append(w); ul.append(li); }
+    box.append(ul); return box;
+  }
+  function sync() { const u = new URL(location.href); u.searchParams.set('user', user); u.searchParams.set('from', from); u.searchParams.set('to', to); history.replaceState(null, '', u); }
+  render();
+})();
+</script>
+</body>
+</html>

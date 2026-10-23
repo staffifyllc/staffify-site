@@ -11,6 +11,7 @@
 // POST /api/instagram-flag/ { email, clear: true }      -> owners only, lift it
 import { redis, requireAccess, SITE, readBody } from './_auth.js';
 import { ownerFor } from './_outreach-queue.js';
+import { recordActivity } from './_hub-activity.js';
 
 export const FLAG = email => 'staffify:instagram-flag:' + String(email || '').toLowerCase();
 
@@ -40,6 +41,7 @@ export default async function handler(req, res) {
             at: new Date().toISOString(),
         };
         await redis.set(FLAG(email), record, { ex: 365 * 86400 });
+        await recordActivity(redis, { email: rep && rep.email, kind: 'instagram_flag', page: '/dialer/', detail: email });
         return res.status(200).json({ ok: true, flagged: record, email,
             note: 'The Instagram question is suppressed for this prospect until an owner clears it.' });
     } catch (e) {

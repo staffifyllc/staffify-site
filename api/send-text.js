@@ -14,6 +14,7 @@
 //   That var accepts either an OpenPhone id ("PNxxxxxxxx") or the plain number ("(561) 617-9973"),
 //   whichever is easier to hand over. A plain number is normalised to E.164 before sending.
 
+import { recordActivity } from './_hub-activity.js';
 import { openIdentity, redis, readBody } from './_auth.js';
 import { slackNotify } from './_slack.js';
 import { configured as hsReady, findOrCreateContact, logText } from './_hubspot.js';
@@ -210,6 +211,7 @@ export default async function handler(req, res) {
             } catch (e) { /* the text already went out; CRM logging is best effort */ }
         }
         slackNotify(':speech_balloon: *' + firstName(rep) + '* texted a no-answer lead: *' + (motion === 'websites' ? company : role) + '*');
+        if (who && who.email) await recordActivity(redis, { email: who.email, kind: 'text_sent', page: '/dialer/', detail: company || role || null });
         return res.status(200).json({ ok: true, sent: true, content, consent: { basis: consent.basis || 'none', note: consent.reason } });
     } catch (e) {
         return res.status(200).json({ ok: false, error: 'network', detail: String((e && e.message) || e).slice(0, 160) });

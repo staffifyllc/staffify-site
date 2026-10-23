@@ -12,7 +12,7 @@ export const redis = new Redis({
 
 import { loginAliases } from './_login-aliases.js';
 export const SESSION_COOKIE = 'sfy_sess';
-const SESSION_TTL = 60 * 60 * 24 * 30; // 30 days
+export const SESSION_TTL = 60 * 60 * 24 * 30; // 30 days
 const MAGIC_TTL = 60 * 20;             // 20 minutes
 export const SITE = 'https://www.gostaffify.com';
 

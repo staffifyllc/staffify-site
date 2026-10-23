@@ -197,6 +197,22 @@ function promiseRow(it, now) {
         sp.append(linkTo('Open spearhead accounts', '/spearhead/', 'btn btn-ghost'));
     }
 
+    // Your activity: what the Hub measured about you, and what it does not.
+    try {
+        const a = await get('/api/activity/?me=1');
+        const ac = panel('Your Hub activity this week', 'An estimate of time with a Hub tab open and in use. It cannot see phone calls or anything outside the Hub, and it is not payroll: Hubstaff is the source for paid hours.');
+        const mins = n => n >= 60 ? Math.floor(n / 60) + 'h ' + (n % 60) + 'm' : n + 'm';
+        const row = el('div', null, 'stats');
+        row.append(stat(mins(a.totals.activeMinutes), 'active (estimate)'), stat(mins(a.totals.idleMinutes), 'idle in session'), stat(mins(a.totals.elapsedMinutes), 'elapsed in sessions'), stat(a.totals.meaningful, 'actions recorded'));
+        ac.append(row);
+        const ul = el('ul', null, 'rows');
+        for (const d of a.days) { const li = el('li'); const left = el('div'); left.append(el('div', new Date(d.day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), 'who'), el('div', d.measured ? `${mins(d.activeMinutes)} active · ${mins(d.idleMinutes)} idle · ${d.sessions} session${d.sessions === 1 ? '' : 's'} · ${d.meaningful} action${d.meaningful === 1 ? '' : 's'}` : 'Not measured (before tracking started, or no Hub use)', 'meta')); li.append(left); ul.append(li); }
+        ac.append(ul, linkTo('See your events', '/activity/', 'btn btn-ghost'));
+        const what = el('details'); what.append(el('summary', 'What is measured'));
+        for (const t of a.definitions.measured) what.append(el('p', t, 'hint'));
+        ac.append(what);
+    } catch { /* the panel is informational; a failed read shows nothing rather than zeros */ }
+
     // Training
     const tr = panel('Training', 'The Staffify sales playbook: the offer, who buys, discovery, the close and the objection bank.');
     try {

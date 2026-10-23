@@ -22,6 +22,7 @@
 import { redis, requireAccess, SITE, readBody } from './_auth.js';
 import { KEY, visibleState, canUseCallQueue } from './_outreach-queue.js';
 import { isOptedOut } from './_optout.js';
+import { recordActivity } from './_hub-activity.js';
 
 export const OVERVIEW_PATH = '/assets/docs/staffify-overview.pdf';
 export const OVERVIEW_URL = 'https://www.gostaffify.com' + OVERVIEW_PATH;
@@ -110,6 +111,7 @@ export default async function handler(req, res) {
         const out = await r.json().catch(() => ({}));
         const receipt = { at: new Date().toISOString(), by: rep.name || rep.email, to: email, replyTo, id: out.id || null, company: row.company || null };
         await redis.set(SENT(email), receipt, { ex: 400 * 86400 }).catch(() => {});
+        await recordActivity(redis, { email: rep && rep.email, kind: 'overview_sent', page: '/dialer/', detail: receipt && receipt.to || null });
         return res.status(200).json({ sent: true, ...receipt });
     } catch (e) {
         return res.status(503).json({ sent: false, reason: 'The overview could not be sent. ' + String((e && e.message) || e).slice(0, 140) });
