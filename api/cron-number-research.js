@@ -136,32 +136,6 @@ export default async function handler(req, res) {
         }
     }
 
-    // Phone evidence: is the CRM number published on the business's own site? This used to run
-    // live on first card open, up to three page fetches, and was most of the 2.1 seconds a caller
-    // waited. It now runs here, bounded, newest-due first, and the card reads the stored answer.
-    const ev = { checked: 0, listed: 0, unconfirmed: 0 };
-    try {
-        const state = await redis.get(KEY);
-        const decorated = await withCallPhones(visibleState(state, 'all'), { redis, crm });
-        const withNumber = decorated.records.filter(r => r.callReady && r.callContact && r.callContact.phone && websiteOf(r));
-        for (const row of withNumber) {
-            if (Date.now() - started > BUDGET_MS) break;
-            if (ev.checked >= EVIDENCE_PER_RUN) break;
-            try {
-                const prior = await redis.get('staffify:call-phone-evidence:' + row.recipient).catch(() => null);
-                if (prior && prior.checkedAt && Date.now() - Date.parse(prior.checkedAt) < 7 * 86400000) continue;
-                ev.checked++;
-                const result = await checkBusinessPhone({ phone: row.callContact.phone, website: websiteOf(row), fetchSite: site });
-                await redis.set('staffify:call-phone-evidence:' + row.recipient, result, { ex: 14 * 86400 });
-                if (result.status === 'business_listed') ev.listed++; else ev.unconfirmed++;
-            } catch (e) {
-                out.failures.push({ company: row.company || row.recipient, why: 'evidence: ' + String((e && e.message) || e).slice(0, 90) });
-            }
-        }
-    } catch (e) {
-        out.failures.push({ company: 'evidence pass', why: String((e && e.message) || e).slice(0, 120) });
-    }
-
     // Who is this. Paul, 2026-10-23: a card that says "McKinstry" and no person is not enough to
     // call on; "the system should be capable of conducting research based on incomplete data."
     // For due records whose CRM contact has no first name: a vendor answer already paid for is
@@ -192,6 +166,32 @@ export default async function handler(req, res) {
         }
     } catch (e) {
         out.failures.push({ company: 'identity pass', why: String((e && e.message) || e).slice(0, 120) });
+    }
+
+    // Phone evidence: is the CRM number published on the business's own site? This used to run
+    // live on first card open, up to three page fetches, and was most of the 2.1 seconds a caller
+    // waited. It now runs here, bounded, newest-due first, and the card reads the stored answer.
+    const ev = { checked: 0, listed: 0, unconfirmed: 0 };
+    try {
+        const state = await redis.get(KEY);
+        const decorated = await withCallPhones(visibleState(state, 'all'), { redis, crm });
+        const withNumber = decorated.records.filter(r => r.callReady && r.callContact && r.callContact.phone && websiteOf(r));
+        for (const row of withNumber) {
+            if (Date.now() - started > BUDGET_MS) break;
+            if (ev.checked >= EVIDENCE_PER_RUN) break;
+            try {
+                const prior = await redis.get('staffify:call-phone-evidence:' + row.recipient).catch(() => null);
+                if (prior && prior.checkedAt && Date.now() - Date.parse(prior.checkedAt) < 7 * 86400000) continue;
+                ev.checked++;
+                const result = await checkBusinessPhone({ phone: row.callContact.phone, website: websiteOf(row), fetchSite: site });
+                await redis.set('staffify:call-phone-evidence:' + row.recipient, result, { ex: 14 * 86400 });
+                if (result.status === 'business_listed') ev.listed++; else ev.unconfirmed++;
+            } catch (e) {
+                out.failures.push({ company: row.company || row.recipient, why: 'evidence: ' + String((e && e.message) || e).slice(0, 90) });
+            }
+        }
+    } catch (e) {
+        out.failures.push({ company: 'evidence pass', why: String((e && e.message) || e).slice(0, 120) });
     }
 
     // Instagram, for marketing agencies only, on the same pass. Paul asked for this to be a
