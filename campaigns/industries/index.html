@@ -416,6 +416,7 @@ function renderCampaign(d) {
   const sh = el('div', null, 'panel-h'); sh.append(el('h2', 'What they received')); sp.append(sh);
   const sb = el('div', null, 'panel-b');
   if (!d.sequence.length) sb.append(el('p', 'No email copy is stored on this campaign.', 'sub'));
+  else if (d.sequence.length < 4 && c.fourDone > 0) sb.append(el('p', `Only email ${d.sequence.length === 1 ? '1 is' : '1 to ' + d.sequence.length + ' are'} stored here. The follow-ups are written at send time from the first email, so ${n(c.fourDone)} people got all four even though they are not shown.`, 'sub'));
   const ol = el('ol', null, 'seq');
   for (const s of d.sequence) { const li = el('li'); const det = el('details'); det.append(el('summary', s.subject ? `Email ${s.n} · ${s.subject}` : `Email ${s.n}`)); det.append(el('pre', s.body || '', 'mail')); li.append(det); ol.append(li); }
   sb.append(ol); sp.append(sb); side.append(sp);

@@ -33,6 +33,18 @@ export default async function handler(req, res) {
         const rep = await requireAccess(req);
         if (!rep || !rep.email) return res.status(401).json({ error: 'Sign in to your Staffify account' });
 
+        // The tab people land on. Walking 1,630 records through the phone ladder took over five
+        // seconds live, so each view is held for 45 seconds per viewer scope. A caller who just
+        // logged an outcome can pass fresh=1; the dialer itself never reads this, so a stale count
+        // here can never hold back a card.
+        const q = req.query || {};
+        const scope = ownerFor(rep) || 'all';
+        const cacheKey = 'staffify:campaigns-view:' + scope + ':' + String(q.view || 'overview') + ':' + String(q.industry || '') + ':' + String(q.campaign || '');
+        if (!q.fresh) {
+            const held = await redis.get(cacheKey).catch(() => null);
+            if (held && held.builtAt && Date.now() - Date.parse(held.builtAt) < 45000) return res.status(200).json({ ...held, cached: true });
+        }
+
         const state = await redis.get(KEY);
         if (!state) return res.status(503).json({ error: 'The queue could not be read, so no counts are reported. This is not a statement that there are no campaigns.' });
 
@@ -44,7 +56,6 @@ export default async function handler(req, res) {
         const records = decorated.records;
         const stated = (await redis.hgetall(INDUSTRY_KEY).catch(() => null)) || {};
 
-        const q = req.query || {};
         const view = String(q.view || 'overview');
         const notes = [
             'A rate is withheld below 30 contacted. A dash means no evidence; 0 means we looked and it is zero.',
@@ -55,15 +66,21 @@ export default async function handler(req, res) {
         if (view === 'industry') {
             const key = String(q.industry || '').trim();
             if (!key) return res.status(400).json({ error: 'Which industry?' });
-            return res.status(200).json({ view, builtAt: new Date().toISOString(), ...industryView(records, key, stated), notes });
+            const out = { view, builtAt: new Date().toISOString(), ...industryView(records, key, stated), notes };
+            await redis.set(cacheKey, out, { ex: 120 }).catch(() => {});
+            return res.status(200).json(out);
         }
         if (view === 'campaign') {
             const id = String(q.campaign || '').trim();
             if (!id) return res.status(400).json({ error: 'Which campaign?' });
             if (!records.some(r => r.campaignId === id)) return res.status(404).json({ error: 'No campaign with that id is in the queue.' });
-            return res.status(200).json({ view, builtAt: new Date().toISOString(), ...campaignView(records, id, stated), notes });
+            const out = { view, builtAt: new Date().toISOString(), ...campaignView(records, id, stated), notes };
+            await redis.set(cacheKey, out, { ex: 120 }).catch(() => {});
+            return res.status(200).json(out);
         }
-        return res.status(200).json({ view: 'overview', builtAt: new Date().toISOString(), ...overview(records, stated), notes });
+        const out = { view: 'overview', builtAt: new Date().toISOString(), ...overview(records, stated), notes };
+        await redis.set(cacheKey, out, { ex: 120 }).catch(() => {});
+        return res.status(200).json(out);
     } catch (e) {
         return res.status(503).json({ error: 'The campaign view could not be built.', detail: String((e && e.message) || e).slice(0, 200) });
     }
