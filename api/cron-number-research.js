@@ -18,6 +18,9 @@ import { hubspotRequest } from './_outreach-hubspot.js';
 import { site } from './_outreach-supply.js';
 import { findSitePhone } from './_site-phone.js';
 import { checkBusinessPhone } from './_outreach-phone-evidence.js';
+import { contact } from './_outreach-crm.js';
+import { fillBlankContactProps } from './_hubspot.js';
+import { researchIdentity, needsName, triedRecently } from './_contact-identity.js';
 import { lookupByEmail, rrConfigured } from './_rocketreach.js';
 import { ATTEMPTS, decide, noteAttempt, websiteOf } from './_number-research.js';
 import { loadBad, isBad } from './_bad-numbers.js';
@@ -33,6 +36,7 @@ const VENDOR_PER_RUN = Number(process.env.NUMBER_RESEARCH_VENDOR_PER_RUN || 8);
 const SITE_PER_RUN = Number(process.env.NUMBER_RESEARCH_SITE_PER_RUN || 25);
 const IG_PER_RUN = Number(process.env.INSTAGRAM_RESEARCH_PER_RUN || 12);
 const EVIDENCE_PER_RUN = Number(process.env.PHONE_EVIDENCE_PER_RUN || 25);
+const IDENTITY_PER_RUN = Number(process.env.IDENTITY_RESEARCH_PER_RUN || 10);
 
 const crm = async (path, body) => {
     const response = await hubspotRequest('https://api.hubapi.com' + path, {
@@ -158,6 +162,37 @@ export default async function handler(req, res) {
         out.failures.push({ company: 'evidence pass', why: String((e && e.message) || e).slice(0, 120) });
     }
 
+    // Who is this. Paul, 2026-10-23: a card that says "McKinstry" and no person is not enough to
+    // call on; "the system should be capable of conducting research based on incomplete data."
+    // For due records whose CRM contact has no first name: a vendor answer already paid for is
+    // used first, then a RocketReach lookup inside the same per-run vendor budget as the numbers.
+    // What is found fills the BLANK CRM fields only. The CEO cohort goes first; it is worked by name.
+    const idn = { checked: 0, found: 0, credits: 0, skipped: 0 };
+    try {
+        const state = await redis.get(KEY);
+        const due = visibleState(state, 'all').records.filter(r => r.callReady && r.recipient)
+            .sort((a, b) => Number(b.campaignId === 'staffify-tobit-outreach') - Number(a.campaignId === 'staffify-tobit-outreach'));
+        for (const row of due) {
+            if (Date.now() - started > BUDGET_MS) break;
+            if (idn.checked >= IDENTITY_PER_RUN) break;
+            const e = row.recipient.toLowerCase();
+            if (await triedRecently(redis, e)) { idn.skipped++; continue; }
+            let c = null;
+            try { c = await contact(row.recipient); } catch { continue; }
+            if (!c || !needsName(c.properties)) continue;
+            idn.checked++;
+            const vendorCached = await redis.get(VENDOR(e)).catch(() => null);
+            const canSpend = rrConfigured() && vendorSpend < VENDOR_PER_RUN;
+            try {
+                const r = await researchIdentity({ redis, email: e, contactId: c.id, vendorCached,
+                    lookup: canSpend ? (async a => { vendorSpend++; idn.credits++; return lookupByEmail(a); }) : null, fill: fillBlankContactProps });
+                if (r.found) idn.found++;
+            } catch (err) { out.failures.push({ company: row.company || row.recipient, why: 'identity: ' + String((err && err.message) || err).slice(0, 90) }); }
+        }
+    } catch (e) {
+        out.failures.push({ company: 'identity pass', why: String((e && e.message) || e).slice(0, 120) });
+    }
+
     // Instagram, for marketing agencies only, on the same pass. Paul asked for this to be a
     // datapoint a caller can see rather than something guessed at mid-call. It is the cheapest
     // possible look: their own website, which is also the only source that confirms the account
@@ -190,7 +225,7 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-        ...out, instagram: ig, evidence: ev, backlog: due.length, ranAt: new Date().toISOString(),
+        ...out, instagram: ig, evidence: ev, identity: idn, backlog: due.length, ranAt: new Date().toISOString(),
         note: 'A record that gained a number is promoted on the next queue read, where call eligibility is recomputed in full. Nothing is promoted past the four-email rule or the exclusions.',
     });
 }

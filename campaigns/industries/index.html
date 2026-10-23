@@ -291,8 +291,10 @@ function renderIndustry(d) {
     const tile = (v, label, href, hot) => { const a = link('', href, hot ? 'hot' : ''); a.append(el('b', n(v)), el('span', label)); return a; };
     const firstId = d.campaigns[0] ? d.campaigns[0].id : '';
     today.append(tile(d.queue.repliesWaiting, 'replies waiting for a human', '/outreach-review/?view=replies', d.queue.repliesWaiting > 0));
-    today.append(tile(d.queue.callbacksDue, 'callbacks due now', dialer(firstId), d.queue.callbacksDue > 0));
-    today.append(tile(d.queue.ready, 'ready to call', dialer(firstId), false));
+    // The queue opens ON this industry, not on the campaign's first card every time.
+    const here = '&industry=' + encodeURIComponent(d.industry.key);
+    today.append(tile(d.queue.callbacksDue, 'callbacks due now', dialer(firstId, here), d.queue.callbacksDue > 0));
+    today.append(tile(d.queue.ready, 'ready to call', dialer(firstId, here), false));
     out.push(today);
 
     const panel = el('section', null, 'panel');

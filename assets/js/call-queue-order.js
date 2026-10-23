@@ -1,5 +1,7 @@
 // Stable call order: callbacks that have come due first, then corroborated numbers, then the oldest fourth-email handoff.
-export function orderCallQueue(records,{campaign,owner='all',search='',research=false}={}){
+export function orderCallQueue(records,{campaign,owner='all',search='',research=false,industry=''}={}){
+ // Paul, 2026-10-23: a queue opened from an industry on the Campaigns page must be THAT industry.
+ const inIndustry=r=>!industry||industry==='all'||(r.industry&&r.industry.key===industry);
  // A vendor direct dial counts as dialable. It sorts BELOW a number published on the business's
  // own site, because that one is corroborated and this one is a vendor's claim.
  // EVERY status the phone ladder can hand a caller, or the card never reaches them. On 2026-10-22
@@ -15,7 +17,7 @@ export function orderCallQueue(records,{campaign,owner='all',search='',research=
  const offered=r=>('unclaimed' in r||'dueForMe' in r)?(r.unclaimed||r.dueForMe):r.callReady;
  const now=Date.now();
  const dueCallback=r=>r.callOutcome==='callback'&&Date.parse(r.nextCallAt||'')<=now;
- return records.filter(r=>(!campaign||campaign==='all'||r.campaignId===campaign)&&offered(r)&&(owner==='all'||r.owner===owner)&&(research?!candidate(r):candidate(r))&&(!search||[r.company,r.recipient,r.callContact?.phone].join(' ').toLowerCase().includes(search.toLowerCase())))
+ return records.filter(r=>(!campaign||campaign==='all'||r.campaignId===campaign)&&inIndustry(r)&&offered(r)&&(owner==='all'||r.owner===owner)&&(research?!candidate(r):candidate(r))&&(!search||[r.company,r.recipient,r.callContact?.phone].join(' ').toLowerCase().includes(search.toLowerCase())))
  // A callback that has come due goes first, ahead of everything. Somebody asked to be called at
  // that time, and the caller promised; Paul, 2026-10-22: "a task time to call them back that
  // reminds the sales person." The queue is the reminder that works even when the CRM's does not.

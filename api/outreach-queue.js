@@ -8,6 +8,8 @@ import {scheduleCallbackTask} from './_callback-task.js';
 import {markBad} from './_bad-numbers.js';
 import {ATTEMPTS} from './_number-research.js';
 import {listTasks,addTask,completeTask} from './_rep-tasks.js';
+import {classified} from './_campaigns-model.js';
+import {INDUSTRY_KEY} from './_campaign-industry.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
@@ -28,7 +30,13 @@ export default async function handler(req,res) {
       const out=slim?slimState(decorated):decorated;
       // The caller's own tasks ride along with the call view, so the dialer's follow-up list is
       // one read: callbacks from the records, tasks from here.
-      if(calls)out.tasks=await listTasks(redis,rep.email);
+      if(calls){
+       // Each card carries the industry the Campaigns page shows for it, so a queue opened from an
+       // industry there is that industry here. Same classifier, same stated overrides.
+       const stated=(await redis.hgetall(INDUSTRY_KEY).catch(()=>null))||{};
+       out.records=classified(out.records,stated).map(({r,v})=>({...r,industry:v&&v.key?{key:v.key,label:v.label,source:v.source}:null}));
+       out.tasks=await listTasks(redis,rep.email);
+      }
       return res.status(200).json(out);
     }
     if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});

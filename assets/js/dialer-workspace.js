@@ -19,7 +19,7 @@ const app=document.getElementById('app');
 const params=new URLSearchParams(location.search);
 const PIN=app.dataset.campaign||null;                      // /spearhead/ pins its campaign in the shell
 let selectedCampaign=PIN||params.get('campaign')||'all';
-let selectedOwner=params.get('owner')||'all', research=false, search='';
+let selectedOwner=params.get('owner')||'all', selectedIndustry=params.get('industry')||'all', research=false, search='';
 let state=null, current=null, brief=null, requestId=0, busy=false, drawerOpen=false, quoToday=null;
 const skipped=new Set(), dialled=new Set();
 const session={started:Date.now(),saved:{},texts:0,tasks:0};
@@ -42,11 +42,18 @@ const firstName=s=>String(s||'').trim().split(/\s+/)[0]||'';
 // and still set with textContent, so nothing here is ever interpreted as markup.
 const ENT={nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',hellip:'…',mdash:'-',ndash:'-',rsquo:'\u2019',lsquo:'\u2018',rdquo:'\u201d',ldquo:'\u201c'};
 const plain=s=>String(s||'').replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,n)=>String.fromCodePoint(Number(n))).replace(/&([a-z]+);/gi,(m,k)=>k.toLowerCase() in ENT?ENT[k.toLowerCase()]:m).replace(/\s+/g,' ').trim();
-const rows=()=>orderCallQueue(state.records,{campaign:selectedCampaign,owner:selectedOwner,search,research});
-const positionKey=()=>`staffify-call-position:${selectedCampaign}:${selectedOwner}:${research}`;
+const rows=()=>orderCallQueue(state.records,{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
+// A skip holds for the day. Paul, 2026-10-23: the queue "is starting every single time on the same
+// prospect": a skip lived in memory, so every reload put the same card back on top. Now a skipped
+// prospect stays out of this rep's queue for 24 hours and the options say how many are out.
+const skipKey=()=>'staffify-dialer-skipped:'+String(state&&state.viewer||'me');
+function loadSkips(){try{const m=JSON.parse(localStorage.getItem(skipKey())||'{}');const cut=Date.now()-24*3600000;skipped.clear();for(const [id,at] of Object.entries(m))if(at>cut)skipped.add(id);}catch{}}
+function saveSkips(){try{const m={};for(const id of skipped)m[id]=Date.now();localStorage.setItem(skipKey(),JSON.stringify(m));}catch{}}
+function skipNow(id){skipped.add(id);saveSkips();}
+const positionKey=()=>`staffify-call-position:${selectedCampaign}:${selectedOwner}:${selectedIndustry}:${research}`;
 function remember(id){try{sessionStorage.setItem(positionKey(),id);}catch{}}
 function remembered(){try{return sessionStorage.getItem(positionKey());}catch{return null;}}
-function syncUrl(){const u=new URL(location.href);if(!PIN){selectedCampaign==='all'?u.searchParams.delete('campaign'):u.searchParams.set('campaign',selectedCampaign);}selectedOwner==='all'?u.searchParams.delete('owner'):u.searchParams.set('owner',selectedOwner);history.replaceState(null,'',u);}
+function syncUrl(){const u=new URL(location.href);if(!PIN){selectedCampaign==='all'?u.searchParams.delete('campaign'):u.searchParams.set('campaign',selectedCampaign);}selectedOwner==='all'?u.searchParams.delete('owner'):u.searchParams.set('owner',selectedOwner);selectedIndustry==='all'?u.searchParams.delete('industry'):u.searchParams.set('industry',selectedIndustry);history.replaceState(null,'',u);}
 
 // Drafts survive a reload. Notes typed during a call are the one thing a rep cannot retype.
 const draftKey=id=>'staffify-dialer-draft:'+id;
@@ -66,7 +73,8 @@ function bar(){
  title.append(el('div',pin?pin.eyebrow:'Shared call queue','dw-eyebrow'));
  const pos=el('div',null,'dw-pos');
  pos.append(document.createTextNode(list.length?`${Math.max(1,index+1)} of ${list.length}`:'Queue complete'));
- pos.append(el('small',research?'Numbers that need confirming':(pin?pin.h1:NAMES[selectedCampaign]||selectedCampaign)));
+ const indLabel=selectedIndustry!=='all'?((state?.records||[]).find(r=>r.industry&&r.industry.key===selectedIndustry)||{}).industry?.label||selectedIndustry:null;
+ pos.append(el('small',research?'Numbers that need confirming':[(pin?pin.h1:NAMES[selectedCampaign]||selectedCampaign),indLabel].filter(Boolean).join(' · ')));
  title.append(pos);
  b.append(title);
  // Options: campaign, owner, search, the research tab, refresh. Behind one control so the bar
@@ -75,10 +83,14 @@ function bar(){
  const body=el('div',null,'dw-optbody');
  if(!PIN){const campaign=el('select');campaign.setAttribute('aria-label','Campaign');for(const id of new Set(['all',selectedCampaign,...(state?.records||[]).map(r=>r.campaignId)])){const o=el('option',NAMES[id]||id);o.value=id;campaign.append(o);}campaign.value=selectedCampaign;campaign.onchange=()=>{stash();selectedCampaign=campaign.value;syncUrl();skipped.clear();current=null;showNext();};body.append(campaign);}
  const ownerSel=el('select');ownerSel.setAttribute('aria-label','Sales owner');for(const [label,value] of [['All sales owners','all'],['Paul','Paul'],['Madison','Madison']]){const o=el('option',label);o.value=value;ownerSel.append(o);}ownerSel.value=selectedOwner;ownerSel.onchange=()=>{stash();selectedOwner=ownerSel.value;syncUrl();skipped.clear();current=null;showNext();};
+ // Industries present in this view, from the same classifier the Campaigns page uses.
+ const inds=new Map();for(const r of state?.records||[])if(r.industry&&r.industry.key&&(selectedCampaign==='all'||r.campaignId===selectedCampaign))inds.set(r.industry.key,r.industry.label||r.industry.key);
+ const indSel=el('select');indSel.setAttribute('aria-label','Industry');const allInd=el('option','All industries');allInd.value='all';indSel.append(allInd);for(const [k,l] of [...inds.entries()].sort((a,b)=>a[1].localeCompare(b[1]))){const o=el('option',l);o.value=k;indSel.append(o);}if(selectedIndustry!=='all'&&!inds.has(selectedIndustry)){const o=el('option',selectedIndustry);o.value=selectedIndustry;indSel.append(o);}indSel.value=selectedIndustry;indSel.onchange=()=>{stash();selectedIndustry=indSel.value;syncUrl();current=null;showNext();};
  const find=el('input');find.placeholder='Find company, email or number';find.setAttribute('aria-label','Find prospect');find.value=search;find.onchange=()=>{stash();search=find.value;showNext();};
  const tabs=el('div',null,'dw-nav');for(const [label,value] of [['Ready to call',false],['Number research',true]]){const t=button(label,()=>{stash();research=value;skipped.clear();current=null;showNext();},'btn'+(research===value?' active':''));t.setAttribute('aria-pressed',String(research===value));tabs.append(t);}
  const w=state&&state.numberWork;const held=[];if(w?.findingNumber)held.push(w.findingNumber+' having a number found automatically');if(w?.noNumberPossible)held.push(w.noNumberPossible+' where no number could be found');
- body.append(ownerSel,find,tabs,button('Refresh queue',()=>refresh().catch(fail),'btn btn-ghost'));
+ body.append(ownerSel,indSel,find,tabs,button('Refresh queue',()=>refresh().catch(fail),'btn btn-ghost'));
+ if(skipped.size)body.append(button(skipped.size+' skipped today · show them again',()=>{skipped.clear();saveSkips();showNext();},'btn btn-ghost'));
  if(held.length)body.append(el('p','Held out of this queue: '+held.join(' · ')+'. Nobody is handed a card without a number.','dw-held'));
  body.append(el('p','Order: callbacks that are due, then numbers listed on the business website, then the oldest fourth email.','dw-held'));
  opt.append(body);b.append(opt);
@@ -98,7 +110,7 @@ function bar(){
  const fuBtn=button('Follow-ups',()=>openDrawer(),'btn btn-ghost');
  if(n){const badge=el('span',String(fu.dueNow.length||n),'dw-badge'+(fu.dueNow.length?' hot':''));badge.setAttribute('aria-label',fu.dueNow.length?fu.dueNow.length+' due now':n+' upcoming');fuBtn.append(badge);}
  fuBtn.title='F';
- const prev=button('← Previous',()=>move(-1),'btn btn-ghost'),skip=button('Skip',()=>{if(busy||!current||!leaveOk())return;skipped.add(current.id);showNext();},'btn btn-ghost'),next=button('Next →',()=>move(1),'btn btn-ghost');
+ const prev=button('← Previous',()=>move(-1),'btn btn-ghost'),skip=button('Skip',()=>{if(busy||!current||!leaveOk())return;skipNow(current.id);showNext();},'btn btn-ghost'),next=button('Next →',()=>move(1),'btn btn-ghost');
  prev.disabled=index<=0||busy;next.disabled=index<0||index>=list.length-1||busy;skip.disabled=!current||busy;
  prev.title='P';next.title='N';skip.title='S';
  nav.append(fuBtn,prev,skip,next);b.append(nav);
@@ -111,8 +123,8 @@ function move(offset){if(busy)return;if(!leaveOk())return;const list=rows(),inde
 
 // ---- loading and the empty state ----------------------------------------------------------
 function fail(e){app.replaceChildren(bar(),el('div',e.message,'dw-pane dw-loading'),button('Retry',()=>refresh().catch(fail)));}
-async function refresh(){stash();state=await api('/api/outreach-queue/?view=calls');skipped.clear();const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
-async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id));if(row)return show(row);current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects are still in this queue. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Review skipped prospects',()=>{skipped.clear();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
+async function refresh(){stash();state=await api('/api/outreach-queue/?view=calls');loadSkips();const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
+async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id));if(row)return show(row);current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
 
 // ---- one prospect -------------------------------------------------------------------------
 async function show(row){
@@ -148,7 +160,9 @@ function renderWho(pane,row,b){
  const head=el('div');
  const companyName=p.company||row.company||row.recipient;const h2=el('h2',companyName,'dw-company');const hearCo=hearButton(companyName);if(hearCo)h2.append(hearCo);head.append(h2);
  const name=p.name&&p.name!==row.recipient?p.name:(row.verifiedFirstName||'');
- if(name){const who=el('div',name,'dw-person');const hearWho=hearButton(name);if(hearWho)who.append(hearWho);head.append(who);}
+ if(name){const who=el('div',name+(p.title?' · '+p.title:''),'dw-person');const hearWho=hearButton(name);if(hearWho)who.append(hearWho);head.append(who);
+  if(p.identity&&p.identity.status==='researched')who.append(el('span','Name from '+p.identity.source+(p.identity.checkedAt?', '+new Date(p.identity.checkedAt).toLocaleDateString():''),'dw-prov'));}
+ else if(b){const who=el('div',p.identity&&p.identity.status==='unknown'&&p.identity.reason?'No name on file. '+p.identity.reason:'No name on file. A lookup is queued.','dw-person dw-noname');head.append(who);}
  const meta=el('div',null,'dw-meta');
  const tag=industryTag(p.industry);if(tag)meta.append(tag);
  if(p.location)meta.append(el('span',p.location));
@@ -401,7 +415,8 @@ async function saveOutcome(row,b,status,save){
   if(state.wrongNumber){if(state.wrongNumber.ok)toast('Logged. That number will not be offered again for them; we are looking for another.');else toast('Logged as a wrong number, but the number could not be marked: '+state.wrongNumber.reason+'.',true);}
   if(!state.nurture&&!state.callbackTask&&!state.wrongNumber)toast('Saved: '+(LOGLABEL[choice]||choice)+'.');
   const phones=new Map(latest.records.map(r=>[r.id,r.callContact]));state.records=state.records.map(r=>({...r,callContact:phones.get(r.id)||r.callContact}));
-  dropDraft(row.id);skipped.add(row.id);current=null;choice='';await showNext();
+  // A logged card leaves the queue because its state changed (callReady recomputed on the server), not because it was skipped.
+  dropDraft(row.id);current=null;choice='';await showNext();
  }catch(e){status.textContent='Not saved: '+e.message+'. Your notes are still here.';status.className='dw-status';}
  finally{busy=false;save.disabled=false;refreshBar();}
 }
@@ -423,7 +438,7 @@ function renderBlocked(who,talk,log,hist,row,p,message){
  renderWho(who,row,{...p,phone:null,dial:null,phoneEvidence:{detail:p.crmPhone?'CRM number '+p.crmPhone+' is shown for reference only; this prospect is not callable right now.':'No number on file.'},checkedAt:new Date().toISOString(),fact:p.source&&p.source.excerpt||null,website:p.website,instagram:null});
  const alert=el('div',null,'dw-due dw-alert');alert.append(el('b','Not callable right now. '),document.createTextNode(message+' Everything on this card is from the last queue sync'+(p.syncedAt?' at '+new Date(p.syncedAt).toLocaleString():'')+'.'));
  who.prepend(alert);
- talk.replaceChildren(heading('Talk track'),el('p','No script until the live check passes. Reply, opt-out and client exclusions could not be re-checked.','dw-small'),button('Retry this prospect',()=>show(row)),button('Skip to next',()=>{skipped.add(row.id);showNext();},'btn btn-ghost'));
+ talk.replaceChildren(heading('Talk track'),el('p','No script until the live check passes. Reply, opt-out and client exclusions could not be re-checked.','dw-small'),button('Retry this prospect',()=>show(row)),button('Skip to next',()=>{skipNow(row.id);showNext();},'btn btn-ghost'));
  log.replaceChildren(heading('How did it go?'),el('p','Outcomes are off for a prospect we are not calling.','dw-small'));
  renderHistory(hist,row,{events:p.events||[]});
 }
@@ -466,7 +481,7 @@ document.addEventListener('keydown',e=>{
  if(s.type==='outcome'&&current&&document.querySelector('.dw-oc'))selectOutcome(s.value);
  else if(s.type==='next')move(1);
  else if(s.type==='prev')move(-1);
- else if(s.type==='skip'&&current){if(leaveOk()){skipped.add(current.id);showNext();}}
+ else if(s.type==='skip'&&current){if(leaveOk()){skipNow(current.id);showNext();}}
  else if(s.type==='followups')openDrawer();
  else if(s.type==='call'){const c=document.getElementById('call-now');if(c)c.click();}
 });

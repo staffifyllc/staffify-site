@@ -86,6 +86,9 @@ test('screen 2: the funnel names its denominators and keeps reaching campaigns a
     assert.match(text, /Also reaching this industry/);
     assert.match(text, /CEO B2B outreach · 1 of 23 here/);
     assert.ok(text.indexOf('Campaigns built for this industry') < text.indexOf('Also reaching this industry'), 'own campaigns first');
+    // Paul, 2026-10-23: a queue opened from an industry kept landing on the campaign's first card.
+    const hrefs = all(app).map(x => x.href).filter(Boolean);
+    assert.ok(hrefs.some(h => h.startsWith('/dialer/?campaign=staffify-agency-outreach&industry=re-media')), 'the queue opens on this industry');
 });
 
 test('screen 3: prospects sorted by what needs a person, the real email copy, the real replies', async () => {

@@ -8,6 +8,7 @@ import {classify,callReady} from './_outreach-policy.js';
 import {callScript} from './_call-scripts.js';
 import {industryFor} from './_industry.js';
 import {resolveTimezone} from './_outreach-timezone.js';
+import {knownIdentity,TRIED_KEY} from './_contact-identity.js';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store');
  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed'});
@@ -89,7 +90,13 @@ export default async function handler(req,res){
   await redis.del('staffify:call-block:'+row.id);
   // One lookup, reused. This used to fetch the same contact a second time just to build the
   // CRM link whenever hubspotId was absent, doubling the cost of every such card.
-  const crmContact=await crmPromise;const p=crmContact.properties;const contactId=crmContact.id;mark('crm');
+  const crmContact=await crmPromise;const p={...crmContact.properties};const contactId=crmContact.id;mark('crm');
+  // A name the research pass found fills in for a blank CRM name. The CRM is patched by that pass
+  // too, so this is only the window between a lookup and HubSpot catching up, plus provenance.
+  let identity={status:p.firstname?'crm':'unknown'};
+  if(!p.firstname){const known=await knownIdentity(redis,row.recipient);
+   if(known){p.firstname=known.firstName;p.lastname=p.lastname||known.lastName;p.jobtitle=p.jobtitle||known.title||'';identity={status:'researched',source:known.source,checkedAt:known.checkedAt};}
+   else{const tried=await redis.get(TRIED_KEY(row.recipient)).catch(()=>null);identity={status:'unknown',reason:tried&&tried.at?('Looked up on '+(tried.source||'RocketReach')+' '+new Date(tried.at).toLocaleDateString('en-US')+': not found.'):'A lookup is queued.'};}}
   // Phone evidence is READ here, never fetched. This used to fetch up to three pages of the
   // prospect's website live on every first open, which was most of the 2.1 seconds a caller waited
   // per card. The background research pass does that check now and stores the result; a record it
@@ -130,7 +137,7 @@ export default async function handler(req,res){
    :null;
   const clockZone=(row.prospectTimezone&&row.prospectTimezone.timeZone)?row.prospectTimezone
    :(!String(p.country||'').trim()&&String(p.state||'').trim())?(z=>z.timeZone?{...z,source:'CRM state; country assumed US for the clock only'}:null)(resolveTimezone({...p,country:'US'})):null;
-  return res.status(200).json({timings:(mark('done'),timings),prospectTimezone:clockZone,callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
+  return res.status(200).json({timings:(mark('done'),timings),prospectTimezone:clockZone,identity,title:p.jobtitle||null,callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
    industry:industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle}),
    staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:dial&&dial.number||null,dial,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname,website:p.website||row.website||row.source?.url||'',excerpt:row.source?.excerpt||'',crmIndustry:p.industry||'',title:p.jobtitle||'',igBranch:instagram&&instagram.branch}),instagram,events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
  }catch(e){

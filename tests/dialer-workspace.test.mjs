@@ -16,10 +16,10 @@ const rec = (id, over) => ({ id, company: 'Co ' + id, recipient: id + '@x.com', 
     callContact: { phone: '+1512555000' + id.replace(/\D/g, ''), phoneStatus: 'available' }, callHistory: [], events: [], ...over });
 const STATE = () => ({ revision: 41, viewer: ME, numberWork: { callable: 3, findingNumber: 3, noNumberPossible: 0, blocked: 0 },
     records: [
-        rec('r1', { company: 'Riley Jones Real Estate Media', recipient: 'tom@rileyjonesrem.com', callContact: { phone: '+19107695931', phoneStatus: 'business_listed' } }),
+        rec('r1', { company: 'Riley Jones Real Estate Media', recipient: 'tom@rileyjonesrem.com', callContact: { phone: '+19107695931', phoneStatus: 'business_listed' }, industry: { key: 're-media', label: 'Real estate media', source: 'campaign' } }),
         rec('r2', { company: 'Loft & Light', recipient: 'priya@loft.com', callOwner: ME, mine: true, dueForMe: true, unclaimed: false, callOutcome: 'callback', nextCallAt: hourAgo,
             callHistory: [{ at: hourAgo, outcome: 'callback', notes: 'after lunch, ask for Priya', caller: ME, nextCallAt: hourAgo }] }),
-        rec('r3', { company: 'Blocked Co', recipient: 'b@blocked.com', lastSentAt: '2026-09-01T18:25:22Z' }),
+        rec('r3', { company: 'Blocked Co', recipient: 'b@blocked.com', lastSentAt: '2026-09-01T18:25:22Z', industry: { key: 'construction', label: 'Construction', source: 'named' } }),
     ],
     tasks: [{ id: 't1', title: 'Send pricing', dueAt: tomorrow10.toISOString(), doneAt: null, company: 'Loft & Light', recordId: 'r2', hubspot: { ok: false, reason: 'no_owner' } }] });
 const BRIEF = (row, name) => ({ callable: true, checkedAt: new Date().toISOString(), company: row.company, name, location: 'Wilmington, NC', phone: row.callContact.phone,
@@ -198,5 +198,21 @@ test('a prospect the live check refuses renders as refused, with its history and
     assert.equal(document.querySelectorAll('.dw-oc').length, 0);
     assert.match(text, /\+15125550003 is shown for reference only/);
     assert.equal(document.getElementById('call-now'), null, 'no dial button on a refused card');
+});
+
+test('a skip holds for the day, and the industry select narrows the queue to that industry', async () => {
+    const saved = JSON.parse(localStorage.getItem('staffify-dialer-skipped:' + ME) || '{}');
+    assert.ok(saved.r1, 'the skipped prospect is remembered on this device');
+    assert.match(dom.text(document.querySelector('.dw-optbody')), /1 skipped today · show them again/);
+    const sel = document.querySelector('select[aria-label="Industry"]');
+    assert.ok(sel, 'an industry control exists');
+    assert.deepEqual(dom.queryAll(sel, 'option').map(o => dom.text(o)), ['All industries', 'Construction', 'Real estate media']);
+    sel.value = 'construction'; sel.dispatchEvent(dom.makeEvent('change'));
+    await tick(60);
+    assert.match(dom.text(document.querySelector('.dw-bar')), /1 of 1.*Construction/);
+    assert.match(location.search, /industry=construction/, 'the filter is in the link');
+    sel.value = 're-media'; sel.dispatchEvent(dom.makeEvent('change'));
+    await tick(60);
+    assert.match(dom.text(document.body), /Show the 1 skipped/, 'the only real estate media prospect is the skipped one, and the page says so');
     restore();
 });
