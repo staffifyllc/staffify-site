@@ -26,6 +26,15 @@ import { CAMPAIGN_ID } from './_outreach-campaign.js';
 
 export const INDUSTRY_KEY = 'staffify:prospect-industry:v1';
 
+// What the business itself is, from its name or its own copy.
+const MEDIA_BUSINESS = /\b(photo\w*|pix|pics|video\w*|media|studios?|films?|filmmaking|drone|aerial|visuals?|imaging|cinematic|3d tours?|virtual tours?|matterport)\b/i;
+// Whether that business serves real estate. Wider than the call-script rule on purpose: listing
+// photographers say "realtor", "listings", "exterior" and "properties" far more than they say the
+// exact phrase "real estate photography".
+const SERVES_REAL_ESTATE = /\b(real[ -]?estate|realtors?|realty|listings?|mls|brokerages?|homes?|home sellers?|houses?|properties|property|open houses?|agents?|twilight|floor ?plans?|exteriors?|interiors?|staging|vacation rentals?|airbnb|builders?|new construction|model homes?|condos?|apartments?)\b/i;
+// Positive evidence that a photographer's focus is something other than real estate.
+const OTHER_FOCUS = /\b(weddings?|brides?|engagements?|elopements?|newborns?|maternity|boudoir|portraits?|headshots?|seniors?|family sessions?|pet photography|product photography|food photography|fashion|events?|concerts?|sports|lifestyle brands?)\b/i;
+
 /** How far a classification can be trusted, and what it is allowed to drive. */
 export const CONFIDENCE = Object.freeze({
     stated: 'A person recorded it.',
@@ -52,6 +61,35 @@ export function classify(row, { stated = null, crmIndustry = '', title = '' } = 
     if (crmIndustry && String(crmIndustry).trim()) {
         const g = industryFor({ company, excerpt, crmIndustry, title });
         if (g) return { key: g.key, label: g.label, source: 'crm', confidence: 'crm', why: `HubSpot industry: ${crmIndustry}.` };
+    }
+
+    // A photo or video business is classified by what IT does, not by what its clients do.
+    //
+    // The first live preview over the 1,508 put "Rancho Photos" in construction, "Bella
+    // Photography" in healthcare, "Framed Listings" in hospitality and "Realty Pix Media" in
+    // property. Every one is a listing photographer. Their copy says they shoot new-construction
+    // homes, or hotels, or properties, and a keyword classifier read the client as the business.
+    // So a media business is decided here, before any client-industry keyword gets a vote.
+    const hay = `${company} ${excerpt} ${website}`;
+    if (MEDIA_BUSINESS.test(company) || MEDIA_BUSINESS.test(excerpt)) {
+        if (SERVES_REAL_ESTATE.test(hay)) {
+            return { key: 're-media', label: 'Real estate media', source: 'read', confidence: 'read',
+                why: 'A photo or video business whose own copy talks about realtors, listings or properties.' };
+        }
+        // Off target ONLY on positive evidence. A photographer whose copy is about weddings,
+        // portraits or brands is a real finding: they may not belong on this list. But a
+        // 120-character excerpt that simply never says "real estate" proves nothing about what they
+        // shoot, and reading it as "not real estate" is the absence-as-evidence error this whole
+        // codebase guards against. So silence falls through to the cohort assumption below, labelled
+        // as an assumption, and never to a client's industry.
+        if (OTHER_FOCUS.test(hay)) {
+            return { key: 'media-other', label: 'Photo and video, other focus', source: 'read', confidence: 'read',
+                why: 'A photo or video business whose own copy is about weddings, portraits, brands or events, with no mention of real estate. Possibly off target for this list.' };
+        }
+        if (row && row.campaignId === CAMPAIGN_ID) {
+            return { key: 're-media', label: 'Real estate media', source: 'campaign', confidence: 'campaign',
+                why: 'A photo or video business on the real estate media list whose copy does not say either way. Not verified for this business.' };
+        }
     }
 
     // Read from their own words. The campaign is deliberately NOT passed in here: letting the

@@ -75,3 +75,50 @@ test('spanning is read from the prospects, not declared', () => {
     assert.equal(spansIndustries({}), false);
     assert.equal(spansIndustries({ 're-media': 779, null: 12 }), false, 'unclassified rows do not make it span');
 });
+
+// ------------------------------------------------------------------
+// The first live preview over the 1,508 filed listing photographers under their CLIENTS'
+// industries: "Rancho Photos" as construction, "Bella Photography" as healthcare, "Framed
+// Listings" as hospitality, "Realty Pix Media" as property. Their copy says they shoot new-build
+// homes, or hotels, or properties, and a keyword classifier read the client as the business.
+// Persisting that would have put false industries on Paul's Option B page. These are the real
+// cases, as they appeared.
+const A = 'staffify-agency-outreach';
+const read = (company, excerpt) => classify({ campaignId: A, company, source: { excerpt } });
+
+test('a listing photographer is real estate media, not the industry of the homes it shoots', () => {
+    assert.equal(read('Rancho Photos', 'We shoot new construction homes and model homes for builders across the valley.').key, 're-media');
+    assert.equal(read('Framed Listings', 'Hotels, rentals and listings photographed with care.').key, 're-media');
+    assert.equal(read('Realty Pix Media', 'Property photography for agents who want to win more listings.').key, 're-media');
+    assert.equal(read('AK Media', 'Whether you are a realtor looking to sell more properties and win more listings').key, 're-media');
+    // A mixed studio that does real estate among other things is still a real estate media business.
+    assert.equal(read('Wallace + Sage Photo', 'Wedding, Family, Portrait and Real Estate Photography.').key, 're-media');
+});
+
+test('off target only on POSITIVE evidence of another focus', () => {
+    const wellness = read('Bella Photography', 'Helping health and wellness brands look their best with lifestyle portraits.');
+    assert.equal(wellness.key, 'media-other', 'a genuine finding: possibly not on target');
+    assert.match(wellness.why, /Possibly off target/);
+    assert.equal(read('Love Story Weddings Photo', 'Capturing your wedding day and engagement sessions across Texas.').key, 'media-other');
+});
+
+test('silence is not evidence: a short excerpt that never says real estate stays on the cohort assumption', () => {
+    // The mistake the fix nearly made. 120 characters about years of experience prove nothing about
+    // what a studio shoots, so it is NOT reported as off target and NOT filed under a client industry.
+    for (const [c, ex] of [
+        ['Front Door Media', 'Each of our photographers has over 7 years of experience, setting us apart from competitors.'],
+        ['Jordan Licon Photography', 'Photography in El Paso: images that make your brand easier to trust.'],
+    ]) {
+        const v = read(c, ex);
+        assert.equal(v.key, 're-media', c);
+        assert.equal(v.source, 'campaign', c + ' is labelled as an assumption, not a reading');
+        assert.match(v.why, /does not say either way/);
+    }
+});
+
+test('a non-media business is still read normally', () => {
+    // The media rule must not swallow a real non-media business that ended up on the list.
+    const v = read('Summit Roofing', 'Residential and commercial roofing contractor serving Denver since 1998.');
+    assert.notEqual(v.key, 're-media');
+    assert.notEqual(v.key, 'media-other');
+});
