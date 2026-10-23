@@ -5,6 +5,9 @@ let state, current, selectedOwner=new URLSearchParams(location.search).get('owne
 const drafts=new Map(), skipped=new Set();
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!=null)e.textContent=text;if(cls)e.className=cls;return e;};
 const button=(label,fn,cls='btn')=>{const b=el('button',label,cls);b.onclick=fn;return b;};
+// Saving moves straight on to the next prospect, so a message written onto the old card is gone
+// before anybody reads it. Confirmations that matter after the move go here instead.
+function toast(text,warn){const t=document.getElementById('toast');if(!t)return;t.textContent=text;t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:min(560px,92vw);padding:12px 16px;border-radius:12px;font-size:14px;z-index:50;box-shadow:0 6px 24px rgba(0,0,0,.18);background:'+(warn?'#fff3e0':'#1d1d1f')+';color:'+(warn?'#8a5a10':'#fff');clearTimeout(toast.t);toast.t=setTimeout(()=>{t.textContent='';t.style.cssText='';},9000);}
 const link=(label,url,cls='btn btn-ghost')=>{const a=el('a',label,cls);a.href=url;if(!url.startsWith('tel:')){a.target='_blank';a.rel='noopener';}return a;};
 async function api(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});const j=await r.json();if(!r.ok){const err=Error(j.error||'Could not load current data');err.payload=j;err.status=r.status;throw err;}return j;}
 const rows=()=>orderCallQueue(state.records,{campaign:selectedCampaign,owner:selectedOwner,search,research});
@@ -103,6 +106,37 @@ function scripts(parent,b){
    if(node.say)parts.push(el('p',node.say,'say'));
    if(node.note)parts.push(el('div',node.note,'sub'));
    if(node.log)parts.push(el('div','Log this call as: '+(LOGLABEL[node.log]||node.log),'lbl'));
+   // Paul, 2026-10-22: "if they select bad time can we make a task time to call them back that
+   // reminds the sales person." Pick the time right here and it is saved as a callback, which also
+   // creates a HubSpot task with a reminder for whoever is calling. It goes through the SAME save
+   // as the outcome buttons below, so the future-time check, the retry and the ownership rules all
+   // still apply; this only saves the caller scrolling and re-entering what they just agreed.
+   if(node.log==='callback'){
+    const box=el('div',null,'cbk');
+    box.append(el('div','When should you call them back?','gstep'));
+    const tz=b.prospectTimezone&&b.prospectTimezone.timeZone;
+    if(tz)box.append(el('div','Their time zone: '+tz+'. Times below are yours.','sub'));
+    const local=d=>new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+    const at=(days,h)=>{const d=new Date();d.setDate(d.getDate()+days);d.setHours(h,0,0,0);return d;};
+    const nextMonday=()=>{const d=new Date();const add=((8-d.getDay())%7)||7;d.setDate(d.getDate()+add);d.setHours(10,0,0,0);return d;};
+    const pick=el('input');pick.type='datetime-local';pick.id='cbk-at';pick.setAttribute('aria-label','Callback date and time');
+    pick.value=local(at(1,10));
+    const quick=el('div',null,'chip-row');
+    for(const [label,make] of [['In 2 hours',()=>new Date(Date.now()+2*36e5)],['Tomorrow 10am',()=>at(1,10)],['Tomorrow 2pm',()=>at(1,14)],['Next Monday 10am',nextMonday]])
+     quick.append(button(label,()=>{pick.value=local(make());},'objchip'));
+    const msg=el('p','','sub');
+    const go=button('Schedule callback',()=>{
+     if(!(Date.parse(pick.value)>Date.now())){msg.textContent='Pick a time in the future.';return;}
+     const oc=document.querySelector('[data-outcome="callback"]'),due=document.getElementById('callback-at'),save=[...document.querySelectorAll('button')].find(x=>x.textContent==='Save outcome & next');
+     if(!oc||!due||!save){msg.textContent='The outcome form is not on this card. Use Callback below.';return;}
+     oc.click();due.value=pick.value;
+     const n=document.getElementById('call-notes');
+     if(n&&!n.value.trim())n.value='Bad time. Agreed to call back '+new Date(pick.value).toLocaleString()+'.';
+     save.click();
+    },'btn');
+    box.append(quick,pick,go,msg);
+    parts.push(box);
+   }
    const nav=el('div',null,'chip-row');
    for(const [label,to] of node.choices||[])nav.append(button(label,()=>{path.push(to);draw();},'objchip'));
    if(path.length>1)nav.append(button('Back',()=>{path.pop();draw();},'btn btn-ghost'));
@@ -239,5 +273,10 @@ function renderCard(panel,row,b){panel.replaceChildren();const head=el('div',nul
  section(main,'How did it go?',null,'sub');const options=el('div',null,'outcomes');const saved=drafts.get(row.id)||{};let choice=saved.outcome||'';const labels=[['connected','Connected / interested'],['callback','Callback / gatekeeper'],['timing','Not interested: timing'],['no_answer','No answer'],['voicemail','Left voicemail'],['wrong_number','Wrong number'],['suppress','Not interested / stop']];for(const [value,label] of labels){const o=button(label,()=>{choice=value;if(value==='timing'&&Date.parse(due.value)-Date.now()<14*864e5){const d=new Date(Date.now()+90*864e5);d.setHours(10,0,0,0);due.value=new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}for(const child of options.children)child.classList.toggle('sel',child.dataset.outcome===value);},'oc'+(choice===value?' sel':''));o.dataset.outcome=value;options.append(o);}main.append(options);
  const notes=el('textarea');notes.id='call-notes';notes.value=saved.notes||'';notes.placeholder='Who answered, what they need, objections, and agreed next step';notes.setAttribute('aria-label','Call notes');notes.rows=6;const notesbox=el('div',null,'notesbox');notesbox.append(notes);main.append(notesbox);
  const due=el('input');due.id='callback-at';due.type='datetime-local';due.setAttribute('aria-label','Next call date and time');const tomorrow=new Date(Date.now()+86400000);tomorrow.setHours(10,0,0,0);due.value=saved.due||new Date(tomorrow-tomorrow.getTimezoneOffset()*60000).toISOString().slice(0,16);main.append(el('p','Next call time for no answer, voicemail or callback:','sub'),due);
- const status=el('p','','err');status.setAttribute('role','status');const save=button('Save outcome & next',async()=>{if(busy)return;if(!choice){status.textContent='Choose an outcome first.';return;}if(['callback','no_answer','voicemail','timing'].includes(choice)&&!(Date.parse(due.value)>Date.now())){status.textContent='Choose a future callback time.';return;}busy=true;save.disabled=true;for(const control of app.querySelectorAll('.queue-buttons button,.toprow button,.call-tabs button,.headrow button,.toprow select,.toprow input'))control.disabled=true;status.textContent='Saving…';stash();try{const latest=await api('/api/outreach-queue/?view=calls');const body=choice==='suppress'?{action:'suppress',email:row.recipient}:{action:'call-outcome',id:row.id,outcome:choice,notes:notes.value,nextCallAt:['callback','no_answer','voicemail','timing'].includes(choice)?new Date(due.value).toISOString():null};state=await api('/api/outreach-queue/?view=calls',{...body,expectedRevision:latest.revision});if(state&&state.nurture&&state.nurture.enrolled)status.textContent='Saved. Added to the email nurture.';const phones=new Map(latest.records.map(r=>[r.id,r.callContact]));state.records=state.records.map(r=>({...r,callContact:phones.get(r.id)}));drafts.delete(row.id);skipped.add(row.id);current=null;await showNext();}catch(e){status.textContent='Not saved: '+e.message+'. Your notes are still here.';}finally{busy=false;save.disabled=false;for(const control of app.querySelectorAll('.toprow button,.call-tabs button,.headrow button,.toprow select,.toprow input'))control.disabled=false;const list=rows(),i=list.findIndex(r=>r.id===current?.id),nav=app.querySelectorAll('.queue-buttons button');if(nav[0])nav[0].disabled=i<=0;if(nav[1])nav[1].disabled=i<0||i>=list.length-1;}},'confirmbtn');main.append(status,save);app.querySelector('.queue-nav')?.scrollIntoView({behavior:'smooth',block:'start'});}
+ const status=el('p','','err');status.setAttribute('role','status');const save=button('Save outcome & next',async()=>{if(busy)return;if(!choice){status.textContent='Choose an outcome first.';return;}if(['callback','no_answer','voicemail','timing'].includes(choice)&&!(Date.parse(due.value)>Date.now())){status.textContent='Choose a future callback time.';return;}busy=true;save.disabled=true;for(const control of app.querySelectorAll('.queue-buttons button,.toprow button,.call-tabs button,.headrow button,.toprow select,.toprow input'))control.disabled=true;status.textContent='Saving…';stash();try{const latest=await api('/api/outreach-queue/?view=calls');const body=choice==='suppress'?{action:'suppress',email:row.recipient}:{action:'call-outcome',id:row.id,outcome:choice,notes:notes.value,nextCallAt:['callback','no_answer','voicemail','timing'].includes(choice)?new Date(due.value).toISOString():null};state=await api('/api/outreach-queue/?view=calls',{...body,expectedRevision:latest.revision});if(state&&state.nurture&&state.nurture.enrolled)status.textContent='Saved. Added to the email nurture.';
+ // The callback reminder. Said either way: a caller must know whether the CRM will remind them or
+ // whether they are relying on the queue alone.
+ if(state&&state.callbackTask){const t=state.callbackTask;
+  if(t.ok)toast('Callback saved. A HubSpot task will remind you at '+new Date(due.value).toLocaleString()+'.');
+  else toast('Callback saved and it will come back to the top of your queue at that time. No HubSpot reminder was set: '+(t.detail||t.reason)+'.',true);}const phones=new Map(latest.records.map(r=>[r.id,r.callContact]));state.records=state.records.map(r=>({...r,callContact:phones.get(r.id)}));drafts.delete(row.id);skipped.add(row.id);current=null;await showNext();}catch(e){status.textContent='Not saved: '+e.message+'. Your notes are still here.';}finally{busy=false;save.disabled=false;for(const control of app.querySelectorAll('.toprow button,.call-tabs button,.headrow button,.toprow select,.toprow input'))control.disabled=false;const list=rows(),i=list.findIndex(r=>r.id===current?.id),nav=app.querySelectorAll('.queue-buttons button');if(nav[0])nav[0].disabled=i<=0;if(nav[1])nav[1].disabled=i<0||i>=list.length-1;}},'confirmbtn');main.append(status,save);app.querySelector('.queue-nav')?.scrollIntoView({behavior:'smooth',block:'start'});}
 refresh().catch(fail);

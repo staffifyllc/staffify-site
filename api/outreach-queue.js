@@ -4,6 +4,7 @@ import { redis, requireAccess, adminAuthorized, SITE, readBody } from './_auth.j
 import {config,access,gmail,compactMessage} from './_outreach-gmail.js';
 import {KEY,ownerFor,visibleState,mergeSnapshot,controlState,canUseCallQueue,sharedCallState} from './_outreach-queue.js';
 import {enrolInNurture} from './_nurture-enrol.js';
+import {scheduleCallbackTask} from './_callback-task.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
@@ -47,7 +48,14 @@ export default async function handler(req,res) {
             if(row)nurture=await enrolInNurture({redis,email:row.recipient,name:row.verifiedFirstName||'',
               company:row.company||'',caller:rep.email,campaignId:row.campaignId||''});
           }
-          return res.status(200).json({...view(candidate),...(nurture?{nurture}:{})});
+          // A callback becomes a CRM task with a reminder, owned by the caller. Same rule as the
+          // nurture above: only after the save landed, and it can never fail the save.
+          let callbackTask=null;
+          if(body.action==='call-outcome'&&body.outcome==='callback'&&body.nextCallAt) {
+            const row=(fresh?.records||[]).find(r=>r.id===body.id);
+            if(row)callbackTask=await scheduleCallbackTask({redis,row,rep,nextCallAt:body.nextCallAt,notes:body.notes});
+          }
+          return res.status(200).json({...view(candidate),...(nurture?{nurture}:{}),...(callbackTask?{callbackTask}:{})});
         }
       }
       return res.status(409).json({error:'The queue is busy right now. Your notes are still here; press save again.'});

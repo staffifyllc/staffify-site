@@ -137,7 +137,7 @@ export async function fillBlankContactProps(contactId, wanted = {}) {
  * A task with an owner and a due time, so an inbound request is somebody's job by a certain hour
  * rather than a row in a queue nobody is accountable for.
  */
-export async function createTask({ contactId, subject, body, dueAt, ownerId, priority = 'HIGH' }) {
+export async function createTask({ contactId, subject, body, dueAt, ownerId, priority = 'HIGH', reminderAt = null }) {
     if (!token()) return { ok: false, reason: 'no_token' };
     // A task nobody owns is not somebody's job. Refusing here is visible; creating an unowned task
     // and calling it assigned is not, and that is the failure this whole queue exists to prevent.
@@ -154,6 +154,9 @@ export async function createTask({ contactId, subject, body, dueAt, ownerId, pri
         hs_timestamp: dueAt || Date.now(),
     };
     if (ownerId) props.hubspot_owner_id = String(ownerId);
+    // HubSpot sends its own notification to the owner at this moment. Used for callbacks, where the
+    // whole point of the task is that somebody is reminded at the agreed time.
+    if (reminderAt) props.hs_task_reminders = String(reminderAt);
     const r = await hs('/crm/v3/objects/tasks', { method: 'POST', body: JSON.stringify({ properties: props }) });
     if (!r.ok) return { ok: false, reason: 'task_failed', status: r.status, detail: r.raw };
     // The task exists now. If linking it to the contact fails, that is a linking problem, and the
