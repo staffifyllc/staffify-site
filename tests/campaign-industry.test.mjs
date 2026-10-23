@@ -5,7 +5,7 @@
 // says so, not because anything was checked. Rendering that prettier would not make it true.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classify, rate, spansIndustries, SAMPLE_FLOOR, CONFIDENCE } from '../api/_campaign-industry.js';
+import { classify, rate, spansIndustries, offTarget, SAMPLE_FLOOR, CONFIDENCE } from '../api/_campaign-industry.js';
 
 const row = (over = {}) => ({ campaignId: 'staffify-tobit-outreach', company: 'Example Co', source: {}, ...over });
 
@@ -74,6 +74,18 @@ test('spanning is read from the prospects, not declared', () => {
     assert.equal(spansIndustries({ 're-media': 779 }), false);
     assert.equal(spansIndustries({}), false);
     assert.equal(spansIndustries({ 're-media': 779, null: 12 }), false, 'unclassified rows do not make it span');
+});
+
+test('a few strays do not turn a single-industry campaign into a cross-industry one', () => {
+    // The real numbers from the first persisted classification. Under the old "more than one key"
+    // rule this moved the main real estate media campaign into the band beside CEO outreach.
+    const agency = { 're-media': 1447, 'media-other': 44, property: 8, education: 3, legal: 2, marketing: 1, nonprofit: 1, health: 1, construction: 1 };
+    assert.equal(spansIndustries(agency), false, '96% one industry is that industry');
+    const off = offTarget(agency);
+    assert.equal(off.dominant, 're-media');
+    assert.equal(off.strays, 61, 'the strays are reported, not hidden and not promoted');
+    // CEO outreach genuinely spans: no sector comes close to a majority.
+    assert.equal(spansIndustries({ software: 6, construction: 4, manufacturing: 2, finance: 1, marketing: 1, property: 1, health: 1, nonprofit: 1, education: 1 }), true);
 });
 
 // ------------------------------------------------------------------

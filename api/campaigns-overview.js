@@ -16,7 +16,7 @@
 // Read-only. It computes nothing into the queue and sends nothing.
 import { redis, requireAccess } from './_auth.js';
 import { KEY, visibleState, ownerFor } from './_outreach-queue.js';
-import { INDUSTRY_KEY, classify, rate, spansIndustries } from './_campaign-industry.js';
+import { INDUSTRY_KEY, classify, rate, spansIndustries, offTarget } from './_campaign-industry.js';
 import { CAMPAIGN_ID } from './_outreach-campaign.js';
 import { TOBIT_ID } from './_tobit-campaign.js';
 import { TALENT_ID } from './_talent-network-campaign.js';
@@ -96,6 +96,10 @@ export default async function handler(req, res) {
             // A candidate campaign is not a sales campaign and must never land in a conversion rate.
             if (c.candidates) { shaped.replyRate = rate(null, null); shaped.meetingRate = rate(null, null); shaped.note = 'Candidates, not buyers. Deliberately carries no sales conversion.'; }
             if (spansIndustries(c.byIndustry)) { spanning.push(shaped); continue; }
+            // A single-industry campaign that picked up off-target names says so, as a list-quality
+            // finding, rather than being reclassified as cross-industry because of them.
+            const off = offTarget(c.byIndustry);
+            if (off.strays) shaped.offTargetNote = `${off.strays} of ${c.total} look like something other than ${labelOf[off.dominant] || off.dominant}. Worth a look before they are called.`;
             const key = industries[0] ? industries[0].key : 'unclassified';
             (grouped[key] = grouped[key] || []).push(shaped);
         }

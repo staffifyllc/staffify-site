@@ -125,8 +125,29 @@ export function rate(numerator, denominator) {
         note: `${numerator} of ${denominator}`, small: false, unknown: false };
 }
 
-/** Does this campaign reach more than one industry? That decides where it is shown. */
+/**
+ * Does this campaign genuinely reach more than one industry? That decides where it is shown.
+ *
+ * "More than one key" was the first rule, and the first real classification broke it: the agency
+ * campaign is 1,447 real estate media out of 1,508, with 61 strays, and two strays were enough to
+ * move Paul's main campaign into the cross-industry band beside CEO outreach. A campaign built for
+ * one industry that picked up a few off-target names is still that industry's campaign; the
+ * strays are a list-quality finding, reported separately. So it spans only when no single industry
+ * holds a clear majority.
+ */
+export const DOMINANT_SHARE = 0.8;
 export function spansIndustries(counts) {
-    const keys = Object.keys(counts || {}).filter(k => k !== 'null' && k !== 'none');
-    return keys.length > 1;
+    const entries = Object.entries(counts || {}).filter(([k]) => k !== 'null' && k !== 'none');
+    if (entries.length < 2) return false;
+    const total = entries.reduce((n, [, v]) => n + v, 0);
+    const top = Math.max(...entries.map(([, v]) => v));
+    return total > 0 && top / total < DOMINANT_SHARE;
+}
+
+/** The strays in a single-industry campaign: names that are not its industry. */
+export function offTarget(counts) {
+    const entries = Object.entries(counts || {}).filter(([k]) => k !== 'null' && k !== 'none');
+    if (!entries.length) return { dominant: null, strays: 0 };
+    entries.sort((a, b) => b[1] - a[1]);
+    return { dominant: entries[0][0], strays: entries.slice(1).reduce((n, [, v]) => n + v, 0) };
 }

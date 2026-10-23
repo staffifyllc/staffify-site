@@ -171,6 +171,25 @@ function renderCard(panel,row,b){panel.replaceChildren();const head=el('div',nul
   if(b.dial.sourceUrl)phone.append(link('Where this number is published',b.dial.sourceUrl));
   for(const alt of b.dial.alternates||[])phone.append(link(alt,'tel:'+alt));}main.append(el('p','On iPhone, tap Call now and use your business line. The Hub does not detect or record iPhone calls automatically.','sub'));
  if(!b.dial)main.append(el('p',b.phoneEvidence?.detail||'No phone evidence available.','sub'));if(b.phoneEvidence?.sourceUrl)main.append(link('Business website / phone source',b.phoneEvidence.sourceUrl));main.append(link('Open CRM contact',b.crmUrl),link('Email conversation','https://mail.google.com/mail/u/?authuser='+encodeURIComponent(row.sender)+(row.threadId?'#all/'+encodeURIComponent(row.threadId):'#search/'+encodeURIComponent(row.recipient))));
+ // "Just send me something." Paul, 2026-10-22: one click sends the Staffify overview. The
+ // prospect is looked up server-side, so nothing typed here can redirect it, and it goes once.
+ {
+  const send=section(main,'They said "send me something"',null);
+  const status=el('p','Sends the one-page Staffify overview to '+row.recipient+', attached and linked, from hello@gostaffify.com. Replies come back to '+(row.sender||'hello@gostaffify.com')+'.','sub');
+  const btn=button('Send the overview',async()=>{
+   if(!window.confirm('Email the Staffify overview to '+row.recipient+' now?'))return;
+   btn.disabled=true;btn.textContent='Sending\u2026';
+   try{
+    const r=await fetch('/api/send-overview/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:row.recipient})});
+    const j=await r.json();
+    // sent:false comes back with a reason rather than an error status, so it is read as a
+    // failure explicitly. A blocked send must never look like a successful one.
+    if(j.sent){btn.textContent='Sent';status.textContent='Sent '+new Date(j.at).toLocaleString()+'. Log the outcome below so the follow-up is set.';}
+    else{btn.textContent='Not sent';btn.disabled=!!j.already;status.textContent=j.reason||'Not sent.';status.className='hold';}
+   }catch(e){btn.textContent='Send the overview';btn.disabled=false;status.textContent='Could not reach the server. Nothing was sent.';status.className='hold';}
+  },'btn');
+  send.append(btn,status,link('Preview the overview','/assets/docs/staffify-overview.pdf'));
+ }
  // The Instagram datapoint, shown as research with its proof rather than as a line to read out.
  // Paul: "I want our sales people to be armed." Armed means seeing the profile, the post, the date
  // and when we looked, so a caller can judge it before they say it.

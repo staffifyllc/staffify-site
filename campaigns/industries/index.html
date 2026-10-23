@@ -102,6 +102,7 @@ function campaignCard(c) {
 
   if (c.note) card.append(el('p', c.note, 'note'));
   if (c.evidenceNote) card.append(el('p', c.evidenceNote, 'note'));
+  if (c.offTargetNote) card.append(el('p', c.offTargetNote, 'note'));
   if (!c.candidates) card.append(link('Open its call queue →', '/dialer/?campaign=' + encodeURIComponent(c.id), 'act'));
   return card;
 }
