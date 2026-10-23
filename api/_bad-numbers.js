@@ -15,12 +15,13 @@
 export const BAD_KEY = email => 'staffify:bad-numbers:' + String(email || '').toLowerCase();
 export const digits10 = s => String(s || '').replace(/\D/g, '').slice(-10);
 
+/** The stored value as a set of last-ten digits. Shared by the one-at-a-time and batched readers. */
+export const badSetFrom = v => new Set((v && Array.isArray(v.numbers) ? v.numbers : []).map(digits10).filter(Boolean));
+
 /** Every number a caller has proven wrong for this person, as last-ten digits. Never throws. */
 export async function loadBad(redis, email) {
-    try {
-        const v = await redis.get(BAD_KEY(email));
-        return new Set((v && Array.isArray(v.numbers) ? v.numbers : []).map(digits10).filter(Boolean));
-    } catch { return new Set(); }
+    try { return badSetFrom(await redis.get(BAD_KEY(email))); }
+    catch { return new Set(); }
 }
 
 export const isBad = (bad, phone) => !!phone && bad.has(digits10(phone));
