@@ -17,6 +17,7 @@ import { withCallPhones } from './_outreach-call-phones.js';
 import { hubspotRequest } from './_outreach-hubspot.js';
 import { site } from './_outreach-supply.js';
 import { findSitePhone } from './_site-phone.js';
+import { checkBusinessPhone } from './_outreach-phone-evidence.js';
 import { lookupByEmail, rrConfigured } from './_rocketreach.js';
 import { ATTEMPTS, decide, noteAttempt, websiteOf } from './_number-research.js';
 import { loadBad, isBad } from './_bad-numbers.js';
@@ -31,6 +32,7 @@ const BUDGET_MS = 45000;
 const VENDOR_PER_RUN = Number(process.env.NUMBER_RESEARCH_VENDOR_PER_RUN || 8);
 const SITE_PER_RUN = Number(process.env.NUMBER_RESEARCH_SITE_PER_RUN || 25);
 const IG_PER_RUN = Number(process.env.INSTAGRAM_RESEARCH_PER_RUN || 12);
+const EVIDENCE_PER_RUN = Number(process.env.PHONE_EVIDENCE_PER_RUN || 25);
 
 const crm = async (path, body) => {
     const response = await hubspotRequest('https://api.hubapi.com' + path, {
@@ -130,6 +132,32 @@ export default async function handler(req, res) {
         }
     }
 
+    // Phone evidence: is the CRM number published on the business's own site? This used to run
+    // live on first card open, up to three page fetches, and was most of the 2.1 seconds a caller
+    // waited. It now runs here, bounded, newest-due first, and the card reads the stored answer.
+    const ev = { checked: 0, listed: 0, unconfirmed: 0 };
+    try {
+        const state = await redis.get(KEY);
+        const decorated = await withCallPhones(visibleState(state, 'all'), { redis, crm });
+        const withNumber = decorated.records.filter(r => r.callReady && r.callContact && r.callContact.phone && websiteOf(r));
+        for (const row of withNumber) {
+            if (Date.now() - started > BUDGET_MS) break;
+            if (ev.checked >= EVIDENCE_PER_RUN) break;
+            try {
+                const prior = await redis.get('staffify:call-phone-evidence:' + row.recipient).catch(() => null);
+                if (prior && prior.checkedAt && Date.now() - Date.parse(prior.checkedAt) < 7 * 86400000) continue;
+                ev.checked++;
+                const result = await checkBusinessPhone({ phone: row.callContact.phone, website: websiteOf(row), fetchSite: site });
+                await redis.set('staffify:call-phone-evidence:' + row.recipient, result, { ex: 14 * 86400 });
+                if (result.status === 'business_listed') ev.listed++; else ev.unconfirmed++;
+            } catch (e) {
+                out.failures.push({ company: row.company || row.recipient, why: 'evidence: ' + String((e && e.message) || e).slice(0, 90) });
+            }
+        }
+    } catch (e) {
+        out.failures.push({ company: 'evidence pass', why: String((e && e.message) || e).slice(0, 120) });
+    }
+
     // Instagram, for marketing agencies only, on the same pass. Paul asked for this to be a
     // datapoint a caller can see rather than something guessed at mid-call. It is the cheapest
     // possible look: their own website, which is also the only source that confirms the account
@@ -162,7 +190,7 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-        ...out, instagram: ig, backlog: due.length, ranAt: new Date().toISOString(),
+        ...out, instagram: ig, evidence: ev, backlog: due.length, ranAt: new Date().toISOString(),
         note: 'A record that gained a number is promoted on the next queue read, where call eligibility is recomputed in full. Nothing is promoted past the four-email rule or the exclusions.',
     });
 }

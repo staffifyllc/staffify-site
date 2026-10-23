@@ -15,7 +15,7 @@
 // GET /api/quo-activity/?seats=1          -> who has a Quo seat at all (Paul and Madison only)
 //
 // This is read-only. It places no calls and changes nothing in Quo.
-import { requireAccess } from './_auth.js';
+import { requireAccess, redis } from './_auth.js';
 import { financeAccess } from './_finance-access.js';
 import { loginAliases } from './_caller-plan.js';
 import { quoConfigured, listUsers, listCalls, findSeat, tally, etDay, etDayBounds } from './_quo.js';
@@ -64,6 +64,12 @@ export default async function handler(req, res) {
     const q = req.query || {};
     const { from, to, clamped } = windowFrom(q);
 
+    const cacheKey = 'staffify:quo-activity:' + [rep.email, from, to, q.team ? 'team' : '', q.rep || '', q.seats ? 'seats' : ''].join('|');
+    if (!q.fresh) {
+        const held = await redis.get(cacheKey).catch(() => null);
+        if (held && held.builtAt && Date.now() - Date.parse(held.builtAt) < 60000) return res.status(200).json({ ...held, cached: true });
+    }
+    const send = async (code, body) => { if (code === 200) await redis.set(cacheKey, { ...body, builtAt: new Date().toISOString() }, { ex: 300 }).catch(() => {}); return res.status(code).json(body); };
     try {
         const users = await listUsers();
 
@@ -92,7 +98,7 @@ export default async function handler(req, res) {
         for (const seat of wanted) reps.push(await activityFor({ seat, from, to }));
         const total = reps.reduce((n, r) => n + r.dials, 0);
 
-        return res.status(200).json({
+        return send(200, {
             window: { from, to, timezone: 'America/New_York', days: Math.round((Date.parse(to) - Date.parse(from)) / DAY) + 1, ...(clamped ? { clamped: 'Range capped at 31 days' } : {}) },
             reps: reps.sort((a, b) => b.dials - a.dials),
             totalDials: total,

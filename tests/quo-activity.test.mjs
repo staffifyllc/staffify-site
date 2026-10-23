@@ -253,3 +253,21 @@ test('a seat is matched on the address, never guessed from a name', () => {
     assert.equal(quo.findSeat(users, ['MILTION@TRYSTAFFIFY.COM']).actorId, 'USmilton');
     assert.equal(quo.findSeat(users, []), null);
 });
+
+test('a first dial to a number is a new call; a later dial to the same number is a follow-up', async () => {
+    // Paul, 2026-10-22: "new calls, follow up calls made etc". Judged within the window reported.
+    const to = n => ({ participants: [{ phoneNumber: n, actorId: null }] });
+    stubQuo({ calls: [
+        call({ ...to('+15615550001'), createdAt: '2026-10-21T20:00:00Z' }),
+        call({ ...to('+15615550002'), createdAt: '2026-10-21T20:10:00Z' }),
+        call({ ...to('+15615550001'), createdAt: '2026-10-21T20:20:00Z', answeredAt: null, status: 'no-answer', duration: 0 }),
+        call({ ...to('+15615550001'), createdAt: '2026-10-21T20:30:00Z' }),
+        call({ direction: 'incoming', initiatedBy: null, answeredBy: 'USmilton', ...to('+15615550003') }),  // inbound: neither
+    ] });
+    const { body } = await run({ rep: 'milton@trystaffify.com', from: '2026-10-21', to: '2026-10-21' });
+    const r = body.reps[0];
+    assert.equal(r.newCalls, 2, 'two numbers were reached for the first time');
+    assert.equal(r.followUpCalls, 2, 'two more dials went back to the first number, answered or not');
+    assert.equal(r.newCalls + r.followUpCalls, r.dials, 'every outgoing dial is one or the other');
+    assert.match(r.definitions.newCalls, /within this window/);
+});

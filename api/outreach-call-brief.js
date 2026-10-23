@@ -1,4 +1,3 @@
-import {checkBusinessPhone} from './_outreach-phone-evidence.js';
 import {site} from './_outreach-supply.js';
 import {redis,requireAccess} from './_auth.js';
 import {KEY,ownerFor,visibleState,canUseCallQueue} from './_outreach-queue.js';
@@ -50,6 +49,9 @@ export default async function handler(req,res){
   // Each mailbox is read on its own. This used to be one Promise.all, so a single expired token
   // rejected the lot and every prospect in the queue showed "Call check unavailable", even though
   // only one mailbox was dead. Paul, 2026-10-20.
+  // The CRM lookup does not depend on the Gmail reads, so it runs alongside them rather than after.
+  // On a 2.1-second card that was ~300ms spent waiting for nothing.
+  const crmPromise=contact(row.recipient);
   const reads=await Promise.all(accounts.map(async a=>{
     try{return {email:a.email,ok:true,messages:(await history(await access(a.email),row.recipient)).map(m=>compactMessage(m,a.email))};}
     catch(e){return {email:a.email,ok:false,messages:[],error:String((e&&e.message)||e)};}
@@ -79,9 +81,17 @@ export default async function handler(req,res){
   await redis.del('staffify:call-block:'+row.id);
   // One lookup, reused. This used to fetch the same contact a second time just to build the
   // CRM link whenever hubspotId was absent, doubling the cost of every such card.
-  const crmContact=await contact(row.recipient);const p=crmContact.properties;const contactId=crmContact.id;
-  const phoneEvidence=await checkBusinessPhone({phone:p.phone||p.mobilephone,website:p.website,fetchSite:site});
-  await redis.set('staffify:call-phone-evidence:'+row.recipient,phoneEvidence,{ex:86400});
+  const crmContact=await crmPromise;const p=crmContact.properties;const contactId=crmContact.id;
+  // Phone evidence is READ here, never fetched. This used to fetch up to three pages of the
+  // prospect's website live on every first open, which was most of the 2.1 seconds a caller waited
+  // per card. The background research pass does that check now and stores the result; a record it
+  // has not reached yet shows its CRM number honestly as uncorroborated until it does.
+  const crmPhoneRaw=String(p.phone||'').trim()||String(p.mobilephone||'').trim()||null;
+  let phoneEvidence=await redis.get('staffify:call-phone-evidence:'+row.recipient).catch(()=>null);
+  if(!phoneEvidence||typeof phoneEvidence!=='object'){
+   phoneEvidence={phone:crmPhoneRaw,status:crmPhoneRaw?'needs_confirmation':'missing',checkedAt:null,sourceUrl:null,
+    detail:crmPhoneRaw?'Not yet compared with their website. That check runs in the background.':'No phone number in CRM'};
+  }
   // Paul, 2026-10-22: "our sales people shouldn't have to do this." The card used to hand over a
   // number ONLY when the CRM number was found printed on the prospect's own website, and otherwise
   // showed nothing plus "Research before calling". Meanwhile the direct dials already bought from

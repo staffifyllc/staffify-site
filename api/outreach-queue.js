@@ -2,7 +2,7 @@ import {withCallPhones} from './_outreach-call-phones.js';
 import {hubspotRequest} from './_outreach-hubspot.js';
 import { redis, requireAccess, adminAuthorized, SITE, readBody } from './_auth.js';
 import {config,access,gmail,compactMessage} from './_outreach-gmail.js';
-import {KEY,ownerFor,visibleState,mergeSnapshot,controlState,canUseCallQueue,sharedCallState} from './_outreach-queue.js';
+import {KEY,ownerFor,visibleState,mergeSnapshot,controlState,canUseCallQueue,sharedCallState,slimState} from './_outreach-queue.js';
 import {enrolInNurture} from './_nurture-enrol.js';
 import {scheduleCallbackTask} from './_callback-task.js';
 import {markBad} from './_bad-numbers.js';
@@ -11,13 +11,15 @@ const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=c
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
   try {
-    const rep=await requireAccess(req);const calls=req.query?.view==='calls';const owner=calls&&canUseCallQueue(rep)?'all':ownerFor(rep);
+    const rep=await requireAccess(req);const calls=req.query?.view==='calls';const slim=req.query?.view==='slim';const owner=calls&&canUseCallQueue(rep)?'all':ownerFor(rep);
     const view=s=>calls?sharedCallState(s,rep.email):visibleState(s,owner);
     if(!owner)return res.status(401).json({error:'Sign in with your Staffify account'});
     const state=await redis.get(KEY);
     if(req.method==='GET'){
       const crm=async(path,body)=>{const response=await hubspotRequest('https://api.hubapi.com'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined},{redis});if(!response.ok)throw Error('CRM unavailable');return response.json();};
-      return res.status(200).json(await withCallPhones(view(state),{redis,crm}));
+      const decorated=await withCallPhones(view(state),{redis,crm});
+      // view=slim: the same rows and the same callReady, without the mail bodies. See slimState.
+      return res.status(200).json(slim?slimState(decorated):decorated);
     }
     if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});
     const machine=adminAuthorized(req);

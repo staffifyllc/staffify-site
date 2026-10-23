@@ -91,3 +91,24 @@ export function sharedCallState(state, viewer=null) {
         dueForMe:!!r.callReady&&mine};
     })};
 }
+
+// The queue payload is 7.9 MB uncompressed: 2 MB of email bodies on events, 900 KB of draft copy,
+// 730 KB of send receipts, 550 KB of creation logs. Today and the scoreboard read none of it; they
+// count sends, replies and callable rows. Paul, 2026-10-22: "its deathly slow between tabs".
+//
+// This strips what those pages never read and keeps every field they do, so a count on a slim
+// page is the same count the Inbox shows. The Inbox and the dialer still take the full record,
+// because they show the mail itself.
+export const SLIM_EVENT = e => ({ id: e.id, kind: e.kind, at: e.at, from: e.from, to: e.to, subject: e.subject });
+export function slimState(state) {
+  const { sends, creations, ...rest } = state;
+  const sendsToday = (sends || []).filter(s => s && s.status === 'verified');
+  return { ...rest,
+    sends: sendsToday.map(s => ({ status: s.status, day: s.day, sender: s.sender })),
+    records: (state.records || []).map(r => {
+      const { bodyText, followupBodies, followupSubjects, source, emailVerification, sendWindow, prospectTimezone, creations: _c, ...keep } = r;
+      return { ...keep,
+        emailVerification: emailVerification ? { outcome: emailVerification.outcome ?? emailVerification.status ?? null } : null,
+        events: (r.events || []).map(SLIM_EVENT) };
+    }) };
+}

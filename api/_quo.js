@@ -148,7 +148,19 @@ export function tally(calls, { actorId } = {}) {
         byDay[day].talkSeconds += talkSeconds(c);
     }
     const numbers = new Set(placed.map(counterparty).filter(Boolean));
+    // Paul, 2026-10-22: "new calls, follow up calls made etc". The first dial to a number in the
+    // window is a new call; any later dial to the same number is a follow-up. Judged within the
+    // window being reported, which the definitions say, so a 7-day view and a 30-day view can
+    // disagree about the same call and both be right.
+    let newCalls = 0, followUpCalls = 0;
+    const seen = new Set();
+    for (const c of placed.slice().sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))) {
+        const who = counterparty(c);
+        if (!who) continue;
+        if (seen.has(who)) followUpCalls++; else { seen.add(who); newCalls++; }
+    }
     return {
+        newCalls, followUpCalls,
         dials: placed.length,
         connected: answered.length,
         noAnswer: placed.length - answered.length,
@@ -168,6 +180,8 @@ export function tally(calls, { actorId } = {}) {
             connected: 'Dials where the line was picked up (answeredAt is set). An answering machine or a gatekeeper picking up also counts, so read this with avgAnsweredSeconds: short answered calls are not conversations.',
             talkSeconds: 'Time on answered dials only. Ringing time is not counted.',
             uniqueNumbers: 'Distinct outside numbers dialled. Compare with dials to see repeat attempts or test calls.',
+            newCalls: 'First dial to a number within this window.',
+            followUpCalls: 'A later dial to a number already called within this window.',
         },
     };
 }
