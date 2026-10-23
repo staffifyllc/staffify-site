@@ -58,6 +58,10 @@
     {
       "path": "/api/playbook-reconcile/",
       "schedule": "7,22,37,52 * * * *"
+    },
+    {
+      "path": "/api/cron-number-research",
+      "schedule": "5,35 * * * *"
     }
   ],
   "rewrites": [

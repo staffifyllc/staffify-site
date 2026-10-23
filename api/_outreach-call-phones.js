@@ -1,3 +1,4 @@
+import {ATTEMPTS,researchStatus} from './_number-research.js';
 export async function withCallPhones(state,{redis,crm,now=Date.now()}){
  const due=state.records.filter(r=>r.callReady);if(!due.length)return state;
  const phones=new Map(),missing=[];
@@ -47,5 +48,35 @@ export async function withCallPhones(state,{redis,crm,now=Date.now()}){
    phoneDetail:'Main line published on their own site. Ask for them by name. '+(v.sourceUrl?'Source: '+v.sourceUrl:'')});
  }
  const blocked=new Map();for(const row of due){const v=await redis.get('staffify:call-block:'+row.id);if(v&&v.lastSentAt===row.lastSentAt)blocked.set(row.id,v);}
- return {...state,records:state.records.map(r=>r.callReady?{...r,callReady:!blocked.has(r.id),callBlock:blocked.get(r.id)||null,callContact:phones.get(r.recipient)||{phone:null,phoneStatus:'missing'}}:r)};
+ // Paul, 2026-10-22: "There needs to never be someone in there without a number... it should just
+ // do what it needs to in order to get the number."
+ //
+ // A record with no usable number LEAVES Ready to call. It is not deleted, no number is invented
+ // for it, and it is not handed to a caller as a card they cannot work. It carries a research
+ // status instead, and the background pass works the backlog on its own.
+ //
+ // Each read is isolated. One unreadable research record must not decide anything about the other
+ // 800 rows, so a failure here degrades that one row to "researching" and the queue carries on.
+ const research=new Map();
+ for(const row of due){
+  if(phones.get(row.recipient)?.phone)continue;
+  let st=null;
+  try{st=await redis.get(ATTEMPTS(row.recipient));}catch{st=null;}
+  try{research.set(row.id,researchStatus(row,st));}
+  catch{research.set(row.id,{state:'researching',label:'Finding a number',detail:'Research status unavailable.',callable:false});}
+ }
+ const counts={callable:0,findingNumber:0,noNumberPossible:0,blocked:0};
+ for(const row of due){
+  if(blocked.has(row.id)){counts.blocked++;continue;}
+  const r=research.get(row.id);
+  if(!r)counts.callable++;
+  else if(r.state==='exhausted')counts.noNumberPossible++;
+  else counts.findingNumber++;
+ }
+ return {...state,numberWork:counts,records:state.records.map(r=>r.callReady?{...r,
+   // Not callable without a number, whatever else is true of the record.
+   callReady:!blocked.has(r.id)&&!research.has(r.id),
+   callBlock:blocked.get(r.id)||null,
+   numberResearch:research.get(r.id)||null,
+   callContact:phones.get(r.recipient)||{phone:null,phoneStatus:'missing'}}:r)};
 }
