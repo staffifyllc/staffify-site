@@ -111,6 +111,21 @@ test('screen 3: prospects sorted by what needs a person, the real email copy, th
     assert.match(text, /Open the call queue · 771 ready/);
 });
 
+test('screen 3 at real scale: 1,508 prospects does not crash the page', async () => {
+    // Live, the campaign screen died with "Cannot read properties of undefined (reading 'style')"
+    // on the over-200 note, which a 3-prospect fixture never reached.
+    const many = Array.from({ length: 1508 }, (_, i) => ({ id: 'p' + i, company: 'Studio ' + i, name: 'Pat', email: `p${i}@x.com`, emails: 4, lastTouch: '2026-10-01T12:00:00Z', state: i < 6 ? 'reply' : 'ready', stateLabel: i < 6 ? 'Replied, needs a human' : 'Ready to call', nextCallAt: null, callOwner: null, phone: null }));
+    const app = await run('?view=campaign&campaign=staffify-agency-outreach', { view: 'campaign', campaign: CAMP(), prospects: many, sequence: [{ n: 1, subject: 'A quick hello', body: 'Hi.' }], replies: [],
+        calls: { placed: 128, attempts: 143, connected: 12, callbacks: [] }, next: { ready: 771, callbacksDue: 0, repliesWaiting: 6, findingNumber: 54, noNumberPossible: 0 }, notes: NOTES });
+    const text = app.textContent;
+    assert.ok(!/Cannot read properties/.test(text), 'no crash text');
+    assert.match(text, /Showing the first 200 of 1,508/);
+    assert.match(text, /Needs a human 6/);
+    assert.match(text, /Ready to call 1502/);
+    // The stored-copy caveat appears when only one email is on file and people got all four.
+    assert.match(text, /Only email 1 is stored here/);
+});
+
 test('a refusal is shown as a refusal, not as an empty page', async () => {
     const app = await run('', { error: 'Sign in to your Staffify account' }, false);
     assert.match(app.textContent, /Sign in/);

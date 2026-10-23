@@ -393,7 +393,10 @@ function renderCampaign(d) {
   };
   for (const k of order) { if (k !== 'all' && !counts[k]) continue; const b = el('button', `${labelFor[k]}${k === 'all' ? ' ' + d.prospects.length : ' ' + counts[k]}`); b.type = 'button'; b.dataset.k = k; b.onclick = () => { filter = k; draw(); }; tabs.append(b); }
   ph.append(tabs); pp.append(ph); pp.append(table);
-  if (d.prospects.length > 200) pp.append(el('p', `Showing the first 200 of ${d.prospects.length}. Use the state filters.`, 'sub')).style.padding = '10px 16px';
+  // append() returns undefined, so the style has to go on the node before it is appended. This
+  // line crashed the whole campaign screen live, because the test fixture had 3 prospects and the
+  // real campaign has 1,508.
+  if (d.prospects.length > 200) { const more = el('p', `Showing the first 200 of ${n(d.prospects.length)}. Use the state filters to find anyone else.`, 'sub'); more.style.padding = '10px 16px'; pp.append(more); }
   draw(); main.append(pp);
 
   // Replies: the actual words, newest first.
