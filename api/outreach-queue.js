@@ -7,6 +7,7 @@ import {enrolInNurture} from './_nurture-enrol.js';
 import {scheduleCallbackTask} from './_callback-task.js';
 import {markBad} from './_bad-numbers.js';
 import {ATTEMPTS} from './_number-research.js';
+import {listTasks,addTask,completeTask} from './_rep-tasks.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
@@ -24,13 +25,20 @@ export default async function handler(req,res) {
        if(!row)return res.status(404).json({error:'That record is not in your view of the queue'});return res.status(200).json({record:row});}
       const decorated=await withCallPhones(view(state),{redis,crm});
       // view=slim: the same rows and the same callReady, without the mail bodies. See slimState.
-      return res.status(200).json(slim?slimState(decorated):decorated);
+      const out=slim?slimState(decorated):decorated;
+      // The caller's own tasks ride along with the call view, so the dialer's follow-up list is
+      // one read: callbacks from the records, tasks from here.
+      if(calls)out.tasks=await listTasks(redis,rep.email);
+      return res.status(200).json(out);
     }
     if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});
     const machine=adminAuthorized(req);
     if(!machine&&req.headers.origin!==SITE)return res.status(403).json({error:'Invalid origin'});
     const body=readBody(req);
-    if(calls&&!['call-outcome','suppress'].includes(body.action))return res.status(403).json({error:'Caller access is limited to call outcomes and exclusions'});
+    if(calls&&!['call-outcome','suppress','task-add','task-done'].includes(body.action))return res.status(403).json({error:'Caller access is limited to call outcomes, exclusions and their own tasks'});
+    // A rep's own tasks never touch the queue state, so they skip the revision dance below.
+    if(body.action==='task-add'){const r=await addTask(redis,{rep,title:body.title,dueAt:body.dueAt,notes:body.notes,recordId:body.id||null,company:body.company||'',recipient:body.recipient||null,campaignId:body.campaignId||null,contactId:body.contactId||null});return res.status(r.ok?200:400).json(r);}
+    if(body.action==='task-done'){const r=await completeTask(redis,{email:rep.email,id:String(body.taskId||''),done:body.done!==false});return res.status(r.ok?200:404).json(r);}
     if(calls&&!sharedCallState(state,rep.email).records.some(r=>body.action==='suppress'?r.recipient===String(body.email||'').toLowerCase():r.id===body.id))return res.status(409).json({error:'This prospect is no longer in the call queue'});
     // A caller action is the one write a HUMAN makes here, and typing call notes takes longer than
     // a minute. The outreach worker rewrites this key every minute and saves up to sixteen times a

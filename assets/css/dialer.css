@@ -1,0 +1,183 @@
+/* The call workspace. Three panes: who you are calling, what you say, what you log.
+   Built on portal.css (light system); loaded after it. Class prefix dw- keeps it out of the
+   way of the shared overrides. */
+body .wrap.dw-wrap{max-width:1560px;padding-top:22px}
+body .dw-wrap h1{font-size:22px;letter-spacing:-.5px;margin:0}
+
+/* ---- session bar ------------------------------------------------------------------------ */
+.dw-bar{position:sticky;top:68px;z-index:30;display:flex;align-items:center;gap:18px;padding:12px 18px;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border:1px solid #e5e5ea;border-radius:16px;margin:0 0 18px;box-shadow:0 4px 18px rgba(29,29,31,.04)}
+.dw-bar .dw-title{min-width:0}
+.dw-bar .dw-eyebrow{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:#6e6e73;font-weight:600}
+.dw-bar .dw-pos{font-weight:600;font-size:16px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dw-bar .dw-pos small{color:#6e6e73;font-weight:400;font-size:13px;margin-left:8px}
+.dw-stats{display:flex;gap:16px;margin-left:auto;font-size:12.5px;color:#6e6e73;flex-wrap:wrap;align-items:center}
+.dw-stats b{color:#1d1d1f;font-weight:600;font-variant-numeric:tabular-nums;margin-right:4px}
+.dw-nav{display:flex;gap:8px;align-items:center}
+body .dw-nav button{min-height:38px;padding:8px 13px}
+.dw-badge{display:inline-flex;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#0071e3;color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;margin-left:7px;vertical-align:middle}
+.dw-badge.hot{background:#b42332}
+body .dw-options{margin:0;position:relative}
+body .dw-options>summary{padding:8px 12px;font-size:13px;border:1px solid #d9d9df;border-radius:10px;background:#fff;list-style:none;min-height:38px;display:inline-flex;align-items:center}
+body .dw-options[open]>summary{margin:0}
+body .dw-options .dw-optbody{position:absolute;top:46px;left:0;z-index:40;min-width:420px;max-width:92vw;background:#fff;border:1px solid #e5e5ea;border-radius:14px;box-shadow:0 18px 40px rgba(29,29,31,.12);padding:14px;display:grid;gap:10px}
+body .dw-options select,body .dw-options input{width:100%}
+.dw-held{font-size:12.5px;color:#6e6e73;margin:0}
+
+/* ---- the three panes --------------------------------------------------------------------- */
+.dw-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+.dw-who{grid-area:who}.dw-talk{grid-area:talk}.dw-log{grid-area:log}.dw-hist{grid-area:hist}
+@media(min-width:900px){.dw-grid{grid-template-columns:minmax(0,1fr) 352px;grid-template-areas:'who log' 'talk log' 'hist log'}.dw-log{position:sticky;top:150px;max-height:calc(100vh - 166px);overflow:auto}}
+@media(min-width:1240px){.dw-grid{grid-template-columns:316px minmax(0,1fr) 360px;grid-template-areas:'who talk log' 'hist talk log'}}
+.dw-pane{background:#fff;border:1px solid #e5e5ea;border-radius:18px;padding:20px 22px;min-width:0}
+.dw-h{font-size:11.5px;font-weight:650;letter-spacing:1.3px;text-transform:uppercase;color:#6e6e73;margin:0 0 12px}
+.dw-pane .dw-h+.dw-h{margin-top:0}
+.dw-sec{margin-top:22px}
+.dw-sec:first-child{margin-top:0}
+
+/* ---- who --------------------------------------------------------------------------------- */
+.dw-company{font-size:24px;font-weight:650;letter-spacing:-.6px;line-height:1.15;margin:0;color:#1d1d1f}
+.dw-person{font-size:15px;color:#1d1d1f;margin-top:6px}
+.dw-meta{color:#6e6e73;font-size:13px;margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.dw-chip{display:inline-flex;align-items:center;gap:6px;background:#eef3f8;color:#415971;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+.dw-chip svg{width:13px;height:13px}
+.dw-clock{display:inline-flex;align-items:center;gap:8px;font-size:13px;margin-top:12px;color:#1d1d1f}
+.dw-dot{width:8px;height:8px;border-radius:50%;background:#28734b;flex:0 0 auto}
+.dw-dot.off{background:#c9903f}
+.dw-clock span{color:#6e6e73}
+.dw-numblock{margin-top:16px;padding:16px;border-radius:14px;background:#f5f8fc;border:1px solid #dce7f5}
+.dw-num{font-size:28px;font-weight:650;letter-spacing:-.5px;color:#0066cc;text-decoration:none;display:block;font-variant-numeric:tabular-nums;line-height:1.1}
+.dw-num:hover{text-decoration:underline}
+.dw-trust{display:inline-flex;gap:6px;align-items:center;margin-top:8px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:#f1f1f3;color:#6e6e73}
+.dw-trust.good{background:#edf8f0;color:#236443}.dw-trust.ok{background:#eaf3ff;color:#0066cc}.dw-trust.warn{background:#fff7e5;color:#845400}
+.dw-numdetail{font-size:12.5px;color:#6e6e73;margin:8px 0 0;line-height:1.5}
+.dw-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+body .dw-primary{background:#0071e3!important;color:#fff!important;border-color:#0071e3!important}
+body .dw-primary:hover{background:#0066cc!important}
+body .dw-good{background:#28734b!important;color:#fff!important;border-color:#28734b!important}
+.dw-alts{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font-size:13px}
+.dw-links{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:14px;font-size:13px}
+.dw-links a{color:#0066cc;text-decoration:none}
+.dw-links a:hover{text-decoration:underline}
+.dw-fact{font-size:14px;line-height:1.6;color:#303b4b;background:#f5f8fc;border-radius:12px;padding:12px 14px;margin:0}
+.dw-small{font-size:12.5px;color:#6e6e73;margin:8px 0 0;line-height:1.5}
+.dw-why{font-size:12.5px;color:#6e6e73;margin:10px 0 0;line-height:1.5}
+.dw-due{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:#fff7e5;border:1px solid #ecd8aa;color:#845400;font-size:13.5px;margin:0 0 14px;line-height:1.5}
+.dw-due b{color:#5e3d00}
+.dw-alert{background:#fdeeee;border-color:#e7b4b4;color:#8e1f2a}
+.dw-alert b{color:#6b1420}
+.dw-info{background:#eaf3ff;border-color:#c4dcf5;color:#0b4f8f}
+.dw-info b{color:#0b4f8f}
+.dw-ig{margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid #e5e5ea;background:#fafbfd}
+.dw-ig .dw-iglabel{font-weight:600;font-size:14px}
+
+/* ---- talk -------------------------------------------------------------------------------- */
+.dw-step{font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase;color:#0066cc;font-weight:650;margin:0 0 6px}
+.dw-say{font-size:16.5px;line-height:1.6;color:#1d1d1f;background:#f5f8fc;border-left:3px solid #0071e3;border-radius:4px 12px 12px 4px;padding:14px 16px;margin:0 0 12px}
+.dw-say.quiet{font-size:15px;color:#303b4b}
+.dw-tree{margin-top:6px;padding:16px 18px;border-radius:14px;border:1px solid #e5e5ea;background:#fafbfd}
+.dw-tree .dw-say{background:#fff}
+.dw-choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+body .dw-choice{font-size:13.5px;font-weight:550}
+body .dw-choice.win{background:#edf8f0;border-color:#9fcfae;color:#236443}
+.dw-logas{display:inline-flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:#415971;background:#eef3f8;border-radius:999px;padding:5px 12px}
+.dw-note{font-size:13px;color:#6e6e73;margin:6px 0 0;line-height:1.5}
+.dw-objs{display:flex;flex-wrap:wrap;gap:6px}
+body .dw-obj{font-size:12.5px;padding:7px 11px;min-height:34px;border-radius:999px}
+body .dw-obj.on{background:#eaf3ff;color:#0066cc;border-color:#92bceb}
+.dw-objsay{margin-top:10px}
+body .dw-talk details{margin:14px 0 0;border-top:1px solid #ececf0;padding-top:4px}
+body .dw-talk summary{font-size:13.5px}
+.dw-script h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#6e6e73;margin:14px 0 6px;font-weight:650}
+.dw-cbk{margin-top:12px;padding:14px;border-radius:12px;background:#eaf3ff;border:1px solid #c4dcf5}
+.dw-cbk .dw-step{color:#0b4f8f}
+
+/* ---- log --------------------------------------------------------------------------------- */
+.dw-ocs{display:flex;flex-direction:column;gap:6px}
+body .dw-oc{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 12px;border:1px solid #e5e5ea;border-radius:12px;background:#fff;cursor:pointer;min-height:44px;font-size:14px;font-weight:550;color:#1d1d1f;box-shadow:none}
+body .dw-oc .h{font-size:12px;color:#6e6e73;font-weight:400;margin-left:2px}
+body .dw-oc .k{margin-left:auto;font-size:11px;color:#6e6e73;border:1px solid #d9d9df;border-radius:6px;padding:1px 6px;min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
+body .dw-oc:hover{background:#f7f9fc;border-color:#b4cdeb}
+body .dw-oc.sel{background:#eaf3ff;border-color:#92bceb;color:#0066cc}
+body .dw-oc.sel .h,body .dw-oc.sel .k{color:#0066cc;border-color:#92bceb}
+body .dw-oc.good.sel{background:#edf8f0;border-color:#9fcfae;color:#236443}
+body .dw-oc.good.sel .h,body .dw-oc.good.sel .k{color:#236443;border-color:#9fcfae}
+body .dw-oc.bad.sel{background:#fdeeee;border-color:#e7b4b4;color:#8e1f2a}
+body .dw-oc.bad.sel .h,body .dw-oc.bad.sel .k{color:#8e1f2a;border-color:#e7b4b4}
+.dw-next{margin-top:14px;padding:14px;border-radius:14px;background:#f5f8fc;border:1px solid #dce7f5}
+.dw-next .dw-h{margin-bottom:8px}
+.dw-picks{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 10px}
+body .dw-pick{font-size:12.5px;padding:6px 11px;min-height:32px;border-radius:999px;font-weight:550}
+body .dw-pick.on{background:#0071e3;color:#fff;border-color:#0071e3}
+body input.dw-when{width:100%;min-height:42px}
+.dw-nexthint{font-size:12.5px;color:#6e6e73;margin:8px 0 0;line-height:1.5}
+body textarea.dw-notes{width:100%;min-height:92px;margin-top:14px;font-size:14px;line-height:1.5}
+.dw-autosave{font-size:11.5px;color:#6e6e73;margin:4px 0 0;text-align:right;min-height:16px}
+.dw-saveline{margin-top:12px}
+body .dw-save{width:100%;background:#0071e3!important;color:#fff!important;border-color:#0071e3!important;min-height:48px;font-size:15px;font-weight:600;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:10px}
+body .dw-save:hover{background:#0066cc!important}
+body .dw-save:disabled{opacity:.5}
+body .dw-save kbd{font-family:inherit;font-size:11px;font-weight:600;background:rgba(255,255,255,.18);border-radius:5px;padding:1px 6px}
+.dw-status{font-size:12.5px;color:#b42332;min-height:18px;margin:8px 0 0}
+.dw-status.ok{color:#236443}
+.dw-more{margin-top:16px;border-top:1px solid #ececf0;padding-top:14px}
+.dw-more .dw-h{margin-bottom:8px}
+.dw-task{display:grid;gap:8px;margin-top:8px}
+body .dw-task input{width:100%}
+.dw-taskrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dw-taskok{font-size:12.5px;color:#236443}
+.dw-send{display:flex;flex-direction:column;gap:8px}
+body .dw-send button{text-align:left;justify-content:flex-start}
+.dw-txtedit{width:100%;min-height:84px;margin-top:8px;font-size:13.5px;line-height:1.5}
+.dw-kbd{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:#6e6e73;margin-top:14px}
+.dw-kbd kbd{font-family:inherit;border:1px solid #d9d9df;border-radius:5px;padding:0 5px;background:#fafafa;color:#1d1d1f;margin-right:3px}
+@media(max-width:899px){.dw-kbd{display:none}}
+
+/* ---- history ----------------------------------------------------------------------------- */
+.dw-last{font-size:13px;color:#6e6e73;margin:-6px 0 12px}
+.dw-tl{list-style:none;margin:0;padding:0}
+.dw-tl li{display:grid;grid-template-columns:28px 1fr;gap:12px;padding:11px 0;border-top:1px solid #ececf0}
+.dw-tl li:first-child{border-top:0;padding-top:0}
+.dw-ic{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.3px}
+.dw-ic.email_out{background:#eaf3ff;color:#0066cc}.dw-ic.email_in{background:#edf8f0;color:#236443}.dw-ic.call{background:#f1f1f3;color:#1d1d1f}.dw-ic.text{background:#f3e9ff;color:#5b2d9a}
+.dw-tl .t{font-size:14px;font-weight:550;line-height:1.35}
+.dw-tl .d{font-size:12.5px;color:#6e6e73;margin-top:2px}
+.dw-tl .n{font-size:13.5px;color:#303b4b;margin-top:6px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+body .dw-tl details{margin:6px 0 0;border:0;padding:0}
+body .dw-tl summary{font-size:12.5px;color:#0066cc;padding:2px 0}
+body .dw-tl pre{font-size:13px;margin:6px 0 0;background:#fafafa;border-radius:8px;padding:10px 12px;line-height:1.5}
+.dw-tlmore{margin-top:10px}
+
+/* ---- the follow-ups drawer ------------------------------------------------------------------ */
+.dw-scrim{position:fixed;inset:0;background:rgba(29,29,31,.28);z-index:90}
+.dw-drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:#fff;z-index:95;box-shadow:-18px 0 50px rgba(29,29,31,.14);padding:22px 22px 40px;overflow:auto}
+.dw-drawer .dw-dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.dw-drawer h2{font-size:20px;margin:0}
+.dw-drawer .dw-dsub{font-size:13px;color:#6e6e73;margin:4px 0 0}
+.dw-group{margin-top:20px}
+.dw-group h3{font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase;color:#6e6e73;margin:0 0 8px;font-weight:650}
+.dw-group h3 b{color:#1d1d1f;margin-left:6px}
+.dw-fu{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:11px 13px;border:1px solid #e5e5ea;border-radius:12px;margin-bottom:8px;background:#fff;text-align:left;width:100%;cursor:pointer;color:#1d1d1f;font:inherit}
+.dw-fu:hover{border-color:#b4cdeb;background:#f7f9fc}
+.dw-fu.hot{border-color:#ecd8aa;background:#fff9ec}
+.dw-fu .c{font-weight:600;font-size:14px}
+.dw-fu .at{font-size:12.5px;color:#0066cc;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dw-fu .at.over{color:#b42332;font-weight:600}
+.dw-fu .w{font-size:12.5px;color:#6e6e73;grid-column:1/-1;line-height:1.45;overflow-wrap:anywhere}
+.dw-fu .tag{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:#415971;background:#eef3f8;border-radius:999px;padding:2px 8px;justify-self:start;margin-top:4px}
+.dw-fu .tag.task{background:#f3e9ff;color:#5b2d9a}
+.dw-fu .done{grid-column:1/-1;justify-self:end;margin-top:6px}
+body .dw-fu .done button{min-height:30px;padding:4px 10px;font-size:12px}
+.dw-fuempty{font-size:13.5px;color:#6e6e73;padding:10px 0}
+
+/* ---- states ------------------------------------------------------------------------------ */
+.dw-loading{padding:34px 24px;color:#6e6e73;font-size:14.5px}
+.dw-empty{max-width:520px;margin:60px auto;text-align:center}
+.dw-empty h2{font-size:22px;margin:0 0 8px}
+.dw-empty p{color:#6e6e73;margin:0 0 18px}
+.dw-blockedlist{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.dw-blockedlist li{font-size:13.5px;color:#1d1d1f}
+.dw-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:min(560px,92vw);padding:12px 16px;border-radius:12px;font-size:14px;z-index:120;box-shadow:0 6px 24px rgba(0,0,0,.18);background:#1d1d1f;color:#fff;opacity:0;transition:opacity .15s;pointer-events:none}
+.dw-toast.show{opacity:1}
+.dw-toast.warn{background:#fff3e0;color:#8a5a10}
+@media(max-width:899px){.dw-bar{position:static;flex-wrap:wrap}.dw-stats{margin-left:0;flex-basis:100%}.dw-pane{padding:16px 18px;border-radius:14px}.dw-num{font-size:26px}}
+@media(prefers-reduced-motion:reduce){.dw-toast{transition:none}}
