@@ -32,6 +32,10 @@ const heading=t=>el('h3',t,'dw-h');
 async function api(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});const j=await r.json();if(!r.ok){const err=Error(j.error||'Could not load current data');err.payload=j;err.status=r.status;throw err;}return j;}
 function toast(text,warn){let t=document.getElementById('toast');if(!t){t=el('div',null);t.id='toast';document.body.append(t);}t.className='dw-toast show'+(warn?' warn':'');t.textContent=text;clearTimeout(toast.t);toast.t=setTimeout(()=>{t.className='dw-toast';},9000);}
 const firstName=s=>String(s||'').trim().split(/\s+/)[0]||'';
+// Stored excerpts carry HTML entities from the page they were lifted from. Decoded for display only,
+// and still set with textContent, so nothing here is ever interpreted as markup.
+const ENT={nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',hellip:'…',mdash:'-',ndash:'-',rsquo:'\u2019',lsquo:'\u2018',rdquo:'\u201d',ldquo:'\u201c'};
+const plain=s=>String(s||'').replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,n)=>String.fromCodePoint(Number(n))).replace(/&([a-z]+);/gi,(m,k)=>k.toLowerCase() in ENT?ENT[k.toLowerCase()]:m).replace(/\s+/g,' ').trim();
 const rows=()=>orderCallQueue(state.records,{campaign:selectedCampaign,owner:selectedOwner,search,research});
 const positionKey=()=>`staffify-call-position:${selectedCampaign}:${selectedOwner}:${research}`;
 function remember(id){try{sessionStorage.setItem(positionKey(),id);}catch{}}
@@ -75,7 +79,7 @@ function bar(){
  // Live counts. Quo is the truth for dials; the session counts what was logged here since open.
  const stats=el('div',null,'dw-stats');
  if(quoToday&&quoToday.ok){stats.append(stat(quoToday.dials,'dials today'),stat(quoToday.connected,'picked up'));}
- else if(quoToday&&quoToday.error)stats.append(el('span','Quo: '+quoToday.error));
+ else if(quoToday&&quoToday.error)stats.append(el('span',quoToday.error==='no seat'?'No Quo seat for this login':'Quo unavailable'));
  const logged=Object.values(session.saved).reduce((a,n)=>a+n,0);
  stats.append(stat(logged,'logged this session'));
  if(needsOutcome()){const need=el('span','Needs an outcome','dw-badge hot');need.style.marginLeft='0';stats.append(need);}
@@ -185,7 +189,7 @@ function renderWho(pane,row,b){
   :'Four emails sent, no reply, at least 48 hours since the fourth. Checked '+new Date(p.checkedAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'.','dw-why'));
  // Research: the sourced fact, the Instagram datapoint.
  const sec=el('div',null,'dw-sec');sec.append(heading('Research'));
- sec.append(el('p',p.fact||'No sourced business fact is recorded. Ask about their business rather than inventing a personal connection.','dw-fact'));
+ sec.append(el('p',plain(p.fact)||'No sourced business fact is recorded. Ask about their business rather than inventing a personal connection.','dw-fact'));
  if(/^https?:\/\//.test(p.source?.url||'')){const w=el('p',null,'dw-small');w.append(link('Research source',p.source.url));sec.append(w);}
  if(p.instagram)sec.append(instagramPanel(row,p.instagram));
  pane.append(sec);

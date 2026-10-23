@@ -7,6 +7,7 @@ import {config,access,history,compactMessage} from './_outreach-gmail.js';
 import {classify,callReady} from './_outreach-policy.js';
 import {callScript} from './_call-scripts.js';
 import {industryFor} from './_industry.js';
+import {resolveTimezone} from './_outreach-timezone.js';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store');
  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed'});
@@ -127,7 +128,9 @@ export default async function handler(req,res){
    :crmPhone
    ?{number:crmPhone,label:'From the CRM, not corroborated',detail:'Came with the list and is not on their website, so expect a main line or a front desk. Ask for them by name.',sourceUrl:phoneEvidence.sourceUrl||null,alternates:[]}
    :null;
-  return res.status(200).json({timings:(mark('done'),timings),prospectTimezone:row.prospectTimezone||null,callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
+  const clockZone=(row.prospectTimezone&&row.prospectTimezone.timeZone)?row.prospectTimezone
+   :(!String(p.country||'').trim()&&String(p.state||'').trim())?(z=>z.timeZone?{...z,source:'CRM state; country assumed US for the clock only'}:null)(resolveTimezone({...p,country:'US'})):null;
+  return res.status(200).json({timings:(mark('done'),timings),prospectTimezone:clockZone,callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
    industry:industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle}),
    staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:dial&&dial.number||null,dial,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname,website:p.website||row.website||row.source?.url||'',excerpt:row.source?.excerpt||'',crmIndustry:p.industry||'',title:p.jobtitle||'',igBranch:instagram&&instagram.branch}),instagram,events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
  }catch(e){
