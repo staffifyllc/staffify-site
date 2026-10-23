@@ -5,6 +5,8 @@ import {config,access,gmail,compactMessage} from './_outreach-gmail.js';
 import {KEY,ownerFor,visibleState,mergeSnapshot,controlState,canUseCallQueue,sharedCallState} from './_outreach-queue.js';
 import {enrolInNurture} from './_nurture-enrol.js';
 import {scheduleCallbackTask} from './_callback-task.js';
+import {markBad} from './_bad-numbers.js';
+import {ATTEMPTS} from './_number-research.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
@@ -55,7 +57,21 @@ export default async function handler(req,res) {
             const row=(fresh?.records||[]).find(r=>r.id===body.id);
             if(row)callbackTask=await scheduleCallbackTask({redis,row,rep,nextCallAt:body.nextCallAt,notes:body.notes});
           }
-          return res.status(200).json({...view(candidate),...(nurture?{nurture}:{}),...(callbackTask?{callbackTask}:{})});
+          // A wrong number condemns the NUMBER, not the lead. The dialled number is marked bad for
+          // this person only, and only if it really was one we had on file for them, then their
+          // research is reset so the background pass looks for a different one.
+          let wrongNumber=null;
+          if(body.action==='call-outcome'&&body.outcome==='wrong_number'&&body.dialled) {
+            const row=(fresh?.records||[]).find(r=>r.id===body.id);
+            if(row){
+              const e=row.recipient.toLowerCase();
+              const [ev,vd,st,cp]=await Promise.all(['staffify:call-phone-evidence:'+row.recipient,'staffify:call-phone-vendor:'+e,'staffify:call-site-phone:'+e,'staffify:call-phone:'+e].map(k=>redis.get(k).catch(()=>null)));
+              const known=[ev&&ev.phone,vd&&vd.phone,...((vd&&vd.alternates)||[]),st&&st.phone,...((st&&st.alternates)||[]),cp&&cp.phone,row.phone].filter(Boolean);
+              wrongNumber=await markBad(redis,{email:e,phone:body.dialled,known,by:rep.email});
+              if(wrongNumber.ok)await redis.del(ATTEMPTS(e)).catch(()=>{});
+            }
+          }
+          return res.status(200).json({...view(candidate),...(nurture?{nurture}:{}),...(callbackTask?{callbackTask}:{}),...(wrongNumber?{wrongNumber}:{})});
         }
       }
       return res.status(409).json({error:'The queue is busy right now. Your notes are still here; press save again.'});

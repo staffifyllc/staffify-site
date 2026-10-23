@@ -1,5 +1,13 @@
+import {loadBad,isBad} from './_bad-numbers.js';
+import {callReady} from './_outreach-policy.js';
 import {ATTEMPTS,researchStatus} from './_number-research.js';
 export async function withCallPhones(state,{redis,crm,now=Date.now()}){
+ // A wrong number is a failed NUMBER, not a failed lead. Codex's brief: wrong-party numbers go to
+ // background research, not a dead end. callReady never re-offers a wrong_number outcome, so such a
+ // lead is brought back in here only when the SAME policy says it would be ready had the bad call
+ // not happened: four sent emails, the 48-hour wait, still in its campaign. Nothing skips a rule.
+ const retryable=r=>r.callOutcome==='wrong_number'&&callReady({...r,callOutcome:null,nextCallAt:null});
+ for(const r of state.records)if(retryable(r))r.callReady=true,r.wrongNumberRetry=true;
  const due=state.records.filter(r=>r.callReady);if(!due.length)return state;
  const phones=new Map(),missing=[];
  for(const row of due){const key='staffify:call-phone:'+row.recipient.toLowerCase();const cached=await redis.get(key);if(cached&&now-Date.parse(cached.checkedAt)<5*60000)phones.set(row.recipient,cached);else missing.push(row.recipient);}
@@ -47,6 +55,18 @@ export async function withCallPhones(state,{redis,crm,now=Date.now()}){
    phoneSourceUrl:v.sourceUrl||null,phoneAlternates:Array.isArray(v.alternates)?v.alternates:[],phoneCheckedAt:v.checkedAt||null,
    phoneDetail:'Main line published on their own site. Ask for them by name. '+(v.sourceUrl?'Source: '+v.sourceUrl:'')});
  }
+ // A number a caller logged as wrong is never offered again for that person, whichever source
+ // produced it. The research below then treats the lead as having no number and looks again.
+ for(const row of due){
+  const bad=await loadBad(redis,row.recipient);
+  const c=phones.get(row.recipient);
+  if(bad.size&&c&&c.phone&&isBad(bad,c.phone)){phones.set(row.recipient,{...c,phone:null,phoneStatus:'wrong_number',
+   phoneDetail:'The number on file was logged as a wrong number. A different one is being looked for.'});continue;}
+  // A wrong number logged before we recorded WHICH number it was. We cannot tell the bad one from a
+  // good one, so nothing on file is offered: the caller would ring the same wrong line again.
+  if(row.wrongNumberRetry&&!bad.size&&c&&c.phone)phones.set(row.recipient,{...c,phone:null,phoneStatus:'wrong_number',
+   phoneDetail:'Logged as a wrong number before the dialled number was recorded, so no number on file can be trusted. A fresh one is being looked for.'});
+ }
  const blocked=new Map();for(const row of due){const v=await redis.get('staffify:call-block:'+row.id);if(v&&v.lastSentAt===row.lastSentAt)blocked.set(row.id,v);}
  // Paul, 2026-10-22: "There needs to never be someone in there without a number... it should just
  // do what it needs to in order to get the number."
@@ -73,10 +93,19 @@ export async function withCallPhones(state,{redis,crm,now=Date.now()}){
   else if(r.state==='exhausted')counts.noNumberPossible++;
   else counts.findingNumber++;
  }
- return {...state,numberWork:counts,records:state.records.map(r=>r.callReady?{...r,
+ return {...state,numberWork:counts,records:state.records.map(r=>{if(!r.callReady)return r;
    // Not callable without a number, whatever else is true of the record.
-   callReady:!blocked.has(r.id)&&!research.has(r.id),
+   const ready=!blocked.has(r.id)&&!research.has(r.id);
+   return {...r,
+   callReady:ready,
+   // The shared view decides what to OFFER from unclaimed / dueForMe, which sharedCallState set
+   // before this ladder ran. Left alone, a lead this ladder holds back (blocked, or a wrong number
+   // still being replaced) kept being offered, and one that came back with a new number never was.
+   // So they follow the final decision. First-work ownership is unchanged: unclaimed still needs
+   // nobody to own it, and dueForMe still needs it to be yours.
+   ...('unclaimed' in r?{unclaimed:ready&&!r.callOwner}:{}),
+   ...('dueForMe' in r?{dueForMe:ready&&!!r.mine}:{}),
    callBlock:blocked.get(r.id)||null,
    numberResearch:research.get(r.id)||null,
-   callContact:phones.get(r.recipient)||{phone:null,phoneStatus:'missing'}}:r)};
+   callContact:phones.get(r.recipient)||{phone:null,phoneStatus:'missing'}};})};
 }

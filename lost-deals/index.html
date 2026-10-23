@@ -151,7 +151,7 @@ function render() {
     return;
   }
   DATA = d;
-  $('sub').textContent = `${(d.toCall || []).length} people sat on a call with us in the last year and did not become clients. ${d.meetingsRead} meetings read.`;
+  $('sub').textContent = `${(d.toCall || []).length} people sat on a call with us in the last year and did not become clients. ${d.meetingsRead} meetings read. Meetings from the last ${d.coolingDays || 14} days are left out while those deals are still being worked.`;
 
   const ex = d.excluded || {};
   const bits = [];

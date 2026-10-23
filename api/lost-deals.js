@@ -29,7 +29,12 @@ import { isOptedOut } from './_optout.js';
 import { bookingLinkFor } from './_call-scripts.js';
 import { callerPlan, designatedCaller } from './_caller-plan.js';
 
-const CACHE = 'staffify:lost-deals:v1';
+const CACHE = 'staffify:lost-deals:v2';
+// Paul, 2026-10-22: "I would only put people in there after 2 weeks since their sales call, I see
+// some recent ones like from today." A meeting from this week is a deal still being worked, not a
+// lost one: the proposal may not have landed, they may be deciding, Paul may be mid follow-up.
+// Calling them as a "did you ever fill that role" lead would collide with a live conversation.
+export const COOLING_DAYS = 14;
 const TTL_MS = 30 * 60000;
 const BUDGET_MS = 45000;
 
@@ -43,6 +48,8 @@ export default async function handler(req, res) {
 
         const days = Math.max(7, Math.min(730, Number(req.query?.days) || 180));
         const since = new Date(Date.now() - days * 86400000).toISOString();
+        // Nothing from the last two weeks is read at all, so a recent meeting can never appear here.
+        const until = new Date(Date.now() - COOLING_DAYS * 86400000).toISOString();
 
         // The assembly is N+1 Calendly calls, so it is cached. A caller refreshing the page should
         // not re-walk the whole calendar.
@@ -53,7 +60,7 @@ export default async function handler(req, res) {
 
         const me = await whoAmI();
         const { items: events, complete } = await pastEvents({
-            since, organization: me.organization, user: me.organization ? undefined : me.uri,
+            since, until, organization: me.organization, user: me.organization ? undefined : me.uri,
         });
 
         // Newest meeting per person. Somebody who met us three times is one row, dated by the last
@@ -110,14 +117,14 @@ export default async function handler(req, res) {
         noShows.sort((a, b) => String(b.metAt).localeCompare(String(a.metAt)));
 
         const payload = {
-            builtAt: new Date().toISOString(), days, since,
+            builtAt: new Date().toISOString(), days, since, until, coolingDays: COOLING_DAYS,
             callerIs: { name: callerName, email: callerEmail, assigned: !!assigned },
             meetingsRead: eventsRead, peopleSeen: byPerson.size,
             toCall: rows, noShows,
             // Named, not hidden. Each is a decision somebody may want to overturn.
             excluded: { alreadyClients: clients.map(c => ({ email: c.email, name: c.name, metAt: c.metAt })), optedOut: suppressed },
             truncated,
-            note: 'Built from Calendly meetings that were not cancelled. A topic is only shown when we have a record of it; where none exists the script asks rather than guesses.',
+            note: `Built from Calendly meetings that were not cancelled, held at least ${COOLING_DAYS} days ago. Anything more recent is still being worked and is left out. A topic is only shown when we have a record of it; where none exists the script asks rather than guesses.`,
         };
         await redis.set(CACHE, payload, { ex: 3600 }).catch(() => {});
         return res.status(200).json({ ...payload, cached: false });

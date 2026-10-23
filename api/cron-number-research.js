@@ -19,6 +19,7 @@ import { site } from './_outreach-supply.js';
 import { findSitePhone } from './_site-phone.js';
 import { lookupByEmail, rrConfigured } from './_rocketreach.js';
 import { ATTEMPTS, decide, noteAttempt, websiteOf } from './_number-research.js';
+import { loadBad, isBad } from './_bad-numbers.js';
 import { SITE_PHONE } from './outreach-site-phone.js';
 import { contactLinks } from './_site-phone.js';
 import { industryFor } from './_industry.js';
@@ -80,6 +81,14 @@ export default async function handler(req, res) {
                 let hit = null;
                 try { hit = await findSitePhone({ website: websiteOf(row), fetchSite: site }); }
                 catch (e) { await noteAttempt({ redis, email: row.recipient, source: 'website', found: false, detail: String(e.message).slice(0, 120) }); continue; }
+                // Skip any number a caller has already proved wrong for this person; take the first
+                // published alternate that is not, or treat the site as having nothing usable.
+                const bad = await loadBad(redis, row.recipient);
+                if (hit && hit.phone && bad.size) {
+                    const usable = [hit.phone, ...(hit.alternates || [])].find(n => !isBad(bad, n));
+                    if (usable) { hit.alternates = [hit.phone, ...(hit.alternates || [])].filter(n => n !== usable && !isBad(bad, n)); hit.phone = usable; }
+                    else hit.phone = null;
+                }
                 if (hit && hit.phone) {
                     await redis.set(SITE_PHONE(row.recipient), hit);
                     await noteAttempt({ redis, email: row.recipient, source: 'website', found: true, detail: hit.sourceUrl || '' });
@@ -100,6 +109,8 @@ export default async function handler(req, res) {
                 catch (e) { await noteAttempt({ redis, email: row.recipient, source: 'vendor', found: false, detail: String(e.message).slice(0, 120) }); continue; }
                 // A retryable failure is NOT an answer, so it must not burn the source.
                 if (r && r.retryable) { out.failures.push({ company: row.company, why: r.reason || 'retryable' }); continue; }
+                const badV = await loadBad(redis, row.recipient);
+                if (r && r.found && r.phones && badV.size) r.phones = r.phones.filter(p => !isBad(badV, p.number));
                 if (r && r.found && r.phones && r.phones.length) {
                     const best = r.phones.find(p => p.recommended) || r.phones[0];
                     await redis.set(VENDOR(row.recipient.toLowerCase()), {

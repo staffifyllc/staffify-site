@@ -101,3 +101,16 @@ test('an event uri reduces to the uuid the invitees route needs', () => {
     assert.equal(eventUuid(''), '');
     assert.equal(eventUuid(null), '');
 });
+
+// Paul, 2026-10-22: "I would only put people in there after 2 weeks since their sales call, I see
+// some recent ones like from today." A meeting this week is a live deal, not a lost one.
+test('meetings from the last two weeks are never read into the list', async () => {
+    const src = (await import('node:fs')).readFileSync(new URL('../api/lost-deals.js', import.meta.url), 'utf8');
+    const { COOLING_DAYS } = await import('../api/lost-deals.js');
+    assert.equal(COOLING_DAYS, 14);
+    // The cut is applied at the source, on the Calendly query, not filtered afterwards.
+    assert.match(src, /const until = new Date\(Date\.now\(\) - COOLING_DAYS \* 86400000\)/);
+    assert.match(src, /since, until, organization/);
+    // And the cache key moved, so a list built before the rule cannot be served after it.
+    assert.match(src, /staffify:lost-deals:v2/);
+});
