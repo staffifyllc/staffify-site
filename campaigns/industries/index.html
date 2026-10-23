@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Campaigns by industry — Staffify Sales</title>
+<title>Campaigns — Staffify Sales</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,150 +11,436 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/portal.css?v=20261013">
 <style>
-  /* Option B, chosen by Paul on 2026-10-22, standing alongside /campaigns/ rather than replacing it.
-     Tokens come from portal.css so this reads as the live Hub, not a separate product. */
-  .ci{max-width:1180px;margin:0 auto;padding:26px clamp(16px,3vw,36px) 48px}
-  .ci h1{font-size:clamp(26px,3.4vw,32px);font-weight:800;letter-spacing:-.025em;margin:0}
-  .ci .lede{color:var(--muted);font-size:14.5px;margin:6px 0 0;max-width:70ch}
-  .ci .rule{color:var(--muted);font-size:12.5px;margin:12px 0 0;max-width:80ch}
-  .ci h2{font-size:15px;font-weight:700;margin:30px 0 4px}
-  .ci .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
-  .band{margin-top:22px;border:2px solid #c9dbf5;border-radius:13px;background:#f7faff;padding:16px 18px}
+  /* Option B, live. One page, three screens, routed by the query string so the browser back button
+     works and every screen is a link somebody can send. Tokens come from portal.css so it reads as
+     the Hub and not a separate product. */
+  .ci{max-width:1180px;margin:0 auto;padding:22px clamp(16px,3vw,36px) 56px}
+  .crumbs{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .crumbs a{color:var(--cyan);text-decoration:none}
+  .crumbs a:hover{text-decoration:underline}
+  .ci h1{font-size:clamp(26px,3.4vw,32px);font-weight:800;letter-spacing:-.025em;margin:8px 0 0}
+  .lede{color:var(--muted);font-size:14.5px;margin:6px 0 0;max-width:72ch}
+  .fine{color:var(--muted);font-size:12.5px;margin:12px 0 0;max-width:84ch}
+  .ci h2{font-size:15px;font-weight:700;margin:28px 0 4px}
+  .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+  .hold{color:#8a5a10;font-size:12.5px}
+  .err{color:#b42318;font-size:14px;margin-top:20px}
+  .loading{color:var(--muted);font-size:14px;margin-top:20px}
+
+  /* Today, in one row. The numbers that mean "do this next". */
+  .today{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:18px}
+  .today a{display:block;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--card-border);border-radius:11px;padding:13px 15px}
+  .today a:hover{border-color:var(--cyan)}
+  .today b{display:block;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .today span{font-size:12.5px;color:var(--muted)}
+  .today a.hot{background:#e8f1fd;border-color:#c9dbf5}
+  .today a.hot b{color:var(--cyan)}
+
+  /* Two rails. Industry and outreach type are two dimensions, not a tree. */
+  .rails{display:flex;flex-wrap:wrap;gap:22px;margin-top:18px;padding:14px 16px;border:1px solid var(--card-border);border-radius:12px;background:var(--card)}
+  .rail{flex:1 1 320px;min-width:0}
+  .rail-h{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{border-radius:999px;padding:6px 12px;font-size:12.5px;border:1px solid var(--card-border);background:var(--card);color:#46505e;cursor:pointer;font-weight:500}
+  .chip[aria-pressed="true"]{background:var(--cyan);color:#fff;border-color:transparent;font-weight:600}
+  .chip small{opacity:.75;margin-left:4px}
+
+  .band{margin-top:20px;border:2px solid #c9dbf5;border-radius:13px;background:#f7faff;padding:15px 16px}
   .band-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between}
   .band-head h2{margin:0}
   .cards{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
-  .camp{flex:1 1 320px;min-width:0;background:var(--card);border:1px solid var(--card-border);border-radius:11px;padding:15px 16px}
+  .camp{flex:1 1 320px;min-width:0;background:var(--card);border:1px solid var(--card-border);border-radius:11px;padding:14px 16px;display:flex;flex-direction:column}
   .camp-top{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between}
   .camp-name{font-size:15px;font-weight:700;color:var(--ink);text-decoration:none}
+  .camp-name:hover{color:var(--cyan)}
   .tag{font-size:11px;color:#46505e;background:#eef1f5;border-radius:999px;padding:2px 9px;white-space:nowrap}
   .tag.badge{font-weight:700;color:var(--cyan);background:#e8f1fd}
-  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
-  .chip{background:#eef1f5;border-radius:999px;padding:2px 9px;font-size:12px;color:var(--ink)}
-  .chip.warn{background:#fff3e0;color:#8a5a10}
-  .stats{display:flex;flex-wrap:wrap;gap:18px;margin-top:12px}
-  .stat b{display:block;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
-  .stat span{font-size:12px;color:var(--muted)}
+  .ind-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .ind-chip{background:#eef1f5;border-radius:999px;padding:2px 9px;font-size:12px;color:var(--ink)}
+  .ind-chip.warn{background:#fff3e0;color:#8a5a10}
+  .stats{display:flex;flex-wrap:wrap;gap:14px 18px;margin-top:12px}
+  .stat b{display:block;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .stat span{font-size:11.5px;color:var(--muted)}
   .stat.small b,.stat.small span{color:#8a5a10}
   .stat.unknown b{color:var(--muted)}
   .note{font-size:12.5px;color:#8a5a10;margin:10px 0 0}
-  .act{display:inline-block;margin-top:12px;font-size:13px;font-weight:600;color:var(--cyan);text-decoration:none}
+  .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:12px}
+  .act{font-size:12.5px;font-weight:600;text-decoration:none;border-radius:999px;padding:7px 13px;border:1px solid var(--card-border);color:#46505e;background:var(--card)}
+  .act.primary{background:var(--cyan);color:#fff;border-color:transparent}
+  .act:hover{border-color:var(--cyan)}
+
   .ind{border:1px solid var(--card-border);border-radius:12px;background:var(--card);margin-bottom:12px}
   .ind.planned{border-style:dashed;background:#fbfbfd}
-  .ind-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:15px 18px}
-  .ind-name{font-size:16px;font-weight:700}
+  .ind-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px}
+  .ind-name{font-size:16px;font-weight:700;color:var(--ink);text-decoration:none}
+  .ind-name:hover{color:var(--cyan)}
   .ind-meta{color:var(--muted);font-size:13px;margin-left:9px}
-  .ind-body{padding:0 18px 16px}
-  .err{color:#b42318;font-size:14px;margin-top:20px}
-  .loading{color:var(--muted);font-size:14px;margin-top:20px}
+  .ind-body{padding:0 16px 14px}
+
+  /* Industry screen: the funnel, counts first, denominators always. */
+  .funnel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;margin-top:14px;align-items:end}
+  .funnel .bar{background:var(--cyan);border-radius:4px}
+  .funnel b{display:block;margin-top:8px;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  .funnel span{font-size:12px;color:var(--muted)}
+  @media (max-width:640px){.funnel{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+  /* Campaign screen. */
+  .two{display:flex;flex-wrap:wrap;gap:18px;margin-top:22px}
+  .main{flex:999 1 560px;min-width:0}
+  .side{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:12px}
+  .panel{border:1px solid var(--card-border);border-radius:12px;background:var(--card);overflow:hidden}
+  .panel-h{padding:12px 16px;background:#f6f8fa;border-bottom:1px solid var(--card-border);display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between}
+  .panel-h h2{margin:0}
+  .panel-b{padding:14px 16px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px}
+  th{text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:9px 10px}
+  td{padding:11px 10px;border-top:1px solid var(--card-border);vertical-align:top}
+  th:first-child,td:first-child{padding-left:16px}
+  th:last-child,td:last-child{padding-right:16px}
+  .who{color:var(--muted);font-size:12.5px}
+  .pill{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+  .pill.reply{background:#e6f6f2;color:#0f766e}
+  .pill.callback_due,.pill.ready{background:#e8f1fd;color:var(--cyan)}
+  .pill.finding,.pill.wrong_number{background:#fff3e0;color:#8a5a10}
+  .pill.stopped{background:#fde8e8;color:#b42318}
+  .pill.other{background:#eef1f5;color:#46505e}
+  .mail{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;color:#46505e;background:#f6f8fa;border-radius:9px;padding:11px 12px;margin:8px 0 0}
+  .reply{padding:10px 0;border-top:1px solid var(--card-border)}
+  .reply:first-child{border-top:none;padding-top:0}
+  .reply q{font-style:normal;color:#46505e;display:block;margin-top:3px;font-size:13px}
+  ol.seq{margin:0;padding-left:18px;font-size:13px;line-height:1.7}
+  ol.seq summary{cursor:pointer;color:var(--cyan);font-weight:600}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .tabs button{font:inherit;font-size:12.5px;font-weight:600;border-radius:999px;padding:6px 12px;border:1px solid var(--card-border);background:var(--card);color:#46505e;cursor:pointer}
+  .tabs button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:transparent}
 </style>
 </head>
 <body>
 <header class="topbar"><img src="/assets/img/staffify-wordmark.svg" alt="Staffify" onerror="this.outerHTML='<strong>Staffify</strong>'"></header>
 <main class="ci" id="app">
-  <h1>Campaigns by industry</h1>
-  <p class="lede">Every sales effort, read two ways: the industry it targets, and the kind of outreach it is. A campaign can be one without being the other.</p>
-  <p class="rule">A rate is withheld below 30 contacted, and each one names the number it came from. A dash means we hold no evidence; 0 means we looked and it is zero.</p>
   <p class="loading" id="status">Reading the live queue…</p>
-  <div id="out"></div>
 </main>
 <script src="/assets/js/portal-shell.js?v=20261013"></script>
 <script type="module">
-// Built from /api/campaigns-overview/, which reads the live queue. Every label here comes from data,
-// so the page is assembled with textContent and never innerHTML.
-const $ = id => document.getElementById(id);
+// One page, three screens, routed by the query string. Every label is data, so the page is built
+// with textContent and never assigns innerHTML. A refusal from the API renders as a refusal, never
+// as an empty page: that exact confusion cost Milton a shift on Spearhead.
+const app = document.getElementById('app');
 const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 const link = (text, href, cls) => { const a = el('a', text, cls); a.href = href; return a; };
 const n = v => (v == null ? '—' : Number(v).toLocaleString());
+const when = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+const dialer = (id, extra = '') => '/dialer/?campaign=' + encodeURIComponent(id) + extra;
+const q = new URLSearchParams(location.search);
+const me = { industry: q.get('industry') || 'all', motion: q.get('motion') || 'all' };
 
 function stat(value, label, opts = {}) {
   const s = el('div', null, 'stat' + (opts.small ? ' small' : '') + (opts.unknown ? ' unknown' : ''));
   s.append(el('b', value), el('span', label));
   return s;
 }
+function rateStat(r, label) { return stat(r.label, r.note || label, { small: r.small && !r.unknown, unknown: r.unknown }); }
 
-function campaignCard(c) {
+function crumbs(parts) {
+  const c = el('nav', null, 'crumbs'); c.setAttribute('aria-label', 'Breadcrumb');
+  parts.forEach((p, i) => {
+    if (i) { const s = el('span', '/'); s.setAttribute('aria-hidden', 'true'); c.append(s); }
+    c.append(p.href ? link(p.text, p.href) : el('span', p.text));
+  });
+  return c;
+}
+
+function campaignCard(c, { showIndustries = true } = {}) {
   const card = el('article', null, 'camp');
   const top = el('div', null, 'camp-top');
-  top.append(link(c.name, '/dialer/?campaign=' + encodeURIComponent(c.id), 'camp-name'));
+  top.append(link(c.name, '?view=campaign&campaign=' + encodeURIComponent(c.id), 'camp-name'));
   const tags = el('div');
   if (c.badge) tags.append(el('span', c.badge.toUpperCase(), 'tag badge'));
-  tags.append(el('span', c.motion, 'tag'));
+  tags.append(el('span', c.motionLabel, 'tag'));
   top.append(tags);
   card.append(top);
+  if (c.summary) card.append(el('p', c.summary, 'sub'));
 
-  if (c.industries && c.industries.length > 1) {
-    const chips = el('div', null, 'chips');
-    for (const i of c.industries.slice(0, 6)) chips.append(el('span', `${i.label} · ${i.n}`, 'chip'));
-    if (c.industries.length > 6) chips.append(el('span', `+${c.industries.length - 6} more`, 'chip'));
-    if (c.unclassified) chips.append(el('span', `Unclassified · ${c.unclassified}`, 'chip warn'));
+  if (showIndustries && c.industries && (c.industries.length > 1 || c.unclassified)) {
+    const chips = el('div', null, 'ind-chips');
+    for (const i of c.industries.slice(0, 6)) chips.append(link(`${i.label} · ${i.n}`, '?view=industry&industry=' + encodeURIComponent(i.key), 'ind-chip'));
+    if (c.industries.length > 6) chips.append(el('span', `+${c.industries.length - 6} more`, 'ind-chip'));
+    if (c.unclassified) chips.append(el('span', `Unclassified · ${c.unclassified}`, 'ind-chip warn'));
     card.append(chips);
   }
 
   const stats = el('div', null, 'stats');
   stats.append(stat(n(c.total), 'prospects'));
   stats.append(stat(n(c.contacted), 'contacted'));
-  stats.append(stat(n(c.replies), 'replies'));
-  stats.append(stat(c.replyRate.label, c.replyRate.note, { small: c.replyRate.small && !c.replyRate.unknown, unknown: c.replyRate.unknown }));
-  stats.append(stat(n(c.meetings), 'meetings'));
-  // Won is not recorded on the queue, so it is shown as unknown rather than as a zero.
+  stats.append(stat(n(c.replies), 'replied'));
+  stats.append(rateStat(c.replyRate, 'reply rate'));
+  stats.append(stat(n(c.connected), 'connected on a call'));
   stats.append(stat(n(c.won), c.won == null ? 'won, not tracked here' : 'won', { unknown: c.won == null }));
   card.append(stats);
-
   if (c.note) card.append(el('p', c.note, 'note'));
-  if (c.evidenceNote) card.append(el('p', c.evidenceNote, 'note'));
   if (c.offTargetNote) card.append(el('p', c.offTargetNote, 'note'));
-  if (!c.candidates) card.append(link('Open its call queue →', '/dialer/?campaign=' + encodeURIComponent(c.id), 'act'));
+
+  const acts = el('div', null, 'acts');
+  if (!c.candidates) {
+    if (c.repliesWaiting) acts.append(link(`${c.repliesWaiting} repl${c.repliesWaiting === 1 ? 'y' : 'ies'} need a human`, '/outreach-review/?view=replies', 'act primary'));
+    if (c.callbacksDue) acts.append(link(`${c.callbacksDue} callback${c.callbacksDue === 1 ? '' : 's'} due`, dialer(c.id), 'act primary'));
+    acts.append(link(`Call queue · ${n(c.ready)} ready`, dialer(c.id), 'act' + (!c.repliesWaiting && !c.callbacksDue ? ' primary' : '')));
+    if (c.findingNumber) acts.append(el('span', `${c.findingNumber} having a number found`, 'act'));
+  }
+  acts.append(link('Open campaign →', '?view=campaign&campaign=' + encodeURIComponent(c.id), 'act'));
+  card.append(acts);
   return card;
 }
 
-(async () => {
-  let d;
-  try {
-    const r = await fetch('/api/campaigns-overview/', { cache: 'no-store' });
-    d = await r.json();
-    // A refusal is not an empty page. That exact confusion cost Milton a shift on Spearhead.
-    if (!r.ok || d.error) throw new Error((d.error || 'Could not load') + (d.detail ? ' ' + d.detail : ''));
-  } catch (e) {
-    $('status').textContent = String(e.message || e) + ' This is not a statement that there are no campaigns.';
-    $('status').className = 'err';
-    return;
-  }
-  $('status').remove();
-  const out = $('out');
+async function load(params) {
+  const r = await fetch('/api/campaigns-overview/?' + params, { cache: 'no-store' });
+  const d = await r.json().catch(() => ({ error: 'The server answered ' + r.status }));
+  if (!r.ok || d.error) throw new Error((d.error || 'Could not load') + (d.detail ? ' ' + d.detail : ''));
+  return d;
+}
+function fail(e) {
+  app.replaceChildren(el('h1', 'Campaigns'), el('p', String(e.message || e) + ' This is not a statement that there are no campaigns.', 'err'));
+}
 
-  if (d.spanning && d.spanning.length) {
+// ---------------- Screen 1 ----------------
+function renderOverview(d) {
+  const out = [];
+  out.push(crumbs([{ text: 'Campaigns' }]));
+  out.push(el('h1', 'Campaigns'));
+  out.push(el('p', 'Every sales effort, read two ways: the industry it targets, and the kind of outreach it is. A campaign can be one without being the other.', 'lede'));
+
+  // Today. The three numbers that are somebody's job right now, each one a link to the job.
+  const t = d.totals;
+  const today = el('div', null, 'today');
+  const tile = (v, label, href, hot) => { const a = link('', href, hot ? 'hot' : ''); a.append(el('b', n(v)), el('span', label)); return a; };
+  today.append(tile(t.repliesWaiting, 'replies waiting for a human', '/outreach-review/?view=replies', t.repliesWaiting > 0));
+  today.append(tile(t.callbacksDue, 'callbacks due now', '/dialer/', t.callbacksDue > 0));
+  today.append(tile(t.ready, 'ready to call', '/dialer/', false));
+  today.append(tile(t.records, 'prospects across ' + n(t.campaigns) + ' campaigns', '?view=overview', false));
+  out.push(today);
+
+  // Rails.
+  const rails = el('div', null, 'rails');
+  const rail = (title, items, key, allLabel) => {
+    const r = el('div', null, 'rail'); r.append(el('div', title, 'rail-h'));
+    const chips = el('div', null, 'chips');
+    const mk = (k, label, count) => {
+      const b = el('button', null, 'chip'); b.type = 'button'; b.append(document.createTextNode(label));
+      if (count != null) b.append(el('small', n(count)));
+      b.setAttribute('aria-pressed', String(me[key] === k));
+      b.onclick = () => { me[key] = k; const u = new URL(location.href); if (k === 'all') u.searchParams.delete(key); else u.searchParams.set(key, k); history.replaceState(null, '', u); renderOverview(d); };
+      return b;
+    };
+    chips.append(mk('all', allLabel, null));
+    for (const it of items) chips.append(mk(it.key, it.label, it.n));
+    r.append(chips); return r;
+  };
+  rails.append(rail('Industry', d.filters.industries, 'industry', 'All industries'));
+  rails.append(rail('Outreach type', d.filters.motions.filter(m => m.n > 0), 'motion', 'All types'));
+  out.push(rails);
+
+  const matchesMotion = c => me.motion === 'all' || c.motion === me.motion;
+  const matchesIndustry = c => me.industry === 'all' || c.industries.some(i => i.key === me.industry) || (me.industry === 'unclassified' && c.unclassified > 0);
+
+  const spanning = d.spanning.filter(c => matchesMotion(c) && matchesIndustry(c));
+  if (spanning.length) {
     const band = el('section', null, 'band');
     const head = el('div', null, 'band-head');
-    head.append(el('h2', 'Reaches across industries'), el('span', 'Targeted by role, not by trade. Listed once, and counted once.', 'sub'));
+    head.append(el('h2', 'Reaches across industries'), el('span', 'Targeted by role, not by trade. Listed once, people counted once.', 'sub'));
     band.append(head);
     const cards = el('div', null, 'cards');
-    for (const c of d.spanning) cards.append(campaignCard(c));
-    band.append(cards);
-    out.append(band);
+    for (const c of spanning) cards.append(campaignCard(c));
+    band.append(cards); out.push(band);
   }
 
-  out.append(el('h2', 'By industry'));
-  out.append(el('p', `${n(d.totals.records)} prospects across ${n(d.totals.campaigns)} campaigns.` + (d.unclassified ? ` ${n(d.unclassified)} could not be classified from the evidence we hold, and are counted as unclassified rather than assigned a guess.` : ''), 'sub'));
-
-  for (const ind of d.industries) {
+  out.push(el('h2', 'By industry'));
+  const shown = d.industries.filter(i => (me.industry === 'all' || i.key === me.industry) && (me.motion === 'all' ? true : i.campaigns.some(matchesMotion)));
+  out.push(el('p', `${n(d.totals.records)} prospects across ${n(d.totals.campaigns)} campaigns.` + (d.unclassified ? ` ${n(d.unclassified)} could not be classified from the evidence we hold and are counted as unclassified, never assigned a guess.` : ''), 'sub'));
+  if (!shown.length) out.push(el('p', 'Nothing matches those filters.', 'sub'));
+  for (const ind of shown) {
     const sec = el('section', null, 'ind' + (ind.started ? '' : ' planned'));
     const head = el('div', null, 'ind-head');
     const left = el('div');
-    left.append(el('span', ind.label, 'ind-name'));
+    left.append(link(ind.label, '?view=industry&industry=' + encodeURIComponent(ind.key), 'ind-name'));
     left.append(el('span', ind.started ? `${ind.campaigns.length} campaign${ind.campaigns.length === 1 ? '' : 's'} · ${n(ind.prospects)} prospects` : 'Not started', 'ind-meta'));
     head.append(left);
+    if (ind.started) head.append(link(`Open industry →`, '?view=industry&industry=' + encodeURIComponent(ind.key), 'act'));
     sec.append(head);
     const body = el('div', null, 'ind-body');
-    if (ind.started) {
-      const cards = el('div', null, 'cards');
-      for (const c of ind.campaigns) cards.append(campaignCard(c));
-      body.append(cards);
-    } else {
-      body.append(el('p', ind.note, 'sub'));
-    }
-    sec.append(body);
-    out.append(sec);
+    if (ind.started) { const cards = el('div', null, 'cards'); for (const c of ind.campaigns.filter(matchesMotion)) cards.append(campaignCard(c, { showIndustries: false })); body.append(cards); }
+    else body.append(el('p', ind.note, 'sub'));
+    sec.append(body); out.push(sec);
   }
+  out.push(el('p', d.notes.join(' '), 'fine'));
+  app.replaceChildren(...out);
+}
+
+// ---------------- Screen 2 ----------------
+function renderIndustry(d) {
+  const out = [];
+  out.push(crumbs([{ text: 'Campaigns', href: '?view=overview' }, { text: d.industry.label }]));
+  out.push(el('h1', d.industry.label));
+  const f = d.funnel;
+  out.push(el('p', d.industry.started ? `${n(f.total)} prospects across ${d.campaigns.length} campaign${d.campaigns.length === 1 ? '' : 's'} built for this industry.` : (d.note || 'Not started.'), 'lede'));
+
+  if (d.industry.started) {
+    const today = el('div', null, 'today');
+    const tile = (v, label, href, hot) => { const a = link('', href, hot ? 'hot' : ''); a.append(el('b', n(v)), el('span', label)); return a; };
+    const firstId = d.campaigns[0] ? d.campaigns[0].id : '';
+    today.append(tile(d.queue.repliesWaiting, 'replies waiting for a human', '/outreach-review/?view=replies', d.queue.repliesWaiting > 0));
+    today.append(tile(d.queue.callbacksDue, 'callbacks due now', dialer(firstId), d.queue.callbacksDue > 0));
+    today.append(tile(d.queue.ready, 'ready to call', dialer(firstId), false));
+    out.push(today);
+
+    const panel = el('section', null, 'panel');
+    const h = el('div', null, 'panel-h'); h.append(el('h2', 'The funnel'), el('span', 'Each step names the number it came from, so a rate is never read without its base.', 'sub'));
+    panel.append(h);
+    const b = el('div', null, 'panel-b');
+    const funnel = el('div', null, 'funnel');
+    const max = Math.max(1, f.contacted);
+    const step = (v, label, hBase) => { const w = el('div'); const bar = el('div', null, 'bar'); bar.style.height = Math.max(6, Math.round(96 * (v / max))) + 'px'; w.append(bar, el('b', n(v)), el('span', label + (hBase ? ' · ' + hBase : ''))); return w; };
+    funnel.append(step(f.contacted, 'contacted', ''));
+    funnel.append(step(f.fourDone, 'got all four emails', f.contacted ? `${Math.round(100 * f.fourDone / f.contacted)}% of ${n(f.contacted)}` : ''));
+    funnel.append(step(f.replies, 'replied', f.replyRate.note || ''));
+    funnel.append(step(f.connected, 'connected on a call', f.connectRate.note || ''));
+    const wonW = el('div'); const wonBar = el('div', null, 'bar'); wonBar.style.cssText = 'height:6px;background:#e5e5ea'; wonW.append(wonBar, el('b', '—'), el('span', 'won, not tracked here')); funnel.append(wonW);
+    b.append(funnel);
+    if (f.replyRate.small && !f.replyRate.unknown) b.append(el('p', `Reply rate withheld: ${f.replyRate.note}. Below 30 contacted a rate is noise dressed as a finding.`, 'note'));
+    panel.append(b); out.push(panel);
+
+    out.push(el('h2', 'Campaigns built for this industry'));
+    const cards = el('div', null, 'cards'); for (const c of d.campaigns) cards.append(campaignCard(c, { showIndustries: false })); out.push(cards);
+  }
+
+  if (d.alsoReaching.length) {
+    const band = el('section', null, 'band');
+    const head = el('div', null, 'band-head'); head.append(el('h2', 'Also reaching this industry'), el('span', 'Targeted by role, not by trade. Their people are counted once, in their own campaign.', 'sub'));
+    band.append(head);
+    const row = el('div', null, 'chips');
+    for (const c of d.alsoReaching) { const a = link(`${c.name} · ${c.here} of ${c.total} here`, '?view=campaign&campaign=' + encodeURIComponent(c.id), 'act'); row.append(a); }
+    band.append(row); out.push(band);
+  }
+  out.push(el('p', d.notes.join(' '), 'fine'));
+  app.replaceChildren(...out);
+}
+
+// ---------------- Screen 3 ----------------
+function renderCampaign(d) {
+  const c = d.campaign;
+  const out = [];
+  const home = c.spans ? { text: 'Reaches across industries', href: '?view=overview' } : { text: c.industries[0] ? c.industries[0].label : 'Unclassified', href: '?view=industry&industry=' + encodeURIComponent(c.industries[0] ? c.industries[0].key : 'unclassified') };
+  out.push(crumbs([{ text: 'Campaigns', href: '?view=overview' }, home, { text: c.name }]));
+  const h1row = el('div', null, 'camp-top');
+  const h1 = el('h1', c.name); h1row.append(h1);
+  const tags = el('div'); if (c.badge) tags.append(el('span', c.badge.toUpperCase(), 'tag badge')); tags.append(el('span', c.motionLabel, 'tag')); h1row.append(tags);
+  out.push(h1row);
+  if (c.summary) out.push(el('p', c.summary, 'lede'));
+
+  if (c.industries.length > 1 || c.unclassified) {
+    const chips = el('div', null, 'ind-chips');
+    for (const i of c.industries) chips.append(link(`${i.label} · ${i.n}`, '?view=industry&industry=' + encodeURIComponent(i.key), 'ind-chip'));
+    if (c.unclassified) chips.append(el('span', `Unclassified · ${c.unclassified}`, 'ind-chip warn'));
+    out.push(chips);
+  }
+
+  const today = el('div', null, 'today');
+  const tile = (v, label, href, hot) => { const a = link('', href, hot ? 'hot' : ''); a.append(el('b', n(v)), el('span', label)); return a; };
+  today.append(tile(d.next.repliesWaiting, 'replies waiting for a human', '/outreach-review/?view=replies', d.next.repliesWaiting > 0));
+  today.append(tile(d.next.callbacksDue, 'callbacks due now', dialer(c.id), d.next.callbacksDue > 0));
+  today.append(tile(d.next.ready, 'ready to call', dialer(c.id), false));
+  today.append(tile(d.next.findingNumber, 'having a number found', '?view=campaign&campaign=' + encodeURIComponent(c.id), false));
+  out.push(today);
+
+  const stats = el('div', null, 'stats');
+  stats.append(stat(n(c.total), 'prospects'), stat(n(c.contacted), 'contacted'), stat(n(c.fourDone), 'got all four'), stat(n(c.replies), 'replied'), rateStat(c.replyRate, 'reply rate'), stat(n(c.connected), 'connected'), rateStat(c.connectRate, 'connect rate'), stat(n(c.won), 'won, not tracked here', { unknown: true }));
+  out.push(stats);
+  if (c.evidenceNote) out.push(el('p', c.evidenceNote, 'note'));
+  if (c.offTargetNote) out.push(el('p', c.offTargetNote, 'note'));
+
+  const two = el('div', null, 'two');
+  const main = el('div', null, 'main');
+  const side = el('div', null, 'side');
+
+  // Prospects, with a state filter. Sorted so what needs a human is on top.
+  const pp = el('section', null, 'panel');
+  const ph = el('div', null, 'panel-h'); ph.append(el('h2', 'Prospects'));
+  const counts = {}; for (const p of d.prospects) counts[p.state] = (counts[p.state] || 0) + 1;
+  const tabs = el('div', null, 'tabs');
+  let filter = 'all';
+  const order = ['all', 'reply', 'callback_due', 'ready', 'callback', 'finding', 'wrong_number', 'retry', 'four_sent', 'sequence', 'timing', 'held', 'queued', 'stopped'];
+  const labelFor = { all: 'All', reply: 'Needs a human', callback_due: 'Callback due', ready: 'Ready to call', callback: 'Callback booked', finding: 'Finding a number', wrong_number: 'Wrong number', retry: 'Retry scheduled', four_sent: 'Four sent, waiting', sequence: 'In sequence', timing: 'In nurture', held: 'Held', queued: 'Not contacted', stopped: 'Stopped' };
+  const table = el('table');
+  const thead = el('thead'); const tr = el('tr'); for (const h of ['Business', 'Emails', 'Last touch', 'State']) tr.append(el('th', h)); thead.append(tr); table.append(thead);
+  const tbody = el('tbody'); table.append(tbody);
+  const draw = () => {
+    tbody.replaceChildren();
+    const rows = d.prospects.filter(p => filter === 'all' || p.state === filter).slice(0, 200);
+    for (const p of rows) {
+      const r = el('tr');
+      const td1 = el('td'); td1.append(el('strong', p.company || p.email)); td1.append(el('div', [p.name, p.email].filter(Boolean).join(' · '), 'who')); r.append(td1);
+      r.append(el('td', `${p.emails} of 4`));
+      r.append(el('td', p.lastTouch ? when(p.lastTouch) : '—'));
+      const td4 = el('td'); const cls = ['reply', 'callback_due', 'ready', 'finding', 'wrong_number', 'stopped'].includes(p.state) ? p.state : 'other';
+      td4.append(el('span', p.stateLabel + (p.state === 'callback' || p.state === 'callback_due' ? ' · ' + new Date(p.nextCallAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''), 'pill ' + cls));
+      if (p.callOwner) td4.append(el('div', 'owned by ' + p.callOwner, 'who'));
+      r.append(td4); tbody.append(r);
+    }
+    if (!rows.length) { const r = el('tr'); const td = el('td', 'Nobody in that state.'); td.colSpan = 4; r.append(td); tbody.append(r); }
+    for (const b of tabs.children) b.setAttribute('aria-pressed', String(b.dataset.k === filter));
+  };
+  for (const k of order) { if (k !== 'all' && !counts[k]) continue; const b = el('button', `${labelFor[k]}${k === 'all' ? ' ' + d.prospects.length : ' ' + counts[k]}`); b.type = 'button'; b.dataset.k = k; b.onclick = () => { filter = k; draw(); }; tabs.append(b); }
+  ph.append(tabs); pp.append(ph); pp.append(table);
+  if (d.prospects.length > 200) pp.append(el('p', `Showing the first 200 of ${d.prospects.length}. Use the state filters.`, 'sub')).style.padding = '10px 16px';
+  draw(); main.append(pp);
+
+  // Replies: the actual words, newest first.
+  const rp = el('section', null, 'panel');
+  const rh = el('div', null, 'panel-h'); rh.append(el('h2', `Replies · ${d.replies.length}`), link('Open the inbox →', '/outreach-review/?view=replies', 'act')); rp.append(rh);
+  const rb = el('div', null, 'panel-b');
+  if (!d.replies.length) rb.append(el('p', 'No replies on this campaign yet.', 'sub'));
+  for (const r of d.replies.slice(0, 25)) {
+    const w = el('div', null, 'reply');
+    const head = el('div'); head.append(el('strong', r.company || r.email)); head.append(el('span', ' · ' + [r.name, r.at ? when(r.at) : null].filter(Boolean).join(' · '), 'who'));
+    if (r.needsHuman) head.append(el('span', ' needs a human', 'pill reply'));
+    w.append(head);
+    if (r.excerpt) w.append(el('q', r.excerpt));
+    rb.append(w);
+  }
+  rp.append(rb); main.append(rp);
+
+  // The sequence, readable in full.
+  const sp = el('section', null, 'panel');
+  const sh = el('div', null, 'panel-h'); sh.append(el('h2', 'What they received')); sp.append(sh);
+  const sb = el('div', null, 'panel-b');
+  if (!d.sequence.length) sb.append(el('p', 'No email copy is stored on this campaign.', 'sub'));
+  const ol = el('ol', null, 'seq');
+  for (const s of d.sequence) { const li = el('li'); const det = el('details'); det.append(el('summary', s.subject ? `Email ${s.n} · ${s.subject}` : `Email ${s.n}`)); det.append(el('pre', s.body || '', 'mail')); li.append(det); ol.append(li); }
+  sb.append(ol); sp.append(sb); side.append(sp);
+
+  // Calls and callbacks.
+  const cp = el('section', null, 'panel');
+  const chh = el('div', null, 'panel-h'); chh.append(el('h2', 'Calls')); cp.append(chh);
+  const cb = el('div', null, 'panel-b');
+  const cs = el('div', null, 'stats'); cs.append(stat(n(d.calls.attempts), 'call attempts'), stat(n(d.calls.placed), 'people called'), stat(n(d.calls.connected), 'connected')); cb.append(cs);
+  if (d.calls.callbacks.length) {
+    cb.append(el('h2', 'Callbacks'));
+    for (const k of d.calls.callbacks.slice(0, 12)) { const line = el('div', null, 'reply'); line.append(el('strong', k.company || k.name || '')); line.append(el('span', ` · ${new Date(k.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}${k.owner ? ' · ' + k.owner : ''}${k.due ? ' · due now' : ''}`, 'who')); cb.append(line); }
+  }
+  cb.append(link(`Open the call queue · ${n(d.next.ready)} ready`, dialer(c.id), 'act primary'));
+  cp.append(cb); side.append(cp);
+
+  two.append(main, side); out.push(two);
+  out.push(el('p', d.notes.join(' '), 'fine'));
+  app.replaceChildren(...out);
+}
+
+(async () => {
+  const view = q.get('view') || 'overview';
+  try {
+    if (view === 'industry') renderIndustry(await load('view=industry&industry=' + encodeURIComponent(q.get('industry') || '')));
+    else if (view === 'campaign') renderCampaign(await load('view=campaign&campaign=' + encodeURIComponent(q.get('campaign') || '')));
+    else renderOverview(await load('view=overview'));
+  } catch (e) { fail(e); }
 })();
 </script>
 </body>

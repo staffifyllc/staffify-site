@@ -22,6 +22,7 @@
 // its campaign happens to be about. On Option B's overview that is a visible count, not a silent
 // reassignment, because "we do not know what 300 of these businesses do" is a fact worth seeing.
 import { industryFor } from './_industry.js';
+import { sectorFor } from './_sectors.js';
 import { CAMPAIGN_ID } from './_outreach-campaign.js';
 
 export const INDUSTRY_KEY = 'staffify:prospect-industry:v1';
@@ -38,6 +39,7 @@ const OTHER_FOCUS = /\b(weddings?|brides?|engagements?|elopements?|newborns?|mat
 /** How far a classification can be trusted, and what it is allowed to drive. */
 export const CONFIDENCE = Object.freeze({
     stated: 'A person recorded it.',
+    named: 'Named by sector on the call-script list, by hand.',
     crm: 'Filled in on the CRM record.',
     read: 'Read from their website and name.',
     campaign: 'Assumed from the campaign the list was built as. True of the cohort, unverified per business.',
@@ -61,6 +63,16 @@ export function classify(row, { stated = null, crmIndustry = '', title = '' } = 
     if (crmIndustry && String(crmIndustry).trim()) {
         const g = industryFor({ company, excerpt, crmIndustry, title });
         if (g) return { key: g.key, label: g.label, source: 'crm', confidence: 'crm', why: `HubSpot industry: ${crmIndustry}.` };
+    }
+
+    // A company somebody has already named by sector, for the call scripts. The Spearhead card
+    // says "Construction" for Boot Civil because a person put it on that list; the Campaigns page
+    // must not then call the same business unclassified. Two classifiers disagreeing about one
+    // company is the fastest way to lose trust in either, so the named list is consulted here,
+    // ahead of any rule, and only its NAMED hits count: its fallthrough guesses are not taken.
+    const named = sectorFor({ company });
+    if (named && named.source === 'named' && named.key) {
+        return { key: named.key, label: named.label, source: 'named', confidence: 'named', why: 'Named by sector on the call-script list.' };
     }
 
     // A photo or video business is classified by what IT does, not by what its clients do.

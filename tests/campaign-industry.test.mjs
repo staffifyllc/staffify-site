@@ -17,14 +17,29 @@ test('a person who set it outranks everything, and the record says who', () => {
 });
 
 test('their own website copy beats the name, and the name beats nothing', () => {
-    const fromCopy = classify(row({ company: 'Boot Civil', source: { excerpt: 'We are a civil engineering firm handling site work across central Texas.' } }));
+    // A company NOT on the named call-script list, so this exercises the reading path.
+    const fromCopy = classify(row({ company: 'Lone Star Site Works', source: { excerpt: 'We are a civil engineering firm handling site work across central Texas.' } }));
     assert.equal(fromCopy.key, 'construction');
     assert.equal(fromCopy.source, 'read');
     assert.match(fromCopy.why, /website copy/);
 
-    const fromName = classify(row({ company: 'Jefferson Bank', source: {} }));
+    const fromName = classify(row({ company: 'First Community Bank', source: {} }));
     assert.equal(fromName.key, 'finance');
     assert.match(fromName.why, /company name/);
+});
+
+test('a company named by sector for the call scripts gets the same answer here', () => {
+    // The Spearhead card says "Construction" for Boot Civil because a person put it on that list.
+    // The Campaigns page must not then call the same business unclassified: two classifiers
+    // disagreeing about one company is how both lose trust. The live overview showed exactly
+    // that, "Unclassified · 20" for a cohort whose cards carried sectors for 18.
+    const v = classify(row({ company: 'Boot Civil', source: {} }));
+    assert.equal(v.key, 'construction');
+    assert.equal(v.source, 'named');
+    assert.equal(classify(row({ company: 'Jefferson Bank', source: {} })).key, 'finance');
+    assert.equal(classify(row({ company: 'HeartGift', source: {} })).key, 'nonprofit');
+    // Only a NAMED hit is taken. The sector list's own fallthrough guess is not.
+    assert.equal(classify(row({ company: 'T. Kerr Group', source: {} })).key, null, 'deliberately unclassified on both screens');
 });
 
 test('the campaign assumption is kept, but LABELLED as an assumption', () => {
