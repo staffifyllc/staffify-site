@@ -20,12 +20,16 @@ import { findSitePhone } from './_site-phone.js';
 import { lookupByEmail, rrConfigured } from './_rocketreach.js';
 import { ATTEMPTS, decide, noteAttempt, websiteOf } from './_number-research.js';
 import { SITE_PHONE } from './outreach-site-phone.js';
+import { contactLinks } from './_site-phone.js';
+import { industryFor } from './_industry.js';
+import { IG_KEY, researchInstagram, MAX_CHECK_AGE_DAYS } from './_instagram-research.js';
 
 const VENDOR = email => 'staffify:call-phone-vendor:' + String(email).toLowerCase();
 const BUDGET_MS = 45000;
 // Metered work is capped per run so a backlog cannot drain the credit balance in one pass.
 const VENDOR_PER_RUN = Number(process.env.NUMBER_RESEARCH_VENDOR_PER_RUN || 8);
 const SITE_PER_RUN = Number(process.env.NUMBER_RESEARCH_SITE_PER_RUN || 25);
+const IG_PER_RUN = Number(process.env.INSTAGRAM_RESEARCH_PER_RUN || 12);
 
 const crm = async (path, body) => {
     const response = await hubspotRequest('https://api.hubapi.com' + path, {
@@ -115,8 +119,39 @@ export default async function handler(req, res) {
         }
     }
 
+    // Instagram, for marketing agencies only, on the same pass. Paul asked for this to be a
+    // datapoint a caller can see rather than something guessed at mid-call. It is the cheapest
+    // possible look: their own website, which is also the only source that confirms the account
+    // is actually theirs. Isolated per record like everything else here.
+    const ig = { checked: 0, confirmed: 0, unresolved: 0 };
+    try {
+        const state = await redis.get(KEY);
+        const all = visibleState(state, 'all').records.filter(r => r.callReady);
+        const marketing = all.filter(r => {
+            const g = industryFor({ campaignId: r.campaignId, company: r.company, excerpt: r.source?.excerpt });
+            return g && g.key === 'marketing';
+        });
+        for (const row of marketing) {
+            if (Date.now() - started > BUDGET_MS) break;
+            if (ig.checked >= IG_PER_RUN) break;
+            try {
+                const prior = await redis.get(IG_KEY(row.recipient)).catch(() => null);
+                // Re-look only when the evidence is stale or was never gathered.
+                if (prior && prior.checkedAt && Date.now() - Date.parse(prior.checkedAt) < MAX_CHECK_AGE_DAYS * 86400000) continue;
+                ig.checked++;
+                const ev = await researchInstagram({ website: websiteOf(row), fetchSite: site, contactLinks });
+                await redis.set(IG_KEY(row.recipient), ev, { ex: 120 * 86400 });
+                if (ev.profileConfirmed) ig.confirmed++; else ig.unresolved++;
+            } catch (e) {
+                out.failures.push({ company: row.company || row.recipient, why: 'instagram: ' + String((e && e.message) || e).slice(0, 90) });
+            }
+        }
+    } catch (e) {
+        out.failures.push({ company: 'instagram pass', why: String((e && e.message) || e).slice(0, 120) });
+    }
+
     return res.status(200).json({
-        ...out, backlog: due.length, ranAt: new Date().toISOString(),
+        ...out, instagram: ig, backlog: due.length, ranAt: new Date().toISOString(),
         note: 'A record that gained a number is promoted on the next queue read, where call eligibility is recomputed in full. Nothing is promoted past the four-email rule or the exclusions.',
     });
 }

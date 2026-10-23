@@ -3,6 +3,7 @@ import {site} from './_outreach-supply.js';
 import {redis,requireAccess} from './_auth.js';
 import {KEY,ownerFor,visibleState,canUseCallQueue} from './_outreach-queue.js';
 import {contact,draftBlockReason} from './_outreach-crm.js';
+import {IG_KEY,instagramPanel} from './_instagram-research.js';
 import {config,access,history,compactMessage} from './_outreach-gmail.js';
 import {classify,callReady} from './_outreach-policy.js';
 import {callScript} from './_call-scripts.js';
@@ -86,6 +87,15 @@ export default async function handler(req,res){
   // showed nothing plus "Research before calling". Meanwhile the direct dials already bought from
   // RocketReach sat unread. Same evidence, ranked and surfaced rather than discarded: the caller
   // always gets the best number we hold and one line saying how good it is.
+  // The Instagram datapoint, read not computed. Paul: "I want our sales people to be armed."
+  // The panel renders whatever state the research is in, and only hands over a question when the
+  // evidence supports one.
+  const igSector=industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle});
+  const [igEvidence,igFlag]=await Promise.all([
+   redis.get(IG_KEY(row.recipient)).catch(()=>null),
+   redis.get('staffify:instagram-flag:'+row.recipient.toLowerCase()).catch(()=>null),
+  ]);
+  const instagram=instagramPanel({sector:igSector?.key,company:p.company||row.company,evidence:igEvidence,flagged:igFlag});
   const [vendorDial,sitePhone]=await Promise.all([
    redis.get('staffify:call-phone-vendor:'+row.recipient.toLowerCase()).catch(()=>null),
    redis.get('staffify:call-site-phone:'+row.recipient.toLowerCase()).catch(()=>null),
@@ -102,7 +112,7 @@ export default async function handler(req,res){
    :null;
   return res.status(200).json({callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
    industry:industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle}),
-   staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:dial&&dial.number||null,dial,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname,website:p.website||row.website||row.source?.url||'',excerpt:row.source?.excerpt||'',crmIndustry:p.industry||'',title:p.jobtitle||''}),events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
+   staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:dial&&dial.number||null,dial,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname,website:p.website||row.website||row.source?.url||'',excerpt:row.source?.excerpt||'',crmIndustry:p.industry||'',title:p.jobtitle||'',igBranch:instagram&&instagram.branch}),instagram,events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
  }catch(e){
   // Degrade, do not go blank. The research, the website and the email trail live on the queue
   // record and owe nothing to whichever system just failed.

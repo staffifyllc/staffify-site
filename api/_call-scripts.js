@@ -225,7 +225,7 @@ function callTree(q, company) {
 }
 
 /** Everything the card needs to run the call, chosen by campaign. */
-export function callScript({ campaignId, caller, callerEmail, company, firstName, website = '', excerpt = '', crmIndustry = '', title = '' }) {
+export function callScript({ campaignId, caller, callerEmail, company, firstName, website = '', excerpt = '', crmIndustry = '', title = '', igBranch = null }) {
     const base = SCRIPTS[campaignId] || SCRIPTS[TOBIT_ID];
     const who = company || 'your business';
     // Paul, 2026-10-22: "can we wire up the spearheads account to behave exactly like the other
@@ -239,10 +239,17 @@ export function callScript({ campaignId, caller, callerEmail, company, firstName
     // media-only "how long until it is resolved" node with its Same day / A day or two buttons.
     // Under a sector question like "who picks it up when it backs up" those answers are nonsense,
     // and a caller mid-conversation would be reading buttons that do not match what was asked.
-    const pick = sector ? { audience: sector.label.toLowerCase(), questions: [...sector.questions.slice(0, 2), sector.questions[3], CLOSE] } : base;
+    let questions = sector ? [...sector.questions.slice(0, 2), sector.questions[3], CLOSE] : null;
+    // Paul, 2026-10-22: the Instagram opener for marketing agencies. It REPLACES the first
+    // discovery question only when verified evidence exists, and the gate that decides that lives
+    // in _instagram-branch.js. Without evidence this is null and the ordinary question stands, so
+    // there is no path where the line is said on a guess.
+    if (questions && igBranch && igBranch.say) questions = [igBranch.say, ...questions.slice(1)];
+    const pick = questions ? { audience: sector.label.toLowerCase(), questions } : base;
     return {
         audience: pick.audience,
         ...(sector ? { sector: { key: sector.key, label: sector.label, source: sector.source } } : {}),
+        ...(igBranch ? { instagramBranch: igBranch } : {}),
         opener: opener(caller, who).replace('{first}', firstName || 'there'),
         questions: pick.questions,
         stages: (STAGE_LABELS[pick.questions.length] || STAGE_LABELS[4]).map((label, i) => ({ label, say: pick.questions[i] })).filter(s => s.say),

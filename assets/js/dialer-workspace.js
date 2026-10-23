@@ -171,6 +171,40 @@ function renderCard(panel,row,b){panel.replaceChildren();const head=el('div',nul
   if(b.dial.sourceUrl)phone.append(link('Where this number is published',b.dial.sourceUrl));
   for(const alt of b.dial.alternates||[])phone.append(link(alt,'tel:'+alt));}main.append(el('p','On iPhone, tap Call now and use your business line. The Hub does not detect or record iPhone calls automatically.','sub'));
  if(!b.dial)main.append(el('p',b.phoneEvidence?.detail||'No phone evidence available.','sub'));if(b.phoneEvidence?.sourceUrl)main.append(link('Business website / phone source',b.phoneEvidence.sourceUrl));main.append(link('Open CRM contact',b.crmUrl),link('Email conversation','https://mail.google.com/mail/u/?authuser='+encodeURIComponent(row.sender)+(row.threadId?'#all/'+encodeURIComponent(row.threadId):'#search/'+encodeURIComponent(row.recipient))));
+ // The Instagram datapoint, shown as research with its proof rather than as a line to read out.
+ // Paul: "I want our sales people to be armed." Armed means seeing the profile, the post, the date
+ // and when we looked, so a caller can judge it before they say it.
+ if(b.instagram){
+  const ig=b.instagram, box=section(main,'Their Instagram',null);
+  const tone=ig.status==='verified_stale_posting'?'#0f766e':ig.status==='unknown'||ig.status==='flagged'?'#8a5a10':'#46505e';
+  const head=el('p',ig.label);head.style.cssText='font-weight:700;color:'+tone;box.append(head);
+  box.append(el('p',ig.detail,'sub'));
+  if(ig.warning)box.append(el('p',ig.warning,'hold'));
+  if(ig.handle||ig.profileUrl)box.append(link(ig.handle?('@'+ig.handle):'Their profile',ig.profileUrl));
+  if(ig.postUrl)box.append(link('The post we are quoting',ig.postUrl));
+  if(ig.postSummary)box.append(el('p',ig.postSummary,'sub'));
+  const prov=[ig.postedAt?('Last post '+new Date(ig.postedAt).toLocaleDateString()):null,
+   ig.ageDays!=null?(ig.ageDays+' days ago'):null,
+   ig.checkedAt?('checked '+new Date(ig.checkedAt).toLocaleString()):null,
+   ig.profileConfirmedBy||null].filter(Boolean).join(' \u00b7 ');
+  if(prov)box.append(el('p',prov,'sub'));
+  for(const c of ig.candidates||[])box.append(link(c,c));
+  if(ig.branch){
+   box.append(el('p','Say this only if you are comfortable with the proof above.','sub'));
+   const claim=el('p',ig.branch.claim);claim.style.cssText='font-size:12.5px;color:#8a5a10';box.append(claim);
+   box.append(el('p',ig.branch.variant.label+': '+ig.branch.variant.say,'sub'));
+   box.append(el('p',ig.branch.variant.delivery,'sub'));
+   box.append(el('p',ig.branch.ifCorrected.label+': '+ig.branch.ifCorrected.say,'sub'));
+  }
+  if(ig.status!=='flagged'){
+   box.append(button('Wrong profile or date',async()=>{
+    const note=window.prompt('What is wrong with it? This suppresses the question for everyone.','');
+    if(note==null)return;
+    try{await api('/api/instagram-flag/',{email:row.recipient,note});box.append(el('p','Flagged. The question is suppressed for this prospect.','sub'));}
+    catch(e){box.append(el('p','Could not save the flag: '+e.message,'hold'));}
+   },'btn btn-ghost'));
+  }
+ }
  scripts(side,b);
  // Says plainly what was proven live and what was not. A caller should never have to guess
  // which half of the verification is fresh.
