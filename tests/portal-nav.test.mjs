@@ -88,6 +88,15 @@ test('Lost deals is reachable, under More', () => {
     assert.equal([...links, ...moreLinks].filter(l => l.href === '/lost-deals/').length, 1, 'exactly once');
 });
 
+test('the industry view stands alongside Campaigns, it does not replace it', () => {
+    // Paul, 2026-10-22: "alongside first". Option B is reachable from More while the existing
+    // Campaigns tab keeps working, so nobody loses a page they rely on mid-shift.
+    const { links, moreLinks } = build();
+    assert.ok(moreLinks.some(l => l.href === '/campaigns/industries/'), 'the new view is reachable');
+    assert.ok(links.some(l => l.href === '/campaigns/'), 'and the old one is still a top tab');
+    assert.equal([...links, ...moreLinks].filter(l => l.href === '/campaigns/industries/').length, 1);
+});
+
 test('nothing else fell out of the bar', () => {
     const { links, moreLinks } = build();
     for (const href of ['/hub/', '/campaigns/', '/dialer/', '/pipeline/', '/commissions/'])

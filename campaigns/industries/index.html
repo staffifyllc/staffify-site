@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaigns by industry — Staffify Sales</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/portal.css?v=20261013">
+<style>
+  /* Option B, chosen by Paul on 2026-10-22, standing alongside /campaigns/ rather than replacing it.
+     Tokens come from portal.css so this reads as the live Hub, not a separate product. */
+  .ci{max-width:1180px;margin:0 auto;padding:26px clamp(16px,3vw,36px) 48px}
+  .ci h1{font-size:clamp(26px,3.4vw,32px);font-weight:800;letter-spacing:-.025em;margin:0}
+  .ci .lede{color:var(--muted);font-size:14.5px;margin:6px 0 0;max-width:70ch}
+  .ci .rule{color:var(--muted);font-size:12.5px;margin:12px 0 0;max-width:80ch}
+  .ci h2{font-size:15px;font-weight:700;margin:30px 0 4px}
+  .ci .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+  .band{margin-top:22px;border:2px solid #c9dbf5;border-radius:13px;background:#f7faff;padding:16px 18px}
+  .band-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between}
+  .band-head h2{margin:0}
+  .cards{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+  .camp{flex:1 1 320px;min-width:0;background:var(--card);border:1px solid var(--card-border);border-radius:11px;padding:15px 16px}
+  .camp-top{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between}
+  .camp-name{font-size:15px;font-weight:700;color:var(--ink);text-decoration:none}
+  .tag{font-size:11px;color:#46505e;background:#eef1f5;border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .tag.badge{font-weight:700;color:var(--cyan);background:#e8f1fd}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+  .chip{background:#eef1f5;border-radius:999px;padding:2px 9px;font-size:12px;color:var(--ink)}
+  .chip.warn{background:#fff3e0;color:#8a5a10}
+  .stats{display:flex;flex-wrap:wrap;gap:18px;margin-top:12px}
+  .stat b{display:block;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .stat span{font-size:12px;color:var(--muted)}
+  .stat.small b,.stat.small span{color:#8a5a10}
+  .stat.unknown b{color:var(--muted)}
+  .note{font-size:12.5px;color:#8a5a10;margin:10px 0 0}
+  .act{display:inline-block;margin-top:12px;font-size:13px;font-weight:600;color:var(--cyan);text-decoration:none}
+  .ind{border:1px solid var(--card-border);border-radius:12px;background:var(--card);margin-bottom:12px}
+  .ind.planned{border-style:dashed;background:#fbfbfd}
+  .ind-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:15px 18px}
+  .ind-name{font-size:16px;font-weight:700}
+  .ind-meta{color:var(--muted);font-size:13px;margin-left:9px}
+  .ind-body{padding:0 18px 16px}
+  .err{color:#b42318;font-size:14px;margin-top:20px}
+  .loading{color:var(--muted);font-size:14px;margin-top:20px}
+</style>
+</head>
+<body>
+<header class="topbar"><img src="/assets/img/staffify-wordmark.svg" alt="Staffify" onerror="this.outerHTML='<strong>Staffify</strong>'"></header>
+<main class="ci" id="app">
+  <h1>Campaigns by industry</h1>
+  <p class="lede">Every sales effort, read two ways: the industry it targets, and the kind of outreach it is. A campaign can be one without being the other.</p>
+  <p class="rule">A rate is withheld below 30 contacted, and each one names the number it came from. A dash means we hold no evidence; 0 means we looked and it is zero.</p>
+  <p class="loading" id="status">Reading the live queue…</p>
+  <div id="out"></div>
+</main>
+<script src="/assets/js/portal-shell.js?v=20261013"></script>
+<script type="module">
+// Built from /api/campaigns-overview/, which reads the live queue. Every label here comes from data,
+// so the page is assembled with textContent and never innerHTML.
+const $ = id => document.getElementById(id);
+const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const link = (text, href, cls) => { const a = el('a', text, cls); a.href = href; return a; };
+const n = v => (v == null ? '—' : Number(v).toLocaleString());
+
+function stat(value, label, opts = {}) {
+  const s = el('div', null, 'stat' + (opts.small ? ' small' : '') + (opts.unknown ? ' unknown' : ''));
+  s.append(el('b', value), el('span', label));
+  return s;
+}
+
+function campaignCard(c) {
+  const card = el('article', null, 'camp');
+  const top = el('div', null, 'camp-top');
+  top.append(link(c.name, '/dialer/?campaign=' + encodeURIComponent(c.id), 'camp-name'));
+  const tags = el('div');
+  if (c.badge) tags.append(el('span', c.badge.toUpperCase(), 'tag badge'));
+  tags.append(el('span', c.motion, 'tag'));
+  top.append(tags);
+  card.append(top);
+
+  if (c.industries && c.industries.length > 1) {
+    const chips = el('div', null, 'chips');
+    for (const i of c.industries.slice(0, 6)) chips.append(el('span', `${i.label} · ${i.n}`, 'chip'));
+    if (c.industries.length > 6) chips.append(el('span', `+${c.industries.length - 6} more`, 'chip'));
+    if (c.unclassified) chips.append(el('span', `Unclassified · ${c.unclassified}`, 'chip warn'));
+    card.append(chips);
+  }
+
+  const stats = el('div', null, 'stats');
+  stats.append(stat(n(c.total), 'prospects'));
+  stats.append(stat(n(c.contacted), 'contacted'));
+  stats.append(stat(n(c.replies), 'replies'));
+  stats.append(stat(c.replyRate.label, c.replyRate.note, { small: c.replyRate.small && !c.replyRate.unknown, unknown: c.replyRate.unknown }));
+  stats.append(stat(n(c.meetings), 'meetings'));
+  // Won is not recorded on the queue, so it is shown as unknown rather than as a zero.
+  stats.append(stat(n(c.won), c.won == null ? 'won, not tracked here' : 'won', { unknown: c.won == null }));
+  card.append(stats);
+
+  if (c.note) card.append(el('p', c.note, 'note'));
+  if (c.evidenceNote) card.append(el('p', c.evidenceNote, 'note'));
+  if (!c.candidates) card.append(link('Open its call queue →', '/dialer/?campaign=' + encodeURIComponent(c.id), 'act'));
+  return card;
+}
+
+(async () => {
+  let d;
+  try {
+    const r = await fetch('/api/campaigns-overview/', { cache: 'no-store' });
+    d = await r.json();
+    // A refusal is not an empty page. That exact confusion cost Milton a shift on Spearhead.
+    if (!r.ok || d.error) throw new Error((d.error || 'Could not load') + (d.detail ? ' ' + d.detail : ''));
+  } catch (e) {
+    $('status').textContent = String(e.message || e) + ' This is not a statement that there are no campaigns.';
+    $('status').className = 'err';
+    return;
+  }
+  $('status').remove();
+  const out = $('out');
+
+  if (d.spanning && d.spanning.length) {
+    const band = el('section', null, 'band');
+    const head = el('div', null, 'band-head');
+    head.append(el('h2', 'Reaches across industries'), el('span', 'Targeted by role, not by trade. Listed once, and counted once.', 'sub'));
+    band.append(head);
+    const cards = el('div', null, 'cards');
+    for (const c of d.spanning) cards.append(campaignCard(c));
+    band.append(cards);
+    out.append(band);
+  }
+
+  out.append(el('h2', 'By industry'));
+  out.append(el('p', `${n(d.totals.records)} prospects across ${n(d.totals.campaigns)} campaigns.` + (d.unclassified ? ` ${n(d.unclassified)} could not be classified from the evidence we hold, and are counted as unclassified rather than assigned a guess.` : ''), 'sub'));
+
+  for (const ind of d.industries) {
+    const sec = el('section', null, 'ind' + (ind.started ? '' : ' planned'));
+    const head = el('div', null, 'ind-head');
+    const left = el('div');
+    left.append(el('span', ind.label, 'ind-name'));
+    left.append(el('span', ind.started ? `${ind.campaigns.length} campaign${ind.campaigns.length === 1 ? '' : 's'} · ${n(ind.prospects)} prospects` : 'Not started', 'ind-meta'));
+    head.append(left);
+    sec.append(head);
+    const body = el('div', null, 'ind-body');
+    if (ind.started) {
+      const cards = el('div', null, 'cards');
+      for (const c of ind.campaigns) cards.append(campaignCard(c));
+      body.append(cards);
+    } else {
+      body.append(el('p', ind.note, 'sub'));
+    }
+    sec.append(body);
+    out.append(sec);
+  }
+})();
+</script>
+</body>
+</html>
