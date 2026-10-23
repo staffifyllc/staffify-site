@@ -123,7 +123,11 @@ function move(offset){if(busy)return;if(!leaveOk())return;const list=rows(),inde
 
 // ---- loading and the empty state ----------------------------------------------------------
 function fail(e){app.replaceChildren(bar(),el('div',e.message,'dw-pane dw-loading'),button('Retry',()=>refresh().catch(fail)));}
-async function refresh(){stash();state=await api('/api/outreach-queue/?view=calls');loadSkips();const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
+const OPEN=params.get('open')||null;let opened=false;
+async function refresh(){stash();state=await api('/api/outreach-queue/?view=calls');loadSkips();
+ // A deep link from My Day or the follow-ups list opens that card first, filters or not.
+ if(OPEN&&!opened){opened=true;const want=(state.records||[]).find(r=>r.id===OPEN);if(want){skipped.delete(want.id);saveSkips();return show(want);}toast('That prospect is not in the call view right now.',true);}
+ const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
 async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id));if(row)return show(row);current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
 
 // ---- one prospect -------------------------------------------------------------------------

@@ -38,6 +38,12 @@
   .pill{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 10px;border:1px solid rgba(26,189,225,.4);color:var(--cyan);background:rgba(26,189,225,.08)}
   .pill.due{border-color:rgba(255,183,77,.45);color:#ffb74d;background:rgba(255,183,77,.1)}
   .err{color:#ff9f9f;font-size:14px}
+.sub-h{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#6e6e73;margin:16px 0 6px;font-weight:650}
+  .rows li .acts{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .rows li .acts a,.rows li .acts button{min-height:32px;padding:5px 11px;font-size:12.5px}
+  .pill.over{background:#fdeeee;color:#8e1f2a;border-color:#e7b4b4}
+  .pill.task{background:#f3e9ff;color:#5b2d9a;border-color:#dccbf3}
+  .lead{font-size:15px;color:#845400;background:#fff7e5;border:1px solid #ecd8aa;border-radius:12px;padding:12px 14px;margin:0 0 16px}
 </style>
 </head>
 <body>
@@ -54,30 +60,48 @@
 <script src="/assets/js/portal-shell.js"></script>
 <script type="module">
 // Milton, and anyone else on the caller seat, lands here. It deliberately shows ONLY their own
-// work: the shared pool they can pick from, the follow-ups they personally own, and what they
-// logged. No owner finance, no other rep's numbers, no company totals. The server already refuses
-// those endpoints for a caller; this page simply never asks for them.
+// work: what they promised and what is next, then what they logged. No owner finance, no other
+// rep's numbers, no company totals. The server already refuses those endpoints for a caller; this
+// page simply never asks for them.
+//
+// Paul, 2026-10-23: "the dashboard should present call backs and highest priority items first for
+// the salesperson." So the first panel is Right now: callbacks due, tasks due, then the next card
+// in queue order. The grouping is the same followUps() the dialer's drawer uses.
+import { orderCallQueue } from '/assets/js/call-queue-order.js';
+import { followUps, fmtWhen, OUTCOMES } from '/assets/js/dialer-model.js';
 const $ = id => document.getElementById(id);
 const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 const get = async url => { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw Object.assign(Error('HTTP ' + r.status), { status: r.status }); return r.json(); };
+const post = async (url, body) => { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const j = await r.json(); if (!r.ok) throw Error(j.error || 'HTTP ' + r.status); return j; };
 const when = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }); };
-
-const OUTCOME = { connected: 'Connected', callback: 'Callback', timing: 'Not now, timing', no_answer: 'No answer', voicemail: 'Voicemail', wrong_number: 'Wrong number' };
+const LABEL = Object.fromEntries(OUTCOMES.map(o => [o.value, o.label]));
+const linkTo = (text, href, cls = 'btn') => Object.assign(el('a', text, cls), { href });
 
 function stat(n, label) { const d = el('div', null, 'stat'); d.append(el('b', String(n)), el('span', label)); return d; }
+function panel(title, hint) { const s = el('section', null, 'card'); s.append(el('h2', title)); if (hint) s.append(el('p', hint, 'hint')); $('panels').append(s); return s; }
 
-function panel(title, hint) {
-    const s = el('section', null, 'card');
-    s.append(el('h2', title));
-    if (hint) s.append(el('p', hint, 'hint'));
-    $('panels').append(s);
-    return s;
+// One promise, as a row: who, what was agreed, when, and the way in.
+function promiseRow(it, now) {
+    const li = el('li'); if (Date.parse(it.at) <= now) li.className = 'over';
+    const left = el('div');
+    left.append(el('div', it.company || it.recipient || 'Task', 'who'));
+    left.append(el('div', it.kind === 'task' ? 'Task · ' + it.title + (it.notes ? ' · ' + it.notes : '') : (LABEL[it.outcome] || it.outcome) + (it.note ? ' · ' + it.note : ''), 'meta'));
+    const right = el('div', null, 'acts');
+    right.append(el('span', fmtWhen(it.at, now), 'pill ' + (Date.parse(it.at) <= now ? 'over' : it.kind === 'task' ? 'task' : 'due')));
+    if (it.recordId) right.append(linkTo('Open card', '/dialer/?open=' + encodeURIComponent(it.recordId), 'btn'));
+    if (it.kind === 'task') {
+        const done = el('button', 'Done', 'btn btn-ghost'); done.type = 'button';
+        done.onclick = async () => { done.disabled = true; try { const r = await post('/api/outreach-queue/?view=calls', { action: 'task-done', taskId: it.taskId }); if (r.ok) li.remove(); else { done.disabled = false; done.textContent = 'Could not update'; } } catch { done.disabled = false; done.textContent = 'Could not update'; } };
+        right.append(done);
+    }
+    li.append(left, right);
+    return li;
 }
 
 (async () => {
     let me = null;
     try { me = (await get('/api/auth-me/')).rep; }
-    catch { $('sub').textContent = 'Sign in with your Staffify account to see your day.'; $('panels').append(Object.assign(el('a', 'Sign in', 'btn'), { href: '/hub/' })); return; }
+    catch { $('sub').textContent = 'Sign in with your Staffify account to see your day.'; $('panels').append(linkTo('Sign in', '/hub/')); return; }
 
     const first = String(me.name || me.email).trim().split(/\s+/)[0];
     $('greeting').textContent = `Good to see you, ${first}`;
@@ -85,11 +109,14 @@ function panel(title, hint) {
     let queue = null, qErr = null;
     try { queue = await get('/api/outreach-queue/?view=calls'); } catch (e) { qErr = e; }
 
+    const now = Date.now();
     const mine = String(me.email || '').toLowerCase();
     const records = (queue && queue.records) || [];
     const owned = records.filter(r => String(r.callOwner || '').toLowerCase() === mine);
     const unclaimed = records.filter(r => r.unclaimed);
-    const dueForMe = records.filter(r => r.dueForMe);
+    const fu = followUps({ records, tasks: (queue && queue.tasks) || [], me: mine, now });
+    const soon = [...fu.dueNow, ...fu.today];
+    const nextUp = qErr ? [] : orderCallQueue(records, {}).filter(r => !soon.some(i => i.recordId === r.id)).slice(0, 3);
 
     // Everything this caller personally logged, newest first. The history is on the record, so
     // this needs no extra endpoint and cannot show anyone else's calls.
@@ -100,52 +127,58 @@ function panel(title, hint) {
     const today = new Date().toDateString();
     const loggedToday = logged.filter(c => new Date(c.at).toDateString() === today);
 
-    $('sub').textContent = qErr
-        ? 'Your call queue could not be loaded just now.'
-        : 'One shared pool. Work anything unclaimed, and whatever you work becomes yours to follow up.';
+    $('sub').textContent = qErr ? 'Your call queue could not be loaded just now.'
+        : fu.dueNow.length ? `${fu.dueNow.length} callback${fu.dueNow.length === 1 ? '' : 's'} waiting for you. Those first.`
+        : soon.length ? `${soon.length} promise${soon.length === 1 ? '' : 's'} due today. Then the queue.`
+        : 'Nothing overdue. Start with the next card.';
 
     $('stats').append(
+        stat(fu.dueNow.length, 'due now'),
+        stat(fu.today.length, 'later today'),
+        stat(fu.upcoming.length + fu.later.length, 'coming up'),
         stat(loggedToday.length, 'calls you logged today'),
-        stat(dueForMe.length, 'follow-ups due for you'),
-        stat(owned.length, 'prospects you own'),
-        stat(unclaimed.length, 'unclaimed in the pool'),
     );
 
-    // Calls
-    const calls = panel('Team calls', qErr ? null : `${unclaimed.length} prospects are unclaimed right now. Opening a card claims nothing; logging an outcome makes the follow-up yours.`);
-    if (qErr) calls.append(el('p', qErr.status === 401 ? 'Sign in again to load the queue.' : 'The queue is unavailable right now. Nothing has been lost.', 'err'));
-    calls.append(Object.assign(el('a', 'Open team calls', 'btn'), { href: '/dialer/' }));
-
-    // Follow-ups this caller owns and that are due
-    const fu = panel('Your follow-ups', 'Prospects you have already worked that are due again.');
-    if (!dueForMe.length) fu.append(el('p', 'Nothing due. Anything you work today will show up here when its callback comes round.', 'empty'));
-    else {
+    // Right now: promises first, then the next card. The order is the dialer's own order.
+    const rn = panel('Right now', 'Callbacks you promised and tasks you set, overdue first. Then the next card in the queue.');
+    if (qErr) rn.append(el('p', qErr.status === 401 ? 'Sign in again to load the queue.' : 'The queue is unavailable right now. Nothing has been lost.', 'err'));
+    if (soon.length) { const ul = el('ul', null, 'rows'); for (const it of soon) ul.append(promiseRow(it, now)); rn.append(ul); }
+    else if (!qErr) rn.append(el('p', 'No callbacks or tasks due today.', 'empty'));
+    if (nextUp.length) {
+        rn.append(el('h3', 'Next up', 'sub-h'));
         const ul = el('ul', null, 'rows');
-        for (const r of dueForMe.slice(0, 15)) {
-            const li = el('li');
-            const left = el('div');
-            left.append(el('div', r.company || r.recipient, 'who'), el('div', r.recipient, 'meta'));
-            const right = el('div');
-            right.append(el('span', r.nextCallAt ? 'Due ' + when(r.nextCallAt) : 'Due now', 'pill due'));
-            li.append(left, right);
-            ul.append(li);
+        for (const r of nextUp) {
+            const li = el('li'); const left = el('div');
+            left.append(el('div', r.company || r.recipient, 'who'), el('div', [r.industry && r.industry.label, r.callOutcome === 'callback' ? 'Callback' : (r.sentTouches || 0) + ' emails, no reply'].filter(Boolean).join(' · '), 'meta'));
+            const right = el('div', null, 'acts'); right.append(el('span', 'Ready', 'pill'), linkTo('Open card', '/dialer/?open=' + encodeURIComponent(r.id), 'btn btn-ghost'));
+            li.append(left, right); ul.append(li);
         }
-        fu.append(ul, Object.assign(el('a', 'Work them in the dialer', 'btn btn-ghost'), { href: '/dialer/' }));
+        rn.append(ul);
+    }
+    rn.append(linkTo(fu.dueNow.length ? 'Start with the callbacks' : 'Start calling', fu.dueNow.length ? '/dialer/?open=' + encodeURIComponent(fu.dueNow[0].recordId || '') : '/dialer/'));
+
+    // Coming up: this week and later, so a promise is visible before the day it lands.
+    const later = [...fu.upcoming, ...fu.later];
+    if (later.length) {
+        const cu = panel('Coming up', 'Promises that land later this week and beyond.');
+        const ul = el('ul', null, 'rows'); for (const it of later.slice(0, 10)) ul.append(promiseRow(it, now)); cu.append(ul);
+        if (later.length > 10) cu.append(el('p', `${later.length - 10} more in the dialer's follow-ups (press F).`, 'hint'));
     }
 
+    // The pool
+    const calls = panel('Team calls', qErr ? null : `${unclaimed.length} prospects are unclaimed right now and ${owned.length} are yours. Opening a card claims nothing; logging an outcome makes the follow-up yours.`);
+    calls.append(linkTo('Open team calls', '/dialer/', 'btn btn-ghost'));
+
     // What they logged
-    const recent = panel('Your recent calls', 'Only yours. Nobody else’s calls appear here.');
+    const recent = panel('Your recent calls', 'Only yours. Nobody else\u2019s calls appear here.');
     if (!logged.length) recent.append(el('p', 'No calls logged yet.', 'empty'));
     else {
         const ul = el('ul', null, 'rows');
         for (const c of logged.slice(0, 12)) {
-            const li = el('li');
-            const left = el('div');
+            const li = el('li'); const left = el('div');
             left.append(el('div', c.company, 'who'), el('div', c.notes || 'No notes', 'meta'));
-            const right = el('div');
-            right.append(el('span', OUTCOME[c.outcome] || c.outcome, 'pill'), el('div', when(c.at), 'meta'));
-            li.append(left, right);
-            ul.append(li);
+            const right = el('div'); right.append(el('span', LABEL[c.outcome] || c.outcome, 'pill'), el('div', when(c.at), 'meta'));
+            li.append(left, right); ul.append(li);
         }
         recent.append(ul);
     }
@@ -153,15 +186,15 @@ function panel(title, hint) {
     // Their own booking link, on the page they start the day from.
     if (me.bookingUrl) {
         const bk = panel('Your booking link', 'Send this when a prospect agrees to a call. It books onto your calendar, not the team one.');
-        bk.append(Object.assign(el('a', 'Open your Calendly', 'btn'), { href: me.bookingUrl, target: '_blank', rel: 'noopener' }));
+        bk.append(Object.assign(linkTo('Open your Calendly', me.bookingUrl), { target: '_blank', rel: 'noopener' }));
         bk.append(el('p', me.bookingUrl, 'hint'));
     }
 
-    // Spearhead: the CEO cohort is a different motion and is worked by name, not dialled.
+    // Spearhead: the CEO cohort is a different motion and is worked by name.
     const spear = records.filter(r => r.campaignId === 'staffify-tobit-outreach');
     if (spear.length) {
-        const sp = panel('Spearhead accounts', `${spear.length} CEO accounts from the Tobit list. Four emails sent to each, no direct numbers, worked one at a time by name.`);
-        sp.append(Object.assign(el('a', 'Open spearhead accounts', 'btn btn-ghost'), { href: '/spearhead/' }));
+        const sp = panel('Spearhead accounts', `${spear.length} CEO accounts from the Tobit list. Four emails sent to each, worked one at a time by name.`);
+        sp.append(linkTo('Open spearhead accounts', '/spearhead/', 'btn btn-ghost'));
     }
 
     // Training
@@ -171,7 +204,7 @@ function panel(title, hint) {
         const done = Object.values((t.me && t.me.done) || {}).filter(Boolean).length;
         tr.append(el('p', `${done} of 8 modules marked complete.`, 'hint'));
     } catch { /* progress is a nicety; the link is the point */ }
-    tr.append(Object.assign(el('a', 'Open the playbook', 'btn btn-ghost'), { href: '/training/sales/' }));
+    tr.append(linkTo('Open the playbook', '/training/sales/', 'btn btn-ghost'));
 })();
 </script>
 </body>
