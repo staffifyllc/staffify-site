@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     await redis.zadd('hotleads', { score: Date.now(), member: lead.id });
 
     const slackText =
-        `:fire: *New Bland lead* — *${lead.company || lead.name || lead.phone}*` + (lead.motion ? ` · _${lead.motion}_` : '')
+        `:fire: *New hot lead* — *${lead.company || lead.name || lead.phone}*` + (lead.motion ? ` · _${lead.motion}_` : '')
         + (lead.phone ? `\n:telephone_receiver: ${lead.phone}` : `\n:email: ${lead.email}`)
         + (lead.summary ? `\n> ${lead.summary.slice(0, 400)}` : '')
         + (lead.recordingUrl ? `\n:headphones: Recording: ${lead.recordingUrl}` : '')

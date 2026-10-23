@@ -29,6 +29,12 @@ const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!=null)e.te
 const button=(label,fn,cls='btn')=>{const b=el('button',label,cls);b.type='button';b.onclick=fn;return b;};
 const link=(label,url,cls)=>{const a=el('a',label,cls);a.href=url;if(!/^tel:/.test(url)){a.target='_blank';a.rel='noopener';}return a;};
 const heading=t=>el('h3',t,'dw-h');
+// Hear a name said aloud by the browser's own voice. Rendered only where speech is available.
+function hearButton(text){if(!text||typeof window==='undefined'||!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined')return null;
+ const b=button(null,()=>{try{window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(text));u.lang='en-US';u.rate=0.85;window.speechSynthesis.speak(u);}catch{toast('This browser cannot read names aloud.',true);}},'btn btn-ghost dw-hear');
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');
+ const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M11 5L6 9H2v6h4l5 4V5z M15.5 8.5a5 5 0 010 7 M19 6a9 9 0 010 12');svg.append(path);
+ b.append(svg,el('span','Hear it'));b.title='Hear "'+text+'" said by your browser\u2019s voice. A rare name can still be said wrong.';b.setAttribute('aria-label','Hear '+text+' pronounced');return b;}
 async function api(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});const j=await r.json();if(!r.ok){const err=Error(j.error||'Could not load current data');err.payload=j;err.status=r.status;throw err;}return j;}
 function toast(text,warn){let t=document.getElementById('toast');if(!t){t=el('div',null);t.id='toast';document.body.append(t);}t.className='dw-toast show'+(warn?' warn':'');t.textContent=text;clearTimeout(toast.t);toast.t=setTimeout(()=>{t.className='dw-toast';},9000);}
 const firstName=s=>String(s||'').trim().split(/\s+/)[0]||'';
@@ -140,9 +146,9 @@ function renderWho(pane,row,b){
  pane.replaceChildren();
  const p=b||{};
  const head=el('div');
- head.append(el('h2',p.company||row.company||row.recipient,'dw-company'));
+ const companyName=p.company||row.company||row.recipient;const h2=el('h2',companyName,'dw-company');const hearCo=hearButton(companyName);if(hearCo)h2.append(hearCo);head.append(h2);
  const name=p.name&&p.name!==row.recipient?p.name:(row.verifiedFirstName||'');
- if(name)head.append(el('div',name,'dw-person'));
+ if(name){const who=el('div',name,'dw-person');const hearWho=hearButton(name);if(hearWho)who.append(hearWho);head.append(who);}
  const meta=el('div',null,'dw-meta');
  const tag=industryTag(p.industry);if(tag)meta.append(tag);
  if(p.location)meta.append(el('span',p.location));

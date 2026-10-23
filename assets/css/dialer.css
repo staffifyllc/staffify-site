@@ -184,3 +184,8 @@ body .dw-fu .done button{min-height:30px;padding:4px 10px;font-size:12px}
 .dw-toast.warn{background:#fff3e0;color:#8a5a10}
 @media(max-width:899px){.dw-bar{position:static;flex-wrap:wrap}.dw-stats{margin-left:0;flex-basis:100%}.dw-pane{padding:16px 18px;border-radius:14px}.dw-num{font-size:26px}}
 @media(prefers-reduced-motion:reduce){.dw-toast{transition:none}}
+/* hear the name: a quiet pill after the company and the person */
+body .dw-hear{display:inline-flex;align-items:center;gap:5px;min-height:26px;padding:2px 9px;font-size:12px;font-weight:550;border-radius:999px;margin-left:10px;vertical-align:middle;color:#0066cc;border-color:#c4dcf5;background:#fff}
+body .dw-hear svg{width:13px;height:13px}
+body .dw-hear:hover{background:#eaf3ff}
+.dw-company .dw-hear{font-size:12px;letter-spacing:0}
