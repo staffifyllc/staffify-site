@@ -1,6 +1,13 @@
 import {invoiceEvidence} from './_invoice-monitor.js';
 import {onboardingAmount,placementUnits} from './_commission-evidence.js';
 import {flatOnboardingCommission} from './_caller-plan.js';
+// Paul, 2026-10-22: "commission also for folks from People who met us and did not buy should be a
+// flat $200." A client re-closed from the Lost deals list already had a sales call with Paul and
+// did not buy; the re-engagement is a different, smaller piece of work than sourcing a new client,
+// so it pays a flat fee per collected onboarding fee, whoever re-closes it. It is a LEAD SOURCE on
+// the account, set like business-generated and rep-generated are.
+export const LOST_DEAL_SOURCE='lost-deal';
+export const LOST_DEAL_FEE=200;
 export const round=n=>Math.round((Number(n)||0)*100)/100;
 export function billedHours(invoice, matched={}){
  let hours=0,review=false;
@@ -28,7 +35,14 @@ export function accountLedger({accounts,invoices,payments,refunds=[],credits=[],
   // not a share of it. The percentage ladder below, its fifth-placement escalator and the
   // lead-source question all belong to the percentage plans and must not touch a flat one: his
   // pay does not move with the size of the fee or with where the lead came from.
-  const flatFee=flatOnboardingCommission(a.rep);
+  // Two separate questions, deliberately not merged. WHAT the onboarding commission is: flat $200
+  // for a re-engaged lost deal, otherwise the caller's own flat plan if they have one, otherwise a
+  // percentage. And WHETHER residuals are paid: that belongs to the rep's plan (Milton's trial pays
+  // none, 5.4), not to the lead source. Re-closing a lost deal changes the commission, never a
+  // residual somebody is otherwise owed.
+  const repFlat=flatOnboardingCommission(a.rep);
+  const flatFee=a.source===LOST_DEAL_SOURCE?LOST_DEAL_FEE:repFlat;
+  const noResidual=repFlat!=null;
   const baseRate=flatFee!=null?null:a.rep==='paul'?30:a.source==='self'?30:a.source==='house'?20:null;
   const unitRates=units.map((u,i)=>before+i>=4?35:baseRate);
   if(flatFee==null&&units.length&&e.received>0&&!holds.length)counts[key]=before+units.length;
@@ -48,8 +62,8 @@ export function accountLedger({accounts,invoices,payments,refunds=[],credits=[],
    placementEarned:flatFee!=null?(holds.length||!(onboard>0)||!e.fullyPaid?0:flatFee):holds.length?0:round(Math.max(0,(collected-fees)*share)*(rate||0)/100),
    placementPending:flatFee!=null?(onboard>0&&!e.fullyPaid?flatFee:0):round(e.balance*share*(rate||0)/100),
    // 5.4: no residuals during the trial, so hours on his accounts earn him nothing.
-   residualEarned:flatFee!=null?0:!holds.some(h=>!/lead|method/i.test(h))&&e.fullyPaid?hour.hours:0,
-   residualPending:flatFee!=null?0:e.fullyPaid?0:hour.hours,lines:(inv.Line||[]).filter(l=>l.SalesItemLineDetail).map(l=>({item:l.SalesItemLineDetail.ItemRef?.name,quantity:l.SalesItemLineDetail.Qty,description:l.Description,amount:l.Amount}))};
+   residualEarned:noResidual?0:!holds.some(h=>!/lead|method/i.test(h))&&e.fullyPaid?hour.hours:0,
+   residualPending:noResidual?0:e.fullyPaid?0:hour.hours,lines:(inv.Line||[]).filter(l=>l.SalesItemLineDetail).map(l=>({item:l.SalesItemLineDetail.ItemRef?.name,quantity:l.SalesItemLineDetail.Qty,description:l.Description,amount:l.Amount}))};
   if(hour.review)row.holds.push('Some invoice lines are not confirmed hourly units');
   a.invoices.push(row);
   if(currency==='USD')for(const k of ['collected','residualEarned','residualPending','placementEarned','placementPending'])a[k]=round(a[k]+row[k]);

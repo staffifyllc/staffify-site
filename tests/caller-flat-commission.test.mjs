@@ -89,3 +89,45 @@ test('only a handle with a signed plan reads as flat', () => {
  assert.equal(flatOnboardingCommission(''),null);
  assert.equal(flatOnboardingCommission(undefined),null);
 });
+
+// ------------------------------------------------------------------
+// Paul, 2026-10-22: "commission also for folks from People who met us and did not buy should be a
+// flat $200." A lead source on the account, whoever re-closes it.
+import { LOST_DEAL_FEE, LOST_DEAL_SOURCE } from '../api/_account-commissions.js';
+
+const lostDeal = (rep, over = {}) => ({ customerId: '950', name: 'Back From The Dead Co', rep, source: LOST_DEAL_SOURCE, since: SINCE, ...over });
+
+test('a re-engaged lost deal pays a flat $200, not a percentage, whoever closes it', () => {
+    assert.equal(LOST_DEAL_FEE, 200);
+    for (const rep of ['madison', 'paul', 'milton']) {
+        const [a] = run([lostDeal(rep)], [invoice(1, 950, 2499)], [payment(10, 950, 1, 2499)]);
+        assert.equal(a.placementEarned, 200, rep);
+        assert.equal(a.invoices[0].rate, null, rep + ' is not paid a rate');
+        assert.equal(a.invoices[0].flatFee, 200, rep);
+    }
+});
+
+test('the $200 is owed only once the fee is collected in full, like every flat fee', () => {
+    const [part] = run([lostDeal('madison')], [invoice(1, 950, 2499, { balance: 1249.5 })], [payment(10, 950, 1, 1249.5)]);
+    assert.equal(part.placementEarned, 0);
+    assert.equal(part.placementPending, 200);
+});
+
+test('re-engaging a lost deal changes the commission, never a residual somebody is owed', () => {
+    // Madison earns $1 per Hubstaff hour. Paul set a flat commission, not a cut to her residuals.
+    const [madison] = run([lostDeal('madison')], [invoice(1, 950, 2499, { hours: 40 })], [payment(10, 950, 1, 2539)], { 1: { H1: 40 } });
+    assert.equal(madison.placementEarned, 200);
+    assert.equal(madison.residualEarned, 40, 'her residuals are untouched');
+    // Milton's trial plan pays no residuals at all (5.4), and that is still true on a lost deal.
+    const [milton] = run([lostDeal('milton')], [invoice(1, 950, 2499, { hours: 40 })], [payment(10, 950, 1, 2539)], { 1: { H1: 40 } });
+    assert.equal(milton.residualEarned, 0);
+});
+
+test('a normal account is untouched by the new source', () => {
+    const [house] = run([{ customerId: '902', name: 'John Reid', rep: 'madison', source: 'house', since: SINCE }], [invoice(2, 902, 2000)], [payment(11, 902, 2, 2000)]);
+    assert.equal(house.invoices[0].rate, 20);
+    assert.equal(house.placementEarned, 400);
+    const [milton] = run([milton_()], [invoice(3, 900, 2499)], [payment(12, 900, 3, 2499)]);
+    assert.equal(milton.placementEarned, 400, 'his sourced deals still pay the contract $400');
+});
+function milton_() { return { customerId: '900', name: 'Acme Media', rep: 'milton', source: '', since: SINCE }; }
