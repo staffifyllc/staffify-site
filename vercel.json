@@ -12,23 +12,23 @@
       "schedule": "*/15 * * * *"
     },
     {
-      "path": "/api/cron-disposition",
+      "path": "/api/cron-disposition/",
       "schedule": "0 14 * * 1"
     },
     {
-      "path": "/api/cron-optout",
+      "path": "/api/cron-optout/",
       "schedule": "15 * * * *"
     },
     {
-      "path": "/api/cron-nurture",
+      "path": "/api/cron-nurture/",
       "schedule": "30 14 * * *"
     },
     {
-      "path": "/api/cron-softyes-nurture",
+      "path": "/api/cron-softyes-nurture/",
       "schedule": "*/10 * * * *"
     },
     {
-      "path": "/api/pilot-sync",
+      "path": "/api/pilot-sync/",
       "schedule": "*/10 * * * *"
     },
     {
@@ -60,7 +60,7 @@
       "schedule": "7,22,37,52 * * * *"
     },
     {
-      "path": "/api/cron-number-research",
+      "path": "/api/cron-number-research/",
       "schedule": "5,35 * * * *"
     }
   ],
