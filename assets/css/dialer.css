@@ -24,7 +24,10 @@ body .dw-options select,body .dw-options input{width:100%}
 .dw-held{font-size:12.5px;color:#6e6e73;margin:0}
 
 /* ---- the three panes --------------------------------------------------------------------- */
-.dw-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+/* One column on a phone, in the order a caller needs it: who and the number, then the outcome,
+   then the talk track, then history. The areas must be named here too, or the grid-area on each
+   pane makes the browser invent empty columns and the panes land in the wrong order. */
+.dw-grid{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:'who' 'log' 'talk' 'hist';gap:18px;align-items:start}
 .dw-who{grid-area:who}.dw-talk{grid-area:talk}.dw-log{grid-area:log}.dw-hist{grid-area:hist}
 @media(min-width:900px){.dw-grid{grid-template-columns:minmax(0,1fr) 352px;grid-template-areas:'who log' 'talk log' 'hist log'}.dw-log{position:sticky;top:150px;max-height:calc(100vh - 166px);overflow:auto}}
 @media(min-width:1240px){.dw-grid{grid-template-columns:316px minmax(0,1fr) 360px;grid-template-areas:'who talk log' 'hist talk log'}}
