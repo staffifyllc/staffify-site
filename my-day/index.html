@@ -156,7 +156,15 @@ function promiseRow(it, now) {
             else if (ended) lead.append(el('b', 'Shift ended. '));
             lead.append(el('b', 'Calling from the Hub needs a running shift. '), document.createTextNode(((info.gate && info.gate.message) || '') + ' Notes and outcomes still save. '));
             const go = el('button', { start: 'Start shift', resume: 'Resume shift', end: 'End this shift' }[action], 'btn'); go.type = 'button'; go.id = 'shift-lead-action';
-            go.onclick = async () => { go.disabled = true; try { const r = await post('/api/shift/', { action, page: '/my-day/' }); draw(r, r.ended || null); if (window.__staffifyShift && window.__staffifyShift.refresh) window.__staffifyShift.refresh(); } catch (e) { go.disabled = false; go.textContent = e.message || 'Not changed'; } };
+            go.onclick = async () => {
+                go.disabled = true;
+                // Through the shared shift client when it is loaded, so the header and every other tab hear about it.
+                const shared = window.__staffifyShift;
+                try {
+                    if (shared && typeof shared[action] === 'function') { const r = await shared[action](); if (!r || !r.ok) throw Error((r && r.error) || 'Not changed'); const snap = shared.snapshot(); draw({ state: snap.state, gate: { message: snap.message }, shift: snap.shift }, r.ended || null); }
+                    else { const r = await post('/api/shift/', { action, page: '/my-day/' }); draw(r, r.ended || null); }
+                } catch (e) { go.disabled = false; go.textContent = e.message || 'Not changed'; }
+            };
             lead.append(go);
         };
         draw(shiftInfo, null);

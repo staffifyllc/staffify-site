@@ -6,19 +6,20 @@ import { makeDom } from './helpers/fake-dom.mjs';
 
 const SRC = readFileSync(new URL('../assets/js/hub-shift.js', import.meta.url), 'utf8');
 
-function boot({ required = true } = {}) {
+function boot({ required = true, failReads = false, known = null } = {}) {
     const dom = makeDom({ href: 'https://www.gostaffify.com/dialer/' });
     const { document } = dom;
     const header = document.createElement('header'); header.className = 'topbar portal-header'; document.body.append(header);
     let now = Date.parse('2026-10-23T20:00:00Z');
     class FakeDate extends Date { static now() { return now; } }
     // A small server with the same contract as api/shift.js.
-    let shift = null; const posts = []; let gets = 0;
+    let shift = null; const posts = []; let gets = 0; let slowNext = false;
+    if (known !== null) dom.localStorage.setItem('staffify-shift-required', known);
     const stateOf = () => { if (!shift) return 'off'; const b = shift.breaks.slice(-1)[0]; return b && !b.endedAt ? 'break' : 'on'; };
     const view = () => { const st = stateOf(); return { now: new FakeDate(now).toISOString(), required, state: st, gate: { required, state: st, allowed: !required || st === 'on', reason: st === 'on' ? null : st, message: st === 'on' ? null : st === 'break' ? 'You are on a break. Resume your shift to call.' : 'Start your shift to call.' }, shift, today: { list: shift ? [shift] : [] } }; };
     const ok = body => ({ ok: true, status: 200, json: async () => body });
     const fetch = async (url, opts = {}) => {
-        if (!opts.method) { gets++; return ok(view()); }
+        if (!opts.method) { gets++; if (failReads) throw new Error('offline'); if (slowNext) { const v = view(); slowNext = false; await new Promise(r => setTimeout(r, 40)); return ok(v); } return ok(view()); }
         const b = JSON.parse(opts.body); posts.push(b);
         if (b.action === 'start') { if (shift) return { ok: false, status: 409, json: async () => ({ error: 'A shift is already running, possibly from another tab or device.', reason: 'already_on_shift', ...view() }) }; shift = { id: 'sh1', startedAt: new FakeDate(now).toISOString(), breaks: [] }; }
         else if (b.action === 'break') shift.breaks.push({ startedAt: new FakeDate(now).toISOString(), endedAt: null });
@@ -31,7 +32,7 @@ function boot({ required = true } = {}) {
     class CustomEvent { constructor(type, init) { this.type = type; this.detail = init && init.detail; } }
     const run = () => new Function('window', 'document', 'fetch', 'location', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'Date', 'localStorage', 'CustomEvent', 'BroadcastChannel', SRC)(window, document, fetch, dom.location, setInterval, () => {}, () => 0, () => {}, FakeDate, dom.localStorage, CustomEvent, undefined);
     run();
-    return { dom, document, window, header, posts, get gets() { return gets; }, advance: ms => { now += ms; }, clockTick: () => intervals[1] && intervals[1](), poll: () => intervals[0] && intervals[0](), fire: (t, ev) => { for (const f of winListeners[t] || []) f(ev); }, rerun: run, server: () => ({ shift, state: stateOf() }) };
+    return { dom, document, window, header, posts, slow: () => { slowNext = true; }, get gets() { return gets; }, advance: ms => { now += ms; }, clockTick: () => intervals[1] && intervals[1](), poll: () => intervals[0] && intervals[0](), fire: (t, ev) => { for (const f of winListeners[t] || []) f(ev); }, rerun: run, server: () => ({ shift, state: stateOf() }) };
 }
 const settle = () => new Promise(r => setTimeout(r, 15));
 const bar = s => s.header.querySelector('.portal-shift');
@@ -124,4 +125,24 @@ test('the same early tap goes through once the read says the shift is running', 
     await settle();
     assert.equal(s.dom.location.href, 'tel:+15125550001', 'then dialled');
     assert.equal(s.document.getElementById('shift-gate'), null);
+});
+
+test('a failed read fails closed for a caller and offers to try again; an owner this browser knows stays open', async () => {
+    const s = boot({ failReads: true }); await settle();
+    const a = telLink(s);
+    assert.equal(clickTel(s, a), false, 'never told: blocked');
+    assert.match(s.dom.text(s.document.getElementById('shift-gate')), /Your shift could not be checked just now\..*Try again/);
+    const s2 = boot({ failReads: true, known: '1' }); await settle();
+    assert.equal(clickTel(s2, telLink(s2)), false, 'last seen as a caller: blocked');
+    const s3 = boot({ failReads: true, known: '0' }); await settle();
+    assert.equal(clickTel(s3, telLink(s3)), true, 'last seen as an owner: open');
+});
+
+test('a slow read sent before a press does not overwrite the press', async () => {
+    const s = boot(); await settle();
+    s.slow(); const pending = s.window.__staffifyShift.refresh();   // a poll goes out and hangs, reading "off"
+    await s.window.__staffifyShift.start();                         // the rep presses Start meanwhile
+    await pending;
+    assert.equal(s.window.__staffifyShift.state(), 'on', 'the older read was discarded');
+    assert.match(s.dom.text(bar(s)), /On shift/);
 });

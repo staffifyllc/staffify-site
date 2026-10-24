@@ -5,9 +5,10 @@ export async function openCallBrief(row,card,{text,action,next}={}){
   box.replaceChildren();const close=text('button','Close call brief');close.onclick=()=>{box.remove();const button=card.querySelector('[data-call-brief]');if(button)button.disabled=false;};box.append(close);box.append(text('h3','Call brief · Assigned to '+b.owner),text('p',b.name+' · '+b.company),text('p','Location: '+(b.location||'Not recorded in CRM')),text('p','Checked '+new Date(b.checkedAt).toLocaleString()));
   if(b.shiftGate&&b.shiftGate.required&&!b.shiftGate.allowed){
    // A caller off shift: the server kept the number back. Say why, and offer the press that fixes it.
-   const st=b.shiftGate.state,action=st==='break'?'resume':st==='stale'?'end':'start';
-   const g=text('p','Calling from the Hub needs a running shift. '+(b.shiftGate.message||'')+' Notes and outcomes still save.');const s=text('button',{start:'Start shift',resume:'Resume shift',end:'End this shift'}[action]);
-   s.onclick=async()=>{const api=window.__staffifyShift;if(!api){s.textContent='Reload the page to load the shift bar';return;}s.disabled=true;const r=await api[action]();if(r&&r.ok){box.remove();openCallBrief(row,card,{text,action,next});}else{s.disabled=false;s.textContent=(r&&r.error)||'Not changed';}};
+   // `press`, not `action`: action is the save function this brief was opened with.
+   const st=b.shiftGate.state,press=st==='break'?'resume':st==='stale'?'end':'start';
+   const g=text('p','Calling from the Hub needs a running shift. '+(b.shiftGate.message||'')+' Notes and outcomes still save.');const s=text('button',{start:'Start shift',resume:'Resume shift',end:'End this shift'}[press]);
+   s.onclick=async()=>{const api=window.__staffifyShift;if(!api){s.textContent='Reload the page to load the shift bar';return;}s.disabled=true;const r=await api[press]();if(r&&r.ok){box.remove();openCallBrief(row,card,{text,action,next});}else{s.disabled=false;s.textContent=(r&&r.error)||'Not changed';}};
    box.append(g,s);
   }
   else if(b.phone){const a=text('a','Open '+b.phone+' in calling app');a.href='tel:'+b.phone.replace(/[^+\d]/g,'');box.append(a);}else box.append(text('p','Phone not confirmed. This number needs research before calling; this prospect stays in the queue.'));

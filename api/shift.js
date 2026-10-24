@@ -24,6 +24,7 @@ const WHY = {
     still_running: 'That shift is still running and under 12 hours old. Only the rep can end it.', no_such_shift: 'That shift was not found.', note_required: 'A correction needs a note saying why.', bad_time: 'That is not a valid time.', before_start: 'A shift cannot end before it started.', cannot_lengthen: 'A correction can only shorten a shift.',
 };
 const EVENT = { start: 'shift_start', break: 'shift_break', resume: 'shift_resume', end: 'shift_end' };
+const etText = s => new Date(s).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET';
 
 async function view(rep, now) {
     const email = norm(rep.email);
@@ -100,7 +101,7 @@ export default async function handler(req, res) {
             await putLogged(redis, user, r.doc);
             if (fromCurrent) await redis.del(K.current(user));
             // An event on the rep's log so the change is visible to them, without counting as their presence.
-            await recordActivity(redis, { email: user, kind: 'shift_corrected', page: '/activity/', detail: 'End set to ' + r.doc.correctedEndedAt + ' by ' + me + ': ' + r.doc.corrections.slice(-1)[0].note, at: now, presence: false });
+            await recordActivity(redis, { email: user, kind: 'shift_corrected', page: '/activity/', detail: 'End set to ' + etText(r.doc.correctedEndedAt) + ' by ' + me + ': ' + r.doc.corrections.slice(-1)[0].note, at: now, presence: false });
             return res.status(200).json({ ok: true, shift: { ...r.doc, ...minutesOf(r.doc, now) }, archivedFromCurrent: fromCurrent });
         } catch (e) { return res.status(503).json({ error: 'Not saved: ' + String((e && e.message) || e).slice(0, 120) }); }
     }
@@ -113,7 +114,7 @@ export default async function handler(req, res) {
         if (!r.ok) return res.status(STATUS[r.error] || 409).json({ error: WHY[r.error] || r.error, reason: r.error, ...(await view(rep, now)) });
         const detail = action === 'end' && r.ended ? (r.ended.status === 'needs_review' ? 'Flagged: open more than 12 hours' : minutesOf(r.ended, now).clockedMinutes + ' min clocked') : r.archived ? 'Previous shift archived for review (never ended)' : null;
         await recordActivity(redis, { email: me, kind: EVENT[action], page, detail, at: now });
-        if (r.archived) await recordActivity(redis, { email: me, kind: 'shift_flagged', page, detail: 'Shift from ' + r.archived.startedAt + ' was never ended; archived for review', at: now });
+        if (r.archived) await recordActivity(redis, { email: me, kind: 'shift_flagged', page, detail: 'Shift from ' + etText(r.archived.startedAt) + ' was never ended; archived for review', at: now });
         return res.status(200).json({ ok: true, action, ...(await view(rep, now)), ended: r.ended ? { ...r.ended, ...minutesOf(r.ended, now) } : undefined, archived: r.archived || undefined });
     } catch (e) { return res.status(503).json({ error: 'Not saved: ' + String((e && e.message) || e).slice(0, 120) }); }
 }

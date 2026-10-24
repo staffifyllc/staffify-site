@@ -183,10 +183,11 @@ function renderWho(pane,row,b){
  else if(row.callOwner&&!row.mine){const d=el('div',null,'dw-due dw-info');d.append(el('b',row.callOwner),document.createTextNode(' owns this follow-up. You can still work it; the first outcome keeps its owner.'));pane.append(d);}
  // The number.
  const num=el('div',null,'dw-numblock');
+ cardGated=null;
  if(!b){num.append(el('div','Checking the number…','dw-numdetail'));}
- else if(p.shiftGate&&p.shiftGate.required&&!p.shiftGate.allowed){num.append(shiftGateBlock(row,b));}   // the server kept the number back
- else if(p.phone&&shiftBlocked(b)){num.append(shiftGateBlock(row,b));}                                  // the shift paused or ended after this card loaded
- else if(p.phone){
+ else if(p.shiftGate&&p.shiftGate.required&&!p.shiftGate.allowed){cardGated=true;num.append(shiftGateBlock(row,b));}   // the server kept the number back
+ else if(p.phone&&shiftBlocked(b)){cardGated=true;num.append(shiftGateBlock(row,b));}                                  // the shift paused or ended after this card loaded
+ else if(p.phone){cardGated=false;
   const trust=numberTrust(p.dial);
   num.append(link(p.phone,'tel:'+p.phone,'dw-num'));
   num.append(el('span',trust.word,'dw-trust '+trust.tone));
@@ -236,10 +237,17 @@ function shiftGateBlock(row,b){
  const box=el('div',null,'dw-due dw-shiftgate');box.id='shift-gate-card';
  const st=shiftState(b),action=st==='break'?'resume':st==='stale'?'end':'start';
  box.append(el('b','Calling from the Hub needs a running shift. '),document.createTextNode(shiftMessage(b)+' The number appears once your shift is running. Notes and outcomes still save.'));
- const btn=button({start:'Start shift',resume:'Resume shift',end:'End this shift'}[action],async()=>{const s=shiftApi();if(!s){toast('The shift bar has not loaded yet. Reload the page.',true);return;}btn.disabled=true;const r=await s[action]();if(!r||!r.ok){toast((r&&r.error)||'Could not change your shift.',true);btn.disabled=false;return;}if(current&&current.id===row.id)show(row);},'btn dw-primary');
+ const btn=button({start:'Start shift',resume:'Resume shift',end:'End this shift'}[action],async()=>{const s=shiftApi();if(!s){toast('The shift bar has not loaded yet. Reload the page.',true);return;}btn.disabled=true;const r=await s[action]();if(!r||!r.ok){toast((r&&r.error)||'Could not change your shift.',true);btn.disabled=false;}/* on success the staffify-shift event redraws the card */},'btn dw-primary');
  btn.id='shift-gate-action';box.append(btn);return box;
 }
+// Fired on every shift read (a minute poll, a focused tab, another tab's press). The card redraws
+// only when what it shows disagrees with the shift: gated while the shift runs, or a dial link
+// while it does not. A poll that changes nothing never resets the pane under the rep.
+// cardGated: true = the card shows the gate, false = it shows the number, null = nothing to switch.
+let cardGated=null;
 if(typeof window!=='undefined'&&typeof window.addEventListener==='function')window.addEventListener('staffify-shift',()=>{
+ if(cardGated===null||busy)return;
+ if(shiftBlocked(brief)===cardGated)return;
  if(!current||!whoPane||!whoPane.isConnected)return;
  const withheld=!!(brief&&brief.shiftGate&&brief.shiftGate.required&&!brief.shiftGate.allowed);
  if(withheld&&!shiftBlocked(brief)){refresh().catch(fail);return;}   // the shift started: re-read the queue (its numbers were withheld too) and the card

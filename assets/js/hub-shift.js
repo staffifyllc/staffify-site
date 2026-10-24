@@ -15,7 +15,11 @@
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.__staffifyShift) return;
   const API = '/api/shift/';
-  let data = null, fetchedAt = 0, bar = null, busy = false, firstLoad = null, loaded = false;
+  let data = null, fetchedAt = 0, bar = null, busy = false, firstLoad = null, loaded = false, seq = 0, pressSeq = 0;
+  // Whether this person needed a shift the last time the server said, so a failed read can fail
+  // closed for a caller without blocking an owner. Per browser; a convenience, not the gate.
+  const KNOWN = 'staffify-shift-required';
+  const knownRequired = () => { try { return localStorage.getItem(KNOWN); } catch { return null; } };
   const listeners = [];
   const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
   const pad = n => String(n).padStart(2, '0');
@@ -23,7 +27,9 @@
   const serverNow = () => (data && data.now ? Date.parse(data.now) + (Date.now() - fetchedAt) : Date.now());
   const state = () => (data ? data.state || 'off' : 'off');
   const required = () => !!(data && data.required);
-  const blocked = () => !!data && required() && state() !== 'on';
+  // No answer from the server (a failed read): blocked for anyone this browser last saw as a
+  // caller, open for anyone it last saw as an owner, blocked when it has never been told.
+  const blocked = () => (data ? required() && state() !== 'on' : loaded && knownRequired() !== '0');
   const message = () => (data && data.gate && data.gate.message) || 'Start your shift to call.';
   const shift = () => (data && data.shift) || null;
   function elapsed() { const s = shift(); if (!s) return 0; const n = serverNow(); let brk = 0; for (const b of s.breaks || []) brk += (b.endedAt ? Date.parse(b.endedAt) : n) - Date.parse(b.startedAt); return n - Date.parse(s.startedAt) - brk; }
@@ -32,18 +38,20 @@
   const emit = () => { const snap = snapshot(); for (const fn of listeners) { try { fn(snap); } catch {} } try { if (typeof CustomEvent === 'function' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new CustomEvent('staffify-shift', { detail: snap })); } catch {} };
 
   async function load() {
+    const mySeq = ++seq;
     try {
       const r = await fetch(API + '?me=1', { cache: 'no-store', credentials: 'same-origin' });
-      if (r.status === 401 || r.status === 400) { data = null; render(); return; }
+      if (r.status === 401 || r.status === 400) { data = null; try { localStorage.removeItem(KNOWN); } catch {} render(); return; }
       const j = await r.json();
-      if (r.ok && j && j.gate) { data = j; fetchedAt = Date.now(); }
+      // A press answered after this read was sent is newer than this read; keep the press.
+      if (r.ok && j && j.gate && mySeq > pressSeq) { data = j; fetchedAt = Date.now(); try { localStorage.setItem(KNOWN, j.required ? '1' : '0'); } catch {} }
     } catch { /* keep the last known state; the next poll tries again */ }
     loaded = true;
     render(); emit();
   }
   async function act(action) {
     if (busy) return { ok: false, reason: 'busy', error: 'Still saving the last change.' };
-    busy = true; render();
+    busy = true; pressSeq = ++seq; render();
     try {
       const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, page: (location.pathname || '/').slice(0, 120) }), credentials: 'same-origin' });
       const j = await r.json().catch(() => ({}));
@@ -81,6 +89,14 @@
     let box = document.getElementById('shift-gate');
     if (!box) { box = el('div', null, 'shift-gate'); box.id = 'shift-gate'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-label', 'Start your shift to call'); document.body.append(box); }
     box.replaceChildren();
+    if (!data) {
+      // The shift could not be read. Say so, and offer to try again rather than guessing.
+      box.append(el('b', 'Your shift could not be checked just now.'), el('span', 'Calling from the Hub needs a running shift. Check your connection and try again.'));
+      const again = el('button', 'Try again', 'ps-btn primary'); again.type = 'button';
+      again.onclick = async () => { again.disabled = true; await load(); if (blocked()) explain(anchor); else { box.remove(); if (anchor && anchor.getAttribute) location.href = anchor.getAttribute('href'); } };
+      const later0 = el('button', 'Not now', 'ps-btn'); later0.type = 'button'; later0.onclick = () => box.remove();
+      box.append(again, later0); return;
+    }
     box.append(el('b', 'Calling from the Hub needs a running shift.'), el('span', message()));
     const st = state();
     const action = st === 'break' ? 'resume' : st === 'stale' ? 'end' : 'start';
@@ -94,9 +110,7 @@
     const t = e.target; const a = t && typeof t.closest === 'function' ? t.closest('a') : null;
     const href = a ? a.getAttribute('href') || '' : '';
     if (!a || !/^tel:/i.test(href)) return;
-    // The first read has not answered yet: hold the click until it does, then call or explain. A
-    // read that fails leaves the link working, because the number a caller dials from the dialer is
-    // already withheld by the server off shift; this gate is the second lock, not the only one.
+    // The first read has not answered yet: hold the click until it does, then call or explain.
     if (!loaded) {
       e.preventDefault(); e.stopPropagation(); if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
       Promise.resolve(firstLoad).then(() => { if (blocked()) explain(a); else location.href = href; });

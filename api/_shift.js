@@ -102,6 +102,9 @@ export function correct(shift, { endedAt, note, by, at = Date.now() }) {
     const ceiling = ms(shift.endedAt || shift.archivedAt || iso(at));
     if (to < ms(shift.startedAt)) return { ok: false, error: 'before_start' };
     if (to > ceiling) return { ok: false, error: 'cannot_lengthen' };
+    // A shift that was never ended cannot be corrected past twelve hours: that is the most a shift
+    // can run before it is flagged, so a correction cannot produce more than a shift could.
+    if (!shift.endedAt && to - ms(shift.startedAt) > MAX_OPEN_MS) return { ok: false, error: 'cannot_lengthen' };
     const from = shift.correctedEndedAt || shift.endedAt || null;
     const entry = { by: norm(by), at: iso(at), field: 'endedAt', from, to: iso(to), note: String(note).trim().slice(0, 300) };
     return { ok: true, doc: { ...shift, correctedEndedAt: iso(to), status: 'corrected', corrections: [...(shift.corrections || []), entry] } };

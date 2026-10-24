@@ -150,7 +150,7 @@ const todayET = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York',
       for (const sh of d.shift.list) {
         const line = el('div');
         line.append(document.createTextNode(timeET(sh.startedAt) + ' to ' + endText(sh) + ' · ' + (needsOwner(sh) ? (sh.state === 'open_too_long' ? 'open for more than 12 hours, not yet ended' : 'needs review: ' + ((sh.flags || []).includes('never_ended') ? 'never ended' : 'open for more than 12 hours') + ', not counted') : mins(sh.clockedMinutes) + ' clocked' + (sh.state === 'open' ? ' so far' : ''))));
-        if ((sh.breaks || []).length) line.append(el('span', ' · breaks: ' + sh.breaks.map(b => timeET(b.startedAt) + ' to ' + (b.endedAt ? timeET(b.endedAt) : 'now')).join(', '), 'd'));
+        if ((sh.breaks || []).length) line.append(el('span', ' · breaks: ' + sh.breaks.map(b => timeET(b.startedAt) + ' to ' + (b.endedAt ? timeET(b.endedAt) : sh.state === 'open' ? 'now' : 'not ended')).join(', '), 'd'));
         if (owner && (sh.endedAt || sh.archivedAt || sh.state === 'open_too_long')) { const c = el('button', sh.state === 'needs_review' || sh.state === 'open_too_long' ? 'Set end time' : 'Correct end'); c.type = 'button'; c.style.marginLeft = '10px'; c.onclick = () => correctShift(d, sh); line.append(c); }
         sl.append(line);
         for (const k of sh.corrections || []) sl.append(el('p', 'Corrected by ' + k.by + ' on ' + new Date(k.at).toLocaleString() + ': end set to ' + timeET(k.to) + (k.from ? ' (was ' + timeET(k.from) + ')' : ' (had no end)') + '. ' + k.note, 'act-corr'));

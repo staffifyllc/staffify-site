@@ -62,3 +62,17 @@ test('recordActivity writes the event, the minute and the session, and refuses w
     assert.equal(await recordActivity({ async lpush() { throw new Error('down'); } }, { email: 'a@b.com', kind: 'call_outcome' }), false, 'a store failure never throws into the caller');
     assert.ok(MEASURED_TEXT.some(t => /not payroll/.test(t)) && MEASURED_TEXT.some(t => /never recorded/.test(t)));
 });
+
+test('a leave from one tab is resumed by the next signal inside the gap, so switching tabs does not cut the session', () => {
+    let r = sessionize(null, T('2026-10-23T20:00:00Z'));
+    r = sessionize(r.doc, T('2026-10-23T20:10:00Z'), { kind: 'leave' });
+    assert.equal(r.doc.current, null);
+    r = sessionize(r.doc, T('2026-10-23T20:11:00Z'));
+    assert.equal(r.started, false); assert.equal(r.resumed, true);
+    assert.equal(r.doc.current.start, '2026-10-23T20:00:00.000Z', 'the same session carries on');
+    assert.equal(r.doc.recent.length, 0, 'the leave is not kept as a separate session');
+    r = sessionize(r.doc, T('2026-10-23T20:20:00Z'), { kind: 'leave' });
+    r = sessionize(r.doc, T('2026-10-23T21:00:00Z'));
+    assert.equal(r.started, true, 'forty quiet minutes after a leave: a new session');
+    assert.equal(r.doc.recent[0].reason, 'left'); assert.equal(r.doc.recent[0].lastSeen, '2026-10-23T20:20:00.000Z');
+});

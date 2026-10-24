@@ -59,6 +59,16 @@ export function sessionize(doc, now, { kind = 'heartbeat', page = null } = {}) {
         if (d.current) { d.current.lastSeen = new Date(now).toISOString(); close(d.current, d.current.lastSeen, 'left'); }
         return { doc: d, started: false, ended: true };
     }
+    // A tab that was hidden or closed sends a leave; with two tabs open, the other one carries on.
+    // A signal inside the gap after a leave resumes that session instead of starting a new one, so
+    // elapsed time is not cut into pieces by switching tabs.
+    const last = d.recent[0];
+    if (!d.current && last && last.reason === 'left' && now - Date.parse(last.lastSeen) < SESSION_GAP_MS) {
+        d.recent = d.recent.slice(1);
+        const { endedAt, reason, ...resumed } = last;
+        d.current = { ...resumed, lastSeen: new Date(now).toISOString() };
+        return { doc: d, started: false, ended: false, resumed: true };
+    }
     if (!d.current) { d.current = { start: new Date(now).toISOString(), lastSeen: new Date(now).toISOString(), firstPage: page || null }; return { doc: d, started: true, ended: false }; }
     d.current.lastSeen = new Date(now).toISOString();
     return { doc: d, started: false, ended: false };
@@ -97,7 +107,7 @@ export function daysBetween(from, to) {
 /** What the page tells a rep is measured. One source for the UI and the docs. */
 export const MEASURED_TEXT = [
     'Active Hub time is an estimate. A minute counts as active when a Hub tab was visible and you interacted with it (click, key, scroll, touch) within the last five minutes. Two tabs or two devices in the same minute count once.',
-    'Idle time is time in a session with no interaction. Elapsed time is from the first sign of a session to the last; a session ends when you leave or after thirty quiet minutes.',
+    'Idle time is time in a session with no interaction. Elapsed time is from the first sign of a session to the last; a session ends after thirty quiet minutes. Closing or hiding a tab ends it only if nothing follows within those thirty minutes, so switching tabs does not cut it up.',
     'Recorded actions are the ones the Hub itself performed for you: a call outcome, notes saved, a task added or done, a callback scheduled, a text or overview sent, a page opened. The content of notes is never recorded. Nothing outside the Hub is seen: phone calls, email, other sites.',
     'This is not payroll and not proof of total work. Hubstaff remains the source for paid hours.',
 ];

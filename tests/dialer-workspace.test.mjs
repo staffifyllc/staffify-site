@@ -242,6 +242,11 @@ test('a caller off shift gets the card without the number; Start on the card bri
     assert.ok(document.getElementById('call-now'), 'the shift started: the number and the dial link are back');
     assert.match(dom2.text(document.body), /\+15125550002/);
     assert.ok(api2.calls.filter(c => c.url.startsWith('/api/outreach-call-brief/?id=r2')).length >= 2, 'the brief was fetched again once the shift ran');
+    // A poll that changes nothing does not redraw the pane under the rep.
+    const paneBefore = document.querySelector('.dw-who'); const callBefore = document.getElementById('call-now');
+    globalThis.window.dispatchEvent({ type: 'staffify-shift' }); globalThis.window.dispatchEvent({ type: 'staffify-shift' }); await tick(20);
+    assert.equal(document.getElementById('call-now'), callBefore, 'same dial link node: nothing was rebuilt');
+    assert.equal(document.querySelector('.dw-who'), paneBefore);
     // The shift pauses after the card loaded: the link goes, the card and the notes stay.
     document.getElementById('call-notes').value = 'Spoke to Priya';
     gated = true; globalThis.window.__staffifyShift.state = () => 'break'; globalThis.window.__staffifyShift.message = () => 'You are on a break. Resume your shift to call.';

@@ -89,3 +89,10 @@ test('the gate: callers need a running shift; owners and the admin token never d
     assert.ok(DECLARED_TEXT.some(t => /never deducted/.test(t)) && DECLARED_TEXT.some(t => /Hubstaff/.test(t)));
     assert.equal(K.current('Milton@TryStaffify.com'), 'shift:cur:milton@trystaffify.com');
 });
+
+test('a never-ended shift cannot be corrected past twelve hours', () => {
+    const forgotten = { id: 'sh-x', startedAt: '2026-10-23T20:00:00.000Z', endedAt: null, archivedAt: '2026-10-25T20:00:00.000Z', status: 'needs_review', breaks: [], day: '2026-10-23' };
+    assert.equal(correct(forgotten, { endedAt: '2026-10-24T09:00:00Z', note: 'x', by: 'a' }).error, 'cannot_lengthen', 'thirteen hours: refused');
+    assert.equal(correct(forgotten, { endedAt: '2026-10-24T08:00:00Z', note: 'x', by: 'a' }).ok, true, 'twelve hours: allowed');
+    assert.equal(minutesOf(forgotten).elapsedMinutes, 2880, 'an archived never-ended shift stops at its archive time, not now');
+});
