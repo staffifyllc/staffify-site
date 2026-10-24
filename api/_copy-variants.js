@@ -24,6 +24,21 @@ export const EXPLORE_SHARE = 0.2;  // the share every non-leading version keeps,
  */
 export const VARIANTS = Object.freeze({
     [CAMPAIGN_ID]: [
+        // Sent 2026-10-04 to 10-14 (commit d58f2e3), retired by 8bde9a5, and the best-measured opener
+        // on the live queue when this engine shipped: 9 replies from 367 sends, 2.5%, against 1.6%
+        // for the client-service opener that replaced it. Reinstated verbatim: changing a word
+        // would make that measurement somebody else's.
+        { id: 'conversational-2026-10-04', label: 'The work between shoots', subject: 'The work between shoots', since: '2026-10-04',
+          body: (owner, firstName) => {
+              const intro = owner === 'Madison'
+                  ? "I'm Madison with Staffify. I work with Paul, who runs Flylisted, a real estate media agency. We help owners hand off the work around their shoots."
+                  : "I'm Paul. I run Flylisted, a real estate media agency, and Staffify, where we help owners hand off the work around their shoots.";
+              return ['Hi ' + (firstName || 'there') + ',', intro,
+                  'One small thing you can try: keep photo revision requests in one shared list, with a person and a due date beside each change. It gives the team one place to check before anything comes back to you.',
+                  'We put together a few more practical handoffs here, if useful:\nhttps://www.gostaffify.com/blog/real-estate-photography-tasks-to-delegate/',
+                  'What tends to pull you away from running the business most: scheduling, revisions, or client follow-ups?',
+                  owner + '\nStaffify', "If you'd prefer no more emails, just let me know."].join('\n\n');
+          } },
         { id: INTRO_VERSION, label: 'Client service', subject: INTRO_SUBJECT, body: introduction, since: '2026-10-13' },
         {
             id: 'handoff-list-2026-10-23', label: 'Fifteen tasks', subject: '15 tasks to hand off after the shoot', since: '2026-10-23',
@@ -48,6 +63,17 @@ export const variantById = (campaignId, id) => variantsFor(campaignId).find(v =>
 
 const first = r => [...(r.events || [])].filter(e => e && e.kind === 'sent' && e.at).sort((a, b) => Date.parse(a.at) - Date.parse(b.at))[0] || null;
 const lower = s => String(s || '').toLowerCase().trim();
+// The subject a row was opened with, as a bucket key. Live data had a batch of 170 one-off subjects
+// ("A practical handoff for <Company>"), one per prospect, which made 170 buckets of one send each.
+// The company name is replaced with a placeholder so a personalised subject is one opener.
+export function subjectKey(subject, company) {
+    let s = lower(subject).replace(/^(re|fw|fwd):\s*/i, '').replace(/\s+/g, ' ');
+    const c = lower(company);
+    if (c && c.length >= 3 && s.includes(c)) s = s.split(c).join('{company}');
+    s = s.replace(/\bfor [^{].*$/, 'for {company}');   // "a practical handoff for sky visuals" -> one bucket
+    return 'subject:' + s.trim();
+}
+const FOLD_BELOW = 5;   // legacy subject buckets with fewer sends than this are shown as one line
 const WON = /closed ?won|customer|signed/i;
 
 /**
@@ -62,7 +88,7 @@ export function attribute(records, { campaignId = CAMPAIGN_ID, meetingsByEmail =
         if ((r.campaignId || CAMPAIGN_ID) !== campaignId) continue;
         const f = first(r);
         if (!f) continue;
-        const id = r.copyVersion || ('subject:' + lower(f.subject).replace(/^re:\s*/, ''));
+        const id = r.copyVersion || subjectKey(f.subject, r.company);
         if (!by.has(id)) by.set(id, { id, label: null, subject: (variantById(campaignId, id) || {}).subject || f.subject || null, sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: f.at, lastSent: f.at });
         const b = by.get(id);
         b.sends++;
@@ -73,10 +99,17 @@ export function attribute(records, { campaignId = CAMPAIGN_ID, meetingsByEmail =
         if (f.at < b.firstSent) b.firstSent = f.at;
         if (f.at > b.lastSent) b.lastSent = f.at;
     }
+    // Fold the long tail of one-off legacy subjects into a single honest line.
+    const small = [...by.values()].filter(b => b.id.startsWith('subject:') && b.sends < FOLD_BELOW);
+    if (small.length > 1) {
+        const fold = { id: 'subject:other', label: 'Other earlier subjects', subject: `${small.length} subjects, each sent fewer than ${FOLD_BELOW} times`, sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: null, lastSent: null };
+        for (const b of small) { fold.sends += b.sends; fold.replies += b.replies; fold.conversations += b.conversations; fold.meetings += b.meetings; fold.won += b.won; if (!fold.firstSent || b.firstSent < fold.firstSent) fold.firstSent = b.firstSent; if (!fold.lastSent || b.lastSent > fold.lastSent) fold.lastSent = b.lastSent; by.delete(b.id); }
+        by.set(fold.id, fold);
+    }
     const out = [...by.values()].map(b => {
         const v = variantById(campaignId, b.id);
         const enough = b.sends >= MIN_SENDS;
-        return { ...b, label: v ? v.label : (b.id.startsWith('subject:') ? 'Earlier copy' : b.id), active: !!v, enough,
+        return { ...b, label: v ? v.label : (b.label || (b.id.startsWith('subject:') ? 'Earlier copy' : b.id)), active: !!v, enough,
             replyRate: enough ? Math.round(1000 * b.replies / b.sends) / 10 : null,
             meetingRate: enough && meetingsByEmail ? Math.round(1000 * b.meetings / b.sends) / 10 : null,
             note: enough ? `${b.replies} of ${b.sends} replied` : `${b.sends} sent; a rate needs ${MIN_SENDS}` };
