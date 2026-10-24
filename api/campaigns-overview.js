@@ -15,6 +15,7 @@ import { withCallPhones } from './_outreach-call-phones.js';
 import { hubspotRequest } from './_outreach-hubspot.js';
 import { INDUSTRY_KEY } from './_campaign-industry.js';
 import { overview, industryView, campaignView } from './_campaigns-model.js';
+import { attribute } from './_copy-variants.js';
 
 const crm = async (path, body) => {
     const response = await hubspotRequest('https://api.hubapi.com' + path, {
@@ -74,7 +75,11 @@ export default async function handler(req, res) {
             const id = String(q.campaign || '').trim();
             if (!id) return res.status(400).json({ error: 'Which campaign?' });
             if (!records.some(r => r.campaignId === id)) return res.status(404).json({ error: 'No campaign with that id is in the queue.' });
-            const out = { view, builtAt: new Date().toISOString(), ...campaignView(records, id, stated), notes };
+            // Which opener is earning replies. Meetings come from the lost-deals Calendly cache when it is
+            // warm; without it the meeting column is withheld rather than shown as zero.
+            let meetingsByEmail = null;
+            try { const ld = await redis.get('staffify:lost-deals:v2'); if (ld && Array.isArray(ld.toCall)) meetingsByEmail = new Set([...ld.toCall, ...((ld.excluded && ld.excluded.alreadyClients) || []), ...(ld.noShows || [])].map(p => String(p.email || '').toLowerCase()).filter(Boolean)); } catch { meetingsByEmail = null; }
+            const out = { view, builtAt: new Date().toISOString(), ...campaignView(records, id, stated), copy: attribute(records, { campaignId: id, meetingsByEmail }), notes };
             await redis.set(cacheKey, out, { ex: 120 }).catch(() => {});
             return res.status(200).json(out);
         }

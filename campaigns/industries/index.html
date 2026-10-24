@@ -416,6 +416,17 @@ function renderCampaign(d) {
   }
   rp.append(rb); main.append(rp);
 
+  // Which opener is winning. Measured, not asserted: a rate is withheld below the minimum.
+  if (d.copy && d.copy.variants && d.copy.variants.length) {
+    const cb = el('section', null, 'block'); cb.append(el('h2', 'Which opener is winning'));
+    cb.append(el('p', d.copy.leader ? `New prospects get the leading opener ${Math.round((1 - d.copy.exploreShare) * 100)}% of the time; the rest rotate so a new one can prove itself. A rate needs ${d.copy.minSends} sends.` : `No opener has ${d.copy.minSends} sends yet, so new prospects rotate evenly between them.`, 'sub'));
+    const tbl = el('table'); const th = el('tr'); for (const h of ['Opener', 'Sent', 'Replied', 'Conversations', 'Meetings', 'Won', 'In use']) th.append(el('th', h)); tbl.append(th);
+    for (const v of d.copy.variants) { const tr = el('tr'); const name = el('td'); name.append(el('strong', v.label || v.id)); if (v.subject) name.append(el('div', v.subject, 'sub')); if (v.id === d.copy.leader) name.append(el('span', 'Leading', 'chip')); tr.append(name);
+      tr.append(el('td', n(v.sends)), el('td', v.replyRate == null ? v.note : `${v.replyRate}% · ${v.replies} of ${v.sends}`), el('td', n(v.conversations)), el('td', v.meetingRate == null ? (meetingsKnown(d) ? n(v.meetings) : '—') : `${v.meetings} (${v.meetingRate}%)`), el('td', n(v.won)), el('td', v.active ? (v.lastSent ? 'Yes · last ' + new Date(v.lastSent).toLocaleDateString() : 'Yes · not sent yet') : 'Retired'));
+      tbl.append(tr); }
+    cb.append(tbl); app.append(cb);
+  }
+  function meetingsKnown(d) { return d.copy.variants.some(v => v.meetingRate != null) || d.copy.variants.some(v => v.meetings > 0); }
   // The sequence, readable in full.
   const sp = el('section', null, 'panel');
   const sh = el('div', null, 'panel-h'); sh.append(el('h2', 'What they received')); sp.append(sh);

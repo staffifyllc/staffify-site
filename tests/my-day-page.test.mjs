@@ -19,7 +19,7 @@ const file = join(mkdtempSync(join(tmpdir(), 'myday-')), 'my-day.mjs');
 writeFileSync(file, SRC.replace(/from '\/assets\/js\//g, `from '${assets}`));
 
 const hourAgo = new Date(Date.now() - 3600000).toISOString();
-const inTwoHours = new Date(Date.now() + 7200000).toISOString();
+const inTwoHours = new Date(Date.now() + 5 * 60000).toISOString();   // minutes out, so it is still today in an evening run
 const rec = (id, over) => ({ id, company: 'Co ' + id, recipient: id + '@x.com', campaignId: 'staffify-agency-outreach', callReady: true, unclaimed: true, lastSentAt: '2026-10-01T12:00:00Z', sentTouches: 4,
     callContact: { phone: '+1512555000' + id.replace(/\D/g, ''), phoneStatus: 'available' }, callHistory: [], ...over });
 const QUEUE = { viewer: ME, records: [
@@ -27,7 +27,7 @@ const QUEUE = { viewer: ME, records: [
     rec('r2', { company: 'Loft & Light', callOwner: ME, unclaimed: false, dueForMe: true, callOutcome: 'callback', nextCallAt: hourAgo, callHistory: [{ at: hourAgo, outcome: 'callback', notes: 'after lunch', caller: ME, nextCallAt: hourAgo }] }),
     rec('r3', { company: 'Eastside Pics', callOwner: ME, unclaimed: false, callReady: false, callOutcome: 'voicemail', nextCallAt: inTwoHours, callHistory: [{ at: hourAgo, outcome: 'voicemail', notes: 'left one', caller: ME, nextCallAt: inTwoHours }] }),
     rec('r4', { company: 'Zenoti', campaignId: 'staffify-tobit-outreach', industry: { key: 'software', label: 'Software and security' } }),
-], tasks: [{ id: 't1', title: 'Send pricing', dueAt: new Date(Date.now() + 3600000).toISOString(), doneAt: null, company: 'Loft & Light', recordId: 'r2' }] };
+], tasks: [{ id: 't1', title: 'Send pricing', dueAt: new Date(Date.now() + 2 * 60000).toISOString(), doneAt: null, company: 'Loft & Light', recordId: 'r2' }] };
 
 test('the first panel is Right now: the overdue callback, then the task and the later one, then the next card', async () => {
     const dom = makeDom({ href: 'https://www.gostaffify.com/my-day/' }); const restore = install(dom);

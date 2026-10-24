@@ -1,5 +1,6 @@
 import {CAMPAIGN_ID} from './_outreach-campaign.js';
 import {introduction,INTRO_SUBJECT,INTRO_VERSION} from './_outreach-copy.js';
+import {attribute,chooseVariant,openerFor} from './_copy-variants.js';
 import {supplyOwner} from './_outreach-inventory.js';
 import {redis,listReps} from './_auth.js';
 import {hubspotRequest} from './_outreach-hubspot.js';
@@ -21,6 +22,8 @@ export async function supply(state,cfg){
  if(!reserved.length&&!priority.length)state.supplyCursor=page.paging?.next?.after||null;state.supplyCheckedAt=now;let added=0;
  for(const row of reserved){row.qualificationCheckedAt=now;row.qualificationReason='CRM record not found';}
 
+ // The opener each new prospect gets is chosen from what the openers already sent have earned.
+ const copyStats=attribute(state.records);
  for(const c of page.results||[]){const p=c.properties,email=String(p.email||'').toLowerCase();const existing=state.records.find(r=>r.recipient===email);if(existing&&reserved.includes(existing))existing.qualificationReason='Missing company or website, duplicate company, or ineligible state';if(!email||!p.company||!p.website||existing&&!['awaiting_qualification','reserved_for_madison_external','mailbox_connection_required'].includes(existing.status)||state.records.some(r=>r.recipient!==email&&r.company?.toLowerCase()===p.company.toLowerCase()))continue;if(existing&&(existing.sentTouches||(existing.events||[]).some(e=>e.kind==='sent')||existing.draftId&&!existing.cloudHeld))continue;
   const assigned=state.assignments.find(a=>a.email===email);const owner=supplyOwner({assigned,existing,crmOwnerId:p.hubspot_owner_id,reps,id:c.id});if(!owner||state.pausedOwners.includes(owner)||state.suppressions.includes(email))continue;const senders=cfg.accounts.filter(a=>a.owner===owner&&a.brand==='Staffify'&&a.draftEnabled);if(!senders.length)continue;const sender=senders[state.records.filter(r=>r.owner===owner).length%senders.length].email;
   const row={campaignId:CAMPAIGN_ID,id:existing?.id||'cloud-'+c.id,hubspotId:c.id,recipient:email,company:p.company,owner,sender,sentTouches:0,status:'prepared',createdAt:new Date().toISOString()};
@@ -28,7 +31,7 @@ export async function supply(state,cfg){
   const m=/real[ -]estate.{0,50}(photograph|videograph|media)|(?:property|architectural) photography/i.exec(evidence.text);if(!m){if(existing)existing.qualificationReason='Website does not establish real estate media services';continue;}
   const agencyKey=new URL(evidence.url).hostname.replace(/^www\./,'');if(state.assignments.some(a=>a.agencyKey===agencyKey&&a.email!==email)||state.records.some(r=>r.agencyKey===agencyKey&&r.recipient!==email))continue;
   const first=p.firstname&&evidence.text.toLowerCase().includes(p.firstname.toLowerCase())&&evidence.text.toLowerCase().includes(email)?p.firstname:'there';
-  Object.assign(row,{agencyKey,verifiedFirstName:first==='there'?null:first,qualificationApproved:true,copyVersion:INTRO_VERSION,subject:INTRO_SUBJECT,bodyText:introduction(owner,first==='there'?null:first),source:{url:evidence.url,checkedAt:new Date().toISOString(),excerpt:evidence.text.slice(Math.max(0,m.index-60),m.index+160)}});
+  Object.assign(row,{agencyKey,verifiedFirstName:first==='there'?null:first,qualificationApproved:true,...openerFor(chooseVariant(copyStats)||{id:INTRO_VERSION,subject:INTRO_SUBJECT,body:introduction},owner,first==='there'?null:first),source:{url:evidence.url,checkedAt:new Date().toISOString(),excerpt:evidence.text.slice(Math.max(0,m.index-60),m.index+160)}});
   if(existing){Object.assign(existing,{legacyMailbox:{sender:existing.sender,threadId:existing.threadId,draftId:existing.draftId,messageId:existing.messageId,events:existing.events||[],status:existing.status},threadId:null,draftId:null,messageId:null,events:[],cloudHeld:false,verifiedSentTouches:0,lastSentAt:null,nextEligibleAt:null,callReady:false,qualificationCheckedAt:now,qualificationReason:'Approved for connected mailbox'},row);}else state.records.push(row);if(!assigned)state.assignments.push({hubspotId:c.id,email,company:p.company,agencyKey,owner,reservedAt:new Date().toISOString()});added++;
  }
  const rejected=priority.filter(email=>!state.records.some(r=>r.recipient===email));if(rejected.length)await redis.srem('staffify:lead-prep:ready',...rejected);
