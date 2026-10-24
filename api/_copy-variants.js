@@ -133,7 +133,9 @@ export function attribute(records, { campaignId = CAMPAIGN_ID, meetingsByEmail =
     });
     // Every variant on offer appears even before its first send, so the page shows it is in rotation.
     for (const v of variantsFor(campaignId)) if (!out.some(o => o.id === v.id)) out.push({ id: v.id, label: v.label, subject: typeof v.subject === 'function' ? v.subject('{company}') : v.subject, sends: 0, replies: 0, conversations: 0, meetings: 0, won: null, firstSent: null, lastSent: null, active: true, enough: false, replyRate: null, meetingRate: null, note: 'Not sent yet' });
-    out.sort((a, b) => (b.replyRate ?? -1) - (a.replyRate ?? -1) || b.sends - a.sends);
+    // Rank: reply rate, then meetings, then conversations, then evidence. A tie on replies is
+    // broken by what happened after the reply, which is the part that pays.
+    out.sort((a, b) => (b.replyRate ?? -1) - (a.replyRate ?? -1) || b.meetings - a.meetings || b.conversations - a.conversations || b.sends - a.sends);
     const leader = out.find(o => o.active && o.enough) || null;
     return { campaignId, variants: out, leader: leader ? leader.id : null, minSends: MIN_SENDS, exploreShare: EXPLORE_SHARE, computedAt: new Date(now).toISOString() };
 }

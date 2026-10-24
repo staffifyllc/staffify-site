@@ -107,3 +107,14 @@ test('a personalised subject renders with the company and falls back when there 
     assert.match(openerFor(v, 'Madison', null, 'X').bodyText, /^Hi there,\n\nI'm Madison with Staffify/);
     assert.equal(attribute([], { campaignId: CAMPAIGN_ID }).variants.find(x => x.id === v.id).subject, 'A practical handoff for {company}');
 });
+
+test('a tie on reply rate is broken by meetings, then conversations, not by send count', () => {
+    const mk = (id, n, replies, { holds = 0, meet = [] } = {}) => Array.from({ length: n }, (_, i) => ({ id: id + i, campaignId: CAMPAIGN_ID, recipient: `${id}${i}@x.com`, copyVersion: id, status: i < holds ? 'human_reply_hold' : 'sent',
+        events: [{ kind: 'sent', at: '2026-10-05T12:00:00Z' }, ...(i < replies ? [{ kind: 'received', at: '2026-10-06T12:00:00Z' }] : [])] }));
+    const rows = [...mk('conversational-2026-10-04', 100, 2), ...mk(INTRO_VERSION, 50, 1, { holds: 1 })];
+    const meetings = new Map([[INTRO_VERSION + '0@x.com', '2026-10-10T12:00:00Z']]);
+    const s = attribute(rows, { campaignId: CAMPAIGN_ID, meetingsByEmail: meetings });
+    const [a, b] = s.variants;
+    assert.equal(a.replyRate, 2); assert.equal(b.replyRate, 2);
+    assert.equal(s.leader, INTRO_VERSION, 'equal reply rates: the one with a meeting leads, despite fewer sends');
+});
