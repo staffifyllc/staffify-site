@@ -36,7 +36,7 @@ test('attribution: by copy version, with the subject as the fallback for older r
     const s = attribute(records, { campaignId: CAMPAIGN_ID, meetingsByEmail: new Set(['p0@x.com', 'p100@x.com']) });
     const a = s.variants.find(v => v.id === INTRO_VERSION), b = s.variants.find(v => v.id === B), old = s.variants.find(v => v.id.startsWith('subject:'));
     assert.equal(a.sends, 50); assert.equal(a.replies, 3); assert.equal(a.replyRate, 6); assert.equal(a.meetings, 1); assert.equal(a.meetingRate, 2); assert.equal(a.enough, true);
-    assert.equal(b.sends, 10); assert.equal(b.replyRate, null); assert.match(b.note, /needs 40/); assert.equal(b.meetings, 1);
+    assert.equal(b.sends, 10); assert.equal(b.replyRate, null); assert.match(b.note, /needs 30/); assert.equal(b.meetings, 1); assert.equal(b.won, null, 'won is not measured, so it is unknown');
     assert.equal(old.sends, 5); assert.equal(old.label, 'Earlier copy'); assert.equal(old.active, false); assert.equal(old.subject, 'Same feedback, every video?', 'normalised: no Re:, first letter up');
     assert.equal(s.leader, INTRO_VERSION, 'the only version with enough sends leads');
     assert.ok(!s.variants.some(v => v.id === 'ceo'), 'another campaign is not counted');
@@ -79,6 +79,25 @@ test('a personalised subject is one opener, not one bucket per company, and the 
     assert.equal(other.sends, 6); assert.equal(other.label, 'Other earlier subjects'); assert.match(other.subject, /3 subjects/);
     assert.ok(!s.variants.some(v => v.id === 'subject:same feedback, every video?'), 'the tiny buckets are folded, not listed');
     assert.equal(s.leader, null, 'a retired opener never leads');
+});
+
+test('a reply is a human writing back: bounces and auto-replies do not count, deal follow-ups are not openers, meetings must follow the opener', () => {
+    const base = (i, over) => ({ id: 'q' + i, campaignId: CAMPAIGN_ID, recipient: `q${i}@x.com`, copyVersion: INTRO_VERSION, status: 'sent', events: [{ kind: 'sent', at: '2026-10-05T12:00:00Z', subject: 'x' }], ...over });
+    const rows = [
+        ...Array.from({ length: 30 }, (_, i) => base(i)),
+        base(100, { events: [{ kind: 'sent', at: '2026-10-05T12:00:00Z' }, { kind: 'received', at: '2026-10-06T12:00:00Z' }], status: 'bounce_hold' }),
+        base(101, { events: [{ kind: 'sent', at: '2026-10-05T12:00:00Z' }, { kind: 'received', at: '2026-10-06T12:00:00Z' }], status: 'auto_reply_hold' }),
+        base(102, { events: [{ kind: 'sent', at: '2026-10-05T12:00:00Z' }], status: 'human_reply_hold' }),
+        base(103, { events: [{ kind: 'sent', at: '2026-10-05T12:00:00Z' }, { kind: 'received', at: '2026-10-06T12:00:00Z' }] }),
+        base(200, { lane: 'deal_followup', dealStage: 'Closed won', events: [{ kind: 'sent', at: '2026-10-05T12:00:00Z' }, { kind: 'received', at: '2026-10-06T12:00:00Z' }] }),
+    ];
+    const meetings = new Map([['q0@x.com', '2026-10-09T15:00:00Z'], ['q1@x.com', '2026-09-01T15:00:00Z']]);   // one after the opener, one before
+    const s = attribute(rows, { campaignId: CAMPAIGN_ID, meetingsByEmail: meetings });
+    const a = s.variants.find(v => v.id === INTRO_VERSION);
+    assert.equal(a.sends, 34, 'the deal follow-up row is not an opener');
+    assert.equal(a.replies, 2, 'the human reply with no event and the plain received reply count; the bounce and the auto-reply do not');
+    assert.equal(a.meetings, 1, 'only the meeting booked after the opener counts');
+    assert.equal(a.won, null);
 });
 
 test('a personalised subject renders with the company and falls back when there is none', () => {

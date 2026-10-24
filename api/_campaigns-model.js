@@ -205,10 +205,15 @@ export function campaignView(records, campaignId, stated = {}, now = Date.now())
 
     // What they received: the first email and the follow-ups, taken from one representative record
     // that has them, since the copy is the same across the campaign except for the name.
+    // Openers rotate now, so email 1 is one entry per opener actually on the campaign, most-sent first.
     const withCopy = list.find(r => r.bodyText && r.followupBodies && typeof r.followupBodies === 'object') || list.find(r => r.bodyText);
     const sequence = [];
+    const openers = new Map();
+    for (const r of list) { if (!r.bodyText) continue; const k = r.copyVersion || String(r.subject || '').toLowerCase(); const o = openers.get(k) || { subject: r.subject || null, body: r.bodyText, copyVersion: r.copyVersion || null, prospects: 0 }; o.prospects++; openers.set(k, o); }
+    const ranked = [...openers.values()].sort((a, b) => b.prospects - a.prospects).slice(0, 4);
     if (withCopy) {
-        sequence.push({ n: 1, subject: withCopy.subject || null, body: withCopy.bodyText });
+        if (ranked.length) for (const o of ranked) sequence.push({ n: 1, subject: o.subject, body: o.body, copyVersion: o.copyVersion, prospects: o.prospects, variant: ranked.length > 1 });
+        else sequence.push({ n: 1, subject: withCopy.subject || null, body: withCopy.bodyText });
         const follow = withCopy.followupBodies && typeof withCopy.followupBodies === 'object'
             ? Object.entries(withCopy.followupBodies).sort((a, b) => String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true })) : [];
         follow.forEach(([, body], i) => sequence.push({ n: i + 2, subject: null, body }));

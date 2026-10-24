@@ -233,6 +233,6 @@ export default async function handler(req, res) {
         ...out, instagram: ig, evidence: ev, identity: idn, backlog: due.length, ranAt: new Date().toISOString(),
         note: 'A record that gained a number is promoted on the next queue read, where call eligibility is recomputed in full. Nothing is promoted past the four-email rule or the exclusions.',
     };
-    try { await redis.set(LAST_RUN_KEY, { ...summary, failures: (summary.failures || []).slice(0, 8) }, { ex: 7 * 86400 }); } catch { /* the response still reports */ }
+    try { await redis.set(LAST_RUN_KEY, { ...summary, failureCount: (summary.failures || []).length, failures: (summary.failures || []).slice(0, 8) }, { ex: 7 * 86400 }); } catch { /* the response still reports */ }
     return res.status(200).json(summary);
 }

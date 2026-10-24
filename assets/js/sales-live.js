@@ -21,7 +21,7 @@
  // Calls, from Quo. Rendered from the last answer at once so the panel never blanks on a refresh,
  // then refreshed in the background. A Quo failure is shown as a failure, never as zero calls.
  // The machine: each lane, running or blocked, and what unblocks it. Then the money and the opener.
- const machine=el('section',undefined,'so-calls');root.append(machine);renderMachine(machine,machineHeld);loadMachine(machine);
+ const machine=el('section',undefined,'so-calls');root.append(machine);renderMachine(machine,machineHeld);if(!machineHeld||Date.now()-(machineHeld.at||0)>300000)loadMachine(machine);
  const calls=el('section',undefined,'so-calls');root.append(calls);renderCalls(calls,callsHeld);loadCalls(calls);
  if(sends.length){root.append(el('h3','Latest sends'));for(const s of sends.slice(0,5)){const item=el('p',undefined,'so-receipt');item.append(el('strong',s.company||'Agency'),el('span',s.owner+' · '+new Date(s.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+' · '+s.subject));root.append(item);}}else root.append(el('p','No tracked sends recorded today.'));
  const detail=el('details');detail.append(el('summary','Data and daily limits'),el('p','Source: verified Gmail communication records, shared with Outreach review. Tracked Staffify mailboxes only; Foundry and excluded historical mailboxes are not included.'),el('p','Paul: 50 new introductions per Staffify mailbox daily, plus due follow-ups. Madison: 50 new prospect emails per Staffify mailbox daily (200 across four mailboxes), plus due follow-ups. Replies and client correspondence do not count toward new-prospect quotas. No combined daily cap is shown because follow-ups are additional for both owners.'),el('p','Last cloud check: '+(cfg.lastRun?.finishedAt?new Date(cfg.lastRun.finishedAt).toLocaleString():'unavailable')));root.append(detail);
@@ -33,7 +33,7 @@
   out.copy=co.status==='fulfilled'?co.value.copy:null;
   out.finance=fin.status==='fulfilled'?fin.value:null;
   out.pipeline=pipe.status==='fulfilled'?pipe.value:null;
-  if(!node.isConnected)return;machineHeld=out;renderMachine(node,out);
+  if(!node.isConnected)return;out.at=Date.now();machineHeld=out;renderMachine(node,out);
  }
  function renderMachine(node,data){
   node.replaceChildren(el('h3','The machine'));
@@ -52,7 +52,7 @@
   if(money.length){const g=el('div',undefined,'so-grid so-grid-calls');for(const [v,l] of money){const c=el('div',undefined,'so-card');c.append(el('strong',v),el('span',l));g.append(c);}node.append(g);}
   // The opener that is earning replies, from the campaign's own numbers.
   const c=data.copy;if(c&&c.variants){const lead=c.variants.find(v=>v.id===c.leader);
-   node.append(el('p',lead?('New prospects get “'+(lead.subject||lead.label)+'”: '+lead.replyRate+'% replied ('+lead.note+'). The other '+(c.variants.filter(v=>v.active&&v.id!==c.leader).length===1?'opener keeps':'openers share')+' '+Math.round(c.exploreShare*100)+'% so they can prove themselves.'):('Openers are rotating evenly until one reaches '+c.minSends+' sends: '+c.variants.map(v=>(v.label||v.id)+' '+v.sends+' sent').join(' · ')+'.'),'so-muted so-small'));}
+   node.append(el('p',lead?('New prospects get “'+(lead.subject||lead.label)+'”: '+lead.replyRate+'% replied ('+lead.replies+' of '+lead.sends+'). The other '+(c.variants.filter(v=>v.active&&v.id!==c.leader).length===1?'opener keeps':'openers share')+' '+Math.round(c.exploreShare*100)+'% so they can prove themselves.'):('Openers are rotating evenly until one reaches '+c.minSends+' sends: '+c.variants.map(v=>(v.label||v.id)+' '+v.sends+' sent').join(' · ')+'.'),'so-muted so-small'));}
  }
  // Paul, 2026-10-22: "how many calls have been made ... talk times, new calls, follow up calls".
  // Team view where the viewer may read it; a caller who may not (403) is shown his own seat.

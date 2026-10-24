@@ -32,6 +32,15 @@ export function followup(record) {
  if(record.campaignId===TALENT_ID)return talentFollowup(record);
  if(record.campaignId===TOBIT_ID)return tobitFollowup(record);
  if(record.lane==='deal_followup')return dealEmail(record,record.sentTouches);
+ // The "15 tasks" opener promised the list with no call required. Its first follow-up delivers
+ // the list and keeps that promise; the later touches are the shared ones.
+ if(record.sentTouches===1&&/^handoff-list-/.test(String(record.copyVersion||''))){
+  return ['Hey '+(record.verifiedFirstName||'there')+',',
+   'Here is the list I mentioned, in case the reply got lost in the shuffle:\nhttps://www.gostaffify.com/blog/real-estate-photography-tasks-to-delegate/',
+   'If a few of those are still landing on you, I am happy to walk through what handing them off looks like in practice. No call needed; a reply here works fine.',
+   (record.owner==='Madison'?'Madison':'Paul')+'\nStaffify',
+   'If you’d like me to kick rocks and leave you alone, just say so :)'].join('\n\n');
+ }
  if(record.sentTouches===1){
   const experience=record.owner==='Madison'
    ? 'I’d love to get to know you and hear what you’re building. Paul, our founder, built his own real estate media agency to seven figures. We’d be happy to share some game on what worked, including a few things he’d definitely skip the second time around.'

@@ -2,7 +2,9 @@
 // Live Calendly bookings for the sales pipeline: last 30 days + upcoming 45 days.
 // Env: CALENDLY_API_TOKEN, plus ADMIN_TOKEN or CRON_SECRET for auth.
 
+import { redis, requireAccess } from './_auth.js';
 const USER_URI = 'https://api.calendly.com/users/7b9e76a9-050c-436f-b226-719606dc462c';
+const CACHE = 'staffify:pipeline:bookings:v1', CACHE_SECONDS = 300;
 
 async function cget(url, token) {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -11,7 +13,10 @@ async function cget(url, token) {
 }
 
 export default async function handler(req, res) {
-    // open-share: live Calendly bookings, no login required
+    // Signed-in only, and held for five minutes: Today polls this, and Calendly is not a free read.
+    res.setHeader('Cache-Control', 'private, no-store');
+    if (!(await requireAccess(req))) return res.status(401).json({ error: 'Sign in to your Staffify account' });
+    try { const held = await redis.get(CACHE); if (held && held.builtAt && Date.now() - Date.parse(held.builtAt) < CACHE_SECONDS * 1000) return res.status(200).json({ ...held, cached: true }); } catch { /* read live */ }
     const token = process.env.CALENDLY_API_TOKEN;
     if (!token) return res.status(500).json({ error: 'calendly_not_configured' });
     try {
@@ -44,7 +49,9 @@ export default async function handler(req, res) {
             });
         });
         res.setHeader('Cache-Control', 'no-store');
-        return res.status(200).json({ count: rows.length, window: { min, max }, bookings: rows });
+        const payload = { count: rows.length, window: { min, max }, bookings: rows, builtAt: new Date().toISOString() };
+        try { await redis.set(CACHE, payload, { ex: CACHE_SECONDS }); } catch { /* the answer still goes out */ }
+        return res.status(200).json(payload);
     } catch (e) {
         return res.status(502).json({ error: 'calendly_error', detail: String(e.message || e) });
     }

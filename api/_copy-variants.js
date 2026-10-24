@@ -14,8 +14,9 @@
 // evenly. A version that wins keeps winning only while it keeps winning.
 import { INTRO_SUBJECT, INTRO_VERSION, introduction } from './_outreach-copy.js';
 import { CAMPAIGN_ID } from './_outreach-campaign.js';
+import { SAMPLE_FLOOR } from './_campaign-industry.js';
 
-export const MIN_SENDS = 40;       // below this a rate is noise, and the chooser rotates
+export const MIN_SENDS = SAMPLE_FLOOR;   // one evidence floor for the whole campaign screen (30)
 export const EXPLORE_SHARE = 0.2;  // the share every non-leading version keeps, so it can prove itself
 
 /**
@@ -53,8 +54,8 @@ export const VARIANTS = Object.freeze({
                     ? 'Paul, our founder, built Flylisted into a seven-figure real estate media agency, and the turning point was handing that list to one person whose whole job is the back end.'
                     : 'I built Flylisted into a seven-figure real estate media agency, and the turning point was handing that list to one person whose whole job is the back end.';
                 return ['Hey ' + (firstName || 'there') + ',',
-                    'The shoot is the easy part. The next three hours are the problem: culling, uploading, chasing the agent for tomorrow’s lockbox code, answering “can you brighten the kitchen?”, sending the invoice, following up on the one from last week.',
-                    built + ' We wrote down the fifteen tasks our owners hand off first.',
+                    'The shoot is the easy part. Everything after it is the problem: culling, uploading, chasing the agent for tomorrow’s lockbox code, answering “can you brighten the kitchen?”, sending the invoice, following up on the one from last week.',
+                    built + ' We wrote down fifteen tasks an agency owner can hand off, starting with the ones that eat the most time.',
                     'That is what we do at Staffify: we recruit, train and support that person for real estate media agencies, with a lifetime replacement guarantee if it is not the right fit.',
                     'Want the list? Reply “list” and I’ll send it over, no call required.',
                     owner + '\nStaffify',
@@ -80,7 +81,12 @@ export function subjectKey(subject, company) {
     return 'subject:' + s.trim();
 }
 const FOLD_BELOW = 5;   // legacy subject buckets with fewer sends than this are shown as one line
-const WON = /closed ?won|customer|signed/i;
+// A reply is a human writing back. The worker files bounces, auto-replies and out-of-office
+// notices under their own statuses, and those must not raise an opener's rate or crown a leader.
+const NOT_HUMAN = new Set(['bounce_hold', 'auto_reply_hold', 'held_out_of_office']);
+export const humanReply = r => !!r && !NOT_HUMAN.has(r.status) && ((r.events || []).some(e => e && e.kind === 'received') || r.status === 'human_reply_hold' || r.status === 'held_reply');
+// Won is not measured on the queue (dealStage only exists on deal follow-up rows, which are not
+// openers), so it is reported as unknown, never as zero.
 
 /**
  * What each opener produced, per campaign, from the queue records.
@@ -92,27 +98,29 @@ export function attribute(records, { campaignId = CAMPAIGN_ID, meetingsByEmail =
     const by = new Map();
     for (const r of records || []) {
         if ((r.campaignId || CAMPAIGN_ID) !== campaignId) continue;
+        if (r.lane === 'deal_followup') continue;   // an existing deal's follow-up is not an opener
         const f = first(r);
         if (!f) continue;
         const id = r.copyVersion || subjectKey(f.subject, r.company);
         // A legacy bucket shows its normalised subject ("A practical handoff for {company}"), not the
         // first company's copy of it.
         const legacySubject = k => { const t = k.slice('subject:'.length); return t ? t.charAt(0).toUpperCase() + t.slice(1) : null; };
-        if (!by.has(id)) { const vs = (variantById(campaignId, id) || {}).subject; by.set(id, { id, label: null, subject: typeof vs === 'function' ? vs('{company}') : (vs || (id.startsWith('subject:') ? legacySubject(id) : f.subject) || null), sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: f.at, lastSent: f.at }); }
+        if (!by.has(id)) { const vs = (variantById(campaignId, id) || {}).subject; by.set(id, { id, label: null, subject: typeof vs === 'function' ? vs('{company}') : (vs || (id.startsWith('subject:') ? legacySubject(id) : f.subject) || null), sends: 0, replies: 0, conversations: 0, meetings: 0, won: null, firstSent: f.at, lastSent: f.at }); }
         const b = by.get(id);
         b.sends++;
-        if ((r.events || []).some(e => e && e.kind === 'received')) b.replies++;
+        if (humanReply(r)) b.replies++;
         if (r.status === 'human_reply_hold' || r.callOutcome === 'connected') b.conversations++;
-        if (meetingsByEmail && meetingsByEmail.has(lower(r.recipient))) b.meetings++;
-        if (WON.test(r.dealStage || '')) b.won++;
+        // A meeting counts for the opener only if it was booked after the opener went out.
+        if (meetingsByEmail instanceof Map) { const at = meetingsByEmail.get(lower(r.recipient)); if (at && Date.parse(at) >= Date.parse(f.at)) b.meetings++; }
+        else if (meetingsByEmail && typeof meetingsByEmail.has === 'function' && meetingsByEmail.has(lower(r.recipient))) b.meetings++;
         if (f.at < b.firstSent) b.firstSent = f.at;
         if (f.at > b.lastSent) b.lastSent = f.at;
     }
     // Fold the long tail of one-off legacy subjects into a single honest line.
     const small = [...by.values()].filter(b => b.id.startsWith('subject:') && b.sends < FOLD_BELOW);
     if (small.length > 1) {
-        const fold = { id: 'subject:other', label: 'Other earlier subjects', subject: `${small.length} subjects, each sent fewer than ${FOLD_BELOW} times`, sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: null, lastSent: null };
-        for (const b of small) { fold.sends += b.sends; fold.replies += b.replies; fold.conversations += b.conversations; fold.meetings += b.meetings; fold.won += b.won; if (!fold.firstSent || b.firstSent < fold.firstSent) fold.firstSent = b.firstSent; if (!fold.lastSent || b.lastSent > fold.lastSent) fold.lastSent = b.lastSent; by.delete(b.id); }
+        const fold = { id: 'subject:other', label: 'Other earlier subjects', subject: `${small.length} subjects, each sent fewer than ${FOLD_BELOW} times`, sends: 0, replies: 0, conversations: 0, meetings: 0, won: null, firstSent: null, lastSent: null };
+        for (const b of small) { fold.sends += b.sends; fold.replies += b.replies; fold.conversations += b.conversations; fold.meetings += b.meetings; if (!fold.firstSent || b.firstSent < fold.firstSent) fold.firstSent = b.firstSent; if (!fold.lastSent || b.lastSent > fold.lastSent) fold.lastSent = b.lastSent; by.delete(b.id); }
         by.set(fold.id, fold);
     }
     const out = [...by.values()].map(b => {
@@ -124,7 +132,7 @@ export function attribute(records, { campaignId = CAMPAIGN_ID, meetingsByEmail =
             note: enough ? `${b.replies} of ${b.sends} replied` : `${b.sends} sent; a rate needs ${MIN_SENDS}` };
     });
     // Every variant on offer appears even before its first send, so the page shows it is in rotation.
-    for (const v of variantsFor(campaignId)) if (!out.some(o => o.id === v.id)) out.push({ id: v.id, label: v.label, subject: typeof v.subject === 'function' ? v.subject('{company}') : v.subject, sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: null, lastSent: null, active: true, enough: false, replyRate: null, meetingRate: null, note: 'Not sent yet' });
+    for (const v of variantsFor(campaignId)) if (!out.some(o => o.id === v.id)) out.push({ id: v.id, label: v.label, subject: typeof v.subject === 'function' ? v.subject('{company}') : v.subject, sends: 0, replies: 0, conversations: 0, meetings: 0, won: null, firstSent: null, lastSent: null, active: true, enough: false, replyRate: null, meetingRate: null, note: 'Not sent yet' });
     out.sort((a, b) => (b.replyRate ?? -1) - (a.replyRate ?? -1) || b.sends - a.sends);
     const leader = out.find(o => o.active && o.enough) || null;
     return { campaignId, variants: out, leader: leader ? leader.id : null, minSends: MIN_SENDS, exploreShare: EXPLORE_SHARE, computedAt: new Date(now).toISOString() };
