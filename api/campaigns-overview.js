@@ -11,6 +11,7 @@
 // Read-only. It computes nothing into the queue and sends nothing.
 import { redis, requireAccess } from './_auth.js';
 import { KEY, visibleState, ownerFor } from './_outreach-queue.js';
+import { gate as shiftGateOf, liveCurrent, shiftRequired } from './_shift.js';
 import { withCallPhones } from './_outreach-call-phones.js';
 import { hubspotRequest } from './_outreach-hubspot.js';
 import { INDUSTRY_KEY } from './_campaign-industry.js';
@@ -55,6 +56,10 @@ export default async function handler(req, res) {
         let decorated;
         try { decorated = await withCallPhones(visibleState(state, ownerFor(rep) || 'all'), { redis, crm }); }
         catch { decorated = visibleState(state, ownerFor(rep) || 'all'); }
+        // The shift gate: a caller off shift sees the campaign, not the numbers in it. An unreadable
+        // shift reads as off. Owners are never gated.
+        const shiftGate = shiftGateOf(await liveCurrent(redis, rep.email).catch(() => null), Date.now(), { required: shiftRequired(rep, ownerFor) });
+        if (!shiftGate.allowed) decorated = { ...decorated, records: decorated.records.map(r => (r.callContact && r.callContact.phone ? { ...r, callContact: { ...r.callContact, phone: 'withheld' } } : r)) };
         const records = decorated.records;
         const stated = (await redis.hgetall(INDUSTRY_KEY).catch(() => null)) || {};
 
