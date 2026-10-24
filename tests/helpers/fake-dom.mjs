@@ -32,6 +32,8 @@ export function makeDom({ href = 'https://www.gostaffify.com/dialer/' } = {}) {
         insertBefore(n, ref) { const i = this.children.indexOf(ref); const a = this._adopt(n); if (i < 0) this.children.push(a); else this.children.splice(i, 0, a); return a; }
         removeChild(n) { const i = this.children.indexOf(n); if (i >= 0) this.children.splice(i, 1); n.parentNode = null; return n; }
         remove() { if (this.parentNode) this.parentNode.removeChild(this); }
+        after(...k) { const p = this.parentNode; if (!p) return; let i = p.children.indexOf(this); for (const x of k) { const a = p._adopt(x); i = p.children.indexOf(this); p.children.splice(i + 1, 0, a); } }
+        get nextSibling() { const p = this.parentNode; if (!p) return null; const i = p.children.indexOf(this); return i >= 0 ? p.children[i + 1] || null : null; }
         replaceWith(n) { const p = this.parentNode; if (!p) return; const i = p.children.indexOf(this); p.children[i] = p._adopt(n); this.parentNode = null; }
         replaceChildren(...k) { for (const c of this.children) c.parentNode = null; this.children = []; this._text = ''; this.append(...k); }
         setAttribute(k, v) { this.attrs[k] = String(v); } getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; } removeAttribute(k) { delete this.attrs[k]; }
@@ -101,7 +103,10 @@ export function makeDom({ href = 'https://www.gostaffify.com/dialer/' } = {}) {
         navigator: { clipboard: { writeText: async () => {} } },
         confirm: () => true, prompt: () => null, alert: () => {},
     };
-    g.window = Object.assign(Object.create(null), { confirm: (...a) => g.confirm(...a), prompt: (...a) => g.prompt(...a), alert: (...a) => g.alert(...a) });
+    const winListeners = {};
+    g.window = Object.assign(Object.create(null), { confirm: (...a) => g.confirm(...a), prompt: (...a) => g.prompt(...a), alert: (...a) => g.alert(...a),
+        addEventListener: (t, fn) => { (winListeners[t] ||= []).push(fn); }, removeEventListener: (t, fn) => { winListeners[t] = (winListeners[t] || []).filter(f => f !== fn); },
+        dispatchEvent: ev => { for (const fn of winListeners[ev.type] || []) fn(ev); return true; } });
     return { ...g, Node, makeEvent, queryAll, text: n => n.textContent.replace(/\s+/g, ' ').trim() };
 }
 

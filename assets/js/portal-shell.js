@@ -17,6 +17,8 @@
  header.classList.add('portal-header');
  // Hub activity: one heartbeat a minute while a used tab is visible. See assets/js/hub-activity.js.
  if(document.head&&!document.querySelector('script[src^="/assets/js/hub-activity.js"]')){const s=document.createElement('script');s.src='/assets/js/hub-activity.js?v=20261023';s.defer=true;document.head.append(s);}
+ // The shift bar and the phone-link gate. See assets/js/hub-shift.js.
+ if(document.head&&!document.querySelector('script[src^="/assets/js/hub-shift.js"]')){const s=document.createElement('script');s.src='/assets/js/hub-shift.js?v=20261024';s.defer=true;document.head.append(s);}
  const content=document.querySelector('main,#app,.wrap,.page,.shell');if(content){if(!content.id)content.id='portal-content';const skip=make('Skip to content','#'+content.id);skip.className='portal-skip';document.body.prepend(skip);}
  if(location.hostname==='127.0.0.1'||location.hostname==='localhost'){const note=document.createElement('aside');note.className='portal-preview';note.textContent='Design preview · Sample or saved data. ';note.append(make('Open live Staffify','https://www.gostaffify.com'+location.pathname+location.search));document.body.prepend(note);}
 })();

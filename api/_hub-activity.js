@@ -29,6 +29,7 @@ export const EVENT_KINDS = Object.freeze({
     page_view: 'Opened a page', leave: 'Left the Hub', call_outcome: 'Logged a call', note_saved: 'Saved call notes',
     task_added: 'Added a task', task_done: 'Completed a task', callback_set: 'Scheduled a callback', suppress: 'Excluded a prospect',
     text_sent: 'Sent a text', overview_sent: 'Sent the overview', instagram_flag: 'Flagged a datapoint',
+    shift_start: 'Started a shift', shift_break: 'Took a break', shift_resume: 'Resumed the shift', shift_end: 'Ended the shift', shift_flagged: 'Shift flagged for review', shift_corrected: 'Shift end corrected by an owner',
 });
 export const CLIENT_KINDS = new Set(['page_view', 'leave']);
 export const MEANINGFUL = new Set(['call_outcome', 'note_saved', 'task_added', 'task_done', 'callback_set', 'suppress', 'text_sent', 'overview_sent', 'instagram_flag']);
@@ -105,7 +106,7 @@ export const MEASURED_TEXT = [
  * Record a business event for a rep, from the handler that did the thing. Never throws, never
  * blocks the caller: a failed write loses one line of history, not the action.
  */
-export async function recordActivity(redis, { email, kind, page = null, detail = null, at = Date.now() }) {
+export async function recordActivity(redis, { email, kind, page = null, detail = null, at = Date.now(), presence = true }) {
     const e = norm(email);
     if (!e || e === 'admin' || !EVENT_KINDS[kind]) return false;
     const day = dayOf(at);
@@ -115,6 +116,8 @@ export async function recordActivity(redis, { email, kind, page = null, detail =
         await redis.expire(K.events(e, day), RETAIN_DAYS * 86400);
         await redis.sadd(K.days(e), day);
         // A business action is also a sign of presence: it counts the minute and keeps the session alive.
+        // Not when someone else did it on this person's record (an owner's correction).
+        if (!presence) return true;
         await redis.sadd(K.minutes(e, day), minuteOf(at));
         await redis.expire(K.minutes(e, day), RETAIN_DAYS * 86400);
         const doc = await redis.get(K.sessions(e)).catch(() => null);

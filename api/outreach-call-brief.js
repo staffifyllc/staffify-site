@@ -9,6 +9,7 @@ import {callScript} from './_call-scripts.js';
 import {industryFor} from './_industry.js';
 import {resolveTimezone} from './_outreach-timezone.js';
 import {knownIdentity,TRIED_KEY} from './_contact-identity.js';
+import {gate as shiftGateOf,liveCurrent as currentShift,shiftRequired} from './_shift.js';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store');
  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed'});
@@ -19,6 +20,10 @@ export default async function handler(req,res){
  try{
   const t0=Date.now(),timings={};const mark=k=>{timings[k]=Date.now()-t0;};
   const rep=await requireAccess(req);const owner=canUseCallQueue(rep)?'all':null;const caller=rep?.role==='admin'?'[your name]':rep?.name||'[your name]';if(!owner)return res.status(401).json({error:'Sign in to the Hub'});
+  // The shift gate. A caller (anyone who is not a sales owner) sees the number only on a running shift;
+  // off shift, on a break or past twelve hours the card still loads, the number is withheld and the
+  // reason is on it. Owners are never gated. Outcomes save regardless: that endpoint is not this one.
+  const shiftGate=shiftGateOf(await currentShift(redis,rep.email),Date.now(),{required:shiftRequired(rep,ownerFor)});mark('shift');
   state=await redis.get(KEY);row=visibleState(state,owner).records.find(r=>r.id===req.query.id);mark('state');
   if(!row)return res.status(404).json({error:'Record not available'});
   // What we already know about this prospect, from the last worker sync. Shown even when the live
@@ -35,8 +40,9 @@ export default async function handler(req,res){
      company:p.company||row.company||row.recipient,recipient:row.recipient,
      name:[p.firstname,p.lastname].filter(Boolean).join(' ')||null,
      location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,
-     // Shown as a detail, never as a dial button: this prospect is not callable yet.
-     crmPhone:p.phone||p.mobilephone||null,
+     // Shown as a detail, never as a dial button: this prospect is not callable yet. Withheld from a
+     // caller who is off shift, like every other number.
+     crmPhone:shiftGate.allowed?(p.phone||p.mobilephone||null):null,
      crmUrl:(row.hubspotId||crmId)?'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||crmId):null,
      website:p.website||row.website||row.source?.url||null,source:row.source||null,
      industry:industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle}),
@@ -143,7 +149,7 @@ export default async function handler(req,res){
    :(!String(p.country||'').trim()&&String(p.state||'').trim())?(z=>z.timeZone?{...z,source:'CRM state; country assumed US for the clock only'}:null)(resolveTimezone({...p,country:'US'})):null;
   return res.status(200).json({timings:(mark('done'),timings),prospectTimezone:clockZone,identity,title:p.jobtitle||null,callable:true,checkedAt:new Date().toISOString(),owner:row.owner,callerName:caller,callQueue:'shared',website:p.website||row.website||row.source?.url||null,unreadableMailboxes:unreadable,
    industry:industryFor({campaignId:row.campaignId,company:p.company||row.company,excerpt:row.source?.excerpt,crmIndustry:p.industry,title:p.jobtitle}),
-   staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:dial&&dial.number||null,dial,phoneEvidence,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname,website:p.website||row.website||row.source?.url||'',excerpt:row.source?.excerpt||'',crmIndustry:p.industry||'',title:p.jobtitle||'',igBranch:instagram&&instagram.branch}),instagram,events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
+   staleVerification:senderUnreadable?{mailbox:row.sender,syncedAt:state?.queueUpdatedAt||state?.updatedAt||null,sentTouches:row.verifiedSentTouches||row.sentTouches||0}:null,name:[p.firstname,p.lastname].filter(Boolean).join(' ')||row.recipient,phone:shiftGate.allowed?(dial&&dial.number||null):null,dial:shiftGate.allowed?dial:null,phoneEvidence:shiftGate.allowed?phoneEvidence:{status:'withheld',detail:shiftGate.message,checkedAt:null,sourceUrl:null},shiftGate,location:[p.city,p.state,p.country].filter(Boolean).join(', ')||null,company:p.company||row.company,crmUrl:'https://app.hubspot.com/contacts/51666712/record/0-1/'+(row.hubspotId||row.crmContactId||contactId||''),fact:row.roleContext?('Research context: prior resume-reported work included '+row.roleContext+'. This is historical evidence, not a current vacancy. Ask about today’s workflow; do not mention applicant identities.'):row.source?.excerpt||null,source:row.source||null,...callScript({campaignId:row.campaignId,caller,callerEmail:rep?.email,company:p.company||row.company||'your business',firstName:p.firstname,website:p.website||row.website||row.source?.url||'',excerpt:row.source?.excerpt||'',crmIndustry:p.industry||'',title:p.jobtitle||'',igBranch:instagram&&instagram.branch}),instagram,events:all.filter(m=>!m.draft).sort((a,b)=>a.date-b.date).map(m=>({kind:m.sent?'sent':'received',at:new Date(m.date).toISOString(),subject:m.subject,body:m.text,mailbox:m.mailbox})),instruction:'Read the actual emails below before calling. Ask about their situation; do not assume interest. Record the result and a dated next step. Any request to stop must use Exclude from outreach.'});
  }catch(e){
   // Degrade, do not go blank. The research, the website and the email trail live on the queue
   // record and owe nothing to whichever system just failed.

@@ -38,6 +38,7 @@ test('the first panel is Right now: the overdue callback, then the task and the 
         if (u.startsWith('/api/auth-me/')) return ok({ rep: { email: ME, name: 'Milton Hodgson', role: 'caller' } });
         if (u.startsWith('/api/outreach-queue/?view=calls')) return body ? ok({ ok: true, task: { ...QUEUE.tasks[0], doneAt: 'now' } }) : ok(QUEUE);
         if (u.startsWith('/api/training-progress')) return ok({ me: { done: { a: true } } });
+        if (u.startsWith('/api/shift/')) return body ? ok({ ok: true, state: 'on', gate: { allowed: true }, shift: { startedAt: new Date().toISOString(), breaks: [] } }) : ok({ required: true, state: 'off', gate: { required: true, state: 'off', allowed: false, reason: 'off', message: 'Start your shift to call.' }, shift: null });
         return { ok: false, status: 404, json: async () => ({}) }; };
     await import(pathToFileURL(file).href + '?' + Date.now());
     await new Promise(r => setTimeout(r, 40));
@@ -59,6 +60,13 @@ test('the first panel is Right now: the overdue callback, then the task and the 
     done.click(); await new Promise(r => setTimeout(r, 20));
     assert.ok(calls.some(c => c.body && c.body.action === 'task-done' && c.body.taskId === 't1'));
     assert.ok(!dom.queryAll(panels[0], 'li').some(li => /Send pricing/.test(dom.text(li))), 'the done task is gone');
+    // Off shift: the first panel says so, with the press, before any card.
+    const lead = document.getElementById('shift-lead');
+    assert.ok(lead, 'the shift notice is on the page'); assert.match(dom.text(lead), /^Calling from the Hub needs a running shift\. Start your shift to call\. Notes and outcomes still save\. Start shift$/);
+    assert.equal(panels[0].children.indexOf(lead) < panels[0].children.indexOf(panels[0].querySelector('ul')), true, 'it sits above the promises');
+    document.getElementById('shift-lead-action').click(); await new Promise(r => setTimeout(r, 20));
+    assert.ok(calls.some(c => c.u.startsWith('/api/shift/') && c.body && c.body.action === 'start' && c.body.page === '/my-day/'), 'Start posts the press');
+    assert.match(dom.text(lead), /Shift running since .*Numbers show on the dialer now/);
     assert.equal(dom.text(panels[1].querySelector('h2')), 'Team calls');
     assert.ok(!/undefined|\[object/.test(dom.text(document.body)));
     restore();

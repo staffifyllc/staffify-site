@@ -216,3 +216,39 @@ test('a skip holds for the day, and the industry select narrows the queue to tha
     assert.match(dom.text(document.body), /Show the 1 skipped/, 'the only real estate media prospect is the skipped one, and the page says so');
     restore();
 });
+
+// ---- the shift gate on a card ---------------------------------------------------------------
+test('a caller off shift gets the card without the number; Start on the card brings it back; a break takes the link away again', async () => {
+    const dom2 = makeDom(); const restore2 = install(dom2);
+    const app = document.createElement('div'); app.id = 'app'; app.className = 'wrap'; document.body.append(app);
+    let gated = true; const presses = [];
+    globalThis.window.__staffifyShift = { blocked: () => gated, state: () => (gated ? 'off' : 'on'), message: () => 'Start your shift to call.', start: async () => { presses.push('start'); gated = false; globalThis.window.dispatchEvent({ type: 'staffify-shift' }); return { ok: true }; }, resume: async () => ({ ok: true }) };
+    const api2 = stubApi(); const inner = globalThis.fetch;
+    globalThis.fetch = async (url, opts) => {
+        const u = String(url);
+        if (u.startsWith('/api/outreach-call-brief/?id=') && gated) { const r = await inner(url, opts); const b = await r.json(); return { ok: true, status: 200, json: async () => ({ ...b, phone: null, dial: null, phoneEvidence: { status: 'withheld', detail: 'Start your shift to call.' }, shiftGate: { required: true, state: 'off', allowed: false, reason: 'off', message: 'Start your shift to call.' } }) }; }
+        return inner(url, opts);
+    };
+    await import('../assets/js/dialer-workspace.js?' + Date.now() + 'gate');
+    await tick(60);
+    let text = dom2.text(document.body);
+    assert.match(text, /Loft & Light/); assert.match(text, /Start your shift to call\./); assert.match(text, /Notes and outcomes still save/);
+    assert.equal(document.getElementById('call-now'), null, 'no dial link off shift');
+    assert.ok(!/\+15125550002/.test(text), 'the number is not on the page');
+    assert.ok(document.getElementById('call-notes'), 'notes are still there'); assert.equal(document.querySelectorAll('.dw-oc').length, 7, 'outcomes can still be logged');
+    assert.match(text, /Hi Priya, this is Milton/, 'the talk track still loads');
+    document.getElementById('shift-gate-action').click(); await tick(80);
+    assert.deepEqual(presses, ['start']);
+    assert.ok(document.getElementById('call-now'), 'the shift started: the number and the dial link are back');
+    assert.match(dom2.text(document.body), /\+15125550002/);
+    assert.ok(api2.calls.filter(c => c.url.startsWith('/api/outreach-call-brief/?id=r2')).length >= 2, 'the brief was fetched again once the shift ran');
+    // The shift pauses after the card loaded: the link goes, the card and the notes stay.
+    document.getElementById('call-notes').value = 'Spoke to Priya';
+    gated = true; globalThis.window.__staffifyShift.state = () => 'break'; globalThis.window.__staffifyShift.message = () => 'You are on a break. Resume your shift to call.';
+    globalThis.window.dispatchEvent({ type: 'staffify-shift' }); await tick(20);
+    assert.equal(document.getElementById('call-now'), null); assert.match(dom2.text(document.body), /Resume your shift to call/);
+    assert.equal(document.getElementById('call-notes').value, 'Spoke to Priya', 'a pause does not touch the notes');
+    assert.ok(dom2.queryAll(document.body, '#shift-gate-action').some(b => dom2.text(b) === 'Resume shift'));
+    delete globalThis.window.__staffifyShift;
+    restore2();
+});

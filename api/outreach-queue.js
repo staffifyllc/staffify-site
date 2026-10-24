@@ -10,6 +10,7 @@ import {ATTEMPTS} from './_number-research.js';
 import {listTasks,addTask,completeTask} from './_rep-tasks.js';
 import {classified} from './_campaigns-model.js';
 import {recordActivity} from './_hub-activity.js';
+import {gate as shiftGateOf,liveCurrent,shiftRequired} from './_shift.js';
 import {INDUSTRY_KEY} from './_campaign-industry.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
@@ -25,7 +26,9 @@ export default async function handler(req,res) {
       // same view as the list, so nobody reads a thread outside what their list would show. No phone
       // ladder: a body does not need a number.
       if(req.query?.record){const id=String(req.query.record);const row=view(state).records.find(r=>r.id===id);
-       if(!row)return res.status(404).json({error:'That record is not in your view of the queue'});return res.status(200).json({record:row});}
+       if(!row)return res.status(404).json({error:'That record is not in your view of the queue'});
+       if(calls){const g=shiftGateOf(await liveCurrent(redis,rep.email).catch(()=>null),Date.now(),{required:shiftRequired(rep,ownerFor)});if(!g.allowed&&row.callContact&&row.callContact.phone)return res.status(200).json({record:{...row,callContact:{...row.callContact,phone:'withheld'}}});}
+       return res.status(200).json({record:row});}
       const decorated=await withCallPhones(view(state),{redis,crm});
       // view=slim: the same rows and the same callReady, without the mail bodies. See slimState.
       const out=slim?slimState(decorated):decorated;
@@ -37,6 +40,11 @@ export default async function handler(req,res) {
        const stated=(await redis.hgetall(INDUSTRY_KEY).catch(()=>null))||{};
        out.records=classified(out.records,stated).map(({r,v})=>({...r,industry:v&&v.key?{key:v.key,label:v.label,source:v.source}:null}));
        out.tasks=await listTasks(redis,rep.email);
+       // The shift gate, here too: a caller off shift gets the queue in its real order, but every
+       // number reads "withheld" until the shift is running. An unreadable shift reads as off.
+       const g=shiftGateOf(await liveCurrent(redis,rep.email).catch(()=>null),Date.now(),{required:shiftRequired(rep,ownerFor)});
+       out.shiftGate=g;
+       if(!g.allowed)out.records=out.records.map(r=>r.callContact&&r.callContact.phone?{...r,callContact:{...r.callContact,phone:'withheld'}}:r);
       }
       return res.status(200).json(out);
     }

@@ -108,6 +108,10 @@ function promiseRow(it, now) {
 
     let queue = null, qErr = null;
     try { queue = await get('/api/outreach-queue/?view=calls'); } catch (e) { qErr = e; }
+    // The shift. A caller's calls from the Hub need a running one; the header bar owns it, and this
+    // page says so where the day starts, with the press right there.
+    let shiftInfo = null;
+    try { shiftInfo = await get('/api/shift/?me=1'); } catch { /* the bar still shows it; nothing to invent here */ }
 
     const now = Date.now();
     const mine = String(me.email || '').toLowerCase();
@@ -141,6 +145,22 @@ function promiseRow(it, now) {
 
     // Right now: promises first, then the next card. The order is the dialer's own order.
     const rn = panel('Right now', 'Callbacks you promised and tasks you set, overdue first. Then the next card in the queue.');
+    // One notice per state, redrawn after every press from what the server answered.
+    if (shiftInfo && shiftInfo.required && shiftInfo.state !== 'on') {
+        const lead = el('div', null, 'lead'); lead.id = 'shift-lead'; rn.append(lead);
+        const draw = (info, ended) => {
+            lead.replaceChildren();
+            if (info.state === 'on') { lead.append(el('b', 'Shift running since ' + new Date(info.shift.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '. '), document.createTextNode('Numbers show on the dialer now. The clock is in the header on every page.')); return; }
+            const st = info.state, action = st === 'break' ? 'resume' : st === 'stale' ? 'end' : 'start';
+            if (ended && ended.status === 'needs_review') lead.append(el('b', 'Shift ended and flagged for review. '), document.createTextNode('It ran past 12 hours, so it counts nothing until an owner sets its real end time. '));
+            else if (ended) lead.append(el('b', 'Shift ended. '));
+            lead.append(el('b', 'Calling from the Hub needs a running shift. '), document.createTextNode(((info.gate && info.gate.message) || '') + ' Notes and outcomes still save. '));
+            const go = el('button', { start: 'Start shift', resume: 'Resume shift', end: 'End this shift' }[action], 'btn'); go.type = 'button'; go.id = 'shift-lead-action';
+            go.onclick = async () => { go.disabled = true; try { const r = await post('/api/shift/', { action, page: '/my-day/' }); draw(r, r.ended || null); if (window.__staffifyShift && window.__staffifyShift.refresh) window.__staffifyShift.refresh(); } catch (e) { go.disabled = false; go.textContent = e.message || 'Not changed'; } };
+            lead.append(go);
+        };
+        draw(shiftInfo, null);
+    }
     if (qErr) rn.append(el('p', qErr.status === 401 ? 'Sign in again to load the queue.' : 'The queue is unavailable right now. Nothing has been lost.', 'err'));
     if (soon.length) { const ul = el('ul', null, 'rows'); for (const it of soon) ul.append(promiseRow(it, now)); rn.append(ul); }
     else if (!qErr) rn.append(el('p', 'No callbacks or tasks due today.', 'empty'));
@@ -200,15 +220,20 @@ function promiseRow(it, now) {
     // Your activity: what the Hub measured about you, and what it does not.
     try {
         const a = await get('/api/activity/?me=1');
-        const ac = panel('Your Hub activity this week', 'An estimate of time with a Hub tab open and in use. It cannot see phone calls or anything outside the Hub, and it is not payroll: Hubstaff is the source for paid hours.');
+        const ac = panel('Your shifts and Hub activity this week', 'Shifts are what you clocked with Start and End. Active time is an estimate of time with a Hub tab open and in use; it cannot see phone calls or anything outside the Hub. Neither is payroll: Hubstaff is the source for paid hours.');
         const mins = n => n >= 60 ? Math.floor(n / 60) + 'h ' + (n % 60) + 'm' : n + 'm';
         const row = el('div', null, 'stats');
-        row.append(stat(mins(a.totals.activeMinutes), 'active (estimate)'), stat(mins(a.totals.idleMinutes), 'idle in session'), stat(mins(a.totals.elapsedMinutes), 'elapsed in sessions'), stat(a.totals.meaningful, 'actions recorded'));
+        row.append(stat(mins(a.totals.clockedMinutes || 0), 'clocked on shifts' + (a.totals.shiftsNeedingReview ? ' (' + a.totals.shiftsNeedingReview + ' needs review)' : '')), stat(mins(a.totals.activeMinutes), 'active (estimate)'), stat(mins(a.totals.idleMinutes), 'idle in session'), stat(a.totals.meaningful, 'actions recorded'));
         ac.append(row);
+        const timeET = iso => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+        const shiftLine = sh => timeET(sh.startedAt) + ' to ' + (sh.correctedEndedAt ? timeET(sh.correctedEndedAt) + ' (corrected)' : sh.endedAt ? timeET(sh.endedAt) : sh.state === 'open' ? 'now' : 'never ended') + ' · ' + (sh.state === 'needs_review' || sh.state === 'open_too_long' ? 'needs review' : mins(sh.clockedMinutes) + ' clocked' + (sh.breakMinutes ? ', ' + mins(sh.breakMinutes) + ' break' : '') + (sh.state === 'open' ? ' so far' : ''));
         const ul = el('ul', null, 'rows');
-        for (const d of a.days) { const li = el('li'); const left = el('div'); left.append(el('div', new Date(d.day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), 'who'), el('div', d.measured ? `${mins(d.activeMinutes)} active · ${mins(d.idleMinutes)} idle · ${d.sessions} session${d.sessions === 1 ? '' : 's'} · ${d.meaningful} action${d.meaningful === 1 ? '' : 's'}` : 'Not measured (before tracking started, or no Hub use)', 'meta')); li.append(left); ul.append(li); }
+        for (const d of a.days) { const li = el('li'); const left = el('div'); left.append(el('div', new Date(d.day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), 'who'));
+            if (d.shift && d.shift.list && d.shift.list.length) left.append(el('div', 'Shift: ' + d.shift.list.map(shiftLine).join(' · '), 'meta'));
+            left.append(el('div', d.measured ? `${mins(d.activeMinutes)} active · ${mins(d.idleMinutes)} idle · ${d.sessions} session${d.sessions === 1 ? '' : 's'} · ${d.meaningful} action${d.meaningful === 1 ? '' : 's'}` : 'Not measured (before tracking started, or no Hub use)', 'meta')); li.append(left); ul.append(li); }
         ac.append(ul, linkTo('See your events', '/activity/', 'btn btn-ghost'));
         const what = el('details'); what.append(el('summary', 'What is measured'));
+        for (const t of (a.definitions.declared || [])) what.append(el('p', t, 'hint'));
         for (const t of a.definitions.measured) what.append(el('p', t, 'hint'));
         ac.append(what);
     } catch { /* the panel is informational; a failed read shows nothing rather than zeros */ }

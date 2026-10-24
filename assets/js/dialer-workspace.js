@@ -20,7 +20,7 @@ const params=new URLSearchParams(location.search);
 const PIN=app.dataset.campaign||null;                      // /spearhead/ pins its campaign in the shell
 let selectedCampaign=PIN||params.get('campaign')||'all';
 let selectedOwner=params.get('owner')||'all', selectedIndustry=params.get('industry')||'all', research=false, search='';
-let state=null, current=null, brief=null, requestId=0, busy=false, drawerOpen=false, quoToday=null;
+let state=null, current=null, brief=null, requestId=0, busy=false, drawerOpen=false, quoToday=null, whoPane=null;
 const skipped=new Set(), dialled=new Set();
 const session={started:Date.now(),saved:{},texts:0,tasks:0};
 
@@ -137,7 +137,7 @@ async function show(row){
  const grid=el('div',null,'dw-grid');
  const who=el('section',null,'dw-pane dw-who'),talk=el('section',null,'dw-pane dw-talk'),log=el('section',null,'dw-pane dw-log'),hist=el('section',null,'dw-pane dw-hist');
  who.setAttribute('aria-label','Prospect');talk.setAttribute('aria-label','Talk track');log.setAttribute('aria-label','Log the call');hist.setAttribute('aria-label','History');
- grid.append(who,talk,log,hist);
+ grid.append(who,talk,log,hist);whoPane=who;
  app.replaceChildren(bar(),grid);
  // The parts that need only the queue record draw now, so a rep can read and type while the
  // live checks run. The brief fills in the number, the script and the proof when it lands.
@@ -184,6 +184,8 @@ function renderWho(pane,row,b){
  // The number.
  const num=el('div',null,'dw-numblock');
  if(!b){num.append(el('div','Checking the number…','dw-numdetail'));}
+ else if(p.shiftGate&&p.shiftGate.required&&!p.shiftGate.allowed){num.append(shiftGateBlock(row,b));}   // the server kept the number back
+ else if(p.phone&&shiftBlocked(b)){num.append(shiftGateBlock(row,b));}                                  // the shift paused or ended after this card loaded
  else if(p.phone){
   const trust=numberTrust(p.dial);
   num.append(link(p.phone,'tel:'+p.phone,'dw-num'));
@@ -220,6 +222,29 @@ function renderWho(pane,row,b){
  if(p.instagram)sec.append(instagramPanel(row,p.instagram));
  pane.append(sec);
 }
+
+// ---- the shift gate --------------------------------------------------------------------------
+// A caller places calls only on a running shift. The brief withholds the number when the shift is
+// off, on a break or past twelve hours; the header bar (hub-shift.js) owns the shift and tells this
+// page when it changes. Owners are never gated. Saving notes and outcomes is never gated: a call
+// that was under way when a shift ended still gets logged.
+const shiftApi=()=>(typeof window!=='undefined'&&window.__staffifyShift)||null;
+function shiftBlocked(b){const s=shiftApi();if(s&&typeof s.blocked==='function')return s.blocked();return !!(b&&b.shiftGate&&b.shiftGate.required&&!b.shiftGate.allowed);}
+function shiftState(b){const s=shiftApi();return (s&&typeof s.state==='function'&&s.state())||(b&&b.shiftGate&&b.shiftGate.state)||'off';}
+function shiftMessage(b){const s=shiftApi();return (s&&typeof s.message==='function'&&s.message())||(b&&b.shiftGate&&b.shiftGate.message)||'Start your shift to call.';}
+function shiftGateBlock(row,b){
+ const box=el('div',null,'dw-due dw-shiftgate');box.id='shift-gate-card';
+ const st=shiftState(b),action=st==='break'?'resume':st==='stale'?'end':'start';
+ box.append(el('b','Calling from the Hub needs a running shift. '),document.createTextNode(shiftMessage(b)+' The number appears once your shift is running. Notes and outcomes still save.'));
+ const btn=button({start:'Start shift',resume:'Resume shift',end:'End this shift'}[action],async()=>{const s=shiftApi();if(!s){toast('The shift bar has not loaded yet. Reload the page.',true);return;}btn.disabled=true;const r=await s[action]();if(!r||!r.ok){toast((r&&r.error)||'Could not change your shift.',true);btn.disabled=false;return;}if(current&&current.id===row.id)show(row);},'btn dw-primary');
+ btn.id='shift-gate-action';box.append(btn);return box;
+}
+if(typeof window!=='undefined'&&typeof window.addEventListener==='function')window.addEventListener('staffify-shift',()=>{
+ if(!current||!whoPane||!whoPane.isConnected)return;
+ const withheld=!!(brief&&brief.shiftGate&&brief.shiftGate.required&&!brief.shiftGate.allowed);
+ if(withheld&&!shiftBlocked(brief)){refresh().catch(fail);return;}   // the shift started: re-read the queue (its numbers were withheld too) and the card
+ else if(brief)renderWho(whoPane,current,brief);           // paused or ended: take the link away, keep the card
+});
 
 // The text button. The server drafts the message, checks opt-outs and the never-twice rule, and
 // records what consent it found. Here it is one click and a plain confirm.

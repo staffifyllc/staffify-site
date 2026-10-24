@@ -16,27 +16,40 @@
 import { redis, requireAccess, SESSION_TTL } from './_auth.js';
 import { financeAccess } from './_finance-access.js';
 import { K, norm, dayOf, minuteOf, sessionize, sessionsOn, summarizeDay, daysBetween, EVENT_KINDS, CLIENT_KINDS, MEASURED_TEXT, RETAIN_DAYS, HEARTBEAT_MS, IDLE_CUTOFF_MS, SESSION_GAP_MS } from './_hub-activity.js';
+import { shiftsOn, liveCurrent, stateOf, DECLARED_TEXT, MAX_OPEN_MS } from './_shift.js';
 
 const canReadOthers = rep => !!rep && (rep.role === 'admin' || financeAccess(rep));
 const readBody = req => { try { return typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); } catch { return {}; } };
 const validDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
 
-async function dayView(email, day) {
-    const [minutes, raw, doc] = await Promise.all([
+// Declared shift time rides alongside the observed activity for the same day, and is never
+// mixed into it: a shift is what the rep clocked, activity is what the Hub saw.
+async function dayView(email, day, current) {
+    const [minutes, raw, doc, shift] = await Promise.all([
         redis.smembers(K.minutes(email, day)).catch(() => []),
         redis.lrange(K.events(email, day), 0, 499).catch(() => []),
         redis.get(K.sessions(email)).catch(() => null),
+        shiftsOn(redis, email, day, Date.now(), current).catch(() => ({ list: [], clockedMinutes: 0, breakMinutes: 0, needsReview: 0, open: 0, shifts: 0, unavailable: true })),
     ]);
     const events = (raw || []).map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean)
         .map(e => ({ ...e, label: EVENT_KINDS[e.kind] || e.kind }));
-    return summarizeDay({ day, minutes: minutes || [], sessions: sessionsOn(doc, day), events });
+    // The events ride along, oldest first, so the page's drilldown reads them. They were counted
+    // but never returned before, which left the drilldown saying "No events recorded" on days that had plenty.
+    return { ...summarizeDay({ day, minutes: minutes || [], sessions: sessionsOn(doc, day), events }), events: [...events].sort((a, b) => String(a.at).localeCompare(String(b.at))), shift };
 }
 
 async function weekView(email, from, to) {
+    // undefined when unreadable: each day then tries again and reports itself unavailable, never zero.
+    const current = await liveCurrent(redis, email).catch(() => undefined);
     const days = [];
-    for (const day of daysBetween(from, to)) days.push(await dayView(email, day));
-    const totals = days.reduce((t, d) => ({ activeMinutes: t.activeMinutes + d.activeMinutes, elapsedMinutes: t.elapsedMinutes + d.elapsedMinutes, idleMinutes: t.idleMinutes + d.idleMinutes, meaningful: t.meaningful + d.meaningful, sessions: t.sessions + d.sessions, measuredDays: t.measuredDays + (d.measured ? 1 : 0) }), { activeMinutes: 0, elapsedMinutes: 0, idleMinutes: 0, meaningful: 0, sessions: 0, measuredDays: 0 });
-    return { email, from, to, days, totals };
+    for (const day of daysBetween(from, to)) days.push(await dayView(email, day, current));
+    const totals = days.reduce((t, d) => ({ activeMinutes: t.activeMinutes + d.activeMinutes, elapsedMinutes: t.elapsedMinutes + d.elapsedMinutes, idleMinutes: t.idleMinutes + d.idleMinutes, meaningful: t.meaningful + d.meaningful, sessions: t.sessions + d.sessions, measuredDays: t.measuredDays + (d.measured ? 1 : 0),
+        clockedMinutes: t.clockedMinutes + d.shift.clockedMinutes, breakMinutes: t.breakMinutes + d.shift.breakMinutes, shifts: t.shifts + d.shift.shifts, shiftsNeedingReview: t.shiftsNeedingReview + d.shift.needsReview, shiftsOpen: t.shiftsOpen + d.shift.open, shiftDaysUnavailable: t.shiftDaysUnavailable + (d.shift.unavailable ? 1 : 0) }),
+        { activeMinutes: 0, elapsedMinutes: 0, idleMinutes: 0, meaningful: 0, sessions: 0, measuredDays: 0, clockedMinutes: 0, breakMinutes: 0, shifts: 0, shiftsNeedingReview: 0, shiftsOpen: 0, shiftDaysUnavailable: 0 });
+    // A forgotten shift (open past twelve hours) that started outside this range; say so. A healthy
+    // running shift outside the range is not news and is not mentioned.
+    const openElsewhere = current && stateOf(current) === 'stale' && !days.some(d => d.day === current.day) ? { startedAt: current.startedAt, day: current.day, id: current.id } : null;
+    return { email, from, to, days, totals, openShiftOutsideRange: openElsewhere };
 }
 
 /** Sign-in sessions still in the store. The key carries no timestamp, but its TTL is set once at
@@ -105,7 +118,7 @@ export default async function handler(req, res) {
     const from = validDay(q.from) ? q.from : daysBetween(new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10), today)[0];
     const to = validDay(q.to) ? q.to : today;
     if (daysBetween(from, to).length === 0 || daysBetween(from, to).length > 31) return res.status(400).json({ error: 'from must be on or before to, within 31 days' });
-    const definitions = { heartbeatMs: HEARTBEAT_MS, idleCutoffMs: IDLE_CUTOFF_MS, sessionGapMs: SESSION_GAP_MS, retainDays: RETAIN_DAYS, measured: MEASURED_TEXT, timezone: 'America/New_York' };
+    const definitions = { heartbeatMs: HEARTBEAT_MS, idleCutoffMs: IDLE_CUTOFF_MS, sessionGapMs: SESSION_GAP_MS, retainDays: RETAIN_DAYS, measured: MEASURED_TEXT, declared: DECLARED_TEXT, maxOpenMs: MAX_OPEN_MS, timezone: 'America/New_York' };
 
     try {
         if (q.me) {
@@ -126,7 +139,7 @@ export default async function handler(req, res) {
             if (!canReadOthers(rep)) return res.status(403).json({ error: 'Owners and admins only' });
             const emails = (await redis.smembers('reps').catch(() => [])) || [];
             const users = [];
-            for (const e of emails.map(norm).sort()) { const w = await weekView(e, from, to); users.push({ email: e, totals: w.totals, days: w.days.map(d => ({ day: d.day, measured: d.measured, activeMinutes: d.activeMinutes, elapsedMinutes: d.elapsedMinutes, idleMinutes: d.idleMinutes, meaningful: d.meaningful })) }); }
+            for (const e of emails.map(norm).sort()) { const w = await weekView(e, from, to); users.push({ email: e, totals: w.totals, openShiftOutsideRange: w.openShiftOutsideRange, days: w.days.map(d => ({ day: d.day, measured: d.measured, activeMinutes: d.activeMinutes, elapsedMinutes: d.elapsedMinutes, idleMinutes: d.idleMinutes, meaningful: d.meaningful, clockedMinutes: d.shift.clockedMinutes, shiftsNeedingReview: d.shift.needsReview, shiftsOpen: d.shift.open })) }); }
             return res.status(200).json({ from, to, users, definitions });
         }
         return res.status(400).json({ error: 'Ask for ?me=1, ?user=<email>, ?users=1 or ?sessions=1' });
