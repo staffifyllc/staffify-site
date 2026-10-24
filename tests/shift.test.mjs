@@ -1,7 +1,7 @@
 // Declared shifts: the state machine, the durations, the gate, the correction rule. Pure.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { withholdPhones, stateOf, gate, start, startBreak, resume, end, correct, minutesOf, summarizeShifts, shiftRequired, MAX_OPEN_MS, GATE_TEXT, DECLARED_TEXT, K } from '../api/_shift.js';
+import { withheldNumbers, gateFor, withholdPhones, stateOf, gate, start, startBreak, resume, end, correct, minutesOf, summarizeShifts, shiftRequired, MAX_OPEN_MS, GATE_TEXT, DECLARED_TEXT, K } from '../api/_shift.js';
 
 const T = iso => Date.parse(iso);
 
@@ -105,4 +105,24 @@ test('withholdPhones empties every phone field and nothing else', () => {
     assert.equal(out.items[0].note, 'Call +15125550003 after 5', 'free text is not rewritten');
     assert.equal(src.records[0].phone, '+19107695931', 'the original is untouched');
     assert.equal(withholdPhones(undefined), null);
+});
+
+test('withheldNumbers keeps order and status and replaces only the dialable number', () => {
+    const rows = [{ id: 'a', callContact: { phone: '+15125550001', phoneStatus: 'business_listed' } }, { id: 'b', callContact: { phone: null, phoneStatus: 'missing' } }, { id: 'c' }, null];
+    const out = withheldNumbers(rows);
+    assert.deepEqual(out.map(r => r && r.id), ['a', 'b', 'c', null]);
+    assert.deepEqual(out[0].callContact, { phone: 'withheld', phoneStatus: 'business_listed' }, 'still ordered as dialable, never dialled');
+    assert.equal(out[1].callContact.phone, null); assert.equal(rows[0].callContact.phone, '+15125550001', 'the input is untouched');
+    assert.deepEqual(withheldNumbers(undefined), []);
+});
+
+test('gateFor fails closed when the shift cannot be read, and never gates an owner', async () => {
+    const ownerFor = rep => (rep.email === 'hello@gostaffify.com' ? 'Paul' : null);
+    const down = { get: async () => { throw new Error('store down'); }, hget: async () => { throw new Error('store down'); } };
+    const g = await gateFor(down, { email: 'miltion@trystaffify.com', role: 'caller' }, ownerFor);
+    assert.equal(g.allowed, false); assert.equal(g.reason, 'off');
+    assert.equal((await gateFor(down, { email: 'hello@gostaffify.com', role: 'admin' }, ownerFor)).allowed, true);
+    const on = start(null, Date.now() - 60000).doc;
+    const up = { get: async () => on, hget: async () => null, del: async () => 1 };
+    assert.equal((await gateFor(up, { email: 'miltion@trystaffify.com', role: 'caller' }, ownerFor)).allowed, true);
 });

@@ -160,6 +160,15 @@ export function withholdPhones(x) {
     return JSON.parse(JSON.stringify(x === undefined ? null : x, (k, v) => (PHONE_KEYS.has(k) && v ? (Array.isArray(v) ? [] : null) : v)));
 }
 
+/** Queue rows with the dialable number replaced by "withheld", keeping order and status. Pure. */
+export function withheldNumbers(records) {
+    return (records || []).map(r => (r && r.callContact && r.callContact.phone ? { ...r, callContact: { ...r.callContact, phone: 'withheld' } } : r));
+}
+/** The gate for a signed-in rep, read from the store. Unreadable reads as off: it fails closed. */
+export async function gateFor(redis, rep, ownerFor, now = Date.now()) {
+    return gate(await liveCurrent(redis, rep && rep.email).catch(() => null), now, { required: shiftRequired(rep, ownerFor) });
+}
+
 // ---- store helpers ---------------------------------------------------------------------------
 const parse = x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } };
 /** The current shift doc, or null. Throws when the store cannot be read. */

@@ -25,7 +25,7 @@ import { validateFulfilment, balanceOf, fulfilmentNext, FULFILMENT_STATES, REVIE
 import { qboConnected, qboQuery, getRealmId } from './_qbo.js';
 import { configured as hubspotConfigured, portalId } from './_hubspot.js';
 import { notifyEmail, notifySlack } from './_notify-request.js';
-import { gate as shiftGateOf, liveCurrent, shiftRequired, withholdPhones } from './_shift.js';
+import { gateFor, withholdPhones } from './_shift.js';
 import { ownerFor } from './_outreach-queue.js';
 
 const ENGINE = 'https://campaign-dashboard-green.vercel.app/api/pilot-cohort';
@@ -386,7 +386,7 @@ export default async function handler(req, res) {
     };
     // The shift gate: a caller off shift sees the list without its numbers, so its phone links are
     // not there to tap. An unreadable shift reads as off. Owners are never gated.
-    const shiftGate = shiftGateOf(await liveCurrent(redis, who.email).catch(() => null), Date.now(), { required: shiftRequired(who, ownerFor) });
+    const shiftGate = await gateFor(redis, who, ownerFor);
     const scrub = x => (shiftGate.allowed ? x : withholdPhones(x));
     return res.status(200).json({
         ok: true,
