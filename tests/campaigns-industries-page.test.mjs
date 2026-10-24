@@ -100,8 +100,18 @@ test('screen 3: prospects sorted by what needs a person, the real email copy, th
         sequence: [{ n: 1, subject: 'A quick hello, Krista', body: 'Hi Krista, first email.' }, { n: 2, subject: null, body: 'Second.' }],
         replies: [{ id: 'a', company: 'Loft & Light', name: 'Priya', email: 'p@x.com', at: '2026-10-20T12:00:00Z', subject: 'Re: hello', excerpt: 'What would this actually cost us monthly?', needsHuman: true }],
         calls: { placed: 128, attempts: 143, connected: 12, callbacks: [{ id: 'd', company: 'Front Door Media', name: 'Dana', at: '2026-10-22T18:00:00Z', owner: 'milton@trystaffify.com', due: true }] },
-        next: { ready: 771, callbacksDue: 2, repliesWaiting: 1, findingNumber: 54, noNumberPossible: 0 }, notes: NOTES });
+        next: { ready: 771, callbacksDue: 2, repliesWaiting: 1, findingNumber: 54, noNumberPossible: 0 }, notes: NOTES,
+        copy: { leader: 'conversational-2026-10-04', minSends: 40, exploreShare: 0.2, variants: [
+            { id: 'conversational-2026-10-04', label: 'The work between shoots', subject: 'The work between shoots', sends: 367, replies: 9, replyRate: 2.5, conversations: 0, meetings: 0, meetingRate: null, won: 0, active: true, lastSent: '2026-10-14T00:00:00Z', note: '9 of 367 replied' },
+            { id: 'handoff-list-2026-10-23', label: 'Fifteen tasks', subject: '15 tasks to hand off after the shoot', sends: 3, replies: 0, replyRate: null, conversations: 0, meetings: 0, meetingRate: null, won: 0, active: true, lastSent: null, note: '3 sent; a rate needs 40' },
+            { id: 'subject:other', label: 'Other earlier subjects', subject: '12 subjects, each sent fewer than 5 times', sends: 30, replies: 1, replyRate: null, conversations: 0, meetings: 0, meetingRate: null, won: 0, active: false, lastSent: '2026-09-29T00:00:00Z', note: '30 sent; a rate needs 40' } ] } });
     const text = app.textContent;
+    // Which opener is winning: the leader is marked, a withheld rate shows its reason, retired copy says so.
+    assert.match(text, /Which opener is winning/);
+    assert.match(text, /New prospects get the leading opener 80% of the time/);
+    assert.match(text, /The work between shoots.*Leading.*367.*2\.5% · 9 of 367/s);
+    assert.match(text, /3 sent; a rate needs 40/);
+    assert.match(text, /Other earlier subjects.*Retired/s);
     assert.match(text, /Needs a human 1/);
     assert.match(text, /Ready to call 1/);
     assert.ok(text.indexOf('Loft & Light') < text.indexOf('Cincy Photo Pro'), 'the reply is above the callable one');

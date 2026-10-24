@@ -424,7 +424,7 @@ function renderCampaign(d) {
     for (const v of d.copy.variants) { const tr = el('tr'); const name = el('td'); name.append(el('strong', v.label || v.id)); if (v.subject) name.append(el('div', v.subject, 'sub')); if (v.id === d.copy.leader) name.append(el('span', 'Leading', 'chip')); tr.append(name);
       tr.append(el('td', n(v.sends)), el('td', v.replyRate == null ? v.note : `${v.replyRate}% · ${v.replies} of ${v.sends}`), el('td', n(v.conversations)), el('td', v.meetingRate == null ? (meetingsKnown(d) ? n(v.meetings) : '—') : `${v.meetings} (${v.meetingRate}%)`), el('td', n(v.won)), el('td', v.active ? (v.lastSent ? 'Yes · last ' + new Date(v.lastSent).toLocaleDateString() : 'Yes · not sent yet') : 'Retired'));
       tbl.append(tr); }
-    cb.append(tbl); app.append(cb);
+    cb.append(tbl); main.append(cb);   // into the column the screen is built in; app is replaced at the end
   }
   function meetingsKnown(d) { return d.copy.variants.some(v => v.meetingRate != null) || d.copy.variants.some(v => v.meetings > 0); }
   // The sequence, readable in full.
