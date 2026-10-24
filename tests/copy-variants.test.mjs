@@ -37,7 +37,7 @@ test('attribution: by copy version, with the subject as the fallback for older r
     const a = s.variants.find(v => v.id === INTRO_VERSION), b = s.variants.find(v => v.id === B), old = s.variants.find(v => v.id.startsWith('subject:'));
     assert.equal(a.sends, 50); assert.equal(a.replies, 3); assert.equal(a.replyRate, 6); assert.equal(a.meetings, 1); assert.equal(a.meetingRate, 2); assert.equal(a.enough, true);
     assert.equal(b.sends, 10); assert.equal(b.replyRate, null); assert.match(b.note, /needs 40/); assert.equal(b.meetings, 1);
-    assert.equal(old.sends, 5); assert.equal(old.label, 'Earlier copy'); assert.equal(old.active, false); assert.equal(old.subject, 'Re: same feedback, every video?');
+    assert.equal(old.sends, 5); assert.equal(old.label, 'Earlier copy'); assert.equal(old.active, false); assert.equal(old.subject, 'Same feedback, every video?', 'normalised: no Re:, first letter up');
     assert.equal(s.leader, INTRO_VERSION, 'the only version with enough sends leads');
     assert.ok(!s.variants.some(v => v.id === 'ceo'), 'another campaign is not counted');
     assert.equal(s.minSends, MIN_SENDS);
@@ -74,6 +74,7 @@ test('a personalised subject is one opener, not one bucket per company, and the 
     const s = attribute(recs, { campaignId: CAMPAIGN_ID });
     const handoff = s.variants.find(v => v.id === 'subject:a practical handoff for {company}');
     assert.equal(handoff.sends, 40); assert.equal(handoff.replies, 2); assert.equal(handoff.replyRate, 5);
+    assert.equal(handoff.subject, 'A practical handoff for {company}', 'the template, not the first company it was sent to');
     const other = s.variants.find(v => v.id === 'subject:other');
     assert.equal(other.sends, 6); assert.equal(other.label, 'Other earlier subjects'); assert.match(other.subject, /3 subjects/);
     assert.ok(!s.variants.some(v => v.id === 'subject:same feedback, every video?'), 'the tiny buckets are folded, not listed');

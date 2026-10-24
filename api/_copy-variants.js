@@ -95,7 +95,10 @@ export function attribute(records, { campaignId = CAMPAIGN_ID, meetingsByEmail =
         const f = first(r);
         if (!f) continue;
         const id = r.copyVersion || subjectKey(f.subject, r.company);
-        if (!by.has(id)) { const vs = (variantById(campaignId, id) || {}).subject; by.set(id, { id, label: null, subject: typeof vs === 'function' ? vs('{company}') : (vs || f.subject || null), sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: f.at, lastSent: f.at }); }
+        // A legacy bucket shows its normalised subject ("A practical handoff for {company}"), not the
+        // first company's copy of it.
+        const legacySubject = k => { const t = k.slice('subject:'.length); return t ? t.charAt(0).toUpperCase() + t.slice(1) : null; };
+        if (!by.has(id)) { const vs = (variantById(campaignId, id) || {}).subject; by.set(id, { id, label: null, subject: typeof vs === 'function' ? vs('{company}') : (vs || (id.startsWith('subject:') ? legacySubject(id) : f.subject) || null), sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: f.at, lastSent: f.at }); }
         const b = by.get(id);
         b.sends++;
         if ((r.events || []).some(e => e && e.kind === 'received')) b.replies++;
