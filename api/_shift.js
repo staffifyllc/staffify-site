@@ -150,6 +150,16 @@ export const DECLARED_TEXT = [
     'The shift gate covers calls started from the Hub: off shift, the Hub does not show a prospect\u2019s number and its phone links do not open. A call dialled straight from a phone app is outside what the Hub can see or stop.',
 ];
 
+/**
+ * A copy of a response with every phone-number field emptied, for a caller off shift on a page that
+ * renders numbers as links (the Founder pilot list, for one). Field names, not values, so nothing
+ * that merely looks like a number is touched. Pure.
+ */
+export const PHONE_KEYS = new Set(['phone', 'mobilephone', 'mobilePhone', 'crmPhone', 'phoneNumber', 'directDial', 'alternates']);
+export function withholdPhones(x) {
+    return JSON.parse(JSON.stringify(x === undefined ? null : x, (k, v) => (PHONE_KEYS.has(k) && v ? (Array.isArray(v) ? [] : null) : v)));
+}
+
 // ---- store helpers ---------------------------------------------------------------------------
 const parse = x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } };
 /** The current shift doc, or null. Throws when the store cannot be read. */

@@ -25,3 +25,7 @@ body .portal-shift{display:flex;align-items:center;gap:8px;margin-left:12px;font
 body .shift-gate{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:400;display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:min(680px,calc(100vw - 32px));padding:14px 18px;border-radius:14px;background:#1d1d1f;color:#fff;box-shadow:0 18px 44px #0000004d;font-size:13.5px;line-height:1.45}body .shift-gate b{font-weight:700}body .shift-gate .err{color:#ffb4b4;flex-basis:100%}
 body .shift-flash{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;z-index:390;padding:10px 16px;border-radius:999px;background:#1d1d1f;color:#fff;font-size:13px;pointer-events:none}body .shift-flash.show{opacity:1;transform:translateX(-50%)}
 @media(max-width:700px){body .portal-shift{margin-left:0;flex-basis:100%;justify-content:space-between}}
+
+/* With the shift bar in it, the header wraps a little earlier: on a break the bar is at its widest and
+   at laptop widths it pushed End shift off the screen. Only pages that show the bar are affected. */
+@media(max-width:1320px){body .portal-header:has(.portal-shift){flex-wrap:wrap;row-gap:8px}body .portal-header:has(.portal-shift) .portal-nav{order:3;flex-basis:100%}body .portal-header:has(.portal-shift) .portal-shift{margin-left:auto}}

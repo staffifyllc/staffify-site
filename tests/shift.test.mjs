@@ -1,7 +1,7 @@
 // Declared shifts: the state machine, the durations, the gate, the correction rule. Pure.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { stateOf, gate, start, startBreak, resume, end, correct, minutesOf, summarizeShifts, shiftRequired, MAX_OPEN_MS, GATE_TEXT, DECLARED_TEXT, K } from '../api/_shift.js';
+import { withholdPhones, stateOf, gate, start, startBreak, resume, end, correct, minutesOf, summarizeShifts, shiftRequired, MAX_OPEN_MS, GATE_TEXT, DECLARED_TEXT, K } from '../api/_shift.js';
 
 const T = iso => Date.parse(iso);
 
@@ -95,4 +95,14 @@ test('a never-ended shift cannot be corrected past twelve hours', () => {
     assert.equal(correct(forgotten, { endedAt: '2026-10-24T09:00:00Z', note: 'x', by: 'a' }).error, 'cannot_lengthen', 'thirteen hours: refused');
     assert.equal(correct(forgotten, { endedAt: '2026-10-24T08:00:00Z', note: 'x', by: 'a' }).ok, true, 'twelve hours: allowed');
     assert.equal(minutesOf(forgotten).elapsedMinutes, 2880, 'an archived never-ended shift stops at its archive time, not now');
+});
+
+test('withholdPhones empties every phone field and nothing else', () => {
+    const src = { records: [{ name: 'Tom', phone: '+19107695931', company: 'Riley', meta: { mobilephone: '+15125550001', zip: '28401' }, dial: { alternates: ['+15125550002'], label: 'x' } }], items: [{ email: 'a@b.com', phone: null, note: 'Call +15125550003 after 5' }] };
+    const out = withholdPhones(src);
+    assert.equal(out.records[0].phone, null); assert.equal(out.records[0].meta.mobilephone, null); assert.deepEqual(out.records[0].dial.alternates, []);
+    assert.equal(out.records[0].meta.zip, '28401'); assert.equal(out.records[0].company, 'Riley');
+    assert.equal(out.items[0].note, 'Call +15125550003 after 5', 'free text is not rewritten');
+    assert.equal(src.records[0].phone, '+19107695931', 'the original is untouched');
+    assert.equal(withholdPhones(undefined), null);
 });
