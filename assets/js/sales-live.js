@@ -52,7 +52,7 @@
   if(money.length){const g=el('div',undefined,'so-grid so-grid-calls');for(const [v,l] of money){const c=el('div',undefined,'so-card');c.append(el('strong',v),el('span',l));g.append(c);}node.append(g);}
   // The opener that is earning replies, from the campaign's own numbers.
   const c=data.copy;if(c&&c.variants){const lead=c.variants.find(v=>v.id===c.leader);
-   node.append(el('p',lead?('New prospects get “'+(lead.subject||lead.label)+'”: '+lead.replyRate+'% replied ('+lead.note+'). The other opener keeps '+Math.round(c.exploreShare*100)+'% so it can prove itself.'):('Openers are rotating evenly until one reaches '+c.minSends+' sends: '+c.variants.map(v=>(v.label||v.id)+' '+v.sends+' sent').join(' · ')+'.'),'so-muted so-small'));}
+   node.append(el('p',lead?('New prospects get “'+(lead.subject||lead.label)+'”: '+lead.replyRate+'% replied ('+lead.note+'). The other '+(c.variants.filter(v=>v.active&&v.id!==c.leader).length===1?'opener keeps':'openers share')+' '+Math.round(c.exploreShare*100)+'% so they can prove themselves.'):('Openers are rotating evenly until one reaches '+c.minSends+' sends: '+c.variants.map(v=>(v.label||v.id)+' '+v.sends+' sent').join(' · ')+'.'),'so-muted so-small'));}
  }
  // Paul, 2026-10-22: "how many calls have been made ... talk times, new calls, follow up calls".
  // Team view where the viewer may read it; a caller who may not (403) is shown his own seat.

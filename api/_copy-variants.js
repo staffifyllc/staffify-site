@@ -39,6 +39,12 @@ export const VARIANTS = Object.freeze({
                   'What tends to pull you away from running the business most: scheduling, revisions, or client follow-ups?',
                   owner + '\nStaffify', "If you'd prefer no more emails, just let me know."].join('\n\n');
           } },
+        // The personalised subject "A practical handoff for <Company>" measured 7 of 263, 2.7%, in late
+        // September on bodies that are not on file. This pairs that subject with the best-measured body
+        // above. It starts on the exploration share and earns more only by replies.
+        { id: 'practical-handoff-2026-10-23', label: 'A practical handoff for {company}', since: '2026-10-23',
+          subject: company => 'A practical handoff for ' + (String(company || '').trim() || 'your team'),
+          body: (owner, firstName) => variantById(CAMPAIGN_ID, 'conversational-2026-10-04').body(owner, firstName) },
         { id: INTRO_VERSION, label: 'Client service', subject: INTRO_SUBJECT, body: introduction, since: '2026-10-13' },
         {
             id: 'handoff-list-2026-10-23', label: 'Fifteen tasks', subject: '15 tasks to hand off after the shoot', since: '2026-10-23',
@@ -89,7 +95,7 @@ export function attribute(records, { campaignId = CAMPAIGN_ID, meetingsByEmail =
         const f = first(r);
         if (!f) continue;
         const id = r.copyVersion || subjectKey(f.subject, r.company);
-        if (!by.has(id)) by.set(id, { id, label: null, subject: (variantById(campaignId, id) || {}).subject || f.subject || null, sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: f.at, lastSent: f.at });
+        if (!by.has(id)) { const vs = (variantById(campaignId, id) || {}).subject; by.set(id, { id, label: null, subject: typeof vs === 'function' ? vs('{company}') : (vs || f.subject || null), sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: f.at, lastSent: f.at }); }
         const b = by.get(id);
         b.sends++;
         if ((r.events || []).some(e => e && e.kind === 'received')) b.replies++;
@@ -115,7 +121,7 @@ export function attribute(records, { campaignId = CAMPAIGN_ID, meetingsByEmail =
             note: enough ? `${b.replies} of ${b.sends} replied` : `${b.sends} sent; a rate needs ${MIN_SENDS}` };
     });
     // Every variant on offer appears even before its first send, so the page shows it is in rotation.
-    for (const v of variantsFor(campaignId)) if (!out.some(o => o.id === v.id)) out.push({ id: v.id, label: v.label, subject: v.subject, sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: null, lastSent: null, active: true, enough: false, replyRate: null, meetingRate: null, note: 'Not sent yet' });
+    for (const v of variantsFor(campaignId)) if (!out.some(o => o.id === v.id)) out.push({ id: v.id, label: v.label, subject: typeof v.subject === 'function' ? v.subject('{company}') : v.subject, sends: 0, replies: 0, conversations: 0, meetings: 0, won: 0, firstSent: null, lastSent: null, active: true, enough: false, replyRate: null, meetingRate: null, note: 'Not sent yet' });
     out.sort((a, b) => (b.replyRate ?? -1) - (a.replyRate ?? -1) || b.sends - a.sends);
     const leader = out.find(o => o.active && o.enough) || null;
     return { campaignId, variants: out, leader: leader ? leader.id : null, minSends: MIN_SENDS, exploreShare: EXPLORE_SHARE, computedAt: new Date(now).toISOString() };
@@ -137,7 +143,8 @@ export function chooseVariant(stats, { campaignId = CAMPAIGN_ID, roll = Math.ran
     return pool[Math.min(pool.length - 1, Math.floor(r * pool.length))];
 }
 
-/** The opener fields a new row gets. */
-export function openerFor(variant, owner, firstName) {
-    return { copyVersion: variant.id, subject: variant.subject, bodyText: variant.body(owner, firstName) };
+/** The opener fields a new row gets. A subject may be a function of the company. */
+export function openerFor(variant, owner, firstName, company = '') {
+    const subject = typeof variant.subject === 'function' ? variant.subject(company) : variant.subject;
+    return { copyVersion: variant.id, subject, bodyText: variant.body(owner, firstName, company) };
 }

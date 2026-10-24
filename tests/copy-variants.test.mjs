@@ -43,18 +43,18 @@ test('attribution: by copy version, with the subject as the fallback for older r
     assert.equal(s.minSends, MIN_SENDS);
     // Nothing sent at all: both offered variants still appear, nobody leads.
     const none = attribute([], { campaignId: CAMPAIGN_ID });
-    assert.deepEqual(none.variants.map(v => v.id).sort(), [INTRO_VERSION, B, 'conversational-2026-10-04'].sort()); assert.equal(none.leader, null); assert.equal(none.variants[0].note, 'Not sent yet');
+    assert.deepEqual(none.variants.map(v => v.id).sort(), [INTRO_VERSION, B, 'conversational-2026-10-04', 'practical-handoff-2026-10-23'].sort()); assert.equal(none.leader, null); assert.equal(none.variants[0].note, 'Not sent yet');
 });
 
 test('the chooser rotates evenly with no leader, then gives the leader its share and the rest to the others', () => {
     const noLeader = attribute([], { campaignId: CAMPAIGN_ID });
-    const picks = Array.from({ length: 99 }, (_, i) => chooseVariant(noLeader, { campaignId: CAMPAIGN_ID, roll: i / 99 }).id);
-    for (const id of [INTRO_VERSION, B, 'conversational-2026-10-04']) assert.equal(picks.filter(p => p === id).length, 33, id + ' gets a third with no leader');
+    const picks = Array.from({ length: 100 }, (_, i) => chooseVariant(noLeader, { campaignId: CAMPAIGN_ID, roll: i / 100 }).id);
+    for (const id of [INTRO_VERSION, B, 'conversational-2026-10-04', 'practical-handoff-2026-10-23']) assert.equal(picks.filter(p => p === id).length, 25, id + ' gets a quarter with no leader');
     const records = Array.from({ length: 60 }, (_, i) => rec(i, B, { replied: i < 6 }));
     const led = attribute(records, { campaignId: CAMPAIGN_ID });
     assert.equal(led.leader, B);
     const picks2 = Array.from({ length: 100 }, (_, i) => chooseVariant(led, { campaignId: CAMPAIGN_ID, roll: i / 100 }).id);
-    assert.equal(picks2.filter(p => p === B).length, 100 - EXPLORE_SHARE * 100); assert.equal(picks2.filter(p => p === INTRO_VERSION).length, EXPLORE_SHARE * 100 / 2); assert.equal(picks2.filter(p => p === 'conversational-2026-10-04').length, EXPLORE_SHARE * 100 / 2);
+    assert.equal(picks2.filter(p => p === B).length, 100 - EXPLORE_SHARE * 100); for (const id of [INTRO_VERSION, 'conversational-2026-10-04', 'practical-handoff-2026-10-23']) assert.ok(Math.abs(picks2.filter(p => p === id).length - EXPLORE_SHARE * 100 / 3) <= 1, id + ' shares the exploring slice');
     assert.equal(chooseVariant(led, { campaignId: 'no-such-campaign' }), null);
     // A leader that stops winning stops leading: the other overtakes once it has the sends.
     const flipped = attribute([...records, ...Array.from({ length: 60 }, (_, i) => rec(500 + i, INTRO_VERSION, { replied: i < 12 }))], { campaignId: CAMPAIGN_ID });
@@ -78,4 +78,12 @@ test('a personalised subject is one opener, not one bucket per company, and the 
     assert.equal(other.sends, 6); assert.equal(other.label, 'Other earlier subjects'); assert.match(other.subject, /3 subjects/);
     assert.ok(!s.variants.some(v => v.id === 'subject:same feedback, every video?'), 'the tiny buckets are folded, not listed');
     assert.equal(s.leader, null, 'a retired opener never leads');
+});
+
+test('a personalised subject renders with the company and falls back when there is none', () => {
+    const v = variantsFor(CAMPAIGN_ID).find(x => x.id === 'practical-handoff-2026-10-23');
+    assert.equal(openerFor(v, 'Paul', 'Tom', 'Sky Visuals').subject, 'A practical handoff for Sky Visuals');
+    assert.equal(openerFor(v, 'Paul', 'Tom', '').subject, 'A practical handoff for your team');
+    assert.match(openerFor(v, 'Madison', null, 'X').bodyText, /^Hi there,\n\nI'm Madison with Staffify/);
+    assert.equal(attribute([], { campaignId: CAMPAIGN_ID }).variants.find(x => x.id === v.id).subject, 'A practical handoff for {company}');
 });
