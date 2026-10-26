@@ -445,7 +445,9 @@ async function saveOutcome(row,b,status,save){
  busy=true;save.disabled=true;status.textContent='Saving…';status.className='dw-status ok';stash();refreshBar();
  try{
   const latest=await api('/api/outreach-queue/?view=calls');
-  const body=choice==='suppress'?{action:'suppress',email:row.recipient}:{action:'call-outcome',id:row.id,outcome:choice,notes:notes.value,nextCallAt:NEEDS_TIME.includes(choice)?new Date(due.value).toISOString():null,...(choice==='wrong_number'&&b&&b.phone?{dialled:b.phone}:{})};
+  // The number on screen travels with every outcome, so the daily report can pair it with Quo's record of the call.
+  const dialled=b&&b.phone?{dialled:b.phone}:{};
+  const body=choice==='suppress'?{action:'suppress',email:row.recipient,notes:notes.value,...dialled}:{action:'call-outcome',id:row.id,outcome:choice,notes:notes.value,nextCallAt:NEEDS_TIME.includes(choice)?new Date(due.value).toISOString():null,...dialled};
   const next=await api('/api/outreach-queue/?view=calls',{...body,expectedRevision:latest.revision});
   const tasks=state.tasks;state=next;state.tasks=next.tasks||tasks||[];
   session.saved[choice]=(session.saved[choice]||0)+1;

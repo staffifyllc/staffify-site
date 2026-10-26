@@ -34,7 +34,8 @@ test('an owner sees the day with sources, coverage, rates over their denominator
     assert.match(text, /Friday, Oct 23, 2026/); assert.match(text, /Milton Hodgson/);
     assert.match(text, /generated .* and kept/); assert.match(text, /Slack: not sent: no private destination set/);
     assert.match(text, /2\s*verified dials\s*Quo/); assert.match(text, /1\s*outcomes logged on 1 prospects\s*Hub, manual/);
-    assert.match(text, /unknown\s*meetings booked by prospects he called\s*Calendly/, 'Calendly not connected reads unknown');
+    assert.match(text, /unknown\s*discovery calls booked by prospects he called\s*Calendly/, 'Calendly not connected reads unknown');
+    assert.ok(!/\u2014/.test(document.title || '') && !/\u2014/.test(text), 'no em dash on the page');
     assert.match(text, /Calendly is not connected, so meetings are unknown/);
     assert.match(text, /Line picked up\s*50%\s*1 of 2/);
     assert.match(text, /Numbers dialled with no outcome logged \(missing dispositions\)\s*1/);

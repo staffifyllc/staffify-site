@@ -86,6 +86,8 @@ export async function invitees(eventUri) {
         timezone: i.timezone || null,
         createdAt: i.created_at || null,
         rescheduled: !!i.rescheduled,
+        // Set on the NEW booking when an invitee moved an existing one: the same meeting, not a new one.
+        oldInvitee: i.old_invitee || null,
     }));
 }
 

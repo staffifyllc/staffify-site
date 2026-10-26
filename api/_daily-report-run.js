@@ -70,32 +70,33 @@ export async function postToSlack(dest, text, fetchImpl = fetch) {
 
 /**
  * Generate (unless already delivered), store, and deliver one person's report for one day.
- * Safe to call any number of times: it posts to Slack at most once per person per day.
+ * Safe to call any number of times: it posts to Slack at most once per person per day, and once a
+ * day is delivered its kept snapshot is never rewritten, so the Hub shows what Slack received.
+ * Everything that writes happens under the lease, after re-reading the delivery record; a delivery
+ * record that cannot be read stops the run (the next scheduled run retries) rather than risk a repost.
  */
 export async function runOne({ redis, rep, day, now = Date.now(), deps, env = process.env, fetchImpl = fetch }) {
     const email = String(rep.email).toLowerCase();
-    const prior = await stored(redis, email, day);
-    if (prior.delivery && prior.delivery.delivered) return { email, day, status: 'already_delivered', delivery: prior.delivery };
-
-    const report = await liveReport({ redis, rep, day, now, deps });
-    await redis.set(RK.snapshot(email, day), report, { ex: RETAIN_DAYS * 86400 });
-
-    const dest = destination(env);
-    if (!dest) {
-        const d = { delivered: false, status: 'not_configured', note: 'No private management Slack destination is set. The report is in the Hub.', lastAttemptAt: new Date(now).toISOString(), attempts: (prior.delivery && prior.delivery.attempts) || 0 };
-        await redis.set(RK.delivery(email, day), d, { ex: RETAIN_DAYS * 86400 });
-        return { email, day, status: 'stored_not_delivered', reason: 'not_configured' };
-    }
+    const first = await redis.get(RK.delivery(email, day));
+    if (first && first.delivered) return { email, day, status: 'already_delivered', delivery: first };
     const nonce = randomUUID();
     if ((await redis.set(RK.lease(email, day), nonce, { nx: true, ex: 300 })) === null) return { email, day, status: 'another_run_is_delivering' };
     try {
         const again = await redis.get(RK.delivery(email, day));
         if (again && again.delivered) return { email, day, status: 'already_delivered', delivery: again };
-        const attempts = ((again && again.attempts) || 0) + 1;
+        const attempts = ((again && again.attempts) || 0);
+        const report = await liveReport({ redis, rep, day, now, deps });
+        await redis.set(RK.snapshot(email, day), report, { ex: RETAIN_DAYS * 86400 });
+        const dest = destination(env);
+        if (!dest) {
+            const d = { delivered: false, status: 'not_configured', note: 'No private management Slack destination is set. The report is in the Hub.', lastAttemptAt: new Date().toISOString(), attempts, generatedAt: report.generatedAt };
+            await redis.set(RK.delivery(email, day), d, { ex: RETAIN_DAYS * 86400 });
+            return { email, day, status: 'stored_not_delivered', reason: 'not_configured' };
+        }
         const res = await postToSlack(dest, slackText(report, { link: reportLink(email, day) }), fetchImpl);
         const d = res.confirmed
-            ? { delivered: true, status: 'delivered', at: new Date().toISOString(), via: res.via, channel: res.channel || dest.label, ts: res.ts || null, attempts, generatedAt: report.generatedAt }
-            : { delivered: false, status: 'failed', error: res.error, lastAttemptAt: new Date().toISOString(), attempts };
+            ? { delivered: true, status: 'delivered', at: new Date().toISOString(), via: res.via, channel: res.channel || dest.label, ts: res.ts || null, attempts: attempts + 1, generatedAt: report.generatedAt }
+            : { delivered: false, status: 'failed', error: res.error, lastAttemptAt: new Date().toISOString(), attempts: attempts + 1, generatedAt: report.generatedAt };
         await redis.set(RK.delivery(email, day), d, { ex: RETAIN_DAYS * 86400 });
         return { email, day, status: d.status, delivery: d };
     } finally {

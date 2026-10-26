@@ -50,9 +50,11 @@ export default async function handler(req, res) {
     const schedule = { deliversAt: '8:05 AM Eastern, for the complete previous day', nextRunAt: nextRun(), destination: destination() ? 'Private Slack destination set' : 'No private Slack destination set yet; the report is kept here' };
     try {
         const { snapshot, delivery } = await stored(redis, person.email, day);
-        if (snapshot && !q.live) return res.status(200).json({ report: snapshot, stored: true, delivery, partialDay: false, schedule });
+        // A kept snapshot that is not the one delivered would mean the Hub and Slack disagree; say so.
+        const mismatch = !!(snapshot && delivery && delivery.delivered && delivery.generatedAt && delivery.generatedAt !== snapshot.generatedAt);
+        if (snapshot && !q.live) return res.status(200).json({ report: snapshot, stored: true, delivery, mismatch, partialDay: false, schedule });
         const report = await liveReport({ redis, rep: person, day });
-        return res.status(200).json({ report, stored: false, delivery, partialDay: day === today, schedule });
+        return res.status(200).json({ report, stored: false, delivery, mismatch: false, partialDay: day === today, schedule });
     } catch (e) {
         return res.status(503).json({ error: 'The report could not be built: ' + String((e && e.message) || e).slice(0, 160) });
     }

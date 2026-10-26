@@ -32,7 +32,10 @@ export function mergeSnapshot(previous, incoming, now=new Date().toISOString()) 
   });
   return {revision:(previous?.revision||0)+1,records,assignments,suppressions:[...suppressed],pausedOwners:previous?.pausedOwners||[],updatedAt:now,mailboxes:incoming.mailboxes||[],lastWorkerError:incoming.lastWorkerError||null};
 }
-export function controlState(previous, {action,owner,email,id,outcome,notes,nextCallAt}, actor, callerIdentity=actor) {
+// dialled: the number the dialer had on screen when the outcome was logged. Kept on the history entry
+// so a report can pair the outcome with the phone system's record of that exact call.
+const dialledNumber = d => { const s = String(d || '').replace(/[^+\d]/g, '').slice(0, 16); return s.replace(/\D/g, '').length >= 10 ? s : null; };
+export function controlState(previous, {action,owner,email,id,outcome,notes,nextCallAt,dialled}, actor, callerIdentity=actor) {
   if (!previous) throw Error('Queue not initialized');
   if (action==='pause'||action==='resume') {
     if(!['Paul','Madison'].includes(owner)||(actor!=='all'&&actor!==owner))throw Error('Forbidden');
@@ -47,7 +50,7 @@ export function controlState(previous, {action,owner,email,id,outcome,notes,next
     if(!['connected','no_answer','voicemail','callback','timing','wrong_number'].includes(outcome))throw Error('Invalid outcome');
     if(!callReady(row)||previous.pausedOwners?.includes(row.owner)||previous.suppressions?.includes(row.recipient))throw Error('Call is no longer due');
     if(['no_answer','voicemail','callback','timing'].includes(outcome)&&!(Date.parse(nextCallAt)>Date.now()))throw Error('Choose a future callback time');
-    const at=new Date().toISOString(),entry={outcome,notes:String(notes||'').slice(0,4000),at,caller:callerIdentity,nextCallAt:nextCallAt||null};
+    const at=new Date().toISOString(),entry={outcome,notes:String(notes||'').slice(0,4000),at,caller:callerIdentity,nextCallAt:nextCallAt||null,...(dialledNumber(dialled)?{dialled:dialledNumber(dialled)}:{})};
     // Paul, 2026-10-20: "after a teammate works the call, they own it". The FIRST recorded outcome
     // claims the follow-up; opening a card claims nothing. Set once and never overwritten, so a
     // second caller covering a callback appends history without stealing ownership. This is the
@@ -57,7 +60,11 @@ export function controlState(previous, {action,owner,email,id,outcome,notes,next
   if(action==='suppress') {
     email=String(email||'').toLowerCase();
     if(!previous.records.some(r=>r.recipient===email&&(actor==='all'||r.owner===actor)))throw Error('Forbidden');
-    return {...previous,revision:previous.revision+1,suppressions:[...new Set([...previous.suppressions,email])],records:previous.records.map(r=>r.recipient===email?{...r,status:'suppressed'}:r)};
+    // From the dialer after a call (it sends the number dialled), the opt-out is also written to the
+    // card's call history, so it counts as that call's outcome. An exclusion made anywhere else (no
+    // number dialled) stays a suppression only and is never counted as a call attempt.
+    const d=dialledNumber(dialled),stamp=new Date().toISOString();
+    return {...previous,revision:previous.revision+1,suppressions:[...new Set([...previous.suppressions,email])],records:previous.records.map(r=>r.recipient===email?{...r,status:'suppressed',...(d?{callHistory:[...(r.callHistory||[]),{outcome:'suppress',notes:String(notes||'').slice(0,4000),at:stamp,caller:callerIdentity,nextCallAt:null,dialled:d}]}:{})}:r)};
   }
   throw Error('Unknown action');
 }

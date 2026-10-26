@@ -73,11 +73,20 @@ export function pairCalls(quoCalls, hubEntries) {
 
 const rate = (num, den, label) => (den > 0 ? { num, den, pct: Math.round((num / den) * 1000) / 10, label } : { num, den, pct: null, label, note: 'Not shown: the denominator is zero.' });
 
+/** When each measure began. A day before it is "not measured", never zero. */
+export const ACTIVITY_SINCE = '2026-10-23';
+export const SHIFT_SINCE = '2026-10-24';
+export const ACTIVITY_RETAIN_DAYS = 120;
+export const MEETING_CREDIT_DAYS = 30;
+const daysBefore = (day, n) => etDay(new Date(Date.parse(day + 'T12:00:00Z') - n * 86400000));
+
 /** Everything on the report, from already-read sources. Pure, so it is tested without a network. */
-export function buildReport({ user, day, generatedAt, range, hub, quo, calendly, activity, shift }) {
+export function buildReport({ user, day, generatedAt, range, hub, quo, calendly, activity, shift, now = Date.parse(generatedAt) }) {
     const dayEntries = hub.ok ? hub.entries.filter(e => etDay(e.at) === day) : [];
     const quoCalls = quo.ok ? quo.calls.filter(c => etDay(c.at) === day) : [];
     const { dials, outcomes } = pairCalls(quoCalls, dayEntries);
+    // For today's view, the day ends now: a callback due this evening is not overdue at noon.
+    const end = Math.min(ms(range.to), now);
 
     const by = {}; for (const k of Object.keys(OUTCOME_LABEL)) by[k] = 0;
     for (const e of dayEntries) by[e.outcome] = (by[e.outcome] || 0) + 1;
@@ -89,24 +98,31 @@ export function buildReport({ user, day, generatedAt, range, hub, quo, calendly,
     const numbersWithOutcome = new Set(dials.filter(d => d.pairedWith).map(d => d.number));
     const numbersWithoutOutcome = [...numbersDialled].filter(n => !numbersWithOutcome.has(n));
 
-    // Meetings: booked that ET day, by a prospect this rep logged a call with before the booking.
-    const firstCallByEmail = new Map();
-    for (const e of hub.ok ? hub.entries : []) { const k = norm(e.recipient); if (k && (!firstCallByEmail.has(k) || ms(e.at) < ms(firstCallByEmail.get(k).at))) firstCallByEmail.set(k, e); }
-    const bookingsToday = calendly.ok ? calendly.bookings.filter(b => etDay(b.createdAt) === day) : [];
-    const credited = bookingsToday.filter(b => { const c = firstCallByEmail.get(norm(b.email)); return c && ms(c.at) < ms(b.createdAt); })
-        .map(b => ({ ...b, calledAt: firstCallByEmail.get(norm(b.email)).at, company: firstCallByEmail.get(norm(b.email)).company }));
-
-    // Callbacks this rep agreed: due that day, done (a later outcome on the card by the end of the
-    // day), and overdue at the end of the day (due before it ended, nothing logged since).
-    const end = ms(range.to);
+    // Meetings: discovery calls booked that ET day by a prospect he logged a call with in the 30 days
+    // before the booking. The rate is narrower, so its numerator is part of its denominator: bookings
+    // that day by prospects he had a logged conversation with that day, over that day's conversations.
     const all = hub.ok ? hub.entries : [];
-    const later = (e) => all.some(x => x.recordId === e.recordId && ms(x.at) > ms(e.at) && ms(x.at) <= end);
+    const bookingsToday = calendly.ok ? calendly.bookings.filter(b => etDay(b.createdAt) === day) : [];
+    const lastCallBefore = (email, t) => all.filter(e => norm(e.recipient) === norm(email) && ms(e.at) < t && ms(e.at) >= t - MEETING_CREDIT_DAYS * 86400000).sort((a, b) => ms(b.at) - ms(a.at))[0] || null;
+    const credited = bookingsToday.map(b => ({ b, c: lastCallBefore(b.email, ms(b.createdAt)) })).filter(x => x.c)
+        .map(({ b, c }) => ({ ...b, calledAt: c.at, company: c.company, sameDayConversation: dayEntries.some(e => e.outcome === 'connected' && norm(e.recipient) === norm(b.email) && ms(e.at) < ms(b.createdAt)) }));
+    const conversedProspects = new Set(dayEntries.filter(e => e.outcome === 'connected').map(e => e.recordId));
+
+    // Callbacks he agreed. Done: a later outcome on that card by anyone, or the card excluded, by the
+    // end of the day. A callback rescheduled before it fell due is replaced by the new one; one
+    // completed by setting another callback still counts as due and done.
+    const cards = (hub.ok && hub.cards) || {};
+    const historyOf = id => (cards[id] && cards[id].history) || all.filter(x => x.recordId === id);
+    const resolved = e => historyOf(e.recordId).some(x => ms(x.at) > ms(e.at) && ms(x.at) <= end) || (cards[e.recordId] && cards[e.recordId].status === 'suppressed');
     const callbacks = all.filter(e => e.outcome === 'callback' && e.nextCallAt && ms(e.at) <= end)
-        // Only the most recent callback per card matters: an earlier one superseded by a later
-        // outcome is not still owed.
-        .filter(e => !all.some(x => x.recordId === e.recordId && x.outcome === 'callback' && ms(x.at) > ms(e.at) && ms(x.at) <= end));
+        .filter(e => !all.some(x => x.recordId === e.recordId && x.outcome === 'callback' && ms(x.at) > ms(e.at) && ms(x.at) < ms(e.nextCallAt) && ms(x.at) <= end));
     const dueToday = callbacks.filter(e => etDay(e.nextCallAt) === day);
-    const cbRows = callbacks.filter(e => etDay(e.nextCallAt) <= day).map(e => ({ recordId: e.recordId, company: e.company, setAt: e.at, dueAt: e.nextCallAt, done: later(e), dueToday: etDay(e.nextCallAt) === day }));
+    const cbRows = callbacks.filter(e => etDay(e.nextCallAt) <= day).map(e => ({ recordId: e.recordId, company: e.company, setAt: e.at, dueAt: e.nextCallAt, done: resolved(e), dueToday: etDay(e.nextCallAt) === day }));
+
+    // Opt-outs: the stop button writes the per-rep event log (since Hub activity began) and, since
+    // this report, the card's call history too. Unknown on a day the event log did not exist.
+    const actEvents = activity && !activity.notMeasured && Array.isArray(activity.events) ? activity.events : null;
+    const optOuts = hub.ok && actEvents ? Math.max(by.suppress, actEvents.filter(x => x.kind === 'suppress').length) : null;
 
     const quoUnavailable = !quo.ok;
     const hubUnavailable = !hub.ok;
@@ -126,53 +142,58 @@ export function buildReport({ user, day, generatedAt, range, hub, quo, calendly,
         badNumbers: hubUnavailable ? null : by.wrong_number,
         interested: hubUnavailable ? null : tags.Interested + tags['Meeting booked'],
         notInterested: hubUnavailable ? null : by.timing + tags['Not a fit'],
-        optOuts: hubUnavailable ? null : by.suppress,
+        optOuts,
         // Reconciliation between the two. Unknown when either side could not be read.
         numbersDialledWithoutOutcome: quoUnavailable || hubUnavailable ? null : numbersWithoutOutcome.length,
         dialsWithoutOutcome: quoUnavailable || hubUnavailable ? null : dials.filter(d => !d.pairedWith).length,
         outcomesWithoutQuoCall: quoUnavailable || hubUnavailable ? null : outcomes.filter(o => !o.pairedWith).length,
     };
     const meetings = { booked: calendly.ok && hub.ok ? credited.length : null, bookedTotalThatDay: calendly.ok ? bookingsToday.length : null };
-    const cb = hub.ok ? { dueToday: dueToday.length, doneOfDueToday: dueToday.filter(later).length, overdueAtEndOfDay: cbRows.filter(r => !r.done && ms(r.dueAt) <= end).length } : { dueToday: null, doneOfDueToday: null, overdueAtEndOfDay: null };
+    const cb = hub.ok ? { dueToday: dueToday.length, doneOfDueToday: dueToday.filter(resolved).length, overdueAtEndOfDay: cbRows.filter(r => !r.done && ms(r.dueAt) <= end).length } : { dueToday: null, doneOfDueToday: null, overdueAtEndOfDay: null };
 
     const rates = {
         pickedUp: quoUnavailable ? null : rate(answered.length, quoCalls.length, 'Line picked up, of verified dials. Includes voicemail and gatekeepers, so it is not a conversation rate.'),
         conversations: hubUnavailable ? null : rate(by.connected, dayEntries.length, 'Conversations, of outcomes logged in the Hub.'),
-        meetings: meetings.booked === null || hubUnavailable ? null : rate(meetings.booked, by.connected, 'Meetings booked that day by prospects he had called, of that day’s logged conversations.'),
+        meetings: meetings.booked === null || hubUnavailable ? null : rate(credited.filter(x => x.sameDayConversation).length, conversedProspects.size, "Prospects he had a logged conversation with that day who booked a discovery call that day, of the prospects he had a logged conversation with."),
     };
 
     const coverage = [];
     if (!quo.configured) coverage.push('Quo is not connected, so no call can be verified. Every number below is what he logged.');
+    else if (quo.error) coverage.push('Quo could not be read for this day (' + quo.error + '). Verified calls are unavailable, not zero.');
     else if (!quo.seat) coverage.push('No Quo seat matches this login, so no call can be verified. Every number below is what he logged.');
-    else if (!quo.ok) coverage.push('Quo could not be read for this day (' + (quo.error || 'unavailable') + '). Verified calls are unavailable, not zero.');
-    else coverage.push('Verified calls are the ones placed through Quo by ' + (quo.seat.email || 'his Quo user') + '. Calls from an iPhone’s own dialer or any line outside Quo are not visible to the Hub and are not counted.');
+    else coverage.push('Verified calls are the ones placed through Quo by ' + (quo.seat.email || 'his Quo user') + ". Calls from an iPhone's own dialer or any line outside Quo are not visible to the Hub and are not counted.");
     if (quo.ok && quo.complete === false) coverage.push('Quo returned more pages than were read; the verified counts may be low.');
     if (!hub.ok) coverage.push('The Hub call log could not be read (' + (hub.error || 'unavailable') + ').');
     if (!calendly.configured) coverage.push('Calendly is not connected, so meetings are unknown.');
     else if (!calendly.ok) coverage.push('Calendly could not be read (' + (calendly.error || 'unavailable') + '); meetings are unknown, not zero.');
-    else coverage.push('Meetings count only bookings still active when the report ran, credited when the invitee is a prospect he logged a call with before booking.');
-    if (!activity) coverage.push('Hub activity could not be read.');
-    if (!shift || shift.unavailable) coverage.push('Shift records could not be read.');
+    else coverage.push('Meetings are discovery-call bookings still active when the report ran, credited when the invitee is a prospect he logged a call with in the 30 days before booking. A moved booking is not a new one.');
+    if (activity && activity.notMeasured) coverage.push(activity.reason);
+    else if (!activity) coverage.push('Hub activity could not be read.');
+    if (shift && shift.notMeasured) coverage.push(shift.reason);
+    else if (!shift || shift.unavailable) coverage.push('Shift records could not be read.');
+    if (optOuts === null && hub.ok) coverage.push('Opt-outs are unknown for this day: the per-rep event log that records the stop button began on Oct 23, 2026.');
 
     // "No recorded activity" is a statement about every source, so it is made only when each one was
-    // read (or cannot see calls at all, which the coverage line says). An unreadable source makes it unknown.
-    const quoSilent = !quo.configured || !quo.seat || (quo.ok && quoCalls.length === 0);
-    const noRecordedActivity = quoSilent && hub.ok && dayEntries.length === 0 && !!shift && !shift.unavailable && !shift.shifts && !!activity && !activity.measured;
+    // read (or cannot see calls at all, which the coverage line says) and each one existed that day.
+    const quoSilent = !quo.error && (!quo.configured || !quo.seat || (quo.ok && quoCalls.length === 0));
+    const shiftSilent = !!shift && !shift.unavailable && !shift.notMeasured && !shift.shifts;
+    const activitySilent = !!activity && !activity.notMeasured && !activity.measured;
+    const noRecordedActivity = quoSilent && hub.ok && dayEntries.length === 0 && shiftSilent && activitySilent;
     const quoDial = d => ({ at: d.at, number: tail4(d.number), answered: d.answered, seconds: d.seconds, loggedAs: d.pairedWith ? (OUTCOME_LABEL[(outcomes.find(o => o.id === d.pairedWith) || {}).outcome] || null) : null });
     return {
-        version: REPORT_VERSION, user, day, range, generatedAt,
-        freshness: { hubLog: hub.readAt || null, hubStateUpdatedAt: hub.stateUpdatedAt || null, quo: quo.readAt || null, calendly: calendly.readAt || null, activity: activity ? generatedAt : null },
-        sources: { quo: quo.ok ? 'read' : !quo.configured ? 'not connected' : !quo.seat ? 'no seat for this login' : 'unavailable', hubLog: hub.ok ? 'read' : 'unavailable', calendly: calendly.ok ? 'read' : !calendly.configured ? 'not connected' : 'unavailable' },
+        version: REPORT_VERSION, user, day, range, generatedAt, partialDay: now < ms(range.to),
+        freshness: { hubLog: hub.readAt || null, hubStateUpdatedAt: hub.stateUpdatedAt || null, quo: quo.readAt || null, calendly: calendly.readAt || null, activity: activity && !activity.notMeasured ? generatedAt : null },
+        sources: { quo: quo.ok ? 'read' : !quo.configured ? 'not connected' : quo.error ? 'unavailable' : !quo.seat ? 'no seat for this login' : 'unavailable', hubLog: hub.ok ? 'read' : 'unavailable', calendly: calendly.ok ? 'read' : !calendly.configured ? 'not connected' : 'unavailable' },
         noRecordedActivity,
         calls, meetings, callbacks: cb, rates, coverage,
-        shift: shift && !shift.unavailable ? { shifts: shift.shifts, clockedMinutes: shift.clockedMinutes, breakMinutes: shift.breakMinutes, needsReview: shift.needsReview, open: shift.open,
-            list: (shift.list || []).map(s => ({ startedAt: s.startedAt, endedAt: s.correctedEndedAt || s.endedAt || null, corrected: !!s.correctedEndedAt, state: s.state, clockedMinutes: s.clockedMinutes, breakMinutes: s.breakMinutes, breaks: (s.breaks || []).map(b => ({ startedAt: b.startedAt, endedAt: b.endedAt })) })) } : null,
-        activity: activity ? { measured: activity.measured, activeMinutes: activity.activeMinutes, idleMinutes: activity.idleMinutes, elapsedMinutes: activity.elapsedMinutes, sessions: activity.sessions, firstSeen: activity.firstSeen, lastSeen: activity.lastSeen } : null,
+        shift: !shift || shift.unavailable ? null : shift.notMeasured ? { notMeasured: true, reason: shift.reason } : { shifts: shift.shifts, clockedMinutes: shift.clockedMinutes, breakMinutes: shift.breakMinutes, needsReview: shift.needsReview, open: shift.open,
+            list: (shift.list || []).map(s => ({ startedAt: s.startedAt, endedAt: s.correctedEndedAt || s.endedAt || null, corrected: !!s.correctedEndedAt, state: s.state, clockedMinutes: s.clockedMinutes, breakMinutes: s.breakMinutes, breaks: (s.breaks || []).map(b => ({ startedAt: b.startedAt, endedAt: b.endedAt })) })) },
+        activity: !activity ? null : activity.notMeasured ? { notMeasured: true, reason: activity.reason } : { measured: activity.measured, activeMinutes: activity.activeMinutes, idleMinutes: activity.idleMinutes, elapsedMinutes: activity.elapsedMinutes, sessions: activity.sessions, firstSeen: activity.firstSeen, lastSeen: activity.lastSeen },
         evidence: {
             quoDials: dials.map(quoDial),
             hubOutcomes: outcomes.map(o => ({ at: o.at, company: o.company, outcome: OUTCOME_LABEL[o.outcome] || o.outcome, tag: o.tag, quoCall: !!o.pairedWith, recordId: o.recordId })),
             numbersDialledWithoutOutcome: quoUnavailable || hubUnavailable ? [] : numbersWithoutOutcome.map(tail4),
-            meetings: credited.map(b => ({ bookedAt: b.createdAt, startsAt: b.startTime, company: b.company || null, event: b.eventName || null, calledFirstAt: b.calledAt })),
+            meetings: credited.map(b => ({ bookedAt: b.createdAt, startsAt: b.startTime, company: b.company || null, event: b.eventName || null, calledFirstAt: b.calledAt, sameDayConversation: b.sameDayConversation })),
             callbacks: cbRows,
         },
         definitions: {
@@ -181,10 +202,11 @@ export function buildReport({ user, day, generatedAt, range, hub, quo, calendly,
             linePickedUp: 'Quo saw the line answered. A person, a gatekeeper or a voicemail greeting all answer a line.',
             loggedOutcomes: 'Outcomes he logged on a Hub card. Manual: a logged outcome is not proof a call was placed.',
             conversations: 'Logged as "Connected: you spoke with them".',
+            optOuts: 'Prospects he excluded with the stop button that day.',
             numbersDialledWithoutOutcome: 'Numbers Quo shows he dialled with no outcome logged against them that day (a missing disposition).',
             outcomesWithoutQuoCall: 'Outcomes logged with no matching Quo call within 90 minutes: dialled outside Quo, a different number, or not dialled.',
-            meetings: 'Calendly bookings made that day by an invitee he had logged a call with before the booking. A booking-link click is not a meeting.',
-            callbacks: 'Callbacks he agreed. Done means a later outcome was logged on that card by the end of the day.',
+            meetings: 'Discovery-call bookings made that day by an invitee he had logged a call with in the 30 days before. A booking-link click is not a meeting, and a moved booking is not a new one.',
+            callbacks: 'Callbacks he agreed. Done means a later outcome was logged on that card, by anyone, or the card was excluded, by the end of the day.',
             shift: 'Declared with Start, Break and End. Hub idle time is never subtracted.',
             activity: 'An estimate of time with a Hub tab open and in use. It cannot see phone calls.',
         },
@@ -202,20 +224,20 @@ export function slackText(r, { link } = {}) {
     lines.push(`*${r.user.name || r.user.email} · calls and shift · ${d} (ET)*`);
     if (r.noRecordedActivity) lines.push('No recorded activity: no Quo calls, no logged outcomes, no shift and no Hub use that day.');
     else {
-        lines.push(c.verifiedAttempts == null ? 'Verified calls (Quo): unavailable.' : `Verified calls (Quo): ${c.verifiedAttempts} dials to ${c.uniqueNumbersCalled} numbers (${c.repeatAttempts} repeat). Line picked up ${c.linePickedUp} times, voicemail included; ${c.answered60sOrMore} answered calls ran 60 s or more. Talk time ${mins(Math.round((c.talkSeconds || 0) / 60))}.`);
-        if (c.loggedOutcomes == null) lines.push('Logged in the Hub: unavailable.');
+        lines.push(c.verifiedAttempts == null ? 'Verified calls (Quo): unknown.' : `Verified calls (Quo): ${c.verifiedAttempts} dials to ${c.uniqueNumbersCalled} numbers (${c.repeatAttempts} repeat). Line picked up ${c.linePickedUp} times, voicemail included; ${c.answered60sOrMore} answered calls ran 60 s or more. Talk time ${mins(Math.round((c.talkSeconds || 0) / 60))}.`);
+        if (c.loggedOutcomes == null) lines.push('Logged in the Hub: unknown.');
         else {
             const b = c.byOutcome;
-            lines.push(`Logged in the Hub: ${c.loggedOutcomes} outcomes on ${c.loggedProspects} prospects. Conversations ${b.connected} · voicemail ${b.voicemail} · no answer ${b.no_answer} · callback agreed ${b.callback} · not now ${b.timing} · bad number ${b.wrong_number} · opt-out ${b.suppress}. Tagged interested ${c.interested}, not a fit ${c.tags['Not a fit']}.`);
+            lines.push(`Logged in the Hub: ${c.loggedOutcomes} outcomes on ${c.loggedProspects} prospects. Conversations ${b.connected} · voicemail ${b.voicemail} · no answer ${b.no_answer} · callback agreed ${b.callback} · not now ${b.timing} · bad number ${b.wrong_number} · opt-outs ${v(c.optOuts)}. Tagged interested ${c.interested}, not a fit ${c.tags['Not a fit']}.`);
         }
         if (c.numbersDialledWithoutOutcome != null) lines.push(`Not reconciled: ${c.numbersDialledWithoutOutcome} numbers dialled with no outcome logged; ${c.outcomesWithoutQuoCall} outcomes logged with no matching Quo call.`);
-        lines.push(`Meetings booked by prospects he called: ${v(r.meetings.booked)}.`);
+        lines.push(`Discovery calls booked by prospects he called: ${v(r.meetings.booked)}.`);
         lines.push(`Callbacks: ${v(r.callbacks.dueToday)} due, ${v(r.callbacks.doneOfDueToday)} done, ${v(r.callbacks.overdueAtEndOfDay)} overdue at end of day.`);
         const s = r.shift;
-        lines.push(!s ? 'Shift: unavailable.' : !s.shifts ? 'Shift: none declared.' : `Shift (declared): ${s.list.map(x => timeET(x.startedAt) + ' to ' + (x.endedAt ? timeET(x.endedAt) : x.state === 'open' ? 'still open' : 'never ended')).join(', ')}; ${mins(s.clockedMinutes)} clocked, ${mins(s.breakMinutes)} on breaks${s.needsReview ? '; ' + s.needsReview + ' needs review' : ''}.`);
-        lines.push(!r.activity ? 'Hub activity: unavailable.' : r.activity.measured ? `Hub activity (estimate): ${mins(r.activity.activeMinutes)} active, ${mins(r.activity.idleMinutes)} idle.` : 'Hub activity: none recorded.');
+        lines.push(!s ? 'Shift: unknown.' : s.notMeasured ? 'Shift: not measured on this day.' : !s.shifts ? 'Shift: none declared.' : `Shift (declared): ${s.list.map(x => timeET(x.startedAt) + ' to ' + (x.endedAt ? timeET(x.endedAt) : x.state === 'open' ? 'still open' : 'never ended')).join(', ')}; ${mins(s.clockedMinutes)} clocked, ${mins(s.breakMinutes)} on breaks${s.needsReview ? '; ' + s.needsReview + ' needs review' : ''}.`);
+        lines.push(!r.activity ? 'Hub activity: unknown.' : r.activity.notMeasured ? 'Hub activity: not measured on this day.' : r.activity.measured ? `Hub activity (estimate): ${mins(r.activity.activeMinutes)} active, ${mins(r.activity.idleMinutes)} idle.` : 'Hub activity: none recorded.');
     }
-    const gap = r.coverage.find(x => /not visible|cannot be verified|unavailable/i.test(x));
+    const gap = r.coverage.find(x => /not visible|can be verified|could not be read|not connected|no quo seat/i.test(x));
     if (gap) lines.push('_' + gap + '_');
     if (link) lines.push(link);
     return lines.join('\n');
@@ -223,15 +245,41 @@ export function slackText(r, { link } = {}) {
 
 // ---- reading the sources -----------------------------------------------------------------------
 
-/** The Hub call log for one person, every entry they logged, with the numbers on each card. */
-export function hubEntriesFrom(records, emails) {
+/**
+ * The Hub call log for one person: every entry they logged, with the number dialled when the
+ * dialer recorded it, then every number known for the card (the one on screen now, its alternates,
+ * the vendor, website and evidence numbers, numbers since marked bad). Also each touched card's full
+ * history from every caller and its status, for judging whether a callback was handled.
+ */
+export function hubEntriesFrom(records, emails, extraNumbers = {}) {
     const want = new Set(emails.map(norm));
-    const out = [];
+    const out = [], cards = {};
     for (const r of records || []) {
-        const nums = [r.callContact && r.callContact.phone, r.phone, ...((r.callContact && r.callContact.alternates) || [])].map(last10).filter(n => n.length === 10);
+        const cardNums = [r.callContact && r.callContact.phone, r.phone, ...((r.callContact && (r.callContact.phoneAlternates || r.callContact.alternates)) || []), ...(extraNumbers[r.id] || [])].map(last10).filter(n => n.length === 10);
+        let touched = false;
         (r.callHistory || []).forEach((c, i) => {
             if (!c || !want.has(norm(c.caller)) || !c.at) return;
-            out.push({ id: r.id + '#' + i, recordId: r.id, company: r.company || r.recipient || null, recipient: r.recipient || null, at: c.at, outcome: c.outcome, tag: TAG(c.notes), nextCallAt: c.nextCallAt || null, numbers: [...new Set(nums)] });
+            touched = true;
+            const dialled = last10(c.dialled);
+            out.push({ id: r.id + '#' + i, recordId: r.id, company: r.company || r.recipient || null, recipient: r.recipient || null, at: c.at, outcome: c.outcome, tag: TAG(c.notes), nextCallAt: c.nextCallAt || null,
+                numbers: [...new Set([...(dialled.length === 10 ? [dialled] : []), ...cardNums])], dialledRecorded: dialled.length === 10 });
+        });
+        if (touched) cards[r.id] = { status: r.status || null, history: (r.callHistory || []).filter(c => c && c.at).map(c => ({ at: c.at, outcome: c.outcome, caller: norm(c.caller) })) };
+    }
+    return { entries: out, cards };
+}
+
+/** Every number we hold for a set of cards, from the stores the dialer's number ladder reads. */
+async function numbersFor(redis, records) {
+    const out = {};
+    const rows = (records || []).filter(r => r && r.recipient);
+    for (let i = 0; i < rows.length; i += 50) {
+        const chunk = rows.slice(i, i + 50);
+        const keys = chunk.flatMap(r => { const e = String(r.recipient).toLowerCase(); return ['staffify:call-phone-evidence:' + r.recipient, 'staffify:call-phone-vendor:' + e, 'staffify:call-site-phone:' + e, 'staffify:bad-numbers:' + e]; });
+        const vals = await redis.mget(...keys);
+        chunk.forEach((r, j) => {
+            const [ev, vendor, site, bad] = vals.slice(j * 4, j * 4 + 4);
+            out[r.id] = [ev && ev.phone, vendor && vendor.phone, ...((vendor && vendor.alternates) || []), site && site.phone, ...((site && site.alternates) || []), ...((bad && bad.numbers) || [])].filter(Boolean);
         });
     }
     return out;
@@ -253,7 +301,11 @@ export async function gather({ redis, rep, day, now = Date.now(), decorate, deps
         if (!state) throw Error('the queue store answered with nothing');
         let view = visibleState(state, 'all');
         if (decorate) { try { view = await decorate(view); } catch { /* numbers fall back to what the record holds */ } }
-        Object.assign(hub, { ok: true, entries: hubEntriesFrom(view.records, emails), readAt: at(), stateUpdatedAt: state.queueUpdatedAt || state.updatedAt || null });
+        const mine = view.records.filter(r => (r.callHistory || []).some(c => c && emails.includes(norm(c.caller))));
+        let extra = {};
+        try { extra = await numbersFor(redis, mine); } catch { extra = {}; }
+        const { entries, cards } = hubEntriesFrom(view.records, emails, extra);
+        Object.assign(hub, { ok: true, entries, cards, readAt: at(), stateUpdatedAt: state.queueUpdatedAt || state.updatedAt || null });
     } catch (e) { hub.error = String((e && e.message) || e).slice(0, 120); }
 
     const q = { configured: (deps.quoConfigured || quoConfigured)(), ok: false, seat: null };
@@ -277,26 +329,33 @@ export async function gather({ redis, rep, day, now = Date.now(), decorate, deps
             const scope = me && me.organization ? { organization: me.organization } : me && me.uri ? { user: me.uri } : null;
             if (!scope) throw Error('no Calendly scope');
             // Bookings MADE that day can be for any later date, so the window runs forward from it.
-            const { items } = await (deps.pastEvents || pastEvents)({ since: range.from, until: new Date(ms(range.to) + 120 * 86400000).toISOString(), ...scope, maxPages: 10 });
+            const { items, complete } = await (deps.pastEvents || pastEvents)({ since: range.from, until: new Date(ms(range.to) + 120 * 86400000).toISOString(), ...scope, maxPages: 10 });
+            if (complete === false) throw Error('more Calendly events than were read');
             const bookings = [];
             for (const ev of items || []) {
-                if (etDay(ev.created_at) !== day) continue;
-                let people = []; try { people = await (deps.invitees || invitees)(ev.uri); } catch { continue; }
-                for (const p of people) if (p.email) bookings.push({ email: p.email, createdAt: ev.created_at, startTime: ev.start_time, eventName: ev.name || null });
+                if (etDay(ev.created_at) !== day || !/discovery/i.test(String(ev.name || ''))) continue;
+                // A failed invitee read makes meetings unknown for the day, never a silent zero.
+                const people = await (deps.invitees || invitees)(ev.uri);
+                for (const p of people) if (p.email && (!p.status || p.status === 'active') && !p.oldInvitee) bookings.push({ email: p.email, createdAt: ev.created_at, startTime: ev.start_time, eventName: ev.name || null });
             }
             Object.assign(cal, { ok: true, bookings, readAt: at() });
         } catch (e) { cal.error = String((e && e.message) || e).slice(0, 120); }
     }
 
     let activity = null;
-    try {
-        const [minutes, raw, doc] = await Promise.all([redis.smembers(ACT.minutes(email, day)), redis.lrange(ACT.events(email, day), 0, 499), redis.get(ACT.sessions(email))]);
-        const events = (raw || []).map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean);
-        activity = summarizeDay({ day, minutes: minutes || [], sessions: sessionsOn(doc, day), events });
-    } catch { activity = null; }
+    if (day < ACTIVITY_SINCE) activity = { notMeasured: true, reason: 'Hub activity was not measured before Oct 23, 2026.' };
+    else if (day < daysBefore(etDay(new Date(now)), ACTIVITY_RETAIN_DAYS)) activity = { notMeasured: true, reason: 'Hub activity is kept for 120 days; this day is older.' };
+    else {
+        try {
+            const [minutes, raw, doc] = await Promise.all([redis.smembers(ACT.minutes(email, day)), redis.lrange(ACT.events(email, day), 0, 499), redis.get(ACT.sessions(email))]);
+            const events = (raw || []).map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean);
+            activity = { ...summarizeDay({ day, minutes: minutes || [], sessions: sessionsOn(doc, day), events }), events };
+        } catch { activity = null; }
+    }
 
     let shift = null;
-    try { shift = await shiftsOn(redis, email, day, now); } catch { shift = { unavailable: true }; }
+    if (day < SHIFT_SINCE) shift = { notMeasured: true, reason: 'Shifts were not declared in the Hub before Oct 24, 2026.' };
+    else { try { shift = await shiftsOn(redis, email, day, now); } catch { shift = { unavailable: true }; } }
 
-    return { user: { email, name: rep.name || email }, day, range, hub, quo: q, calendly: cal, activity, shift };
+    return { user: { email, name: rep.name || email }, day, range, hub, quo: q, calendly: cal, activity, shift, now };
 }

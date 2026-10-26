@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily report — Staffify Sales</title>
+<title>Daily report · Staffify Sales</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 <link rel="stylesheet" href="/assets/css/portal.css?v=20261013">
@@ -98,12 +98,13 @@ function evidence(title, head, rows, empty) { const d = el('details', null, 'dr-
     meta.append(el('br'), document.createTextNode('Slack: ' + (!dl ? 'not sent for this day' : dl.delivered ? 'delivered ' + stampET(dl.at) + ' (confirmed by Slack)' : dl.status === 'not_configured' ? 'not sent: no private destination set' : 'not delivered (' + (dl.error || dl.status) + ')') + ' · ' + res.schedule.deliversAt + '; next run ' + stampET(res.schedule.nextRunAt) + '.'));
     app.append(meta);
 
+    if (res.mismatch) app.append(el('div', 'The kept report differs from the one delivered to Slack. The delivered version was generated ' + stampET(res.delivery.generatedAt) + '.', 'dr-note warn'));
     if (r.noRecordedActivity) app.append(el('div', 'No recorded activity this day: no Quo calls, no logged outcomes, no declared shift and no Hub use.', 'dr-note none'));
     for (const line of r.coverage) app.append(el('div', line, 'dr-note' + (/unavailable|not visible|cannot|could not/i.test(line) ? ' warn' : '')));
 
     const g = el('div', null, 'dr-grid');
     g.append(stat(v(c.verifiedAttempts), 'verified dials', 'Quo'), stat(v(c.uniqueNumbersCalled), 'different numbers dialled', 'Quo'), stat(v(c.loggedOutcomes), 'outcomes logged on ' + v(c.loggedProspects) + ' prospects', 'Hub, manual'), stat(v(c.conversations), 'conversations logged', 'Hub, manual'),
-      stat(v(r.meetings.booked), 'meetings booked by prospects he called', 'Calendly'), stat(v(r.callbacks.overdueAtEndOfDay), 'callbacks overdue at end of day', 'Hub'), stat(r.shift ? mins(r.shift.clockedMinutes) : 'unknown', 'clocked on declared shifts', 'Shift'), stat(r.activity ? mins(r.activity.activeMinutes) : 'unknown', 'Hub activity, estimate', 'Hub'));
+      stat(v(r.meetings.booked), 'discovery calls booked by prospects he called', 'Calendly'), stat(v(r.callbacks.overdueAtEndOfDay), 'callbacks overdue at end of day', 'Hub'), stat(!r.shift ? 'unknown' : r.shift.notMeasured ? 'not measured' : mins(r.shift.clockedMinutes), 'clocked on declared shifts', 'Shift'), stat(!r.activity ? 'unknown' : r.activity.notMeasured ? 'not measured' : mins(r.activity.activeMinutes), 'Hub activity, estimate', 'Hub'));
     app.append(g);
 
     const calls = section('Calls');
@@ -111,7 +112,7 @@ function evidence(title, head, rows, empty) { const d = el('details', null, 'dr-
       ['Verified dials (Quo)', v(c.verifiedAttempts)], ['Different numbers dialled', v(c.uniqueNumbersCalled)], ['Repeat attempts', v(c.repeatAttempts)],
       ['Line picked up, voicemail and gatekeepers included', v(c.linePickedUp)], ['Answered calls of 60 s or more', v(c.answered60sOrMore)], ['Talk time', c.talkSeconds == null ? 'unknown' : mins(Math.round(c.talkSeconds / 60))],
       ['Outcomes logged in the Hub (manual)', v(c.loggedOutcomes)], ['Conversations', v(c.conversations)], ['No answer or voicemail', v(c.noAnswerOrVoicemail)], ['Bad numbers', v(c.badNumbers)],
-      ['Tagged interested or meeting booked', v(c.interested)], ['Not now or not a fit', v(c.notInterested)], ['Opt-outs', v(c.optOuts)],
+      ['Tagged interested or meeting booked', v(c.interested)], ['Not now or not a fit', v(c.notInterested)], ['Opt-outs (stop button)', v(c.optOuts)],
     ]));
     calls.append(el('h2', 'Reconciliation'));
     calls.append(table(['', 'Count'], [['Numbers dialled with no outcome logged (missing dispositions)', v(c.numbersDialledWithoutOutcome)], ['Dials with no outcome paired', v(c.dialsWithoutOutcome)], ['Outcomes logged with no matching Quo call', v(c.outcomesWithoutQuoCall)]]));
@@ -119,7 +120,7 @@ function evidence(title, head, rows, empty) { const d = el('details', null, 'dr-
     app.append(calls);
 
     const rates = section('Rates, with their denominators');
-    const rr = [['Line picked up', r.rates.pickedUp], ['Conversations', r.rates.conversations], ['Meetings', r.rates.meetings]].map(([n, x]) => [n, !x ? 'unknown' : x.pct == null ? 'not shown' : x.pct + '%', !x ? '' : x.num + ' of ' + x.den, !x ? 'A source could not be read.' : x.note || x.label]);
+    const rr = [['Line picked up', r.rates.pickedUp], ['Conversations', r.rates.conversations], ['Booked after a conversation that day', r.rates.meetings]].map(([n, x]) => [n, !x ? 'unknown' : x.pct == null ? 'not shown' : x.pct + '%', !x ? '' : x.num + ' of ' + x.den, !x ? 'A source could not be read.' : x.note || x.label]);
     rates.append(table(['', 'Rate', 'Of', 'What it means'], rr));
     app.append(rates);
 
@@ -129,11 +130,12 @@ function evidence(title, head, rows, empty) { const d = el('details', null, 'dr-
 
     const sh = section('Time: declared shift beside observed Hub activity');
     const s = r.shift;
-    sh.append(table(['', ''], [
+    const nm = x => x && x.notMeasured;
+    sh.append(table(['', ''], nm(s) ? [['Declared shifts', 'not measured on this day'], ['Hub activity, estimate', nm(r.activity) ? 'not measured on this day' : r.activity ? (r.activity.measured ? mins(r.activity.activeMinutes) + ' active / ' + mins(r.activity.idleMinutes) + ' idle' : 'none recorded') : 'unavailable']] : [
       ['Declared shifts', !s ? 'unavailable' : !s.shifts ? 'none declared' : s.list.map(x => timeET(x.startedAt) + ' to ' + (x.endedAt ? timeET(x.endedAt) + (x.corrected ? ' (corrected)' : '') : x.state === 'open' ? 'still open' : 'never ended')).join(', ')],
       ['Clocked (end minus start minus breaks)', s ? mins(s.clockedMinutes) : 'unknown'], ['Breaks', s ? mins(s.breakMinutes) + (s.list.some(x => x.breaks.length) ? ': ' + s.list.flatMap(x => x.breaks).map(b => timeET(b.startedAt) + ' to ' + (b.endedAt ? timeET(b.endedAt) : 'not ended')).join(', ') : '') : 'unknown'],
       ['Needs review', s ? v(s.needsReview) : 'unknown'],
-      ['Hub activity, estimate (active / idle / in sessions)', r.activity ? (r.activity.measured ? mins(r.activity.activeMinutes) + ' / ' + mins(r.activity.idleMinutes) + ' / ' + mins(r.activity.elapsedMinutes) : 'none recorded') : 'unavailable'],
+      ['Hub activity, estimate (active / idle / in sessions)', nm(r.activity) ? 'not measured on this day' : r.activity ? (r.activity.measured ? mins(r.activity.activeMinutes) + ' / ' + mins(r.activity.idleMinutes) + ' / ' + mins(r.activity.elapsedMinutes) : 'none recorded') : 'unavailable'],
     ]));
     sh.append(el('p', r.definitions.shift + ' ' + r.definitions.activity + ' Neither is payroll; Hubstaff is the source for paid hours.', 'dr-def'));
     app.append(sh);
@@ -143,7 +145,7 @@ function evidence(title, head, rows, empty) { const d = el('details', null, 'dr-
     ev.append(evidence('Quo dials', ['Time', 'Number', 'Picked up', 'Seconds', 'Logged as'], e.quoDials.map(x => [timeET(x.at), x.number || 'unknown', x.answered ? 'yes' : 'no', x.seconds, x.loggedAs || 'no outcome logged']), 'No Quo dials this day.'));
     ev.append(evidence('Outcomes logged in the Hub', ['Time', 'Prospect', 'Outcome', 'Tag', 'Quo call found'], e.hubOutcomes.map(x => [timeET(x.at), x.company, x.outcome, x.tag || '', x.quoCall ? 'yes' : 'no']), 'No outcomes logged this day.'));
     ev.append(evidence('Numbers dialled with no outcome logged', ['Number'], e.numbersDialledWithoutOutcome.map(x => [x]), 'None.'));
-    ev.append(evidence('Meetings booked by prospects he called', ['Booked', 'Starts', 'Prospect', 'His first logged call'], e.meetings.map(x => [stampET(x.bookedAt), stampET(x.startsAt), x.company || '', stampET(x.calledFirstAt)]), 'None.'));
+    ev.append(evidence('Discovery calls booked by prospects he called', ['Booked', 'Starts', 'Event', 'Prospect', 'His last call before booking', 'Conversation that day'], e.meetings.map(x => [stampET(x.bookedAt), stampET(x.startsAt), x.event || '', x.company || '', stampET(x.calledFirstAt), x.sameDayConversation ? 'yes' : 'no']), 'None.'));
     ev.append(evidence('Callbacks', ['Prospect', 'Agreed', 'Due', 'Done'], e.callbacks.map(x => [x.company, stampET(x.setAt), stampET(x.dueAt), x.done ? 'yes' : 'no']), 'None due by this day.'));
     app.append(ev);
 

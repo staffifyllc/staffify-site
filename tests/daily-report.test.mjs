@@ -13,7 +13,7 @@ const quoOk = calls => ({ configured: true, ok: true, seat: { email: 'milton@try
 const hubOk = entries => ({ ok: true, entries, readAt: at('23:00'), stateUpdatedAt: at('22:59') });
 const calOk = bookings => ({ configured: true, ok: true, bookings, readAt: at('23:00') });
 const SHIFT = { shifts: 1, clockedMinutes: 240, breakMinutes: 15, needsReview: 0, open: 0, list: [{ startedAt: at('16:00'), endedAt: at('20:15'), state: 'closed', clockedMinutes: 240, breakMinutes: 15, breaks: [{ startedAt: at('18:00'), endedAt: at('18:15') }] }] };
-const ACTIVITY = { measured: true, activeMinutes: 150, idleMinutes: 60, elapsedMinutes: 210, sessions: 2, firstSeen: at('16:01'), lastSeen: at('20:10') };
+const ACTIVITY = { measured: true, activeMinutes: 150, idleMinutes: 60, elapsedMinutes: 210, sessions: 2, firstSeen: at('16:01'), lastSeen: at('20:10'), events: [] };
 const e = (id, hm, outcome, over = {}) => ({ id, recordId: id.split('#')[0], company: 'Co ' + id.split('#')[0], recipient: id.split('#')[0] + '@x.com', at: at(hm), outcome, tag: null, nextCallAt: null, numbers: ['5125550001'], ...over });
 
 const FIXTURE = () => ({
@@ -53,7 +53,7 @@ test('verified calls come only from Quo; logged outcomes are counted apart; the 
     assert.deepEqual([r.rates.conversations.num, r.rates.conversations.den, r.rates.conversations.pct], [1, 4, 25]);
     assert.deepEqual([r.rates.meetings.num, r.rates.meetings.den], [1, 1]);
     assert.equal(r.noRecordedActivity, false);
-    assert.match(r.coverage[0], /iPhone’s own dialer.*not counted/);
+    assert.match(r.coverage[0], /iPhone's own dialer.*not counted/);
     assert.deepEqual(r.evidence.numbersDialledWithoutOutcome, ['•••0003']);
     assert.equal(r.evidence.quoDials.find(d => d.number === '•••0002').loggedAs, 'Conversation');
     assert.ok(!/\d{10}/.test(JSON.stringify(r).replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '')), 'no full number anywhere on the report');
@@ -86,16 +86,16 @@ test('the Slack message is readable, plain and says what it cannot see', () => {
     assert.match(text, /Verified calls \(Quo\): 4 dials to 3 numbers \(1 repeat\)\. Line picked up 2 times, voicemail included; 1 answered calls ran 60 s or more/);
     assert.match(text, /Logged in the Hub: 4 outcomes on 4 prospects\. Conversations 1/);
     assert.match(text, /Not reconciled: 1 numbers dialled with no outcome logged; 2 outcomes logged with no matching Quo call/);
-    assert.match(text, /Meetings booked by prospects he called: 1/); assert.match(text, /Callbacks: 1 due, 1 done, 1 overdue/);
+    assert.match(text, /Discovery calls booked by prospects he called: 1/); assert.match(text, /Callbacks: 1 due, 1 done, 1 overdue/);
     assert.match(text, /Shift \(declared\): 4:00 PM to 8:15 PM; 4h 0m clocked, 15m on breaks/);
-    assert.match(text, /iPhone’s own dialer/);
+    assert.match(text, /iPhone's own dialer/);
     assert.ok(!/—/.test(text), 'no em dashes'); assert.ok(!/\d{10}/.test(text), 'no phone numbers');
     assert.ok(text.split('\n').length <= 12, 'one short message');
 });
 
 test('only this person’s calls: other callers on the log and other Quo users on a shared line are left out', async () => {
     const records = [{ id: 'r1', company: 'A', recipient: 'a@x.com', callContact: { phone: '+15125550001' }, callHistory: [{ at: at('16:00'), outcome: 'voicemail', caller: 'MILTION@trystaffify.com' }, { at: at('16:05'), outcome: 'connected', caller: 'paul' }] }];
-    const mine = hubEntriesFrom(records, ['miltion@trystaffify.com', 'milton@trystaffify.com']);
+    const mine = hubEntriesFrom(records, ['miltion@trystaffify.com', 'milton@trystaffify.com']).entries;
     assert.equal(mine.length, 1); assert.deepEqual(mine[0].numbers, ['5125550001']);
     const store = new Map([['staffify:outreach-review:v1', { records, assignments: [], suppressions: [], queueUpdatedAt: at('22:00') }]]);
     const redis = { get: async k => store.get(k) ?? null, smembers: async () => [], lrange: async () => [], hgetall: async () => ({}) };
@@ -138,7 +138,8 @@ test('no private destination: the report is generated and kept, and nothing is s
     const out = await runOne({ redis, rep: USER, day: DAY, deps: quietDeps, env: { SLACK_BOT_TOKEN: 'xoxb', SLACK_CHANNEL: 'C-team' }, fetchImpl: async () => { posted++; } });
     assert.equal(out.status, 'stored_not_delivered'); assert.equal(posted, 0, 'never falls back to the team channel');
     const snap = redis.m.get(RK.snapshot(USER.email, DAY));
-    assert.ok(snap.calls, 'the snapshot is kept for the Hub'); assert.equal(snap.sources.hubLog, 'read'); assert.equal(snap.sources.quo, 'read'); assert.equal(snap.noRecordedActivity, true);
+    assert.ok(snap.calls, 'the snapshot is kept for the Hub'); assert.equal(snap.sources.hubLog, 'read'); assert.equal(snap.sources.quo, 'read');
+    assert.equal(snap.shift.notMeasured, true, 'Oct 23 predates declared shifts'); assert.equal(snap.noRecordedActivity, false, 'so the day is not called empty');
     assert.equal(redis.m.get(RK.delivery(USER.email, DAY)).status, 'not_configured');
     assert.equal(destination({ SLACK_CHANNEL: 'C-team', SLACK_BOT_TOKEN: 'xoxb' }), null);
 });
@@ -169,4 +170,89 @@ test('the schedule: 8:05 AM Eastern in daylight and in standard time, for the pr
     assert.equal(nextRun(Date.parse('2026-10-27T12:30:00Z')), '2026-10-27T13:05:00.000Z', 'after the first run, the retry');
     assert.equal(previousDay(Date.parse('2026-10-27T12:05:00Z')), '2026-10-26');
     assert.equal(tail4('+1 (512) 555-0102'), '•••0102'); assert.equal(tail4('123'), null);
+});
+
+test('the dialer’s save keeps the number on screen; an opt-out after a call enters the history, an exclusion elsewhere does not', async () => {
+    const { controlState } = await import('../api/_outreach-queue.js');
+    const base = { revision: 1, assignments: [], suppressions: [], pausedOwners: [], records: [{ id: 'r1', recipient: 'p@x.com', owner: 'Paul', campaignId: 'staffify-agency-outreach', status: 'sent', sentTouches: 4, verifiedSentTouches: 4, lastSentAt: '2026-10-01T12:00:00Z', callHistory: [] }] };
+    const s1 = controlState(structuredClone(base), { action: 'suppress', email: 'p@x.com', dialled: '+1 (512) 555-0101' }, 'all', 'miltion@trystaffify.com');
+    assert.deepEqual(s1.records[0].callHistory.map(c => [c.outcome, c.caller, c.dialled]), [['suppress', 'miltion@trystaffify.com', '+15125550101']]);
+    const s2 = controlState(structuredClone(base), { action: 'suppress', email: 'p@x.com' }, 'all', 'hello@gostaffify.com');
+    assert.deepEqual(s2.records[0].callHistory, [], 'no number dialled: a suppression only, never a call attempt'); assert.equal(s2.records[0].status, 'suppressed');
+});
+
+// ---- the review's findings, pinned ---------------------------------------------------------------
+const quiet = (over = {}) => ({ user: USER, day: DAY, generatedAt: at('23:30'), range, activity: ACTIVITY, shift: SHIFT, quo: quoOk([]), hub: hubOk([]), calendly: calOk([]), ...over });
+const emptyQueue = () => ({ get: async () => ({ records: [], assignments: [], suppressions: [] }), smembers: async () => [], lrange: async () => [], hgetall: async () => ({}) });
+
+test('a Quo outage is unknown, never "no seat", and never makes the day empty', async () => {
+    const src = await gather({ redis: emptyQueue(), rep: USER, day: '2026-10-26', now: Date.parse('2026-10-27T12:05:00Z'), deps: { quoConfigured: () => true, listUsers: async () => { throw new Error('Quo 503: down'); }, calendlyConfigured: () => false } });
+    const r = buildReport({ ...src, generatedAt: '2026-10-27T12:05:00.000Z' });
+    assert.equal(r.sources.quo, 'unavailable'); assert.match(r.coverage[0], /Quo could not be read .*Quo 503: down.*unavailable, not zero/);
+    assert.equal(r.noRecordedActivity, false); assert.equal(r.calls.verifiedAttempts, null);
+    assert.match(slackText(r), /Verified calls \(Quo\): unknown\./); assert.match(slackText(r), /_Quo could not be read/);
+});
+
+test('the meeting rate is a part of its own denominator; earlier calls credit a booking but never the rate', () => {
+    const entries = [
+        e('ra#0', '10:00', 'voicemail', { at: '2026-10-20T14:00:00.000Z', recipient: 'a@x.com' }),
+        e('rb#0', '10:00', 'no_answer', { at: '2026-10-21T14:00:00.000Z', recipient: 'b@x.com' }),
+        e('rc#0', '16:00', 'connected', { recipient: 'c@x.com' }),
+    ];
+    const bk = em => ({ email: em, createdAt: at('17:00'), startTime: '2026-10-28T15:00:00Z', eventName: 'Discovery call' });
+    let r = buildReport(quiet({ hub: hubOk(entries), calendly: calOk([bk('a@x.com'), bk('b@x.com')]) }));
+    assert.equal(r.meetings.booked, 2, 'both had a call from him in the 30 days before');
+    assert.deepEqual([r.rates.meetings.num, r.rates.meetings.den, r.rates.meetings.pct], [0, 1, 0], 'neither had a conversation that day: 0 of 1, never 200%');
+    r = buildReport(quiet({ hub: hubOk(entries), calendly: calOk([bk('c@x.com')]) }));
+    assert.deepEqual([r.rates.meetings.num, r.rates.meetings.den], [1, 1]);
+    const old = e('rd#0', '10:00', 'voicemail', { at: '2026-09-01T14:00:00.000Z', recipient: 'd@x.com' });
+    assert.equal(buildReport(quiet({ hub: hubOk([old]), calendly: calOk([bk('d@x.com')]) })).meetings.booked, 0, 'a call 52 days earlier is not credit');
+});
+
+test('Calendly: a failed invitee read makes meetings unknown; a moved booking and a non-discovery event do not count', async () => {
+    const base = { quoConfigured: () => false, calendlyConfigured: () => true, whoAmI: async () => ({ organization: 'org' }) };
+    const ev = (uri, name) => ({ uri, name, created_at: at('15:00'), start_time: '2026-10-28T15:00:00Z' });
+    let src = await gather({ redis: emptyQueue(), rep: USER, day: DAY, deps: { ...base, pastEvents: async () => ({ complete: true, items: [ev('u1', 'Discovery call')] }), invitees: async () => { throw new Error('Calendly 429'); } } });
+    assert.equal(src.calendly.ok, false); assert.match(src.calendly.error, /429/);
+    src = await gather({ redis: emptyQueue(), rep: USER, day: DAY, deps: { ...base, pastEvents: async () => ({ complete: false, items: [] }) } });
+    assert.equal(src.calendly.ok, false, 'a truncated list is not read');
+    src = await gather({ redis: emptyQueue(), rep: USER, day: DAY, deps: { ...base, pastEvents: async () => ({ complete: true, items: [ev('u1', 'Discovery call'), ev('u2', 'Client strategy call')] }),
+        invitees: async uri => (uri === 'u1' ? [{ email: 'moved@x.com', status: 'active', oldInvitee: 'https://api.calendly.com/x' }, { email: 'new@x.com', status: 'active', oldInvitee: null }] : [{ email: 'client@x.com', status: 'active' }]) } });
+    assert.deepEqual(src.calendly.bookings.map(b => b.email), ['new@x.com']);
+});
+
+test('callbacks: one completed by rescheduling still counts as due and done; one covered by a colleague is done', () => {
+    const set = e('rx#0', '10:00', 'callback', { at: '2026-10-22T20:00:00.000Z', nextCallAt: at('10:00') });
+    const again = e('rx#1', '10:05', 'callback', { nextCallAt: '2026-10-26T14:00:00.000Z' });
+    let r = buildReport(quiet({ hub: hubOk([set, again]) }));
+    assert.equal(r.callbacks.dueToday, 1); assert.equal(r.callbacks.doneOfDueToday, 1); assert.equal(r.callbacks.overdueAtEndOfDay, 0);
+    const moved = e('ry#1', '08:00', 'callback', { nextCallAt: '2026-10-26T14:00:00.000Z' });
+    r = buildReport(quiet({ hub: hubOk([{ ...set, id: 'ry#0', recordId: 'ry' }, moved]) }));
+    assert.equal(r.callbacks.dueToday, 0, 'moved before it fell due: the new one replaces it');
+    const covered = { ...hubOk([{ ...set, id: 'rz#0', recordId: 'rz' }]), cards: { rz: { status: 'human_reply_hold', history: [{ at: set.at, outcome: 'callback', caller: 'miltion@trystaffify.com' }, { at: at('11:00'), outcome: 'connected', caller: 'paul' }] } } };
+    r = buildReport(quiet({ hub: covered }));
+    assert.equal(r.callbacks.doneOfDueToday, 1, 'Paul took the callback'); assert.equal(r.callbacks.overdueAtEndOfDay, 0);
+    const excluded = { ...hubOk([{ ...set, id: 'rq#0', recordId: 'rq' }]), cards: { rq: { status: 'suppressed', history: [{ at: set.at, outcome: 'callback', caller: 'miltion@trystaffify.com' }] } } };
+    assert.equal(buildReport(quiet({ hub: excluded })).callbacks.overdueAtEndOfDay, 0, 'an excluded card owes no callback');
+    const today = buildReport(quiet({ hub: hubOk([{ ...set, nextCallAt: at('18:00') }]), now: Date.parse(at('12:00')) }));
+    assert.equal(today.callbacks.overdueAtEndOfDay, 0, 'at noon, a callback due at 6 PM is not overdue yet'); assert.equal(today.partialDay, true);
+});
+
+test('days before shifts and activity existed read "not measured", and are never called empty', async () => {
+    const src = await gather({ redis: emptyQueue(), rep: USER, day: '2026-10-21', now: Date.parse('2026-10-26T23:00:00Z'), deps: { quoConfigured: () => true, listUsers: async () => [{ actorId: 'US1', email: 'milton@trystaffify.com' }], listCalls: async () => ({ complete: true, items: [] }), calendlyConfigured: () => false } });
+    assert.equal(src.activity.notMeasured, true); assert.equal(src.shift.notMeasured, true);
+    const r = buildReport({ ...src, generatedAt: '2026-10-26T23:00:00.000Z' });
+    assert.equal(r.noRecordedActivity, false); assert.equal(r.calls.optOuts, null, 'the stop button was not logged per rep then');
+    const text = slackText(r);
+    assert.match(text, /Shift: not measured on this day/); assert.match(text, /Hub activity: not measured on this day/); assert.match(text, /opt-outs unknown/);
+    assert.ok(r.coverage.some(x => /not measured before Oct 23, 2026/.test(x)) && r.coverage.some(x => /not declared in the Hub before Oct 24, 2026/.test(x)));
+});
+
+test('the number actually dialled pairs an outcome even when the card shows another; the stop button counts as an opt-out', () => {
+    const records = [{ id: 'r9', company: 'Nine', recipient: 'n@x.com', status: 'suppressed', callHistory: [{ at: at('16:01'), outcome: 'suppress', caller: USER.email, dialled: '+15125550999' }, { at: at('16:20'), outcome: 'voicemail', caller: USER.email, dialled: '(512) 555-0998' }] }];
+    const { entries } = hubEntriesFrom(records, [USER.email]);
+    assert.deepEqual(entries.map(x => x.numbers[0]), ['5125550999', '5125550998']);
+    const r = buildReport(quiet({ hub: hubOk(entries), quo: quoOk([{ id: 'q', at: at('16:00'), number: '5125550999', answered: true, seconds: 40 }, { id: 'q2', at: at('16:19'), number: '5125550998', answered: true, seconds: 25 }]), activity: { ...ACTIVITY, events: [{ kind: 'suppress', at: at('16:01') }] } }));
+    assert.equal(r.calls.optOuts, 1); assert.equal(r.calls.numbersDialledWithoutOutcome, 0); assert.equal(r.calls.outcomesWithoutQuoCall, 0);
+    assert.equal(r.evidence.quoDials[0].loggedAs, 'Opt-out');
 });
