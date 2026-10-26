@@ -81,7 +81,8 @@ const todayET = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York',
     const prev = el('button', '← Week'); prev.type = 'button'; prev.onclick = () => { from = addDays(from, -7); to = addDays(to, -7); sync(); render(); };
     const next = el('button', 'Week →'); next.type = 'button'; next.onclick = () => { from = addDays(from, 7); to = addDays(from, 6) > todayET ? todayET : addDays(from, 6); sync(); render(); };
     next.disabled = addDays(from, 7) > todayET;
-    ctl.append(prev, el('span', dayLabel(from) + ' to ' + dayLabel(to)), next);
+    const rpt = el('a', 'Daily report', 'btn'); rpt.href = '/activity/report/?user=' + encodeURIComponent(user) + '&date=' + (to < todayET ? to : addDays(todayET, -1));
+    ctl.append(prev, el('span', dayLabel(from) + ' to ' + dayLabel(to)), next, rpt);
     head.append(ctl); app.append(head);
 
     let a;
@@ -105,7 +106,8 @@ const todayET = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York',
       tr.append(el('td', dayLabel(d.day)), shiftCell(d), el('td', mins(d.activeMinutes)), el('td', mins(d.idleMinutes)), el('td', mins(d.elapsedMinutes)), el('td', String(d.sessions)), el('td', d.firstSeen ? timeET(d.firstSeen) : '', 'dim'), el('td', d.lastSeen ? timeET(d.lastSeen) : '', 'dim'), el('td', String(d.meaningful)));
       const td = el('td'); const btn = el('button', 'Events'); btn.type = 'button';
       btn.onclick = () => { const open = tr.nextSibling && tr.nextSibling.classList && tr.nextSibling.classList.contains('drill'); if (open) { tr.nextSibling.remove(); btn.textContent = 'Events'; return; } const dr = el('tr', null, 'drill'); const cell = el('td'); cell.colSpan = 10; cell.append(drill(d)); dr.append(cell); tr.after(dr); btn.textContent = 'Hide'; };
-      td.append(btn); tr.append(td); tb.append(tr);
+      const rl = el('a', 'Report'); rl.href = '/activity/report/?user=' + encodeURIComponent(user) + '&date=' + d.day; rl.style.marginLeft = '8px';
+      td.append(btn, rl); tr.append(td); tb.append(tr);
     }
     table.append(tb); app.append(table);
     const what = el('details'); what.append(el('summary', 'What is measured, and what is not'));

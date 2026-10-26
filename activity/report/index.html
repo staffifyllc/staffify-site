@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily report — Staffify Sales</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="stylesheet" href="/assets/css/portal.css?v=20261013">
+<style>
+  .dr-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 14px}
+  .dr-head h1{margin:0}
+  .dr-ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .dr-ctl select,.dr-ctl input,.dr-ctl button{min-height:38px}
+  .dr-meta{font-size:13px;color:#6e6e73;margin:0 0 16px;line-height:1.6}
+  .dr-meta b{color:#1d1d1f;font-weight:600}
+  .dr-note{font-size:13.5px;line-height:1.55;border-radius:12px;padding:12px 14px;margin:0 0 14px;background:#f5f7fa;border:1px solid #e5e5ea;color:#414146}
+  .dr-note.warn{background:#fff7e5;border-color:#ecd8aa;color:#845400}
+  .dr-note.none{background:#eef6ff;border-color:#cfe2fb;color:#0b4f8a}
+  .dr-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 18px}
+  .dr-stat{background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:14px 16px}
+  .dr-stat b{display:block;font-size:26px;font-weight:600;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+  .dr-stat span{font-size:12.5px;color:#6e6e73;line-height:1.4;display:block}
+  .dr-stat em{font-style:normal;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:#6e6e73}
+  .dr-sec{background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:16px 18px;margin:0 0 14px}
+  .dr-sec h2{font-size:15px;margin:0 0 10px}
+  table.dr{width:100%;border-collapse:collapse}
+  table.dr td,table.dr th{padding:8px 10px;border-bottom:1px solid #ececf0;font-size:13.5px;text-align:left;vertical-align:top;font-variant-numeric:tabular-nums}
+  table.dr th{font-size:11.5px;letter-spacing:.8px;text-transform:uppercase;color:#6e6e73;font-weight:650}
+  table.dr tr:last-child td{border-bottom:0}
+  table.dr td.n{text-align:right;white-space:nowrap}
+  .dr-src{font-size:11px;font-weight:600;letter-spacing:.3px;border-radius:999px;padding:2px 8px;margin-left:6px;white-space:nowrap}
+  .dr-src.q{background:#eaf3ff;color:#0b4f8a}.dr-src.h{background:#f3e9ff;color:#5b2d9a}.dr-src.c{background:#e8f7ef;color:#11643f}
+  details.dr-ev{margin:8px 0 0}details.dr-ev summary{cursor:pointer;font-size:13.5px;font-weight:600;color:#0066cc}
+  .dr-wrap{overflow-x:auto}
+  .dr-def{font-size:12.5px;color:#6e6e73;margin:6px 0 0;line-height:1.5}
+  @media(max-width:760px){.dr-grid{grid-template-columns:1fr 1fr}}
+</style>
+<script defer src="/assets/js/portal-shell.js?v=20261013"></script>
+</head>
+<body>
+<header class="topbar"><img src="/assets/brand/logo-blue.svg" alt="Staffify"><nav class="nav"><a href="/hub/">Hub</a></nav><div class="tb-right" id="tbRight"></div></header>
+<main class="wrap" id="app"><p class="dr-meta">Loading…</p></main>
+<script type="module">
+// One caller's day: verified calls from Quo, outcomes he logged, meetings from Calendly, his
+// declared shift and the Hub's activity estimate. Every figure names its source; anything that
+// could not be read says unavailable. Numbers appear only as their last four digits.
+const app = document.getElementById('app');
+const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const get = async url => { const r = await fetch(url, { cache: 'no-store', credentials: 'same-origin' }); const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(Error(j.error || 'HTTP ' + r.status), { status: r.status }); return j; };
+const TZ = 'America/New_York';
+const timeET = s => (s ? new Date(s).toLocaleTimeString('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }) : '');
+const stampET = s => (s ? new Date(s).toLocaleString('en-US', { timeZone: TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'not read');
+const dayLabel = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const addDays = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const todayET = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const mins = n => (n == null ? 'unknown' : n >= 60 ? Math.floor(n / 60) + 'h ' + (n % 60) + 'm' : n + 'm');
+const v = n => (n == null ? 'unknown' : String(n));
+const params = new URLSearchParams(location.search);
+
+function stat(value, label, src) { const s = el('div', null, 'dr-stat'); s.append(el('b', value), el('span', label)); if (src) s.append(el('em', src)); return s; }
+function section(title) { const s = el('section', null, 'dr-sec'); s.append(el('h2', title)); return s; }
+function table(head, rows) { const w = el('div', null, 'dr-wrap'); const t = el('table', null, 'dr'); const th = el('tr'); for (const h of head) th.append(el('th', h)); const thead = el('thead'); thead.append(th); t.append(thead); const tb = el('tbody'); for (const r of rows) { const tr = el('tr'); r.forEach((c, i) => { const td = el('td', c == null ? '' : String(c)); if (i > 0 && /^[\d.%]+|unknown$/.test(String(c))) td.className = 'n'; tr.append(td); }); tb.append(tr); } t.append(tb); w.append(t); return w; }
+function evidence(title, head, rows, empty) { const d = el('details', null, 'dr-ev'); d.append(el('summary', title + ' (' + rows.length + ')')); d.append(rows.length ? table(head, rows) : el('p', empty, 'dr-def')); return d; }
+
+(async () => {
+  let me;
+  try { me = (await get('/api/auth-me/')).rep; } catch { app.replaceChildren(el('p', 'Sign in with your Staffify account to see daily reports.', 'dr-meta')); return; }
+  const owner = me.role === 'admin' || !!me.financeAccess;
+  let people = [];
+  if (owner) { try { people = (await get('/api/daily-report/?people=1')).people; } catch { people = []; } }
+  let user = params.get('user') || (owner && people[0] ? people[0].email : me.email);
+  let day = params.get('date') || addDays(todayET, -1);
+
+  async function render() {
+    const u = new URL(location.href); u.searchParams.set('user', user); u.searchParams.set('date', day); history.replaceState(null, '', u);
+    app.replaceChildren();
+    const head = el('div', null, 'dr-head');
+    const t = el('div'); t.append(el('div', 'Daily report', 'eyebrow'), el('h1', dayLabel(day)));
+    const ctl = el('div', null, 'dr-ctl');
+    if (owner && people.length) { const sel = el('select'); sel.id = 'dr-person'; sel.setAttribute('aria-label', 'Person'); for (const p of people) { const o = el('option', p.name + ' · ' + p.email); o.value = p.email; sel.append(o); } sel.value = user; sel.onchange = () => { user = sel.value; render(); }; ctl.append(sel); }
+    const prev = el('button', '← Day'); prev.type = 'button'; prev.onclick = () => { day = addDays(day, -1); render(); };
+    const pick = el('input'); pick.type = 'date'; pick.id = 'dr-date'; pick.value = day; pick.max = todayET; pick.setAttribute('aria-label', 'Report date'); pick.onchange = () => { if (pick.value) { day = pick.value; render(); } };
+    const next = el('button', 'Day →'); next.type = 'button'; next.disabled = day >= todayET; next.onclick = () => { day = addDays(day, 1); render(); };
+    const act = el('a', 'Activity', 'btn btn-ghost'); act.href = '/activity/?user=' + encodeURIComponent(user);
+    ctl.append(prev, pick, next, act);
+    head.append(t, ctl); app.append(head);
+
+    let res;
+    try { res = await get('/api/daily-report/?user=' + encodeURIComponent(user) + '&date=' + day); }
+    catch (e) { app.append(el('p', e.status === 403 ? 'You can see your own report only.' : 'The report could not be built: ' + e.message, 'dr-note warn')); return; }
+    const r = res.report, c = r.calls;
+
+    const meta = el('p', null, 'dr-meta');
+    meta.append(el('b', r.user.name), document.createTextNode(' · ' + timeET(r.range.from) + ' to ' + timeET(r.range.to) + ' Eastern · generated ' + stampET(r.generatedAt) + (res.stored ? ' and kept' : ', live') + (res.partialDay ? ' · today so far, not a complete day' : '')));
+    meta.append(el('br'), document.createTextNode('Data read: Quo ' + stampET(r.freshness.quo) + ' · Hub call log ' + stampET(r.freshness.hubLog) + ' (queue synced ' + stampET(r.freshness.hubStateUpdatedAt) + ') · Calendly ' + stampET(r.freshness.calendly)));
+    const dl = res.delivery;
+    meta.append(el('br'), document.createTextNode('Slack: ' + (!dl ? 'not sent for this day' : dl.delivered ? 'delivered ' + stampET(dl.at) + ' (confirmed by Slack)' : dl.status === 'not_configured' ? 'not sent: no private destination set' : 'not delivered (' + (dl.error || dl.status) + ')') + ' · ' + res.schedule.deliversAt + '; next run ' + stampET(res.schedule.nextRunAt) + '.'));
+    app.append(meta);
+
+    if (r.noRecordedActivity) app.append(el('div', 'No recorded activity this day: no Quo calls, no logged outcomes, no declared shift and no Hub use.', 'dr-note none'));
+    for (const line of r.coverage) app.append(el('div', line, 'dr-note' + (/unavailable|not visible|cannot|could not/i.test(line) ? ' warn' : '')));
+
+    const g = el('div', null, 'dr-grid');
+    g.append(stat(v(c.verifiedAttempts), 'verified dials', 'Quo'), stat(v(c.uniqueNumbersCalled), 'different numbers dialled', 'Quo'), stat(v(c.loggedOutcomes), 'outcomes logged on ' + v(c.loggedProspects) + ' prospects', 'Hub, manual'), stat(v(c.conversations), 'conversations logged', 'Hub, manual'),
+      stat(v(r.meetings.booked), 'meetings booked by prospects he called', 'Calendly'), stat(v(r.callbacks.overdueAtEndOfDay), 'callbacks overdue at end of day', 'Hub'), stat(r.shift ? mins(r.shift.clockedMinutes) : 'unknown', 'clocked on declared shifts', 'Shift'), stat(r.activity ? mins(r.activity.activeMinutes) : 'unknown', 'Hub activity, estimate', 'Hub'));
+    app.append(g);
+
+    const calls = section('Calls');
+    calls.append(table(['', 'Count'], [
+      ['Verified dials (Quo)', v(c.verifiedAttempts)], ['Different numbers dialled', v(c.uniqueNumbersCalled)], ['Repeat attempts', v(c.repeatAttempts)],
+      ['Line picked up, voicemail and gatekeepers included', v(c.linePickedUp)], ['Answered calls of 60 s or more', v(c.answered60sOrMore)], ['Talk time', c.talkSeconds == null ? 'unknown' : mins(Math.round(c.talkSeconds / 60))],
+      ['Outcomes logged in the Hub (manual)', v(c.loggedOutcomes)], ['Conversations', v(c.conversations)], ['No answer or voicemail', v(c.noAnswerOrVoicemail)], ['Bad numbers', v(c.badNumbers)],
+      ['Tagged interested or meeting booked', v(c.interested)], ['Not now or not a fit', v(c.notInterested)], ['Opt-outs', v(c.optOuts)],
+    ]));
+    calls.append(el('h2', 'Reconciliation'));
+    calls.append(table(['', 'Count'], [['Numbers dialled with no outcome logged (missing dispositions)', v(c.numbersDialledWithoutOutcome)], ['Dials with no outcome paired', v(c.dialsWithoutOutcome)], ['Outcomes logged with no matching Quo call', v(c.outcomesWithoutQuoCall)]]));
+    calls.append(el('p', r.definitions.outcomesWithoutQuoCall, 'dr-def'));
+    app.append(calls);
+
+    const rates = section('Rates, with their denominators');
+    const rr = [['Line picked up', r.rates.pickedUp], ['Conversations', r.rates.conversations], ['Meetings', r.rates.meetings]].map(([n, x]) => [n, !x ? 'unknown' : x.pct == null ? 'not shown' : x.pct + '%', !x ? '' : x.num + ' of ' + x.den, !x ? 'A source could not be read.' : x.note || x.label]);
+    rates.append(table(['', 'Rate', 'Of', 'What it means'], rr));
+    app.append(rates);
+
+    const cb = section('Callbacks he agreed');
+    cb.append(table(['', 'Count'], [['Due this day', v(r.callbacks.dueToday)], ['Of those, done by the end of the day', v(r.callbacks.doneOfDueToday)], ['Overdue at the end of the day, any due date', v(r.callbacks.overdueAtEndOfDay)]]));
+    app.append(cb);
+
+    const sh = section('Time: declared shift beside observed Hub activity');
+    const s = r.shift;
+    sh.append(table(['', ''], [
+      ['Declared shifts', !s ? 'unavailable' : !s.shifts ? 'none declared' : s.list.map(x => timeET(x.startedAt) + ' to ' + (x.endedAt ? timeET(x.endedAt) + (x.corrected ? ' (corrected)' : '') : x.state === 'open' ? 'still open' : 'never ended')).join(', ')],
+      ['Clocked (end minus start minus breaks)', s ? mins(s.clockedMinutes) : 'unknown'], ['Breaks', s ? mins(s.breakMinutes) + (s.list.some(x => x.breaks.length) ? ': ' + s.list.flatMap(x => x.breaks).map(b => timeET(b.startedAt) + ' to ' + (b.endedAt ? timeET(b.endedAt) : 'not ended')).join(', ') : '') : 'unknown'],
+      ['Needs review', s ? v(s.needsReview) : 'unknown'],
+      ['Hub activity, estimate (active / idle / in sessions)', r.activity ? (r.activity.measured ? mins(r.activity.activeMinutes) + ' / ' + mins(r.activity.idleMinutes) + ' / ' + mins(r.activity.elapsedMinutes) : 'none recorded') : 'unavailable'],
+    ]));
+    sh.append(el('p', r.definitions.shift + ' ' + r.definitions.activity + ' Neither is payroll; Hubstaff is the source for paid hours.', 'dr-def'));
+    app.append(sh);
+
+    const ev = section('Evidence');
+    const e = r.evidence;
+    ev.append(evidence('Quo dials', ['Time', 'Number', 'Picked up', 'Seconds', 'Logged as'], e.quoDials.map(x => [timeET(x.at), x.number || 'unknown', x.answered ? 'yes' : 'no', x.seconds, x.loggedAs || 'no outcome logged']), 'No Quo dials this day.'));
+    ev.append(evidence('Outcomes logged in the Hub', ['Time', 'Prospect', 'Outcome', 'Tag', 'Quo call found'], e.hubOutcomes.map(x => [timeET(x.at), x.company, x.outcome, x.tag || '', x.quoCall ? 'yes' : 'no']), 'No outcomes logged this day.'));
+    ev.append(evidence('Numbers dialled with no outcome logged', ['Number'], e.numbersDialledWithoutOutcome.map(x => [x]), 'None.'));
+    ev.append(evidence('Meetings booked by prospects he called', ['Booked', 'Starts', 'Prospect', 'His first logged call'], e.meetings.map(x => [stampET(x.bookedAt), stampET(x.startsAt), x.company || '', stampET(x.calledFirstAt)]), 'None.'));
+    ev.append(evidence('Callbacks', ['Prospect', 'Agreed', 'Due', 'Done'], e.callbacks.map(x => [x.company, stampET(x.setAt), stampET(x.dueAt), x.done ? 'yes' : 'no']), 'None due by this day.'));
+    app.append(ev);
+
+    const defs = el('details'); defs.append(el('summary', 'How each figure is defined'));
+    for (const [k, txt] of Object.entries(r.definitions)) defs.append(el('p', txt, 'dr-def'));
+    app.append(defs);
+  }
+  render();
+})();
+</script>
+</body>
+</html>

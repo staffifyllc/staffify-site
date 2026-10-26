@@ -62,6 +62,10 @@
     {
       "path": "/api/cron-number-research/",
       "schedule": "5,35 * * * *"
+    },
+    {
+      "path": "/api/cron-daily-report/",
+      "schedule": "5 12-14 * * *"
     }
   ],
   "rewrites": [
@@ -321,6 +325,9 @@
       "maxDuration": 300
     },
     "api/playbook-reconcile.js": {
+      "maxDuration": 300
+    },
+    "api/cron-daily-report.js": {
       "maxDuration": 300
     }
   }
