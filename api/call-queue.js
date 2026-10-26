@@ -7,8 +7,17 @@
 // POST /api/call-queue?action=claim  { id }                  -> holds a lead briefly while a rep has
 //      it open, so two reps are never handed the same prospect at once.
 // Auth: logged-in rep (session) or admin token. Env: SALES_PORTAL_BASE, SALES_PORTAL_TOKEN.
+//
+// Signed in only (Paul, 2026-10-26, through Codex). It was open-share from 2026-07-27; a signed-out
+// request returned prospect numbers, which is also a way around the shift gate. Now a Hub session or
+// an admin/machine token is required for every action, and a caller who is not on a running shift
+// gets every response with its phone fields empty. The opt-out, worked and carrier filters run on the
+// real numbers first. Logging an outcome, a claim or feedback is never gated: a call that was under
+// way when a shift ended still gets logged. Owners are never gated; an unreadable shift reads as off.
 
-import { openIdentity, readBody } from './_auth.js';
+import { requireAccess, readBody } from './_auth.js';
+import { ownerFor } from './_outreach-queue.js';
+import { gateFor, withholdPhones } from './_shift.js';
 import { optedOutSet, last10 } from './_optout.js';
 import { partition } from './_linetype.js';
 import { redis } from './_auth.js';
@@ -63,9 +72,18 @@ const TOKEN = process.env.SALES_PORTAL_TOKEN;
 const OUTCOMES = ['interested', 'callback', 'not_interested', 'gatekeeper', 'no_answer', 'voicemail', 'bad_number'];
 
 export default async function handler(req, res) {
-    const who = await openIdentity(req); // open-share: identify by name if given, else Guest
+    res.setHeader('Cache-Control', 'private, no-store');
+    let who = null;
+    try { who = await requireAccess(req); }
+    catch { return res.status(503).json({ error: 'sign_in_check_unavailable', message: 'Your sign-in could not be checked just now. Try again.' }); }
+    if (!who) return res.status(401).json({ error: 'sign_in_required', message: 'Sign in to your Staffify account.' });
     if (!BASE || !TOKEN) return res.status(500).json({ error: 'portal_not_configured' });
-    res.setHeader('Cache-Control', 'no-store');
+    // Every answer from here on passes through the shift gate on its way out.
+    const shiftGate = await gateFor(redis, who, ownerFor);
+    if (!shiftGate.allowed) {
+        const json = res.json.bind(res);
+        res.json = body => json(body && typeof body === 'object' && !Array.isArray(body) ? { ...withholdPhones(body, { deep: true }), phonesWithheld: true, shiftGate } : withholdPhones(body, { deep: true }));
+    }
 
     const action = (req.query.action || 'list').toString();
 
@@ -162,6 +180,9 @@ export default async function handler(req, res) {
         }
 
         if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+        // Reads are the three this page has ever used. Any other portal action (the dialer feed, for
+        // one) would skip the STOP, worked, claim and carrier filters below, so it is not passed on.
+        if (!['list', 'training', 'scoreboard'].includes(action)) return res.status(400).json({ error: 'unsupported_action', allowed: ['list', 'training', 'scoreboard'] });
 
         const n = req.query.n ? `&n=${encodeURIComponent(req.query.n)}` : '';
         const r = await fetch(`${BASE}?action=${encodeURIComponent(action)}&t=${encodeURIComponent(TOKEN)}${n}`);

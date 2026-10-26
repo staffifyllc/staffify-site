@@ -5,7 +5,8 @@
 // GET  /api/winback-leads                 -> { leads:[...] } (rep session or admin)
 // POST /api/winback-leads  {name,company,email,phone,leftReason}  -> add one (admin only, for loading the list)
 
-import { openIdentity, adminAuthorized, redis, readBody, newToken } from './_auth.js';
+import { adminAuthorized, redis, readBody, newToken } from './_auth.js';
+import { phoneGuard } from './_phone-guard.js';
 
 const OPENER = [
     'Hi [first name], this is [you] with Staffify. I saw [company] worked with us before and stepped away, and I wanted to personally reach out to make it right.',
@@ -21,7 +22,9 @@ function domainWebsite(email) {
 }
 
 export default async function handler(req, res) {
-    const who = await openIdentity(req); // open-share: reading the queue needs no login
+    // Signed in, and numbers only on a running shift (see _phone-guard.js). Was open-share.
+    const guard = await phoneGuard(req, res); if (!guard) return;
+    const who = guard.who;
     res.setHeader('Cache-Control', 'no-store');
 
     if (req.method === 'POST') {

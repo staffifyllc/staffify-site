@@ -92,7 +92,8 @@
     app.innerHTML='<div class="empty">Loading the scoreboard...</div>';
     ME=repGet();
     tbRight.innerHTML=nameChip(); wireChip();
-    var s=null; try{ var r=await fetch('/api/call-queue?action=scoreboard',{cache:'no-store'}); if(r.ok) s=await r.json(); }catch(e){}
+    var s=null, code=0; try{ var r=await fetch('/api/call-queue/?action=scoreboard',{cache:'no-store'}); code=r.status; if(r.ok) s=await r.json(); }catch(e){}
+    if(code===401){app.innerHTML='<div class="empty">Sign in to your Staffify account to see call reporting.</div>';return;}
     if(!s){app.innerHTML='<div class="empty">Call reporting is unavailable. Refresh to try again. No zero totals are assumed.</div>';return;}
     render(s);
     loadQuo();

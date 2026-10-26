@@ -33,7 +33,9 @@ const FULL = {
 };
 
 test('what the page shows is identical over the slim shape', () => {
-    const slim = slimState(structuredClone(FULL));
+    // Read as of the fixture's own day: the slim view keeps three ET days of sends, so a clock left
+    // to run made this test fail on its own from 2026-10-26.
+    const slim = slimState(structuredClone(FULL), Date.parse('2026-10-22T18:00:00Z'));
     assert.deepEqual(Replies.queue(slim.records).map(r => r.id), Replies.queue(FULL.records).map(r => r.id), 'replies to handle');
     assert.equal(slim.records.filter(r => r.callReady).length, FULL.records.filter(r => r.callReady).length, 'ready to call');
     const sentToday = s => s.records.flatMap(r => r.events.filter(e => e.kind === 'sent').map(e => r.sender + ':' + e.id));

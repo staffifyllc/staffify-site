@@ -7,7 +7,8 @@
 // POST /api/hot-leads {id, outcome, motion, company}  -> won|callback|not_interested|no_answer|bad_number
 //   For engine leads: marks the phone handled locally and best-effort logs it back to the engine.
 
-import { openIdentity, redis, readBody } from './_auth.js';
+import { redis, readBody } from './_auth.js';
+import { phoneGuard } from './_phone-guard.js';
 import { carryLineType, partition } from './_linetype.js';
 import { slackNotify } from './_slack.js';
 
@@ -54,8 +55,10 @@ async function fetchEngineWarm() {
 }
 
 export default async function handler(req, res) {
-    const who = await openIdentity(req); // open-share: identify by name if given, else Guest
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'private, no-store');
+    // Signed in, and numbers only on a running shift (see _phone-guard.js). Was open-share.
+    const guard = await phoneGuard(req, res); if (!guard) return;
+    const who = guard.who;
 
     if (req.method === 'POST') {
         const b = readBody(req);

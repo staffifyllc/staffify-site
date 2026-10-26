@@ -1,5 +1,6 @@
 // Read-only endpoint: pull recent OpenPhone calls and surface POSITIVE ones for the sales dashboard.
-// OPEN (no auth gate) like the other read endpoints. Never 500s.
+// Signed in since 2026-10-26 (it was open to anyone), and numbers only for someone on a running shift
+// or an owner: see api/_phone-guard.js. Never 500s.
 // Env: OPENPHONE_API_KEY (required to be "connected"), OPENPHONE_PHONE_NUMBER_ID (optional, e.g. 'PNxxxxxxxx')
 //
 // Contract (see also /api/campaign-metrics):
@@ -8,6 +9,7 @@
 //   positives:[ ...same shape, positives only ],
 //   stats:{ total, answered, positive, avgDurationSec } }
 
+import { phoneGuard } from './_phone-guard.js';
 const OP_BASE = 'https://api.openphone.com/v1';
 
 const EMPTY_STATS = { total: 0, answered: 0, positive: 0, avgDurationSec: 0 };
@@ -131,7 +133,9 @@ async function fetchSummaryText(callId, apiKey) {
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'private, no-store');
+    // Signed in, and numbers only on a running shift (see _phone-guard.js). Was open to anyone.
+    if (!(await phoneGuard(req, res))) return;
 
     const apiKey = process.env.OPENPHONE_API_KEY;
 

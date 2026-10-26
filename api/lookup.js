@@ -8,10 +8,17 @@
 // GET /api/lookup/?q=9512198719          phone, full or partial
 // GET /api/lookup/?q=chalela             name, company or email
 //
-// Open like the other read endpoints, and it never throws: a rep mid-call gets a partial answer
-// rather than an error.
+// It never throws: a rep mid-call gets a partial answer rather than an error.
+//
+// Signed in only (Paul, 2026-10-26, through Codex). It was open to anyone from 2026-07-27 and on
+// 2026-10-24 a signed-out request returned 257 prospect numbers, which is also a way around the
+// shift gate. Now: a Hub session or an admin/machine token, and a caller who is not on a running
+// shift still gets the answer to "who is this" (company, name, history, opt-out, advice) with every
+// phone field empty. Owners are never gated. An unreadable shift reads as off.
 
-import { openIdentity, redis } from './_auth.js';
+import { requireAccess, redis } from './_auth.js';
+import { ownerFor } from './_outreach-queue.js';
+import { gateFor, withholdPhones } from './_shift.js';
 import { configured as hsReady, findContact } from './_hubspot.js';
 import { isOptedOut } from './_optout.js';
 
@@ -32,8 +39,12 @@ function advise({ optedOut, worked, inQueue, hubspot }) {
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Cache-Control', 'no-store');
-    await openIdentity(req).catch(() => null);
+    res.setHeader('Cache-Control', 'private, no-store');
+    let rep = null;
+    try { rep = await requireAccess(req); }
+    catch { return res.status(503).json({ error: 'Your sign-in could not be checked just now. Try again.' }); }
+    if (!rep) return res.status(401).json({ error: 'Sign in to your Staffify account to look someone up.' });
+    const shiftGate = await gateFor(redis, rep, ownerFor);
 
     const q = String((req.query.q || '')).trim();
     if (!q) return res.status(400).json({ error: 'add ?q=<phone, name, company or email>' });
@@ -128,5 +139,7 @@ export default async function handler(req, res) {
         inQueue: out.found.some(f => f.source === 'live queue'),
         hubspot: !!out.hubspot,
     });
+    out.shiftGate = shiftGate;
+    if (!shiftGate.allowed) return res.status(200).json({ ...withholdPhones(out, { deep: true }), phonesWithheld: true });
     return res.status(200).json(out);
 }

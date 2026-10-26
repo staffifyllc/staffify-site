@@ -72,7 +72,10 @@ export async function optedOutSet() {
             redis.smembers(NUMS), redis.smembers(MAILS), redis.smembers(LEGACY_MAILS),
         ]);
         return {
-            numbers: new Set(nums || []),
+            // The client parses an all-digit member as JSON, so 5125550100 comes back a number and a
+            // Set of numbers never matches the string a caller compares. Found 2026-10-26: the legacy
+            // call queue's STOP filter had never removed anyone. Normalised to the 10-digit string.
+            numbers: new Set((nums || []).map(n => last10(n)).filter(Boolean)),
             emails: new Set([...(mails || []), ...(legacy || [])].map(normEmail)),
         };
     } catch (e) { return { numbers: new Set(), emails: new Set() }; }

@@ -329,6 +329,8 @@
   function lkRender(j){
     var box=document.getElementById('lkout'); if(!box) return;
     if(j.__loading){ box.innerHTML='<div class="lkempty">Looking...</div>'; box.style.display='block'; return; }
+    if(j.__failed){ box.innerHTML='<div class="lkempty">Lookup failed. Try again.</div>'; box.style.display='block'; return; }
+    if(j.__signin){ box.innerHTML='<div class="lkempty">Sign in to your Staffify account to look someone up.</div>'; box.style.display='block'; return; }
     var flags='';
     if(j.optedOut) flags+=lkFlag('bad','Opted out, do not pitch');
     if(j.alreadyWorked) flags+=lkFlag('warn','Already worked');
@@ -346,6 +348,7 @@
       (sub?'<div class="lksub">'+esc(sub)+'</div>':'')+
       (flags?'<div class="lkflags">'+flags+'</div>':'')+
       '<div class="lkadvice">'+esc(j.advice||'')+'</div>'+
+      (j.phonesWithheld?'<div class="lkempty">Numbers show once your shift is running. Start it from the bar at the top.</div>':'')+
       lines+
       (head&&head.phone?'<a class="lkcall" href="tel:'+esc(head.phone)+'">'+esc(head.phone)+'</a>':'')+
       '</div>';
@@ -363,7 +366,7 @@
       lkTimer=setTimeout(function(){
         lkRender({__loading:true});
         fetch('/api/lookup/?q='+encodeURIComponent(q),{cache:'no-store'})
-          .then(function(r){return r.json();}).then(lkRender)
+          .then(function(r){ if(r.status===401) return {__signin:true}; if(!r.ok) return {__failed:true}; return r.json(); }).then(lkRender)
           .catch(function(){ var b=document.getElementById('lkout'); if(b) b.innerHTML='<div class="lkempty">Lookup failed. Try again.</div>'; });
       }, 250);
     });

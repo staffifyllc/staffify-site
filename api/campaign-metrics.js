@@ -11,6 +11,7 @@
 //
 // Env: SALES_PORTAL_BASE, SALES_PORTAL_TOKEN.
 
+import { phoneGuard } from './_phone-guard.js';
 const BASE = process.env.SALES_PORTAL_BASE || '';
 const TOKEN = process.env.SALES_PORTAL_TOKEN || '';
 const HUB_URL = BASE ? BASE.replace('/sales-portal', '/hub') : '';
@@ -119,8 +120,10 @@ function brandFilterFrom(q) {
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'private, no-store');
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+    // Signed in, and numbers only on a running shift (see _phone-guard.js). Was open to anyone.
+    if (!(await phoneGuard(req, res))) return;
 
     const brand = brandFilterFrom(req.query.brand); // 'Foundry' | 'Staffify' | null
     if (!BASE || !TOKEN) return res.status(200).json({ ...emptyPayload(), brand: (req.query.brand || 'all').toString() });

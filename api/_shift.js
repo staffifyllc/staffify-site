@@ -23,6 +23,7 @@
 // per ET day, keyed by shift id, so a retried End or a correction overwrites one field instead of
 // rebuilding a list, and the same shift can never be stored twice. A read failure throws: an
 // unreadable store is "unavailable", never "no shift" and never zero hours.
+import { createHmac } from 'node:crypto';
 import { dayOf, norm } from './_hub-activity.js';
 
 export const MAX_OPEN_MS = 12 * 3600000;
@@ -156,8 +157,19 @@ export const DECLARED_TEXT = [
  * that merely looks like a number is touched. Pure.
  */
 export const PHONE_KEYS = new Set(['phone', 'mobilephone', 'mobilePhone', 'crmPhone', 'phoneNumber', 'directDial', 'alternates']);
-export function withholdPhones(x) {
-    return JSON.parse(JSON.stringify(x === undefined ? null : x, (k, v) => (PHONE_KEYS.has(k) && v ? (Array.isArray(v) ? [] : null) : v)));
+// A US number written any common way, as a whole run: +1 512 555 0102, (512) 555-0102, 5125550102.
+// Bounded by non-digits, so a 13-digit timestamp or a 12-digit id never matches part of itself.
+const PHONE_RUN = /(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g;
+const keyed = digits => 'h-' + createHmac('sha256', process.env.KV_REST_API_TOKEN || process.env.CRON_SECRET || 'staffify-shift').update(digits.slice(-10)).digest('hex').slice(0, 10);
+/** Replace every phone-shaped run inside a string with a keyed token: unique and stable, never reversible in the browser. */
+export const maskPhoneRuns = s => String(s).replace(PHONE_RUN, m => keyed(m.replace(/\D/g, '')));
+/**
+ * withholdPhones(x)                 empties phone fields by name.
+ * withholdPhones(x, { deep: true }) also replaces phone-shaped digits inside every other string,
+ * because some sources build ids from the number itself (the lead portal's "agency:9107695931").
+ */
+export function withholdPhones(x, { deep = false } = {}) {
+    return JSON.parse(JSON.stringify(x === undefined ? null : x, (k, v) => (PHONE_KEYS.has(k) && v ? (Array.isArray(v) ? [] : null) : deep && typeof v === 'string' ? maskPhoneRuns(v) : v)));
 }
 
 /** Queue rows with the dialable number replaced by "withheld", keeping order and status. Pure. */

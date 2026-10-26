@@ -387,7 +387,7 @@ export default async function handler(req, res) {
     // The shift gate: a caller off shift sees the list without its numbers, so its phone links are
     // not there to tap. An unreadable shift reads as off. Owners are never gated.
     const shiftGate = await gateFor(redis, who, ownerFor);
-    const scrub = x => (shiftGate.allowed ? x : withholdPhones(x));
+    const scrub = x => (shiftGate.allowed ? x : withholdPhones(x, { deep: true }));
     return res.status(200).json({
         ok: true,
         shiftGate,

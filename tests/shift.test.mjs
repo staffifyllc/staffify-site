@@ -1,7 +1,7 @@
 // Declared shifts: the state machine, the durations, the gate, the correction rule. Pure.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { withheldNumbers, gateFor, withholdPhones, stateOf, gate, start, startBreak, resume, end, correct, minutesOf, summarizeShifts, shiftRequired, MAX_OPEN_MS, GATE_TEXT, DECLARED_TEXT, K } from '../api/_shift.js';
+import { maskPhoneRuns, withheldNumbers, gateFor, withholdPhones, stateOf, gate, start, startBreak, resume, end, correct, minutesOf, summarizeShifts, shiftRequired, MAX_OPEN_MS, GATE_TEXT, DECLARED_TEXT, K } from '../api/_shift.js';
 
 const T = iso => Date.parse(iso);
 
@@ -125,4 +125,13 @@ test('gateFor fails closed when the shift cannot be read, and never gates an own
     const on = start(null, Date.now() - 60000).doc;
     const up = { get: async () => on, hget: async () => null, del: async () => 1 };
     assert.equal((await gateFor(up, { email: 'miltion@trystaffify.com', role: 'caller' }, ownerFor)).allowed, true);
+});
+
+test('deep withholding replaces numbers inside ids and text with a stable token, and leaves dates, timestamps and long ids alone', () => {
+    const out = withholdPhones({ id: 'agency:9107695931', note: 'call (910) 769-5931 after 5', at: '2026-10-26T19:07:00.000Z', ms: '1792878801540', hs: '123456789012', phone: '+19107695931' }, { deep: true });
+    assert.equal(out.phone, null);
+    assert.match(out.id, /^agency:h-[0-9a-f]{10}$/); assert.equal(out.note, 'call ' + out.id.slice(7) + ' after 5', 'the same number in another format gets the same token');
+    assert.equal(out.at, '2026-10-26T19:07:00.000Z'); assert.equal(out.ms, '1792878801540'); assert.equal(out.hs, '123456789012');
+    assert.equal(maskPhoneRuns('+19107695931'), maskPhoneRuns('9107695931'));
+    assert.notEqual(maskPhoneRuns('9107695931'), maskPhoneRuns('5125550102'));
 });
