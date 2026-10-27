@@ -95,7 +95,8 @@ export function summarizeDay({ day, minutes = [], sessions = [], events = [] }) 
     const counts = {};
     for (const e of events) if (e && e.kind) counts[e.kind] = (counts[e.kind] || 0) + 1;
     const meaningful = events.filter(e => e && MEANINGFUL.has(e.kind));
-    const sorted = [...events].filter(e => e && e.at).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    // Being prompted is not being seen: an unanswered idle prompt never moves first or last seen.
+    const sorted = [...events].filter(e => e && e.at && !PROMPT_KINDS.has(e.kind)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     const measured = minutes.length > 0 || sessions.length > 0 || events.length > 0;
     return { day, measured, activeMinutes: active, elapsedMinutes: elapsed, idleMinutes: Math.max(0, elapsed - active),
         sessions: sessions.length, sessionList: sessions, counts, meaningful: meaningful.length,

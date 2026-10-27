@@ -122,6 +122,10 @@ export async function listCalls({ actorId, direction, from, to, maxPages = 40 } 
 // all set it, so a high connect rate on short calls is not evidence of conversations. The tally
 // reports the average and the longest alongside it so the number cannot be read as more than it is.
 export const connected = c => !!c?.answeredAt;
+/** A call still going: no completedAt yet, in a live status. */
+export const callLive = c => !c?.completedAt && ['queued', 'initiated', 'ringing', 'in-progress', 'answered'].includes(String(c?.status || ''));
+/** When a call ended: completedAt, or its start plus its duration (at least a minute); null while live. */
+export const callEnd = c => (callLive(c) ? null : c?.completedAt || (c?.createdAt ? new Date(Date.parse(c.createdAt) + Math.max(60, Number(c.duration) || 0) * 1000).toISOString() : null));
 export const talkSeconds = c => (connected(c) ? Math.max(0, Number(c?.duration) || 0) : 0);
 
 /** The outside number on a call, for telling eight prospects apart from one number dialled eight times. */
@@ -137,6 +141,7 @@ export function tally(calls, { actorId } = {}) {
     const incoming = calls.filter(c => c.direction === 'incoming');
     const placed = actorId ? outgoing.filter(c => !c.initiatedBy || c.initiatedBy === actorId) : outgoing;
     const answered = placed.filter(connected);
+    const onPhone = [...placed, ...(actorId ? incoming.filter(c => c.answeredBy === actorId) : [])];
     const seconds = placed.reduce((n, c) => n + talkSeconds(c), 0);
     const byDay = {};
     for (const c of placed) {
@@ -173,10 +178,12 @@ export function tally(calls, { actorId } = {}) {
         uniqueNumbers: numbers.size,
         repeatDials: placed.length - numbers.size,
         avgAnsweredSeconds: answered.length ? Math.round(seconds / answered.length) : null,
-        // For the Hub's idle prompt: when this person last placed a call, and whether one is still
-        // going (no completedAt yet, in a live status), so a long call never reads as idle.
-        lastCallAt: placed.reduce((m, c) => (c.createdAt && (!m || c.createdAt > m) ? c.createdAt : m), null),
-        callInProgress: placed.some(c => !c.completedAt && ['queued', 'initiated', 'ringing', 'in-progress', 'answered'].includes(String(c.status || ''))),
+        // For the Hub's idle prompt and live status: this person's calls in either direction (dials,
+        // and inbound calls they answered), when the last one started and ended, and whether one is
+        // still going. A long call, or a prospect calling back, never reads as idle.
+        lastCallAt: onPhone.reduce((m, c) => (c.createdAt && (!m || c.createdAt > m) ? c.createdAt : m), null),
+        lastCallEndAt: onPhone.reduce((m, c) => { const e = callEnd(c); return e && (!m || e > m) ? e : m; }, null),
+        callInProgress: onPhone.some(callLive),
         inboundReturned: incoming.length,
         byDay,
         definitions: {

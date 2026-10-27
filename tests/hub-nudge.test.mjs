@@ -23,7 +23,7 @@ function boot({ required = true, state = 'on', path = '/hub/', quo = { lastCallA
         if (opts.method === 'POST') { posts.push(JSON.parse(opts.body)); return { ok: true, status: 200, json: async () => ({ ok: true }) }; }
         gets.push(String(url));
         if (quoFails) return { ok: false, status: 503, json: async () => ({ error: 'Quo could not be read' }) };
-        return { ok: true, status: 200, json: async () => ({ reps: [{ dials: 3, lastCallAt: quo.lastCallAt, callInProgress: quo.callInProgress }], totalDials: 3 }) };
+        return { ok: true, status: 200, json: async () => ({ reps: [{ dials: 3, lastCallAt: quo.lastCallAt, lastCallEndAt: quo.lastCallEndAt || quo.lastCallAt, callInProgress: quo.callInProgress }], totalDials: 3 }) };
     };
     const winListeners = {};
     const location = dom.location;
@@ -55,7 +55,7 @@ test('a caller quiet for 10 minutes on a running shift is asked, once, with thre
     assert.match(s.document.title, /^Still on shift\? · /, 'a hidden tab shows it in its title');
     assert.deepEqual(kinds(s), ['idle_prompt'], 'the prompt is recorded once');
     assert.equal(await s.nudge.check(s.now + MIN), 'showing'); assert.deepEqual(kinds(s), ['idle_prompt']);
-    assert.ok(s.gets.every(u => u === '/api/quo-activity/'));
+    assert.ok(s.gets.every(u => u === '/api/quo-activity/?days=2'), 'two days, so a call just before midnight still counts');
     assert.ok(!/—/.test(text), 'no em dash');
 });
 
@@ -66,9 +66,23 @@ test('a call in Quo is not idle: a recent dial or one still going means no promp
     live.advance(25 * MIN); assert.equal(await live.nudge.check(live.now), 'on a call'); assert.equal(live.prompt(), null);
 });
 
-test('Quo unreadable: it still asks, because asking costs nothing', async () => {
+test('Quo unreadable: it still asks, and says Quo could not be checked', async () => {
     const s = boot({ quoFails: true });
     s.advance(10 * MIN); assert.equal(await s.nudge.check(s.now), 'prompted');
+    assert.match(s.dom.text(s.prompt()), /No Hub activity for 10 minutes, and Quo could not be checked\. If you are on a call, say so\./);
+});
+
+test('a long call counts until it ended, not from when it was placed', async () => {
+    // Last click 1:00, a call placed at 1:01 that ran to 1:13; at 1:13:30 nothing should fire.
+    const s = boot({ quo: { lastCallAt: new Date(T0 + 1 * MIN).toISOString(), lastCallEndAt: new Date(T0 + 13 * MIN).toISOString(), callInProgress: false } });
+    s.advance(13 * MIN + 30000); assert.equal(await s.nudge.check(s.now), 'dialled');
+    s.advance(10 * MIN); assert.equal(await s.nudge.check(s.now), 'prompted', 'ten quiet minutes after the call ended');
+});
+
+test('activity in another tab closes a prompt that is already up', async () => {
+    const s = boot(); s.advance(10 * MIN); await s.nudge.check(s.now);
+    s.advance(30000); s.dom.localStorage.setItem('staffify-last-activity', String(s.now));
+    assert.equal(await s.nudge.check(s.now), 'closed by activity'); assert.equal(s.prompt(), null);
 });
 
 test('owners, breaks and an ended shift are never prompted; a shift just started or resumed gets its full 10 minutes', async () => {
@@ -109,7 +123,7 @@ test('"Next call" goes to the dialer from any other page, and stays put on the d
 test('"Take a break" uses the shift bar\'s own Break, and a break or end from anywhere closes the prompt', async () => {
     const s = boot(); s.advance(10 * MIN); await s.nudge.check(s.now);
     s.button('Take a break').click(); await new Promise(r => setTimeout(r, 5));
-    assert.equal(s.breakCalls.length, 1); assert.equal(s.prompt(), null); assert.deepEqual(kinds(s), ['idle_prompt', 'idle_prompt_break']);
+    assert.equal(s.breakCalls.length, 1); assert.equal(s.prompt(), null); assert.deepEqual(kinds(s), ['idle_prompt', 'idle_prompt_break'], 'recorded after the break is confirmed');
     const t = boot(); t.advance(10 * MIN); await t.nudge.check(t.now);
     t.setShift({ required: true, state: 'off', shift: null });
     assert.equal(t.prompt(), null, 'ending the shift in another tab closes it');

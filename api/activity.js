@@ -18,7 +18,7 @@ import { redis, requireAccess, SESSION_TTL } from './_auth.js';
 import { financeAccess } from './_finance-access.js';
 import { K, norm, dayOf, minuteOf, sessionize, sessionsOn, summarizeDay, daysBetween, EVENT_KINDS, CLIENT_KINDS, PROMPT_KINDS, MEASURED_TEXT, RETAIN_DAYS, HEARTBEAT_MS, IDLE_CUTOFF_MS, SESSION_GAP_MS } from './_hub-activity.js';
 import { shiftsOn, liveCurrent, stateOf, DECLARED_TEXT, MAX_OPEN_MS } from './_shift.js';
-import { quoConfigured, listUsers, listCalls, findSeat, etDayBounds } from './_quo.js';
+import { quoConfigured, listUsers, listCalls, findSeat, etDayBounds, callLive } from './_quo.js';
 import { loginAliases } from './_login-aliases.js';
 import { reportPeople } from './_daily-report-run.js';
 import { signals, liveStatus, quietDay, QUIET_MS } from './_live-status.js';
@@ -80,7 +80,7 @@ async function liveSessions(filterEmail) {
 /**
  * Right now, for every caller: working, on a call, quiet for N minutes, on break or off shift, and
  * today's quiet stretches on shift. Quo is read once a minute per caller at most (cached), so a page
- * left open polling does not hammer it. A Quo read that fails says so; quiet is then an upper bound.
+ * left open polling does not hammer it. A Quo read that fails says so; quiet is then unknown, never a figure.
  */
 async function quoToday(email, day) {
     const key = 'staffify:live-quo:' + email;
@@ -94,9 +94,10 @@ async function quoToday(email, day) {
             if (!seat) out = { quo: 'no seat', calls: [] };
             else {
                 const b = etDayBounds(day);
-                const { items } = await listCalls({ actorId: seat.actorId, direction: 'outgoing', from: b.from, to: b.to });
-                const placed = (items || []).filter(c => c.direction === 'outgoing' && (!c.initiatedBy || c.initiatedBy === seat.actorId));
-                out = { quo: 'read', calls: placed.map(c => ({ at: c.createdAt, seconds: Number(c.duration) || 0, inProgress: !c.completedAt && ['queued', 'initiated', 'ringing', 'in-progress', 'answered'].includes(String(c.status || '')) })) };
+                // Both directions: dials, and calls this person answered (a prospect calling back is work too).
+                const { items } = await listCalls({ actorId: seat.actorId, from: b.from, to: b.to });
+                const mine = (items || []).filter(c => (c.direction === 'outgoing' && (!c.initiatedBy || c.initiatedBy === seat.actorId)) || (c.direction === 'incoming' && c.answeredBy === seat.actorId));
+                out = { quo: 'read', calls: mine.map(c => ({ at: c.createdAt, seconds: Number(c.duration) || 0, inProgress: callLive(c), direction: c.direction })) };
             }
         } catch { out = { quo: 'unavailable', calls: [] }; }
     }
@@ -107,26 +108,35 @@ async function quoToday(email, day) {
 async function liveFor(person, now) {
     const email = norm(person.email), day = dayOf(now);
     const current = await liveCurrent(redis, email).catch(() => undefined);
-    const [minutes, raw, shift, q] = await Promise.all([
+    // A shift started before midnight Eastern: its first day's minutes and calls count too.
+    const earlier = current && current.day && current.day < day ? current.day : null;
+    const [minutes, raw, shift, q, minutesBefore, qBefore] = await Promise.all([
         redis.smembers(K.minutes(email, day)).catch(() => null),
         redis.lrange(K.events(email, day), 0, 499).catch(() => null),
         shiftsOn(redis, email, day, now, current).catch(() => null),
         quoToday(email, day),
+        earlier ? redis.smembers(K.minutes(email, earlier)).catch(() => []) : [],
+        earlier ? quoToday(email, earlier) : { quo: 'read', calls: [] },
     ]);
     const events = (raw || []).map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean);
     const unreadable = current === undefined || minutes === null || raw === null || shift === null;
-    const sig = signals({ day, minutes: minutes || [], calls: q.calls, now });
+    const sig = [...signals({ day, minutes: minutes || [], calls: q.calls, now }), ...(earlier ? signals({ day: earlier, minutes: minutesBefore || [], calls: qBefore.calls, now }) : [])].sort((a, b) => a[0] - b[0]);
     const state = current === undefined ? 'unknown' : stateOf(current, now);
-    const status = unreadable ? { key: 'unknown', label: 'Unknown', detail: 'The shift or Hub activity could not be read just now.' }
-        : liveStatus({ state, current, sig, events, callInProgress: q.calls.some(c => c.inProgress), quo: q.quo, now });
+    const quoRead = q.quo === 'read' && (!earlier || qBefore.quo === 'read');
+    let status = unreadable ? { key: 'unknown', label: 'Unknown', detail: 'The shift or Hub activity could not be read just now.' }
+        : liveStatus({ state, current, sig, events, callInProgress: q.calls.some(c => c.inProgress) || (earlier ? qBefore.calls.some(c => c.inProgress) : false), quo: q.quo, now });
+    // Quo unread: no calls can be seen, so a quiet Hub is not proof of a quiet caller. Say what is known.
+    if (!quoRead && status.key === 'quiet') status = { ...status, key: 'unseen', label: 'No Hub activity for ' + status.quietMinutes + ' min', detail: q.quo === 'no seat' ? 'No Quo seat for this login, so calls cannot be seen.' : 'Quo could not be read, so a call may be going on.', prompt: status.prompt };
     const hubMinutes = (minutes || []).map(Number).filter(Number.isFinite);
     const lastCall = q.calls.map(c => c.at).filter(Boolean).sort().slice(-1)[0] || null;
     const lastEvent = events.filter(e => e.kind && !e.kind.startsWith('idle_prompt') && e.kind !== 'leave').map(e => e.at).sort().slice(-1)[0] || null;
+    const hubRead = minutes !== null && raw !== null;
     return {
-        email, name: person.name || email, status,
-        lastHubAt: hubMinutes.length ? new Date(Math.max(...hubMinutes.map(m => signals({ day, minutes: [m] })[0][1]))).toISOString() : lastEvent,
+        email, name: person.name || email, status, hubRead,
+        lastHubAt: !hubRead ? null : hubMinutes.length ? new Date(Math.max(...hubMinutes.map(m => signals({ day, minutes: [m] })[0][1]))).toISOString() : lastEvent,
         lastCallAt: lastCall, quo: q.quo, quoReadAt: q.readAt,
-        today: unreadable ? null : { day, ...quietDay({ day, minutes: minutes || [], calls: q.calls, shiftList: shift.list, events, now }) },
+        // Today's quiet needs all three sources; without Quo it is unknown, never a figure.
+        today: unreadable || !quoRead ? null : { day, ...quietDay({ day, minutes: minutes || [], calls: q.calls, shiftList: shift.list, events, now }) },
     };
 }
 

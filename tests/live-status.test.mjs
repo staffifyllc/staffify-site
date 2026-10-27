@@ -58,3 +58,17 @@ test('shift windows skip breaks, clip at now, and use an owner-corrected end', (
     assert.deepEqual(shiftWindows([{ startedAt: iso('16:00'), endedAt: iso('20:00'), correctedEndedAt: iso('18:00'), state: 'corrected', breaks: [] }], et('21:00')), [[et('16:00'), et('18:00')]]);
     assert.deepEqual(shiftWindows([{ startedAt: iso('16:00'), endedAt: null, state: 'open', breaks: [{ startedAt: iso('16:30'), endedAt: null }] }], et('17:00')), [[et('16:00'), et('16:30')]]);
 });
+
+test('the review round: a prompted gap is listed even when Hub minutes ran past the last click; a prompt on screen means quiet; midnight clips', () => {
+    // Last click 10:00; heartbeat minutes run to 10:04; the prompt (which saw 10 quiet minutes) at 10:10; answered 10:11.
+    const shift = [{ startedAt: iso('09:30'), endedAt: iso('11:00'), state: 'closed', breaks: [] }];
+    const minutes = [...Array.from({ length: 35 }, (_, i) => mOf('09:30') + i), mOf('10:11'), ...Array.from({ length: 49 }, (_, i) => mOf('10:11') + i)];
+    const events = [{ at: iso('10:10'), kind: 'idle_prompt' }, { at: iso('10:11'), kind: 'idle_prompt_next' }];
+    const d = quietDay({ day: DAY, minutes, calls: [], shiftList: shift, events, now: et('12:00') });
+    assert.deepEqual(d.stretches.map(s => [s.from, s.to, s.prompted, s.answer]), [[iso('10:05'), iso('10:11'), true, 'Went to the next call']]);
+    const now = et('10:10:30'.slice(0, 5)) + 30000;
+    const st = liveStatus({ state: 'on', current: { startedAt: iso('09:30'), breaks: [] }, sig: signals({ day: DAY, minutes: minutes.filter(m => m <= mOf('10:04')), now }), events: [{ at: iso('10:10'), kind: 'idle_prompt' }], now });
+    assert.equal(st.key, 'quiet', 'the caller is looking at "Still on your shift?", so the owner must not see Working');
+    const late = quietDay({ day: DAY, minutes: [], calls: [], shiftList: [{ startedAt: iso('23:00'), endedAt: null, state: 'open', breaks: [] }], events: [], now: Date.parse('2026-10-28T03:00:00-04:00'), until: Date.parse('2026-10-28T00:00:00-04:00') });
+    assert.equal(late.onShiftMinutes, 60, 'after midnight belongs to the next day, which this day did not read');
+});

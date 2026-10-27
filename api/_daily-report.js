@@ -337,6 +337,12 @@ export async function gatherRange({ redis, rep, from, to, now = Date.now(), deco
                 const { items, complete } = await (deps.listCalls || listCalls)({ actorId: q.seat.actorId, direction: 'outgoing', from: etDayBounds(from).from, to: etDayBounds(to).to });
                 const placed = (items || []).filter(c => c.direction === 'outgoing' && (!c.initiatedBy || c.initiatedBy === q.seat.actorId));
                 Object.assign(q, { ok: true, complete, readAt: at(), calls: placed.map(c => ({ id: c.id, at: c.createdAt, number: last10(counterparty(c)), answered: connected(c), seconds: talkSeconds(c) })) });
+                // The Caller review's quiet stretches also count calls this person answered. Dials stay outgoing only.
+                if (keepRecords) {
+                    try { const inb = await (deps.listCalls || listCalls)({ actorId: q.seat.actorId, direction: 'incoming', from: etDayBounds(from).from, to: etDayBounds(to).to });
+                        q.inbound = (inb.items || []).filter(c => c.direction === 'incoming' && c.answeredBy === q.seat.actorId).map(c => ({ at: c.createdAt, seconds: Number(c.duration) || 0 })); }
+                    catch { q.inbound = null; }
+                }
             }
         } catch (e) { q.error = String((e && e.message) || e).slice(0, 120); }
     }

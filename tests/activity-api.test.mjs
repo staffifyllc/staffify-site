@@ -160,8 +160,10 @@ test('right now: an owner sees each caller working, quiet or on break; nobody el
     at('2026-10-27T20:25:00Z');                                      // 24 quiet minutes since the page view
     r = await call({ cookie: 'paul-sid', query: { live: '1' } });
     const q = r.body.people.find(p => p.email === 'miltion@trystaffify.com');
-    assert.deepEqual([q.status.key, q.status.label], ['quiet', 'Quiet for 24 min']);
-    assert.deepEqual(q.today.stretches.map(s => [s.minutes, s.open]), [[24, true]]);
+    // Quo is not connected in this test, so calls cannot be seen: never "quiet", never a quiet figure.
+    assert.deepEqual([q.status.key, q.status.label], ['unseen', 'No Hub activity for 24 min']);
+    assert.match(q.status.detail, /Quo could not be read, so a call may be going on/);
+    assert.equal(q.today, null);
     assert.equal((await call({ cookie: 'milton-sid', query: { live: '1' } })).code, 403, 'a caller cannot watch anyone, including the team');
     assert.equal((await call({ query: { live: '1' } })).code, 401);
     Date.now = realNow;

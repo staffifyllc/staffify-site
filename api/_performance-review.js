@@ -172,7 +172,8 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
         // Needs all three sources for the day; otherwise unknown.
         const act = src.activityByDay[r.day];
         const quiet = quoOk && r.shift && !r.shift.notMeasured && !r.shift.unavailable && act && !act.notMeasured && Array.isArray(act.minuteList)
-            ? quietDay({ day: r.day, minutes: act.minuteList, calls: dayCalls.map(c => ({ at: c.at, seconds: c.seconds })), shiftList: r.shift.list || [], events: act.events || [], now }) : null;
+            && quo.inbound !== null
+            ? quietDay({ day: r.day, minutes: act.minuteList, calls: [...dayCalls, ...(quo.inbound || []).filter(c => etDay(c.at) === r.day)].map(c => ({ at: c.at, seconds: c.seconds })), shiftList: r.shift.list || [], events: act.events || [], now, until: ms(dayRange(r.day).to) + 1 }) : null;
         const active = r.activity && !r.activity.notMeasured ? r.activity.activeMinutes : null;
         return {
             day: r.day, partial: r.partialDay,

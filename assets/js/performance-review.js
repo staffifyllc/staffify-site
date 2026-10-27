@@ -50,7 +50,7 @@ function show(tab, remember) {
     if (skip && shown) skip.setAttribute('href', '#' + shown.panel);
     if (remember) {
         const u = new URL(location.href);
-        if (tab === 'today') u.searchParams.delete('tab'); else u.searchParams.set('tab', tab);
+        u.searchParams.set('tab', tab);
         history.replaceState(null, '', u.toString());
     }
     if (tab === 'review' && !opened) { opened = true; start(); }
@@ -233,21 +233,22 @@ export function render(v) {
 // ---- boot ---------------------------------------------------------------------------------------
 export function init() {
     const tablist = document.querySelector('[role=tablist]');
-    for (const t of TABS) { const b = $(t.button); if (b) b.addEventListener('click', () => show(t.id, true)); }
+    let picked = false;
+    for (const t of TABS) { const b = $(t.button); if (b) b.addEventListener('click', () => { picked = true; show(t.id, true); }); }
     if (tablist) tablist.addEventListener('keydown', e => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
         const tabs = TABS.filter(shown);
         const i = tabs.findIndex(t => $(t.button).getAttribute('aria-selected') === 'true');
         const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-        show(next.id, true); const b = $(next.button); if (b) b.focus();
+        picked = true; show(next.id, true); const b = $(next.button); if (b) b.focus();
     });
     const asked = new URLSearchParams(location.search).get('tab');
-    show(asked === 'review' ? 'review' : 'today', false);
+    show(asked === 'review' ? 'review' : 'today', false);   // ?tab=today stays on Today
     // Owners open on Right now (unless the link asked for another tab); callers never see it.
     if ($('tab-live')) ownerCheck().then(owner => {
         if (!owner) return;
         $('tab-live').hidden = false;
-        if (asked === 'live' || !asked) show('live', false);
+        if (asked === 'live' || (!asked && !picked)) show('live', false);
     });
 }
 async function ownerCheck() {

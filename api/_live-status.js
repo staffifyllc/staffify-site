@@ -71,11 +71,14 @@ export function quietStretches({ windows, signals: sig, events = [], now = Date.
     };
     for (const [ws, we] of windows || []) {
         let cursor = ws;
+        // A gap holding a prompt is listed whatever its measured length: the prompt saw 10 quiet
+        // minutes, while the Hub's minutes run up to five minutes past the last click.
+        const prompted = (from, to) => prompts.some(p => p.kind === 'idle_prompt' && p.at >= from && p.at <= to);
         for (const [a, b] of (sig || []).filter(([a, b]) => b > ws && a < we)) {
-            if (a - cursor >= minMs) out.push(gap(cursor, a, false));
+            if (a - cursor >= minMs || (a > cursor && prompted(cursor, a))) out.push(gap(cursor, a, false));
             cursor = Math.max(cursor, b);
         }
-        if (we - cursor >= minMs) out.push(gap(cursor, we, we >= now - MIN));
+        if (we - cursor >= minMs || (we > cursor && prompted(cursor, we))) out.push(gap(cursor, we, we >= now - MIN));
     }
     return out;
 }
@@ -99,15 +102,18 @@ export function liveStatus({ state, current, sig = [], events = [], callInProgre
     const prompts = (events || []).filter(e => e && e.kind && e.kind.startsWith('idle_prompt') && ms(e.at) >= last).sort((a, b) => ms(a.at) - ms(b.at));
     const shown = prompts.filter(p => p.kind === 'idle_prompt').slice(-1)[0];
     const answered = shown && prompts.some(p => p.kind !== 'idle_prompt' && ms(p.at) >= ms(shown.at));
-    if (quiet < QUIET_MS) return { ...base, key: 'working', label: 'Working', since: new Date(last).toISOString(), quietMinutes: Math.floor(quiet / MIN) };
+    // A prompt on screen and unanswered means the caller's own tab saw 10 quiet minutes.
+    if (quiet < QUIET_MS && !(shown && !answered)) return { ...base, key: 'working', label: 'Working', since: new Date(last).toISOString(), quietMinutes: Math.floor(quiet / MIN) };
     return { ...base, key: 'quiet', label: 'Quiet for ' + Math.floor(quiet / MIN) + ' min', since: new Date(last).toISOString(), quietMinutes: Math.floor(quiet / MIN),
         prompt: shown ? { at: shown.at, answered: !!answered } : null };
 }
 
 /** One caller's day: time on shift, quiet stretches, and the total quiet. */
-export function quietDay({ day, minutes, calls, shiftList, events, now = Date.now() }) {
+export function quietDay({ day, minutes, calls, shiftList, events, now = Date.now(), until = null }) {
     const sig = signals({ day, minutes, calls, now });
-    const windows = shiftWindows(shiftList, now);
+    // `until`: the end of the day whose minutes and calls were read, so a shift running past
+    // midnight is not read as quiet for the hours this day cannot see.
+    const windows = shiftWindows(shiftList, now).map(([a, b]) => [a, until ? Math.min(b, until) : b]).filter(([a, b]) => b > a);
     const stretches = quietStretches({ windows, signals: sig, events, now });
     return { onShiftMinutes: Math.floor(windows.reduce((n, [a, b]) => n + (b - a), 0) / MIN), quietMinutes: stretches.reduce((n, s) => n + s.minutes, 0), stretches };
 }

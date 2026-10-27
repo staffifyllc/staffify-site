@@ -31,12 +31,13 @@ export async function drawLive(box) {
         const st = p.status || { key: 'unknown', label: 'Unknown' };
         const facts = [];
         if (st.key === 'working') facts.push('last activity ' + (st.quietMinutes ? st.quietMinutes + ' min ago' : 'just now'));
-        if (st.key === 'quiet') facts.push('nothing since ' + timeET(st.since) + (st.prompt ? (st.prompt.answered ? ' · prompted at ' + timeET(st.prompt.at) + ', answered' : ' · prompt on screen since ' + timeET(st.prompt.at) + ', not answered') : ''));
+        if (st.key === 'quiet' || st.key === 'unseen') facts.push('nothing in the Hub since ' + timeET(st.since) + (st.prompt ? (st.prompt.answered ? ' · prompted at ' + timeET(st.prompt.at) + ', answered' : ' · prompt on screen since ' + timeET(st.prompt.at) + ', not answered') : ''));
         if (st.key === 'break' && st.since) facts.push('since ' + timeET(st.since));
         if (st.detail) facts.push(st.detail);
-        facts.push('last Hub activity ' + (p.lastHubAt ? timeET(p.lastHubAt) : 'none today'));
+        facts.push('last Hub activity ' + (p.lastHubAt ? timeET(p.lastHubAt) : p.hubRead === false || st.key === 'unknown' ? 'unknown' : 'none today'));
         facts.push('last Quo call ' + (p.quo === 'read' ? (p.lastCallAt ? timeET(p.lastCallAt) : 'none today') : p.quo === 'no seat' ? 'no Quo seat' : 'unknown (Quo not read)'));
         if (p.today && p.today.onShiftMinutes) facts.push('quiet on shift today ' + mins(p.today.quietMinutes) + ' of ' + mins(p.today.onShiftMinutes));
+        else if (!p.today && st.key !== 'off') facts.push("today's quiet stretches unknown until Hub activity, the shift and Quo can all be read");
         const row = el('div', null, 'live-row');
         row.append(el('b', p.name), el('span', st.label, 'live-pill ' + st.key), el('span', facts.join(' · '), 'live-facts'));
         box.append(row);

@@ -45,16 +45,18 @@
     if (now - quoAt < QUO_EVERY_MS && quo) return quo;
     quoAt = now;
     try {
-      const r = await fetch('/api/quo-activity/', { cache: 'no-store', credentials: 'same-origin' });
+      // Two days, so a call placed just before midnight Eastern still counts after it.
+      const r = await fetch('/api/quo-activity/?days=2', { cache: 'no-store', credentials: 'same-origin' });
       const j = r.ok ? await r.json() : null;
-      const me = j && !j.error && Array.isArray(j.reps) ? j.reps[0] : null;   // own seat, today
-      quo = me ? { lastCallAt: Date.parse(me.lastCallAt || '') || 0, inProgress: !!me.callInProgress } : { lastCallAt: 0, inProgress: false, unread: true };
+      const me = j && !j.error && Array.isArray(j.reps) ? j.reps[0] : null;   // own seat
+      // When the last call ENDED: a 12-minute call is 12 minutes of work, not a quiet stretch.
+      quo = me ? { lastCallAt: Date.parse(me.lastCallEndAt || me.lastCallAt || '') || 0, inProgress: !!me.callInProgress } : { lastCallAt: 0, inProgress: false, unread: true };
     } catch { quo = { lastCallAt: 0, inProgress: false, unread: true }; }
     return quo;
   }
 
   // ---- the prompt ----------------------------------------------------------------------------
-  let box = null, titleWas = null, checking = false;
+  let box = null, titleWas = null, checking = false, shownAt = 0;
   const send = kind => { try { return fetch('/api/activity/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'event', kind, page: (location.pathname || '/').slice(0, 120) }), keepalive: true, credentials: 'same-origin' }).catch(() => {}); } catch { return null; } };
   const el = (t, text, cls) => { const e = document.createElement(t); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
   const onDialer = () => /^\/(dialer|spearhead)\//.test(location.pathname || '');
@@ -64,15 +66,17 @@
     if (titleWas !== null) { document.title = titleWas; titleWas = null; }
     if (others) tell('closed');
   }
-  function show(quietMinutes, now) {
+  function show(quietMinutes, now, q) {
     if (box) return;
+    shownAt = now;
     // One tab records that the prompt appeared; every open tab shows it.
     if (now - get(SHOWN) >= IDLE_MS) { put(SHOWN, now); send('idle_prompt'); }
     box = el('div', null, 'idle-prompt');
     box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-labelledby', 'idle-prompt-title'); box.setAttribute('aria-describedby', 'idle-prompt-body');
     const card = el('div', null, 'idle-card');
     const h = el('h2', 'Still on your shift?'); h.id = 'idle-prompt-title';
-    const p = el('p', 'Nothing in the Hub or in Quo for ' + quietMinutes + ' minutes. ' + (onDialer() ? 'Your next call is on screen.' : 'Your next call is ready in the dialer.')); p.id = 'idle-prompt-body';
+    const lead = q && q.unread ? 'No Hub activity for ' + quietMinutes + ' minutes, and Quo could not be checked. If you are on a call, say so. ' : 'Nothing in the Hub or in Quo for ' + quietMinutes + ' minutes. ';
+    const p = el('p', lead + (onDialer() ? 'Your next call is on screen.' : 'Your next call is ready in the dialer.')); p.id = 'idle-prompt-body';
     const row = el('div', null, 'idle-actions');
     const button = (text, cls, fn) => { const b = el('button', text, 'ps-btn' + (cls ? ' ' + cls : '')); b.type = 'button'; b.onclick = fn; return b; };
     const next = button('Next call', 'primary', () => {
@@ -82,9 +86,10 @@
     });
     const onCall = button("I'm on a call", '', () => { send('idle_prompt_on_call'); put(SNOOZE, Date.now() + SNOOZE_MS); touch(); close(); });
     const brk = button('Take a break', '', async () => {
-      brk.disabled = true; send('idle_prompt_break');
+      brk.disabled = true;
       const r = window.__staffifyShift && typeof window.__staffifyShift.break === 'function' ? await window.__staffifyShift.break() : { ok: false };
-      if (r && r.ok) { touch(); close(); return; }
+      // Recorded only once the break is real.
+      if (r && r.ok) { send('idle_prompt_break'); touch(); close(); return; }
       brk.disabled = false; p.textContent = (r && r.error) || 'The break could not be started. Use the Break button at the top.';
     });
     row.append(next, onCall, brk);
@@ -103,18 +108,19 @@
     hook();
     const s = shift();
     if (!running(s)) { if (box) close({ others: false }); return 'not running'; }
-    if (box) return 'showing';
+    // Activity anywhere since the prompt appeared (a new page, another tab) closes it here too.
+    if (box) { if (get(LAST) > shownAt || get(SNOOZE) > shownAt) { close({ others: false }); return 'closed by activity'; } return 'showing'; }
     if (get(SNOOZE) > now) return 'snoozed';
     const since = Math.max(lastActivity(), onSince(s), get(SNOOZE) - SNOOZE_MS);
     if (now - since < IDLE_MS) return 'active';
     checking = true;
     try {
       const q = await quoRecent(now);
-      if (q.inProgress) return 'on a call';
+      if (q.inProgress) { touch(now); return 'on a call'; }
       if (q.lastCallAt && now - q.lastCallAt < IDLE_MS) { touch(q.lastCallAt); return 'dialled'; }
       const s2 = shift();
       if (!running(s2)) return 'not running';
-      show(Math.floor((now - Math.max(since, q.lastCallAt || 0)) / 60000), now);
+      show(Math.floor((now - Math.max(since, q.lastCallAt || 0)) / 60000), now, q);
       return 'prompted';
     } finally { checking = false; }
   }

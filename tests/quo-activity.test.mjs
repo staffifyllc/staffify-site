@@ -128,6 +128,12 @@ test('the idle prompt can tell a caller on a call from a quiet one: last call ti
     stubQuo({ calls: [call({ createdAt: '2026-10-21T20:00:00Z', completedAt: '2026-10-21T20:04:00Z', status: 'completed', duration: 240 })] });
     const done = (await run({ rep: 'milton@trystaffify.com', from: '2026-10-21', to: '2026-10-21' })).body.reps[0];
     assert.equal(done.callInProgress, false);
+    assert.equal(done.lastCallEndAt, '2026-10-21T20:04:00Z', 'when the call ended, not when it was placed');
+    // A prospect calling back counts as being on the phone; dials stay outgoing only.
+    stubQuo({ calls: [call({ createdAt: '2026-10-21T20:00:00Z', completedAt: '2026-10-21T20:01:00Z', duration: 30 }),
+        call({ direction: 'incoming', createdAt: '2026-10-21T20:10:00Z', completedAt: null, answeredAt: '2026-10-21T20:10:05Z', status: 'in-progress', initiatedBy: null, answeredBy: 'USmilton' })] });
+    const inbound = (await run({ rep: 'milton@trystaffify.com', from: '2026-10-21', to: '2026-10-21' })).body.reps[0];
+    assert.deepEqual([inbound.dials, inbound.callInProgress, inbound.lastCallAt], [1, true, '2026-10-21T20:10:00Z']);
 });
 
 test('eight dials to one number is not eight prospects, and the payload says so', async () => {
