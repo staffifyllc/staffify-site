@@ -11,8 +11,8 @@ const MODULE = pathToFileURL(new URL('../assets/js/performance-review.js', impor
 const html = readFileSync(new URL('../scoreboard/index.html', import.meta.url), 'utf8');
 const src = source();
 const REVIEW = { ...buildReview(src, { generatedAt: GENERATED, emails: [USER.email] }), supply: { asOf: GENERATED, ...leadSupply([
-    { id: 'a', campaignId: 'staffify-agency-outreach', callReady: true, callContact: { phone: '+12125550100', phoneStatus: 'business_listed' }, callHistory: [] },
-    { id: 'b', campaignId: 'staffify-agency-outreach', callReady: true, callContact: { phone: '+12125550100', phoneStatus: 'crm_unconfirmed' }, callHistory: [] }], [USER.email]) } };
+    { id: 'a', campaignId: 'staffify-tobit-outreach', callReady: true, callContact: { phone: '+12125550100', phoneStatus: 'business_listed' }, callHistory: [] },
+    { id: 'b', campaignId: 'staffify-tobit-outreach', callReady: true, callContact: { phone: '+12125550100', phoneStatus: 'crm_unconfirmed' }, callHistory: [] }], [USER.email]) } };
 
 function page(href) {
     const dom = makeDom({ href }); const restore = install(dom);

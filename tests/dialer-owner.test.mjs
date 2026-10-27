@@ -45,3 +45,35 @@ test('an owner\'s own follow-up is what their dialer opens on', async () => {
     assert.match(dom.text(document.querySelector('.dw-bar')), /1 of 1/);
     assert.match(dom.text(document.querySelector('#dw-pool')), /Team pool · 1 left/);
 });
+
+test('a caller\'s owned real estate media callback is in the Paused area, not tomorrow\'s worklist', async () => {
+    // PM refinement, 2026-10-27: "keep REP cards out of the default active worklist for every caller,
+    // including owned REP follow-ups ... in a clearly paused campaign/review area".
+    const due = new Date(Date.now() - 3600000).toISOString();
+    const MILTON = 'miltion@trystaffify.com';
+    const dom = makeDom({ href: 'https://www.gostaffify.com/dialer/' }); install(dom);
+    globalThis.setInterval = () => 0;
+    const app = document.createElement('div'); app.id = 'app'; document.body.append(app);
+    const records = [
+        rec('h1', { campaignId: 'staffify-tobit-outreach' }),
+        rec('rep', { unclaimed: false, mine: true, dueForMe: false, pausedFollowUp: true, callOwner: MILTON, callOutcome: 'callback', nextCallAt: due }),
+    ];
+    const briefs = [];
+    globalThis.fetch = async (url, opts = {}) => {
+        const u = String(url); const ok = p => ({ ok: true, status: 200, json: async () => p });
+        if (u.startsWith('/api/outreach-call-brief/')) briefs.push(u.split('id=')[1]);
+        if (u.startsWith('/api/outreach-queue/')) return ok({ revision: 1, viewer: MILTON, viewerOwner: false, records, tasks: [] });
+        if (u.startsWith('/api/call-hold/')) return ok(opts.body ? { ok: true, hold: { by: MILTON, kind: 'open', until: new Date(Date.now() + 240000).toISOString() } } : { me: MILTON, holds: {} });
+        if (u.startsWith('/api/outreach-call-brief/')) return ok({ callable: true, checkedAt: new Date().toISOString(), company: 'Co', name: 'Pat', phone: '+15125550100', dial: { alternates: [] }, opener: 'Hey Pat', stages: [], tree: { open: { choices: [] } }, objections: [], events: [] });
+        return ok({});
+    };
+    await import('../assets/js/dialer-workspace.js?' + Date.now() + 'paused');
+    await tick(80);
+    assert.match(dom.text(document.querySelector('.dw-bar')), /1 of 1/, 'only the live campaign\'s card is work');
+    assert.deepEqual(briefs, ['h1'], 'the live card is opened; the paused one is not');
+    assert.match(dom.text(document.querySelector('#dw-paused')), /Paused · 1/, 'the paused callback is kept and visible');
+    document.getElementById('dw-paused').click();
+    await tick(80);
+    assert.match(dom.text(document.querySelector('.dw-bar')), /Paused: real estate media/);
+    assert.equal(briefs[briefs.length - 1], 'rep', 'opened only on purpose');
+});

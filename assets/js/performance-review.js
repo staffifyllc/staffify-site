@@ -185,7 +185,7 @@ export function render(v) {
     // Supply
     const s = v.supply;
     parts.push(section('Leads ready to call, right now',
-        !s ? lede('Unknown: the call queue could not be read.') : lede((s.crmIncomplete ? 'At least ' : '') + plural(s.neverDialled, 'callable lead nobody has called', 'callable leads nobody has called') + '. ' + (s.crmIncomplete ? 'At least ' : '') + plural(s.hisFollowUpsDue, "of this caller's own follow-ups is", "of this caller's own follow-ups are") + ' due.'),
+        !s ? lede('Unknown: the call queue could not be read.') : lede((s.crmIncomplete ? 'At least ' : '') + plural(s.neverDialled, 'callable lead nobody has called', 'callable leads nobody has called') + '. ' + (s.pausedNotOffered ? s.pausedNotOffered + ' more are on paused campaigns (real estate media) and not offered. ' : '') + (s.crmIncomplete ? 'At least ' : '') + plural(s.hisFollowUpsDue, "of this caller's own follow-ups is", "of this caller's own follow-ups are") + ' due.'),
         s && s.crmIncomplete ? el('p', { class: 'pr-small', text: 'The CRM could not be read just now, so leads and follow-ups whose only number is in the CRM are missing from both counts.' }) : null,
         s && s.bySource.length ? table(['Where the number came from', 'Leads'], s.bySource.map(x => [x.label, num(x.n)])) : null,
         s && s.byCampaign.length > 1 ? table(['Campaign', 'Leads'], s.byCampaign.map(x => [x.name, num(x.n)])) : null));

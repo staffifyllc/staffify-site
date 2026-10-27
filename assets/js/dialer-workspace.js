@@ -27,6 +27,9 @@ let searchText='';                                         // the search bar's t
 // if my guys are already doing it I shouldn't be". An owner's dialer holds their own follow-ups; the shared
 // pool the reps work is the Team pool, opened on purpose. A caller's queue is unchanged.
 let teamPool=params.get('pool')==='team';
+// The Paused area: owned callbacks on a paused campaign (real estate media), kept for review, never default work.
+let pausedView=params.get('pool')==='paused';
+const pausedCount=()=>(state&&state.records||[]).filter(r=>r.pausedFollowUp).length;
 const ownerView=()=>!!(state&&state.viewerOwner);
 let names={};                                              // record id -> contact name from HubSpot, for search
 const skipped=new Set(), dialled=new Set();
@@ -52,7 +55,7 @@ const ENT={nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',hellip:'…',mdash:'
 const plain=s=>String(s||'').replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,n)=>String.fromCodePoint(Number(n))).replace(/&([a-z]+);/gi,(m,k)=>k.toLowerCase() in ENT?ENT[k.toLowerCase()]:m).replace(/\s+/g,' ').trim();
 // A card another rep has open, is calling or just called is out of everyone else's queue (live holds below).
 // A card this rep owns (their callback or retry) is always theirs to see, whatever a teammate logged on it.
-const rows=()=>orderCallQueue(state.records.filter(r=>(ownerView()&&!teamPool?r.mine:true)&&(!heldByOther(r.id)||r.mine||(current&&current.id===r.id&&!refused.has(r.id)))),{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
+const rows=()=>orderCallQueue(pausedView?state.records.filter(r=>r.pausedFollowUp).map(r=>({...r,dueForMe:true})):state.records.filter(r=>!r.pausedFollowUp&&(ownerView()&&!teamPool?r.mine:true)&&(!heldByOther(r.id)||r.mine||(current&&current.id===r.id&&!refused.has(r.id)))),{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
 
 // ---- live holds: who has which card -------------------------------------------------------
 // Paul, 2026-10-27: "after that person's called, it should be removed from the database. Otherwise,
@@ -181,7 +184,7 @@ function bar(){
  const list=rows(),index=list.findIndex(r=>r.id===current?.id),pin=PINNED[selectedCampaign];
  const b=el('div',null,'dw-bar');
  const title=el('div',null,'dw-title');
- title.append(el('div',pin?pin.eyebrow:ownerView()?(teamPool?'Team pool':'Your follow-ups'):'Shared call queue','dw-eyebrow'));
+ title.append(el('div',pin?pin.eyebrow:pausedView?'Paused: real estate media':ownerView()?(teamPool?'Team pool':'Your follow-ups'):'Shared call queue','dw-eyebrow'));
  const pos=el('div',null,'dw-pos');
  pos.append(document.createTextNode(list.length?`${Math.max(1,index+1)} of ${list.length}`:'Queue complete'));
  const indLabel=selectedIndustry!=='all'?((state?.records||[]).find(r=>r.industry&&r.industry.key===selectedIndustry)||{}).industry?.label||selectedIndustry:null;
@@ -191,6 +194,8 @@ function bar(){
  if(!research&&list.length){const m=queueMix(list),parts=[];if(m.callback)parts.push(m.callback+(m.callback===1?' callback due':' callbacks due'));if(m.later)parts.push(m.later+' "not now" due');parts.push(m.new+' new');if(m.retry)parts.push(m.retry+' to try again');pos.append(el('small',parts.join(' · '),'dw-mix'));}
  title.append(pos);
  b.append(title,searchBox());
+ // The Paused area, for whoever owns paused callbacks: kept, labelled, opened only on purpose.
+ if(!PIN&&(pausedCount()||pausedView)){const pz=button(pausedView?'Back to the queue':'Paused · '+pausedCount(),()=>{pausedView=!pausedView;const u=new URL(location.href);pausedView?u.searchParams.set('pool','paused'):u.searchParams.delete('pool');history.replaceState(null,'',u);current=null;showNext();},'btn btn-ghost dw-poolbtn');pz.id='dw-paused';pz.title='Callbacks on real estate media, which Paul paused on Oct 27. Kept for reference, not your work.';b.append(pz);}
  if(ownerView()&&!PIN){const pool=(state.records||[]).filter(r=>r.unclaimed&&!heldByOther(r.id)).length;const sw=button(teamPool?'Back to your follow-ups':'Team pool · '+pool+' left',()=>{teamPool=!teamPool;const u=new URL(location.href);teamPool?u.searchParams.set('pool','team'):u.searchParams.delete('pool');history.replaceState(null,'',u);current=null;showNext();},'btn btn-ghost dw-poolbtn');sw.id='dw-pool';b.append(sw);}
  // Options: campaign, owner, search, the research tab, refresh. Behind one control so the bar
  // stays a bar.
@@ -250,6 +255,7 @@ async function refresh(){stash();state=await api('/api/outreach-queue/?view=call
  if(OPEN&&!opened){opened=true;const want=(state.records||[]).find(r=>r.id===OPEN);if(want){skipped.delete(want.id);saveSkips();await show(want);if(GMAIL)backFromGoogle(want);return;}toast('That prospect is not in the call view right now.',true);}
  const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
 async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id)&&!refused.has(r.id));if(row)return show(row,{auto:true});if(holdId&&holdKind==='open')releaseCard(holdId);holdId=null;
+ if(pausedView){current=null;brief=null;app.replaceChildren(bar());const e=el('section',null,'dw-pane dw-empty');e.append(el('h2','No paused callbacks'),el('p','Nothing of yours is on a paused campaign.'));app.append(e);return;}
  if(ownerView()&&!teamPool&&!PIN){current=null;brief=null;app.replaceChildren(bar());const pool=(state.records||[]).filter(r=>r.unclaimed&&!heldByOther(r.id)).length,others=othersWorking();const e=el('section',null,'dw-pane dw-empty');e.append(el('h2','No follow-ups of yours'),el('p',pool+' people are left in the team pool'+(others.length?'. '+others.join(', ')+' working now.':'.')+' Your reps work those; nothing here is waiting on you.'),button('Open the team pool',()=>{teamPool=true;const u=new URL(location.href);u.searchParams.set('pool','team');history.replaceState(null,'',u);showNext();},'btn'));app.append(e);return;}current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
 
 // ---- one prospect -------------------------------------------------------------------------
@@ -262,7 +268,8 @@ async function show(row,{auto=false}={}){
   if(holdId===row.id)holdId=null;
   if(auto){current=null;showNext();return;}
   toast(r.heldBy.kind==='called'?r.heldBy.name+' just called them.':r.heldBy.name+' has this card open right now. Pick another unless you two agreed.',true);});
- closeMail();stash();current=row;brief=null;remember(row.id);const version=++requestId;
+ closeMail();stash();current=row;
+ if(pausedView)setTimeout(()=>toast('Paused campaign: real estate media. Paul stopped this outreach on Oct 27. This callback is kept for reference; check with Paul before calling.',true),0);brief=null;remember(row.id);const version=++requestId;
  app.classList.add('dw-wrap');app.classList.remove('call-workspace');
  const grid=el('div',null,'dw-grid');
  const who=el('section',null,'dw-pane dw-who'),talk=el('section',null,'dw-pane dw-talk'),log=el('section',null,'dw-pane dw-log'),hist=el('section',null,'dw-pane dw-hist');

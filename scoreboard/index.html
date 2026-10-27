@@ -134,7 +134,7 @@
 <div class="wrap" id="live" role="tabpanel" aria-labelledby="tab-live" hidden></div>
 <div class="wrap" id="app" role="tabpanel" aria-labelledby="tab-today"></div>
 <div class="wrap pr-wrap" id="review" role="tabpanel" aria-labelledby="tab-review" hidden></div>
-<script type="module" src="/assets/js/performance-review.js?v=202610272"></script>
+<script type="module" src="/assets/js/performance-review.js?v=202610273"></script>
 
 <script>
 (function(){
@@ -152,10 +152,17 @@
     app.innerHTML='<div class="empty">Loading the scoreboard...</div>';
     ME=repGet();
     tbRight.innerHTML=nameChip(); wireChip();
-    var s=null, code=0; try{ var r=await fetch('/api/call-queue/?action=scoreboard',{cache:'no-store'}); code=r.status; if(r.ok) s=await r.json(); }catch(e){}
+    // The headline reads the same live daily report the Caller review uses: dials from Quo, outcomes
+    // from the Hub, each on its own line. It used to read the old automated-calling store, which the
+    // dialer never writes to, so it said 0 dials while Quo showed 30 (PM readback, 2026-10-27).
+    var day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+    var people=null, code=0;
+    try{ var pr=await fetch('/api/daily-report/?people=1',{cache:'no-store'}); code=pr.status; if(pr.ok) people=(await pr.json()).people||[]; }catch(e){}
     if(code===401){app.innerHTML='<div class="empty">Sign in to your Staffify account to see call reporting.</div>';return;}
-    if(!s){app.innerHTML='<div class="empty">Call reporting is unavailable. Refresh to try again. No zero totals are assumed.</div>';return;}
-    render(s);
+    var asks=people?people.map(function(p){return '/api/daily-report/?live=1&date='+day+'&user='+encodeURIComponent(p.email);}):['/api/daily-report/?live=1&date='+day];
+    var reps=await Promise.all(asks.map(async function(u){try{var r=await fetch(u,{cache:'no-store'});if(!r.ok)return null;return (await r.json()).report||null;}catch(e){return null;}}));
+    if(reps.some(function(x){return !x;})){app.innerHTML='<div class="empty">Call reporting could not be read for everyone just now. Refresh to try again. No zero totals are assumed.</div>';return;}
+    render({date:day,reps:reps});
     loadQuo();
   }
 
@@ -192,35 +199,39 @@
       'Quo counts a call as answered when voicemail or a phone menu picks up, so that count is not shown. The Caller review tab shows who actually answered, from logged outcomes and notes.</p>';
   }
 
+  // One rep's day from the live report. reached = outcomes that say a person answered (Conversation,
+  // Callback, Gatekeeper, Not now), the same rule as the Caller review; never Quo's "answered".
+  function dayOf(rep){var c=rep.calls||{},b=c.byOutcome||{},quoRead=rep.sources&&rep.sources.quo==='read',hubRead=rep.sources&&rep.sources.hubLog==='read';
+    return {name:(rep.user&&rep.user.name)||'Rep',dials:quoRead?(c.verifiedAttempts||0):null,logged:hubRead?(c.loggedOutcomes||0):null,
+      reached:hubRead?((b.connected||0)+(b.callback||0)+(b.gatekeeper||0)+(b.timing||0)):null,callbacks:hubRead?((b.callback||0)+(b.gatekeeper||0)):null};}
+  function sum(rows,k){if(rows.some(function(r){return r[k]===null;}))return null;return rows.reduce(function(n,r){return n+r[k];},0);}
+  function show(n){return n===null?'<span title="Not readable just now">—</span>':String(n);}
   function render(s){
-    s=s||{}; var t=s.total||{};
-    var target=Number(s.target)||100;
-    var reps=(s.reps||[]).slice().sort(function(a,b){return (Number(b.dials||b.calls||0))-(Number(a.dials||a.calls||0));});
-
+    var reps=(s.reps||[]).map(dayOf).sort(function(a,b){return (b.dials||0)-(a.dials||0);});
+    var t={dials:sum(reps,'dials'),logged:sum(reps,'logged'),reached:sum(reps,'reached'),callbacks:sum(reps,'callbacks')};
     var cards=
       '<div class="cards">'+
-        '<div class="metric"><div class="lbl">Dials</div><div class="n">'+(t.dials||0)+'</div><div class="x">'+pct(t.dials,target)+' of '+target+' goal</div></div>'+
-        '<div class="metric"><div class="lbl">Answers</div><div class="n">'+(t.answers||0)+'</div><div class="x">'+pct(t.answers,t.dials)+' pickup</div></div>'+
-        '<div class="metric"><div class="lbl">Interested</div><div class="n">'+(t.interested||0)+'</div><div class="x">'+pct(t.interested,t.answers)+' of answers</div></div>'+
-        '<div class="metric"><div class="lbl">Callbacks</div><div class="n">'+(t.callbacks||0)+'</div><div class="x">set for later</div></div>'+
+        '<div class="metric"><div class="lbl">Dials</div><div class="n">'+show(t.dials)+'</div><div class="x">placed, from Quo</div></div>'+
+        '<div class="metric"><div class="lbl">Outcomes logged</div><div class="n">'+show(t.logged)+'</div><div class="x">saved in the Hub</div></div>'+
+        '<div class="metric"><div class="lbl">Reached a person</div><div class="n">'+show(t.reached)+'</div><div class="x">by the outcome logged</div></div>'+
+        '<div class="metric"><div class="lbl">Callbacks set</div><div class="n">'+show(t.callbacks)+'</div><div class="x">incl. gatekeeper</div></div>'+
       '</div>';
 
     var board;
-    if(!reps.length){
-      board='<div class="empty">No calls logged yet today. Rep numbers appear here the moment someone starts dialing.</div>';
+    if(!reps.length||!reps.some(function(r){return (r.dials||0)+(r.logged||0)>0;})){
+      board='<div class="empty">No dials or outcomes yet today.</div>';
     } else {
       board=reps.map(function(r,i){
-        return '<div class="lead-row"><div class="rank">'+(i+1)+'</div><div class="rname">'+esc(r.rep||r.name||'Rep')+'</div>'+
-          '<div class="rstat">Dials <b>'+(r.dials||r.calls||0)+'</b> &middot; Answers <b>'+(r.answers||0)+'</b> &middot; Interested <b>'+(r.interested||0)+'</b></div></div>';
+        return '<div class="lead-row"><div class="rank">'+(i+1)+'</div><div class="rname">'+esc(r.name)+'</div>'+
+          '<div class="rstat">Dials <b>'+show(r.dials)+'</b> &middot; Logged <b>'+show(r.logged)+'</b> &middot; Reached <b>'+show(r.reached)+'</b></div></div>';
       }).join('');
     }
 
 
 
     app.innerHTML=
-      '<div class="eyebrow">Live Numbers</div><h2 class="perf-h2"><span class="grad">Scoreboard</span></h2><div class="sub">'+esc(s.date||'today')+' &middot; live from the call log</div>'+
+      '<div class="eyebrow">Live Numbers</div><h2 class="perf-h2"><span class="grad">Scoreboard</span></h2><div class="sub">'+esc(s.date||'today')+' &middot; dials from Quo, outcomes from the Hub, counted separately and never added together</div>'+
       cards+
-      '<div class="conv"><span>Pickup rate <b>'+pct(t.answers,t.dials)+'</b></span><span>Interest rate <b>'+pct(t.interested,t.answers)+'</b></span></div>'+
       '<div class="lbl2">Rep leaderboard</div>'+board+
       '<div id="quo"></div>'+
       '<p><a class="btn" href="/commissions/">View your commissions and payroll</a></p>';

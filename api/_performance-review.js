@@ -1,4 +1,5 @@
 // Caller review: how one caller's calling went over a run of days, from the records that prove it.
+import { poolPaused } from './_campaign-pause.js';
 // ------------------------------------------------------------------
 // Paul, 2026-10-27: "can we get some data on how miltons performance has been he really said the
 // data isn't great", then "idk where we are getting the 'Picked up' data from but it doesn't appear
@@ -124,13 +125,16 @@ export const SOURCE_LABEL = {
 export function leadSupply(records, emails) {
     const mine = new Set((emails || []).map(norm));
     const callable = r => r && r.callReady && r.callContact && r.callContact.phone && DIALABLE.includes(r.callContact.phoneStatus);
-    const fresh = (records || []).filter(r => callable(r) && !r.callOwner && !(r.callHistory || []).some(c => c && c.at));
+    // Paused campaigns (real estate media, 2026-10-27) are nobody's next call, so they are not supply.
+    const fresh = (records || []).filter(r => callable(r) && !r.callOwner && !poolPaused(r) && !(r.callHistory || []).some(c => c && c.at));
     const count = (rows, key) => { const m = new Map(); for (const r of rows) { const k = key(r); m.set(k, (m.get(k) || 0) + 1); } return [...m].sort((a, b) => b[1] - a[1]); };
     return {
         neverDialled: fresh.length,
         bySource: count(fresh, r => r.callContact.phoneStatus).map(([status, n]) => ({ status, label: SOURCE_LABEL[status] || status, n })),
         byCampaign: count(fresh, r => r.campaignId || null).map(([id, n]) => ({ campaignId: id, name: campaignName(id), n })),
-        hisFollowUpsDue: (records || []).filter(r => callable(r) && r.callOwner && mine.has(norm(r.callOwner))).length,
+        hisFollowUpsDue: (records || []).filter(r => callable(r) && r.callOwner && mine.has(norm(r.callOwner)) && !poolPaused(r)).length,
+        hisPausedFollowUps: (records || []).filter(r => callable(r) && r.callOwner && mine.has(norm(r.callOwner)) && poolPaused(r)).length,
+        pausedNotOffered: (records || []).filter(r => callable(r) && !r.callOwner && poolPaused(r) && !(r.callHistory || []).some(c => c && c.at)).length,
     };
 }
 

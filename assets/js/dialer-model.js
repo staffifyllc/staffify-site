@@ -94,6 +94,7 @@ export function followUps({ records = [], tasks = [], me = '', now = Date.now() 
     if (!r || !r.nextCallAt || !NEEDS_TIME.includes(r.callOutcome)) continue;
     if (String(r.callOwner || '').toLowerCase() !== mine) continue;
     if (r.status === 'suppressed') continue;
+    if (r.pausedFollowUp) continue;   // a paused campaign's callback is in the Paused area, not due work
     const last = (r.callHistory || []).slice(-1)[0] || {};
     items.push({ kind: 'callback', id: 'cb:' + r.id, recordId: r.id, company: r.company || r.recipient, who: r.verifiedFirstName || '', recipient: r.recipient,
       at: r.nextCallAt, outcome: r.callOutcome, note: last.notes || '', phone: r.callContact && r.callContact.phone || null, campaignId: r.campaignId || null });

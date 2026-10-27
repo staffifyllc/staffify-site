@@ -97,7 +97,10 @@ export function sharedCallState(state, viewer=null) {
         claimed:!!callOwner,mine,
         // A paused campaign's unworked cards are nobody's next call (api/_campaign-pause.js).
         unclaimed:!!r.callReady&&!callOwner&&!campaignPaused(r),
-        dueForMe:!!r.callReady&&mine};
+        // An owned card on a paused campaign keeps its owner, history and promised time, but is not due work:
+        // it sits in the Paused area (PM, 2026-10-27: "Milton shouldn't start tomorrow on old REP callbacks").
+        dueForMe:!!r.callReady&&mine&&!campaignPaused(r),
+        pausedFollowUp:!!r.callReady&&mine&&campaignPaused(r)};
     })};
 }
 

@@ -130,10 +130,12 @@ test('leads still to call: callable, never dialled, unclaimed; and his own follo
         ready('e', 'business_listed', { callOwner: 'milton@trystaffify.com' }),
         ready('f', 'wrong_number'), { id: 'g', callReady: false, callContact: { phone: '+1', phoneStatus: 'business_listed' } },
     ], ['miltion@trystaffify.com', 'milton@trystaffify.com']);
-    assert.equal(s.neverDialled, 3);
-    assert.deepEqual(s.bySource.map(x => [x.label, x.n]), [['CRM number, not found on their website', 2], ['Published on their own website', 1]]);
-    assert.deepEqual(s.byCampaign.map(x => [x.name, x.n]), [['Staffify agency outreach', 2], ['CEO B2B outreach', 1]]);
-    assert.equal(s.hisFollowUpsDue, 1, 'claimed through his login alias');
+    // The agency (real estate media) list is paused since 2026-10-27: its unworked cards are not supply.
+    assert.equal(s.neverDialled, 1, 'only the live (tobit) card is a lead still to call');
+    assert.equal(s.pausedNotOffered, 2, 'the paused agency cards are counted apart, not offered');
+    assert.deepEqual(s.byCampaign.map(x => [x.name, x.n]), [['CEO B2B outreach', 1]]);
+    assert.equal(s.hisFollowUpsDue, 0, 'an owned follow-up on the paused list is not due work');
+    assert.equal(s.hisPausedFollowUps, 1, 'it is counted in the Paused area instead');
 });
 
 test('quiet stretches on shift, by day: Hub minutes and Quo calls fill the shift, the rest of 10 minutes or more is listed', () => {

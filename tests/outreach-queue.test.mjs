@@ -90,14 +90,17 @@ test('a timing lead comes back round when its date arrives, and not before',()=>
  assert.equal(callReady({...base,nextCallAt:null}),false,'no date means it never returns blindly');
 });
 
-test('real estate media is paused: its unworked cards leave the pool, an owned callback stays, and the worker never sends for it', async () => {
+test('real estate media is paused: its unworked cards leave the pool, an owned callback moves to the Paused area, and the worker never sends for it', async () => {
  // Paul, 2026-10-27: "Stop targeting real estate media/REP agencies ... without deleting records or hiding owned callbacks."
  const { withPauses } = await import('../api/_outreach-gmail.js');
  const agency={...row,status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01'};
  const owned={...agency,id:'mine',recipient:'m@example.com',callOwner:'caller@example.com',callOutcome:'callback',nextCallAt:'2026-01-02T15:00:00Z',callHistory:[{outcome:'callback',caller:'caller@example.com',at:'2026-01-01'}]};
  const v=sharedCallState({revision:1,records:[agency,owned],assignments:[],pausedOwners:[],suppressions:[]},'caller@example.com').records;
  assert.equal(v.find(r=>r.id==='one').unclaimed,false,'not offered as new work to anyone');
- assert.equal(v.find(r=>r.id==='mine').dueForMe,true,'the callback a caller promised is still theirs');
+ // PM refinement, 2026-10-27: owned REP callbacks are kept (owner, history, promised time) but are not due work.
+ const mine=v.find(r=>r.id==='mine');
+ assert.equal(mine.dueForMe,false,'not tomorrow\'s worklist'); assert.equal(mine.pausedFollowUp,true,'in the Paused area instead');
+ assert.equal(mine.callOwner,'caller@example.com'); assert.equal(mine.nextCallAt,'2026-01-02T15:00:00Z','the promise is kept, not rewritten');
  assert.equal(v.length,2,'nothing deleted');
  assert.deepEqual(withPauses({allowedCampaignIds:null}).allowedCampaignIds,['staffify-tobit-outreach','staffify-talent-network-outreach'],'no stored list: everything but the paused campaign');
  assert.deepEqual(withPauses({allowedCampaignIds:['staffify-agency-outreach','staffify-talent-network-outreach']}).allowedCampaignIds,['staffify-talent-network-outreach'],'a stored list that names it cannot re-enable it');

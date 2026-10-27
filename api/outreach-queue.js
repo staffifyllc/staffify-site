@@ -42,7 +42,7 @@ export default async function handler(req,res) {
        out.records=classified(out.records,stated).map(({r,v})=>({...r,industry:v&&v.key?{key:v.key,label:v.label,source:v.source}:null}));
        // A card from a paused industry (real estate media) is out of the unworked pool on any campaign;
        // one a caller already owns stays theirs (api/_campaign-pause.js).
-       out.records=out.records.map(r=>poolPaused(r)&&r.unclaimed?{...r,unclaimed:false,pausedFromPool:true}:r);
+       out.records=out.records.map(r=>!poolPaused(r)?r:r.unclaimed?{...r,unclaimed:false,pausedFromPool:true}:r.dueForMe?{...r,dueForMe:false,pausedFollowUp:true}:r);
        out.tasks=await listTasks(redis,rep.email);
        // An owner (Paul) is not a caller: the dialer opens on their own follow-ups and keeps the team's pool
        // one click away (Paul, 2026-10-27: "if my guys are already doing it I shouldn't be").
