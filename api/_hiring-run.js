@@ -388,7 +388,9 @@ export async function runHiring(deps, { maxSearches = 4, maxCandidates = 14, dea
                 const posts = (r.links || []).map(l => { const p = parseAts(l); return p ? { ...p, url: l } : null; }).filter(Boolean);
                 let added = 0;
                 for (const p of posts) { if (await kv.hget(HK.seen, postingKey(p))) continue; await addPending(kv, p, { discoveredBy: 'SerpApi Google search', searchQuery: q, discoveredAt: report.startedAt }, now); added++; }
-                report.searches.push({ q, family, results: (r.links || []).length, postings: posts.length, queued: added });
+                // Where the results pointed, so a search that returns only job aggregators is visible in the run log.
+                const hosts = [...new Set((r.links || []).map(l => { try { return new URL(l).hostname; } catch { return null; } }).filter(Boolean))].slice(0, 5);
+                report.searches.push({ q, family, results: (r.links || []).length, postings: posts.length, queued: added, hosts });
             } catch (e) { report.searches.push({ q, family, error: String(e.message || e).slice(0, 80) }); }
         }
         await work();

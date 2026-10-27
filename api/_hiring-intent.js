@@ -59,7 +59,11 @@ export const ROLE_TERMS = {
     scheduling: '("scheduler" OR "scheduling coordinator" OR "patient coordinator" OR "dispatcher" OR "intake coordinator")',
     account: '("account coordinator" OR "client success associate" OR "customer success associate" OR "onboarding specialist" OR "account support")',
 };
-export const ATS_SITES = ['site:jobs.lever.co', 'site:boards.greenhouse.io OR site:job-boards.greenhouse.io', 'site:jobs.ashbyhq.com'];
+// Searched: Ashby only. On 2026-10-27 Google, through SerpApi, ignored site: for jobs.lever.co and the
+// Greenhouse boards (five test searches, every result an aggregator such as Indeed or Glassdoor, zero
+// postings), while site:jobs.ashbyhq.com returned postings. Lever and Greenhouse URLs are still read
+// and admitted when they arrive as seeds or from a company's own board; they are just not searched for.
+export const ATS_SITES = ['site:jobs.ashbyhq.com'];
 export const REGIONS = ['("Latin America" OR LATAM OR Philippines) remote', 'remote'];
 export const QUERIES = (() => {
     const out = [];
