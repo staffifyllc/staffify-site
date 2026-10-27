@@ -13,6 +13,8 @@ import {recordActivity} from './_hub-activity.js';
 import {gateFor,withheldNumbers} from './_shift.js';
 import {poolPaused} from './_campaign-pause.js';
 import {INDUSTRY_KEY} from './_campaign-industry.js';
+import {hiringCallRows} from './_hiring-intent.js';
+import {isHiringId,saveHiringOutcome} from './_hiring-calls.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
@@ -21,15 +23,10 @@ export default async function handler(req,res) {
     const view=s=>calls?sharedCallState(s,rep.email):visibleState(s,owner);
     if(!owner)return res.status(401).json({error:'Sign in with your Staffify account'});
     const state=await redis.get(KEY);
-    if(req.method==='GET'){
-      const crm=async(path,body)=>{const response=await hubspotRequest('https://api.hubapi.com'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined},{redis});if(!response.ok)throw Error('CRM unavailable');return response.json();};
-      // One full record, for a page that lists slim rows and opens the mail on demand. Scoped by the
-      // same view as the list, so nobody reads a thread outside what their list would show. No phone
-      // ladder: a body does not need a number.
-      if(req.query?.record){const id=String(req.query.record);const row=view(state).records.find(r=>r.id===id);
-       if(!row)return res.status(404).json({error:'That record is not in your view of the queue'});
-       if(calls&&!(await gateFor(redis,rep,ownerFor)).allowed)return res.status(200).json({record:withheldNumbers([row])[0]});
-       return res.status(200).json({record:row});}
+    const crm=async(path,body)=>{const response=await hubspotRequest('https://api.hubapi.com'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined},{redis});if(!response.ok)throw Error('CRM unavailable');return response.json();};
+    // The list a page reads: the queue for this viewer and, on the calls view, the caller's tasks,
+    // the Hiring now cards and the shift gate. The dialer gets this same answer back after a save.
+    const listView=async()=>{
       const decorated=await withCallPhones(view(state),{redis,crm});
       // view=slim: the same rows and the same callReady, without the mail bodies. See slimState.
       const out=slim?slimState(decorated):decorated;
@@ -43,6 +40,10 @@ export default async function handler(req,res) {
        // A card from a paused industry (real estate media) is out of the unworked pool on any campaign;
        // one a caller already owns stays theirs (api/_campaign-pause.js).
        out.records=out.records.map(r=>!poolPaused(r)?r:r.unclaimed?{...r,unclaimed:false,pausedFromPool:true}:r.dueForMe?{...r,dueForMe:false,pausedFollowUp:true}:r);
+       // Hiring now (api/_hiring-intent.js): call-first cards from their own store, in the same shape, so
+       // the shift gate below, the holds, the search and the outcome buttons treat them like any card.
+       // A hiring store that cannot be read costs the hiring cards, never the rest of the queue.
+       out.records=[...await hiringCallRows(redis,rep.email).catch(()=>[]),...out.records];
        out.tasks=await listTasks(redis,rep.email);
        // An owner (Paul) is not a caller: the dialer opens on their own follow-ups and keeps the team's pool
        // one click away (Paul, 2026-10-27: "if my guys are already doing it I shouldn't be").
@@ -53,7 +54,17 @@ export default async function handler(req,res) {
        out.shiftGate=g;
        if(!g.allowed)out.records=withheldNumbers(out.records);
       }
-      return res.status(200).json(out);
+      return out;
+    };
+    if(req.method==='GET'){
+      // One full record, for a page that lists slim rows and opens the mail on demand. Scoped by the
+      // same view as the list, so nobody reads a thread outside what their list would show. No phone
+      // ladder: a body does not need a number.
+      if(req.query?.record){const id=String(req.query.record);const row=view(state).records.find(r=>r.id===id);
+       if(!row)return res.status(404).json({error:'That record is not in your view of the queue'});
+       if(calls&&!(await gateFor(redis,rep,ownerFor)).allowed)return res.status(200).json({record:withheldNumbers([row])[0]});
+       return res.status(200).json({record:row});}
+      return res.status(200).json(await listView());
     }
     if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});
     const machine=adminAuthorized(req);
@@ -63,6 +74,13 @@ export default async function handler(req,res) {
     // A rep's own tasks never touch the queue state, so they skip the revision dance below.
     if(body.action==='task-add'){const r=await addTask(redis,{rep,title:body.title,dueAt:body.dueAt,notes:body.notes,recordId:body.id||null,company:body.company||'',recipient:body.recipient||null,campaignId:body.campaignId||null,contactId:body.contactId||null});if(r.ok)await recordActivity(redis,{email:rep.email,kind:'task_added',page:'/dialer/',detail:r.task.company||null});return res.status(r.ok?200:400).json(r);}
     if(body.action==='task-done'){const r=await completeTask(redis,{email:rep.email,id:String(body.taskId||''),done:body.done!==false});if(r.ok&&body.done!==false)await recordActivity(redis,{email:rep.email,kind:'task_done',page:'/dialer/',detail:r.task&&r.task.company||null});return res.status(r.ok?200:404).json(r);}
+    // A Hiring now card is saved to its own store (api/_hiring-calls.js), then the dialer gets the same
+    // list view back that a reload would give it.
+    if(calls&&['call-outcome','suppress'].includes(body.action)&&isHiringId(body.id)){
+      const r=await saveHiringOutcome(redis,{rep,body});
+      if(!r.ok)return res.status(r.status||409).json({error:r.error});
+      return res.status(200).json({...await listView(),...(r.callbackTask?{callbackTask:r.callbackTask}:{}),...(r.wrongNumber?{wrongNumber:r.wrongNumber}:{})});
+    }
     if(calls&&!sharedCallState(state,rep.email).records.some(r=>body.action==='suppress'?r.recipient===String(body.email||'').toLowerCase():r.id===body.id))return res.status(409).json({error:'This prospect is no longer in the call queue'});
     // A caller action is the one write a HUMAN makes here, and typing call notes takes longer than
     // a minute. The outreach worker rewrites this key every minute and saves up to sixteen times a

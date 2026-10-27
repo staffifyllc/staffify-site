@@ -16,6 +16,7 @@
 // Nothing here judges performance or sets a quota. Rates appear only with a stated, non-zero
 // denominator. A source that could not be read is "unavailable", never zero.
 import { KEY as QUEUE_KEY, visibleState } from './_outreach-queue.js';
+import { hiringReportRows } from './_hiring-intent.js';
 import { quoConfigured, listUsers, listCalls, findSeat, counterparty, connected, talkSeconds, etDay, etDayBounds } from './_quo.js';
 import { calendlyConfigured, whoAmI, pastEvents, invitees } from './_calendly.js';
 import { loginAliases } from './_login-aliases.js';
@@ -322,6 +323,11 @@ export async function gatherRange({ redis, rep, from, to, now = Date.now(), deco
         if (!state) throw Error('the queue store answered with nothing');
         let view = visibleState(state, 'all');
         if (decorate) { try { view = await decorate(view); } catch { /* numbers fall back to what the record holds */ } }
+        // Hiring now cards keep their call history in their own store (api/_hiring-intent.js). A call logged
+        // there is a call logged in the Hub. Added after the phone ladder, which only knows the email queue.
+        // Unreadable: say so rather than report those calls as none.
+        try { view = { ...view, records: [...view.records, ...await (deps.hiringRows || hiringReportRows)(redis)] }; }
+        catch (e) { hub.hiringError = 'The Hiring now call log could not be read: ' + String((e && e.message) || e).slice(0, 80); }
         const mine = view.records.filter(r => (r.callHistory || []).some(c => c && emails.includes(norm(c.caller))));
         let extra = {};
         try { extra = await numbersFor(redis, mine); } catch { extra = {}; }

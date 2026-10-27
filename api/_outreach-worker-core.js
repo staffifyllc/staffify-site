@@ -37,7 +37,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
   const scanUntil=cursor.until||Math.floor(Date.now()/1000);const query='in:anywhere -in:sent -in:drafts after:'+Math.max(0,cursor.after-300)+' before:'+(scanUntil+1);
   const list=await gmail(tokens[account.email],'messages?'+new URLSearchParams({q:query,maxResults:'20',...(cursor.page?{pageToken:cursor.page}:{})}));
   const inbound=[];for(let i=0;i<(list.messages||[]).length;i+=5)inbound.push(...await Promise.all(list.messages.slice(i,i+5).map(item=>gmail(tokens[account.email],'messages/'+item.id+'?format=full'))));
-  for(const m of inbound){const h=headers(m);const from=addresses(h.from)[0];const body=messageText(m);const affected=state.records.filter(r=>r.recipient===from||(/mailer-daemon|postmaster/i.test(h.from||'')&&body.includes(r.recipient)));
+  for(const m of inbound){const h=headers(m);const from=addresses(h.from)[0];const body=messageText(m);const affected=state.records.filter(r=>!!r.recipient&&(r.recipient===from||(/mailer-daemon|postmaster/i.test(h.from||'')&&body.includes(r.recipient))));
    for(const row of affected){row.status=/mailer-daemon|postmaster/i.test(h.from||'')?'bounce_hold':(classify([compactMessage(m,account.email)],row.recipient,senders).status||'human_reply_hold');row.replyMessageId=m.id;row.replyReceivedAt=new Date(Number(m.internalDate)).toISOString();if(row.status==='suppressed'&&!state.suppressions.includes(row.recipient))state.suppressions.push(row.recipient);}
   }
   state=await save(state);

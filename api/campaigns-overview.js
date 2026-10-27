@@ -16,6 +16,7 @@ import { withCallPhones } from './_outreach-call-phones.js';
 import { hubspotRequest } from './_outreach-hubspot.js';
 import { INDUSTRY_KEY } from './_campaign-industry.js';
 import { overview, industryView, campaignView } from './_campaigns-model.js';
+import { hiringReportRows } from './_hiring-intent.js';
 import { attribute } from './_copy-variants.js';
 import { meetingsByEmail as meetingsCache } from './_meetings-cache.js';
 
@@ -61,6 +62,8 @@ export default async function handler(req, res) {
         catch { decorated = visibleState(state, ownerFor(rep) || 'all'); }
         // The shift gate: a caller off shift sees the campaign, not the numbers in it. An unreadable
         // shift reads as off. Owners are never gated.
+        // Hiring now lives in its own store; its cards count on this page like any campaign's.
+        decorated = { ...decorated, records: [...decorated.records, ...await hiringReportRows(redis).catch(() => [])] };
         if (gated) decorated = { ...decorated, records: withheldNumbers(decorated.records) };
         const records = decorated.records;
         const stated = (await redis.hgetall(INDUSTRY_KEY).catch(() => null)) || {};

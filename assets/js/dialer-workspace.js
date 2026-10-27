@@ -96,7 +96,7 @@ function stash(){if(!current)return;const notes=document.getElementById('call-no
 
 // ---- session bar --------------------------------------------------------------------------
 const PINNED={'staffify-tobit-outreach':{eyebrow:'Spearhead accounts',h1:'CEO outreach'}};
-const NAMES={'all':'All campaigns','staffify-agency-outreach':'Staffify agency outreach','staffify-tobit-outreach':'CEO b2b outreach','staffify-talent-network-outreach':'Talent network outreach'};
+const NAMES={'all':'All campaigns','staffify-hiring-intent':'Hiring now','staffify-agency-outreach':'Staffify agency outreach','staffify-tobit-outreach':'CEO b2b outreach','staffify-talent-network-outreach':'Talent network outreach'};
 function myFollowUps(){return followUps({records:state?.records||[],tasks:state?.tasks||[],me:state?.viewer||'',now:Date.now()});}
 // ---- search ---------------------------------------------------------------------------------
 // Milton, 2026-10-27: "I dont have a search bar to find that lead", and Paul: "it also needs a
@@ -309,7 +309,8 @@ function renderWho(pane,row,b){
  const meta=el('div',null,'dw-meta');
  const tag=industryTag(p.industry);if(tag)meta.append(tag);
  if(p.location)meta.append(el('span',p.location));
- meta.append(el('span',row.sentTouches+' emails · last '+new Date(row.lastSentAt).toLocaleDateString()));
+ // Hiring now cards are call-first: no emails were sent, so the line says what the card is instead.
+ meta.append(el('span',row.kind==='hiring'?'Hiring: '+((row.hiring&&row.hiring.title)||'open role'):row.sentTouches+' emails · last '+new Date(row.lastSentAt).toLocaleDateString()));
  head.append(meta);
  pane.append(head);
  // Their clock, from a zone the CRM gave us. Nothing is guessed from a city name.
@@ -331,7 +332,9 @@ function renderWho(pane,row,b){
   if(trust.detail)num.append(el('p',trust.detail,'dw-numdetail'));
   const acts=el('div',null,'dw-actions');
   const call=link('Call now','tel:'+p.phone,'btn dw-primary');call.id='call-now';call.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');refreshBar();});
-  acts.append(call,button('Copy',async()=>{holdKind='calling';holdCard(row.id,'calling');try{await navigator.clipboard.writeText(p.phone);toast('Number copied.');}catch{toast('Select the number and copy it.',true);}},'btn btn-ghost'),textButton(row,p));
+  acts.append(call,button('Copy',async()=>{holdKind='calling';holdCard(row.id,'calling');try{await navigator.clipboard.writeText(p.phone);toast('Number copied.');}catch{toast('Select the number and copy it.',true);}},'btn btn-ghost'));
+  // A Hiring now number is a company line from their website, with no texting consent behind it: no Text button.
+  if(row.kind!=='hiring')acts.append(textButton(row,p));
   num.append(acts);
   if(p.dial&&p.dial.alternates&&p.dial.alternates.length){const alts=el('div',null,'dw-alts');alts.append(el('span','Also on file:'));for(const a of p.dial.alternates){const t=link(a,'tel:'+a);t.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');});alts.append(t);}num.append(alts);}
   if(p.dial&&p.dial.sourceUrl){const w=el('p',null,'dw-small');w.append(link('Where this number is published',p.dial.sourceUrl));num.append(w);}
@@ -345,8 +348,10 @@ function renderWho(pane,row,b){
  const site=p.website||row.website||(row.source&&row.source.url)||null;
  if(site)links.append(link('Website',/^https?:\/\//.test(site)?site:'https://'+site));
  if(p.crmUrl)links.append(link('CRM contact',p.crmUrl));
- links.append(link('Email thread','https://mail.google.com/mail/u/?authuser='+encodeURIComponent(row.sender)+(row.threadId?'#all/'+encodeURIComponent(row.threadId):'#search/'+encodeURIComponent(row.recipient))));
+ if(row.kind==='hiring'){const job=(p.job&&p.job.url)||(row.hiring&&row.hiring.url);if(job)links.append(link('Job post',job));}
+ else links.append(link('Email thread','https://mail.google.com/mail/u/?authuser='+encodeURIComponent(row.sender)+(row.threadId?'#all/'+encodeURIComponent(row.threadId):'#search/'+encodeURIComponent(row.recipient))));
  // Written and sent here, from the rep's own mailbox with their signature (openMail below).
+ // Hiring now is call first: the send path refuses until this rep has called them (api/rep-email.js calledFirst).
  if(row.recipient){
   const email=button('Email them',()=>openMail(row,b||{}),'btn');
   email.id='email-them';email.setAttribute('aria-label','Email '+row.recipient);
@@ -355,13 +360,15 @@ function renderWho(pane,row,b){
  pane.append(links);
  if(!b)return;
  // Why this card exists, in one line.
- pane.append(el('p',p.staleVerification
+ pane.append(el('p',p.why?p.why:p.staleVerification
   ?(p.staleVerification.sentTouches||4)+' emails and no reply, verified at the last sync'+(p.staleVerification.syncedAt?' ('+new Date(p.staleVerification.syncedAt).toLocaleDateString()+')':'')+'. '+p.staleVerification.mailbox+' could not be re-read just now; a reply to that mailbox since then would not show here.'
   :'Four emails sent, no reply, at least 48 hours since the fourth. Checked '+new Date(p.checkedAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'.','dw-why'));
  // Research: the sourced fact, the Instagram datapoint.
  const sec=el('div',null,'dw-sec');sec.append(heading('Research'));
  sec.append(el('p',plain(p.fact)||'No sourced business fact is recorded. Ask about their business rather than inventing a personal connection.','dw-fact'));
- if(/^https?:\/\//.test(p.source?.url||'')){const w=el('p',null,'dw-small');w.append(link('Research source',p.source.url));sec.append(w);}
+ if(/^https?:\/\//.test(p.source?.url||'')){const w=el('p',null,'dw-small');w.append(link(p.hiring?'The job post, on their own careers page':'Research source',p.source.url));sec.append(w);}
+ if(p.hiring&&p.companyIdentity){const w=el('p',null,'dw-small');w.append(document.createTextNode(p.companyIdentity.how==='board_link'?'Website named by their own job board. ':'Website confirmed: its careers page links to this job board. '));if(/^https?:\/\//.test(p.companyIdentity.evidenceUrl||''))w.append(link('Proof',p.companyIdentity.evidenceUrl));sec.append(w);}
+ if(p.hiring&&p.job&&p.job.more&&p.job.more.length){const w=el('p',null,'dw-small');w.append(document.createTextNode('Also hiring: '));p.job.more.forEach((m,i)=>{if(i)w.append(document.createTextNode(', '));w.append(link(m.title,m.url));});sec.append(w);}
  if(p.instagram)sec.append(instagramPanel(row,p.instagram));
  pane.append(sec);
 }
@@ -610,7 +617,7 @@ function renderTalk(pane,row,b){
  const vm=el('details');vm.append(el('summary','Voicemail'),el('p',b.voicemail||`Hi, this is ${b.callerName} with Staffify. We sent you over a few notes about the day-to-day work at ${b.company||'your business'}. Just wanted to introduce myself. You can reply to our email if a conversation would be useful. Thanks.`,'dw-say quiet'));pane.append(vm);
  if(stages.length){const full=el('details',null,'dw-script');full.append(el('summary','Full conversation script'));for(const [title,say] of stages)full.append(el('h4',title),el('p',say,'dw-say quiet'));pane.append(full);}
  // Booking links, so an interested person can be booked without leaving the card.
- const book=el('details');book.append(el('summary','Book the discovery call'));const bl=el('div',null,'dw-links');if(b.bookingUrl)bl.append(link('Book the discovery call',b.bookingUrl));bl.append(link('Sales training and pricing','/training/sales/'),link('15 tasks agency owners can hand off','/blog/real-estate-photography-tasks-to-delegate/'));book.append(bl);pane.append(book);
+ const book=el('details');book.append(el('summary','Book the discovery call'));const bl=el('div',null,'dw-links');if(b.bookingUrl)bl.append(link('Book the discovery call',b.bookingUrl));bl.append(link('Sales training and pricing','/training/sales/'));if(!b.hiring)bl.append(link('15 tasks agency owners can hand off','/blog/real-estate-photography-tasks-to-delegate/'));book.append(bl);pane.append(book);
  api('/api/calendly-link/').then(j=>{for(const e of (j.events||[]).filter(e=>/discovery|intro|prospect|lead/i.test(e.name)))if(/^https:\/\//.test(e.url)&&e.url!==b.bookingUrl)bl.append(link(e.name,e.url));}).catch(()=>{});
 }
 
@@ -674,7 +681,9 @@ function renderLog(pane,row,b){
    else{ov.textContent='Not sent';ov.disabled=!!j.already;toast(j.reason||'Not sent.',true);}}
   catch(e){ov.textContent='Send the one-page overview';ov.disabled=false;toast('Could not reach the server. Nothing was sent.',true);}
  },'btn');
- send.append(ov,link('Preview the overview','/assets/docs/staffify-overview.pdf','btn btn-ghost'));
+ // The overview send reads the email queue only; a Hiring now card emails from Email them, after the call.
+ if(row.kind==='hiring')send.append(el('p','Hiring now: after the call, use Email them on the left. It goes from your own Gmail with your signature.','dw-small'));
+ else send.append(ov,link('Preview the overview','/assets/docs/staffify-overview.pdf','btn btn-ghost'));
  sendSec.append(send);
  const kbd=el('div',null,'dw-kbd');for(const [k,what] of SHORTCUTS){const s=el('span');s.append(el('kbd',k),document.createTextNode(what));kbd.append(s);}more.append(kbd);
  pane.append(more);
@@ -716,7 +725,7 @@ async function saveOutcome(row,b,status,save){
   const latest=await api('/api/outreach-queue/?view=calls');
   // The number on screen travels with every outcome, so the daily report can pair it with Quo's record of the call.
   const dialled=b&&b.phone?{dialled:b.phone}:{};
-  const body=choice==='suppress'?{action:'suppress',email:row.recipient,notes:notes.value,...dialled}:{action:'call-outcome',id:row.id,outcome:choice,notes:notes.value,nextCallAt:NEEDS_TIME.includes(choice)?new Date(due.value).toISOString():null,...dialled};
+  const body=choice==='suppress'?{action:'suppress',email:row.recipient,notes:notes.value,...(row.kind==='hiring'?{id:row.id}:{}),...dialled}:{action:'call-outcome',id:row.id,outcome:choice,notes:notes.value,nextCallAt:NEEDS_TIME.includes(choice)?new Date(due.value).toISOString():null,...dialled};
   const next=await api('/api/outreach-queue/?view=calls',{...body,expectedRevision:latest.revision});
   const tasks=state.tasks;state=next;state.tasks=next.tasks||tasks||[];
   session.saved[choice]=(session.saved[choice]||0)+1;

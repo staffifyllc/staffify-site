@@ -66,6 +66,10 @@
     {
       "path": "/api/cron-daily-report/",
       "schedule": "5 12-14 * * *"
+    },
+    {
+      "path": "/api/hiring-intent/",
+      "schedule": "15 13-23/2 * * 1-5"
     }
   ],
   "rewrites": [
@@ -335,6 +339,9 @@
     },
     "api/rep-inbox.js": {
       "maxDuration": 60
+    },
+    "api/hiring-intent.js": {
+      "maxDuration": 300
     }
   }
 }

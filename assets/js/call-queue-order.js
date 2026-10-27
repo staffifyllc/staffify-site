@@ -52,10 +52,13 @@ export function orderCallQueue(records,{campaign,owner='all',search='',research=
  const listed=r=>Number(r.callContact?.phoneStatus==='business_listed');
  const sent=r=>ms(r.lastSentAt)??Number.MAX_SAFE_INTEGER;
  const due=r=>ms(r.nextCallAt)??Number.MAX_SAFE_INTEGER;
+ // Hiring now first among new leads: the default work since Paul paused real estate media (2026-10-27).
+ // Within it, the card's own priority (LATAM or Philippines in the post, a fresh post, a small board).
+ const hire=r=>r.kind==='hiring'?1000+Number(r.hiring&&r.hiring.priority||0):0;
  const within=(a,b,g)=>{
   if(g==='callback'||g==='later')return due(a)-due(b);
   // A number published on the business's own website is corroborated; a vendor or CRM number is a claim.
-  if(g==='new')return listed(b)-listed(a)||sent(a)-sent(b);
+  if(g==='new')return hire(b)-hire(a)||listed(b)-listed(a)||sent(a)-sent(b);
   return attempts(a)-attempts(b)||lastTried(a)-lastTried(b)||listed(b)-listed(a);
  };
  return records.filter(r=>(!campaign||campaign==='all'||r.campaignId===campaign)&&inIndustry(r)&&offered(r)&&(owner==='all'||r.owner===owner)&&(research?!candidate(r):candidate(r))&&(!search||[r.company,r.recipient,r.callContact?.phone].join(' ').toLowerCase().includes(search.toLowerCase())))

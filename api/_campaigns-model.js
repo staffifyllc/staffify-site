@@ -21,11 +21,16 @@ import { classify, rate, spansIndustries, offTarget } from './_campaign-industry
 import { CAMPAIGN_ID } from './_outreach-campaign.js';
 import { TOBIT_ID } from './_tobit-campaign.js';
 import { TALENT_ID } from './_talent-network-campaign.js';
+import { HIRING_ID } from './_hiring-intent.js';
 
 export const NAMES = {
     [CAMPAIGN_ID]: { name: 'Staffify agency outreach', motion: 'email_call', motionLabel: 'Email, then call', summary: 'Four emails, 48 hours apart, then a call to anyone who has not replied.' },
     [TOBIT_ID]: { name: 'CEO B2B outreach', motion: 'email_call', motionLabel: 'Email, then call', badge: 'Spearhead', summary: 'Chief executives worked by name, one at a time. Four emails each, then a call.' },
-    [TALENT_ID]: { name: 'Talent network outreach', motion: 'email', motionLabel: 'Email', candidates: true, summary: 'Candidates, not buyers. Kept out of every sales rate on purpose.' },
+    // Buyers, not candidates. The 99 rows are businesses that may need remote talent (the PM's review of
+    // 2026-10-27 read every one); the old "candidates" flag hid them from every rate and mislabelled the page.
+    [TALENT_ID]: { name: 'Talent network outreach', motion: 'email_call', motionLabel: 'Email, then call', summary: 'Businesses that may need remote talent. Four emails, then a call to anyone who has not replied.' },
+    // Call first, no email before the call: the business is hiring for the role right now (api/_hiring-intent.js).
+    [HIRING_ID]: { name: 'Hiring now', motion: 'call', motionLabel: 'Call first', summary: 'Businesses with a current job post for a remote support, admin or scheduling role. Called first, from the number on their own website.' },
 };
 export const MOTIONS = [
     { key: 'email_call', label: 'Email, then call' },
@@ -43,6 +48,8 @@ const HUMAN_STATUSES = new Set(['human_reply_hold', 'held_reply']);
 export const sentCount = r => Number(r.verifiedSentTouches ?? r.sentTouches ?? 0) || 0;
 export const replied = r => (r.events || []).some(e => e && e.kind === 'received') || REPLY_STATUSES.has(r.status);
 export const needsHuman = r => HUMAN_STATUSES.has(r.status);
+// An out-of-office or ticket acknowledgement is a reply arriving, not a person answering. Rates use this.
+export const humanReplied = r => replied(r) && r.status !== 'auto_reply_hold';
 export const connected = r => r.callOutcome === 'connected';
 const isCallback = r => r.callOutcome === 'callback' || r.callOutcome === 'gatekeeper';   // a gatekeeper callback is a callback
 export const callbackDue = (r, now = Date.now()) => isCallback(r) && !!r.nextCallAt && Date.parse(r.nextCallAt) <= now;
@@ -63,27 +70,34 @@ export function prospectState(r, now = Date.now()) {
     if (r.callOutcome === 'timing') return { key: 'timing', label: 'Not now, in nurture' };
     if (sentCount(r) >= 4) return { key: 'four_sent', label: 'Four emails sent, waiting' };
     if (sentCount(r) > 0) return { key: 'sequence', label: `Email ${sentCount(r)} of 4 sent` };
+    // A bounce hold on a row with no address and nothing sent is the worker's empty-recipient bug
+    // (api/_outreach-worker-core.js, fixed 2026-10-27), not a bounce: nothing was ever sent to bounce.
+    if (r.status === 'bounce_hold' && !sentCount(r) && !r.recipient) return { key: 'unsent', label: 'Held before sending: no address yet' };
     if (String(r.status || '').endsWith('_hold')) return { key: 'held', label: 'Held: ' + String(r.status).replace(/_hold$/, '').replace(/_/g, ' ') };
     return { key: 'queued', label: 'Not yet contacted' };
 }
 
 /** The same stats for a set of records, however the set was chosen. */
-export function stats(records, { now = Date.now(), candidates = false } = {}) {
+export function stats(records, { now = Date.now(), candidates = false, motion = null } = {}) {
     const n = records.length;
     const contacted = records.filter(r => sentCount(r) > 0).length;
     const fourDone = records.filter(r => sentCount(r) >= 4).length;
     const replies = records.filter(replied).length;
+    const humanReplies = records.filter(humanReplied).length;
     const human = records.filter(needsHuman).length;
     const conn = records.filter(connected).length;
     const due = records.filter(r => callbackDue(r, now)).length;
     const ready = records.filter(r => r.callReady).length;
     const finding = records.filter(r => r.numberResearch && r.numberResearch.state !== 'exhausted').length;
     const noNumber = records.filter(r => r.numberResearch && r.numberResearch.state === 'exhausted').length;
-    const base = { total: n, contacted, fourDone, replies, repliesWaiting: human, connected: conn, callbacksDue: due, ready, findingNumber: finding, noNumberPossible: noNumber,
+    const base = { total: n, contacted, fourDone, replies, humanReplies, autoReplies: replies - humanReplies, repliesWaiting: human, connected: conn, callbacksDue: due, ready, findingNumber: finding, noNumberPossible: noNumber,
         // Not recorded on the queue. Unknown is not zero.
-        won: null };
+        won: null,
+        // Calls logged, for a call-first campaign where nothing is emailed first.
+        called: records.filter(r => (r.callHistory || []).some(c => c && c.at)).length };
     if (candidates) return { ...base, replyRate: rate(null, null), connectRate: rate(null, null), note: 'Candidates, not buyers. No sales rate is claimed.' };
-    return { ...base, replyRate: rate(replies, contacted), connectRate: rate(conn, fourDone) };
+    if (motion === 'call') return { ...base, replyRate: rate(null, null), connectRate: rate(conn, base.called), note: 'Call first: no email goes out before the call, so the connect rate is over calls logged.' };
+    return { ...base, replyRate: rate(humanReplies, contacted), connectRate: rate(conn, fourDone) };
 }
 
 /** Classify every record once, with a human's answer winning. */
@@ -108,7 +122,7 @@ function campaignShape(id, rows, labelOf, now) {
     const off = offTarget(byIndustry);
     return {
         id, name: meta.name, motion: meta.motion, motionLabel: meta.motionLabel, badge: meta.badge || null, candidates: !!meta.candidates, summary: meta.summary || null,
-        ...stats(rows.map(x => x.r), { now, candidates: !!meta.candidates }),
+        ...stats(rows.map(x => x.r), { now, candidates: !!meta.candidates, motion: meta.motion }),
         industries, unclassified, spans: spansIndustries(byIndustry),
         dominant: off.dominant, strays: off.strays,
         evidenceNote: bySource.campaign ? `${bySource.campaign} of ${rows.length} are classified from the campaign the list was built as, not from evidence about the business.` : null,

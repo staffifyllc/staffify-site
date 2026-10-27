@@ -38,6 +38,8 @@ import { NAMES_KEY, contactIdOf } from './prospect-names.js';
 import { readContactNames } from './_hubspot.js';
 import { knownIdentity } from './_contact-identity.js';
 import { createHash } from 'node:crypto';
+import { hiringReportRows } from './_hiring-intent.js';
+import { HK as HOLDS } from './_call-holds.js';
 
 const CALLBACK = SITE + '/api/outreach-connect/?action=callback';   // the redirect URI Google already knows
 export const K = {
@@ -109,7 +111,19 @@ async function queueSuppressed(email, kv = redis) {
 
 async function queueRow(email, kv = redis) {
     const state = await kv.get(KEY);
-    return visibleState(state, 'all').records.find(r => String(r.recipient || '').toLowerCase() === email) || null;
+    const row = visibleState(state, 'all').records.find(r => String(r.recipient || '').toLowerCase() === email) || null;
+    if (row) return row;
+    // A Hiring now card keeps its own store (api/_hiring-intent.js): its verified contact is a prospect too.
+    return (await hiringReportRows(kv)).find(r => r.recipient && r.recipient.toLowerCase() === email) || null;
+}
+
+/** Hiring now is call-first: an email only after this rep called them (a logged call, or Call now tapped). */
+export async function calledFirst(row, rep, kv = redis) {
+    if (!row || row.kind !== 'hiring') return true;
+    if ((row.callHistory || []).some(c => c && c.at)) return true;
+    const hold = await kv.get(HOLDS.one(row.id)).catch(() => null);
+    const h = typeof hold === 'string' ? (() => { try { return JSON.parse(hold); } catch { return null; } })() : hold;
+    return !!h && ['calling', 'called'].includes(h.kind) && String(h.by || '').toLowerCase() === String(rep && rep.email || '').toLowerCase();
 }
 
 /**
@@ -190,6 +204,7 @@ export async function sendRepEmail({ rep, input, deps, now = Date.now() }) {
 
     const row = await deps.findRow(email);
     if (!row) return out(404, { sent: false, reason: 'That prospect is not in the call queue, so nothing was sent.' });
+    if (deps.calledFirst && !await deps.calledFirst(row, rep).catch(() => false)) return out(409, { sent: false, reason: 'Hiring now is call first: email them after you have called. Nothing was sent.' });
     // Another address at the same company (Milton, 2026-10-27, from a gatekeeper). Everything below
     // runs on the address the email actually goes to.
     const to = String(input.to || email).trim().toLowerCase();
@@ -384,7 +399,7 @@ export default async function handler(req, res) {
         }
         const { status, body } = await sendRepEmail({
             rep, input,
-            deps: { redis, findRow: e => queueRow(e), isOptedOut, clientCheck, access, gmail, line: (box, r) => quoLine(box, r), firstName: r => firstNameFor(r), photo: box => photoUrlFor(box), suppressed: e => queueSuppressed(e),
+            deps: { redis, findRow: e => queueRow(e), calledFirst: (row, r) => calledFirst(row, r), isOptedOut, clientCheck, access, gmail, line: (box, r) => quoLine(box, r), firstName: r => firstNameFor(r), photo: box => photoUrlFor(box), suppressed: e => queueSuppressed(e),
                 stops: (row, email) => stopsFor(row, email, { kv: redis, isOptedOut, contact }) },
         });
         return res.status(status).json(body);
