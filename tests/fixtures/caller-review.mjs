@@ -47,8 +47,11 @@ export function source({ quoOk = true, calendlyOk = true, hubOk = true } = {}) {
     const days = daysBetween(from, to);
     const activityByDay = {}, shiftByDay = {};
     for (const d of days) {
-        activityByDay[d] = d < '2026-10-23' ? { notMeasured: true, reason: 'Hub activity was not measured before Oct 23, 2026.' } : { measured: d === '2026-10-23' || d === '2026-10-26', activeMinutes: d === '2026-10-26' ? 81 : d === '2026-10-23' ? 42 : 0, idleMinutes: 0, elapsedMinutes: 0, sessions: 0, events: [] };
-        shiftByDay[d] = d < '2026-10-24' ? { notMeasured: true, reason: 'Shifts were not declared in the Hub before Oct 24, 2026.' } : d === '2026-10-26' ? { shifts: 1, clockedMinutes: 240, breakMinutes: 0, needsReview: 0, open: 0, list: [] } : { shifts: 0, clockedMinutes: 0, breakMinutes: 0, needsReview: 0, open: 0, list: [] };
+        // Oct 26: Hub use 3:55 to 4:30 PM ET and 5:00 to 5:50 PM ET (minute of day), a prompt at 4:50.
+        const oct26 = [...Array.from({ length: 36 }, (_, i) => 955 + i), ...Array.from({ length: 51 }, (_, i) => 1020 + i)];
+        activityByDay[d] = d < '2026-10-23' ? { notMeasured: true, reason: 'Hub activity was not measured before Oct 23, 2026.' } : { measured: d === '2026-10-23' || d === '2026-10-26', activeMinutes: d === '2026-10-26' ? 81 : d === '2026-10-23' ? 42 : 0, idleMinutes: 0, elapsedMinutes: 0, sessions: 0,
+            events: d === '2026-10-26' ? [{ at: et(d, '16:50'), kind: 'idle_prompt' }, { at: et(d, '16:51'), kind: 'idle_prompt_on_call' }] : [], minuteList: d === '2026-10-26' ? oct26 : [] };
+        shiftByDay[d] = d < '2026-10-24' ? { notMeasured: true, reason: 'Shifts were not declared in the Hub before Oct 24, 2026.' } : d === '2026-10-26' ? { shifts: 1, clockedMinutes: 240, breakMinutes: 0, needsReview: 0, open: 0, list: [{ startedAt: et(d, '15:55'), endedAt: et(d, '19:55'), state: 'closed', clockedMinutes: 240, breakMinutes: 0, breaks: [] }] } : { shifts: 0, clockedMinutes: 0, breakMinutes: 0, needsReview: 0, open: 0, list: [] };
     }
     return {
         user: USER, from, to, days,

@@ -118,6 +118,18 @@ test('dials, connects and talk time are counted the way a caller would count the
     assert.equal(body.totalDials, 4);
 });
 
+test('the idle prompt can tell a caller on a call from a quiet one: last call time and a call still going', async () => {
+    stubQuo({ calls: [
+        call({ createdAt: '2026-10-21T20:00:00Z', completedAt: '2026-10-21T20:04:00Z', duration: 240 }),
+        call({ createdAt: '2026-10-21T20:30:00Z', completedAt: null, answeredAt: '2026-10-21T20:30:20Z', status: 'in-progress', duration: 0 }),
+    ] });
+    const { body } = await run({ rep: 'milton@trystaffify.com', from: '2026-10-21', to: '2026-10-21' });
+    assert.equal(body.reps[0].lastCallAt, '2026-10-21T20:30:00Z'); assert.equal(body.reps[0].callInProgress, true);
+    stubQuo({ calls: [call({ createdAt: '2026-10-21T20:00:00Z', completedAt: '2026-10-21T20:04:00Z', status: 'completed', duration: 240 })] });
+    const done = (await run({ rep: 'milton@trystaffify.com', from: '2026-10-21', to: '2026-10-21' })).body.reps[0];
+    assert.equal(done.callInProgress, false);
+});
+
 test('eight dials to one number is not eight prospects, and the payload says so', async () => {
     // The distinction the dial count alone cannot make. Milton's first live numbers were eight
     // answered calls averaging 33 seconds, which is either eight gatekeepers or one test number.

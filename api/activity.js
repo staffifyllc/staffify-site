@@ -1,12 +1,13 @@
 // Hub activity: heartbeats in, honest summaries out.
 // ------------------------------------------------------------------
 // POST /api/activity/  {action:'heartbeat', page}              one a minute from a visible, used tab
-// POST /api/activity/  {action:'event', kind, page}            page_view / leave only; business
+// POST /api/activity/  {action:'event', kind, page}            page_view / leave and the idle prompt's; business
 //                                                               events are recorded by the handlers
 //                                                               that perform them (recordActivity)
 // GET  /api/activity/?me=1&from=YYYY-MM-DD&to=YYYY-MM-DD        my own week
 // GET  /api/activity/?user=<email>&from&to                      one rep (owner / admin only)
 // GET  /api/activity/?users=1&from&to                           every rep's week (owner / admin only)
+// GET  /api/activity/?live=1                                    every caller right now (owner / admin only)
 // GET  /api/activity/?sessions=1[&user=<email>]                 sign-in sessions still valid in the
 //                                                               store, with when they were created
 //                                                               (owner / admin only)
@@ -15,8 +16,12 @@
 // never returned. A rep reads only their own; owners and admins read everyone's.
 import { redis, requireAccess, SESSION_TTL } from './_auth.js';
 import { financeAccess } from './_finance-access.js';
-import { K, norm, dayOf, minuteOf, sessionize, sessionsOn, summarizeDay, daysBetween, EVENT_KINDS, CLIENT_KINDS, MEASURED_TEXT, RETAIN_DAYS, HEARTBEAT_MS, IDLE_CUTOFF_MS, SESSION_GAP_MS } from './_hub-activity.js';
+import { K, norm, dayOf, minuteOf, sessionize, sessionsOn, summarizeDay, daysBetween, EVENT_KINDS, CLIENT_KINDS, PROMPT_KINDS, MEASURED_TEXT, RETAIN_DAYS, HEARTBEAT_MS, IDLE_CUTOFF_MS, SESSION_GAP_MS } from './_hub-activity.js';
 import { shiftsOn, liveCurrent, stateOf, DECLARED_TEXT, MAX_OPEN_MS } from './_shift.js';
+import { quoConfigured, listUsers, listCalls, findSeat, etDayBounds } from './_quo.js';
+import { loginAliases } from './_login-aliases.js';
+import { reportPeople } from './_daily-report-run.js';
+import { signals, liveStatus, quietDay, QUIET_MS } from './_live-status.js';
 
 const canReadOthers = rep => !!rep && (rep.role === 'admin' || financeAccess(rep));
 const readBody = req => { try { return typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); } catch { return {}; } };
@@ -72,12 +77,77 @@ async function liveSessions(filterEmail) {
     return out.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
+/**
+ * Right now, for every caller: working, on a call, quiet for N minutes, on break or off shift, and
+ * today's quiet stretches on shift. Quo is read once a minute per caller at most (cached), so a page
+ * left open polling does not hammer it. A Quo read that fails says so; quiet is then an upper bound.
+ */
+async function quoToday(email, day) {
+    const key = 'staffify:live-quo:' + email;
+    const held = await redis.get(key).catch(() => null);
+    if (held && held.day === day && Date.now() - Date.parse(held.readAt) < 60000) return held;
+    let out;
+    if (!quoConfigured()) out = { quo: 'not connected', calls: [] };
+    else {
+        try {
+            const seat = findSeat(await listUsers(), loginAliases(email));
+            if (!seat) out = { quo: 'no seat', calls: [] };
+            else {
+                const b = etDayBounds(day);
+                const { items } = await listCalls({ actorId: seat.actorId, direction: 'outgoing', from: b.from, to: b.to });
+                const placed = (items || []).filter(c => c.direction === 'outgoing' && (!c.initiatedBy || c.initiatedBy === seat.actorId));
+                out = { quo: 'read', calls: placed.map(c => ({ at: c.createdAt, seconds: Number(c.duration) || 0, inProgress: !c.completedAt && ['queued', 'initiated', 'ringing', 'in-progress', 'answered'].includes(String(c.status || '')) })) };
+            }
+        } catch { out = { quo: 'unavailable', calls: [] }; }
+    }
+    out = { ...out, day, readAt: new Date().toISOString() };
+    if (out.quo === 'read') await redis.set(key, out, { ex: 120 }).catch(() => {});
+    return out;
+}
+async function liveFor(person, now) {
+    const email = norm(person.email), day = dayOf(now);
+    const current = await liveCurrent(redis, email).catch(() => undefined);
+    const [minutes, raw, shift, q] = await Promise.all([
+        redis.smembers(K.minutes(email, day)).catch(() => null),
+        redis.lrange(K.events(email, day), 0, 499).catch(() => null),
+        shiftsOn(redis, email, day, now, current).catch(() => null),
+        quoToday(email, day),
+    ]);
+    const events = (raw || []).map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean);
+    const unreadable = current === undefined || minutes === null || raw === null || shift === null;
+    const sig = signals({ day, minutes: minutes || [], calls: q.calls, now });
+    const state = current === undefined ? 'unknown' : stateOf(current, now);
+    const status = unreadable ? { key: 'unknown', label: 'Unknown', detail: 'The shift or Hub activity could not be read just now.' }
+        : liveStatus({ state, current, sig, events, callInProgress: q.calls.some(c => c.inProgress), quo: q.quo, now });
+    const hubMinutes = (minutes || []).map(Number).filter(Number.isFinite);
+    const lastCall = q.calls.map(c => c.at).filter(Boolean).sort().slice(-1)[0] || null;
+    const lastEvent = events.filter(e => e.kind && !e.kind.startsWith('idle_prompt') && e.kind !== 'leave').map(e => e.at).sort().slice(-1)[0] || null;
+    return {
+        email, name: person.name || email, status,
+        lastHubAt: hubMinutes.length ? new Date(Math.max(...hubMinutes.map(m => signals({ day, minutes: [m] })[0][1]))).toISOString() : lastEvent,
+        lastCallAt: lastCall, quo: q.quo, quoReadAt: q.readAt,
+        today: unreadable ? null : { day, ...quietDay({ day, minutes: minutes || [], calls: q.calls, shiftList: shift.list, events, now }) },
+    };
+}
+
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store');
     const rep = await requireAccess(req);
     if (!rep) return res.status(401).json({ error: 'Sign in to your Staffify account' });
     const me = norm(rep.email);
     const q = req.query || {};
+
+    if (req.method === 'GET' && q.live) {
+        if (!canReadOthers(rep)) return res.status(403).json({ error: 'Owners only' });
+        const now = Date.now();
+        try {
+            const people = await reportPeople();
+            const out = [];
+            for (const p of people) out.push(await liveFor(p, now));
+            return res.status(200).json({ generatedAt: new Date(now).toISOString(), quietAfterMinutes: QUIET_MS / 60000, people: out,
+                note: 'Working means a Hub click, key or scroll, or a Quo call, in the last 10 minutes of a running shift. A call from the phone\u2019s own dialer is not visible here. Observed, never payroll: Hubstaff is the source for paid hours.' });
+        } catch (e) { return res.status(503).json({ error: 'Live status could not be read: ' + String((e && e.message) || e).slice(0, 120) }); }
+    }
 
     if (req.method === 'POST') {
         if (me === 'admin') return res.status(403).json({ error: 'An admin token is not a person; nothing is recorded for it.' });
@@ -96,11 +166,13 @@ export default async function handler(req, res) {
             }
             if (b.action === 'event') {
                 const kind = String(b.kind || '');
-                if (!CLIENT_KINDS.has(kind)) return res.status(400).json({ error: 'Only page_view and leave are accepted from the browser' });
+                if (!CLIENT_KINDS.has(kind)) return res.status(400).json({ error: 'That event is not accepted from the browser.' });
                 await redis.lpush(K.events(me, day), JSON.stringify({ at: new Date(now).toISOString(), kind, page, detail: null }));
                 await redis.ltrim(K.events(me, day), 0, 499);
                 await redis.expire(K.events(me, day), RETAIN_DAYS * 86400);
                 await redis.sadd(K.days(me), day);
+                // Being prompted is not presence: no minute, no session.
+                if (PROMPT_KINDS.has(kind)) return res.status(200).json({ ok: true });
                 const doc = await redis.get(K.sessions(me)).catch(() => null);
                 const s = sessionize(doc, now, { kind: kind === 'leave' ? 'leave' : 'heartbeat', page });
                 await redis.set(K.sessions(me), s.doc);

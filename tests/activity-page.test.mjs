@@ -9,7 +9,9 @@ import { pathToFileURL } from 'node:url';
 import { makeDom, install } from './helpers/fake-dom.mjs';
 
 const html = readFileSync(new URL('../activity/index.html', import.meta.url), 'utf8');
-const SRC = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
+// The page imports a site-path module; point it at the file so the page runs as written.
+const LIVE = pathToFileURL(new URL('../assets/js/live-status.js', import.meta.url).pathname).href;
+const SRC = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1].replace(/'\/assets\/js\/live-status\.js[^']*'/, "'" + LIVE + "'");
 const file = join(mkdtempSync(join(tmpdir(), 'activity-')), 'activity.mjs');
 writeFileSync(file, SRC);
 const MILTON = 'miltion@trystaffify.com';
@@ -28,6 +30,7 @@ test('the owner sees clocked time, each shift with its flag, the open one outsid
     globalThis.fetch = async (url, opts = {}) => { const u = String(url); const body = opts.body ? JSON.parse(opts.body) : null; calls.push({ u, body });
         const ok = p => ({ ok: true, status: 200, json: async () => p });
         if (u.startsWith('/api/auth-me/')) return ok({ rep: { email: 'hello@gostaffify.com', name: 'Paul', role: 'admin', financeAccess: true } });
+        if (u.startsWith('/api/activity/?live=1')) return ok({ generatedAt: '2026-10-23T22:00:00.000Z', people: [], note: 'Observed, never payroll.' });
         if (u.startsWith('/api/activity/?users=1')) return ok({ users: [{ email: 'hello@gostaffify.com' }, { email: MILTON }] });
         if (u.startsWith('/api/activity/?user=')) return ok(WEEK());
         if (u.startsWith('/api/shift/') && body && body.action === 'correct') return ok({ ok: true, shift: { ...forgotten, status: 'corrected', correctedEndedAt: body.endedAt } });

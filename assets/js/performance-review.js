@@ -5,6 +5,7 @@
 // when he calls, who he calls again, pace and logging. Data: GET /api/performance-review/ (see
 // api/_performance-review.js for what every figure means). Owners pick any caller; a caller sees
 // their own. Built with DOM nodes, never HTML strings: notes are prospect-facing free text.
+import { mountLive } from './live-status.js';
 const $ = id => document.getElementById(id);
 function el(tag, props, ...kids) {
     const n = document.createElement(tag);
@@ -34,8 +35,10 @@ const pct = r => (r && r.pct !== null && r.pct !== undefined ? r.pct + '%' : nul
 const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
 
 // ---- tabs ---------------------------------------------------------------------------------------
-const TABS = [{ id: 'today', button: 'tab-today', panel: 'app' }, { id: 'review', button: 'tab-review', panel: 'review' }];
-let opened = false;
+// Right now is for owners only: its button stays hidden until the sign-in says owner.
+const TABS = [{ id: 'live', button: 'tab-live', panel: 'live' }, { id: 'today', button: 'tab-today', panel: 'app' }, { id: 'review', button: 'tab-review', panel: 'review' }];
+const shown = t => { const b = $(t.button); return !!b && !b.hidden; };
+let opened = false, liveMounted = false;
 function show(tab, remember) {
     for (const t of TABS) {
         const b = $(t.button), p = $(t.panel), on = t.id === tab;
@@ -51,6 +54,7 @@ function show(tab, remember) {
         history.replaceState(null, '', u.toString());
     }
     if (tab === 'review' && !opened) { opened = true; start(); }
+    if (tab === 'live' && !liveMounted && $('live')) { liveMounted = true; const box = el('section'); $('live').replaceChildren(box); mountLive(box); }
 }
 
 // ---- the review ---------------------------------------------------------------------------------
@@ -127,6 +131,7 @@ function table(head, rows, { foot, cls } = {}) {
         foot ? el('tfoot', null, el('tr', null, foot.map(c => el('td', null, c === null || c === undefined ? 'unknown' : c)))) : null));
 }
 const activityText = d => (d.activityUnavailable ? 'unknown' : d.activityMeasured ? mins(d.activeMinutes) : 'not measured');
+const quietText = d => (d.quietStretches ? mins(d.quietMinutes) + (d.quietStretches.length ? ' (' + d.quietStretches.length + ')' : '') : d.shiftMeasured || d.shiftUnavailable ? 'unknown' : 'not recorded');
 const shiftText = d => (d.shiftMeasured ? (d.clockedMinutes ? mins(d.clockedMinutes) : 'none declared') : d.shiftUnavailable ? 'unknown' : 'not recorded');
 const tile = (n, label, sub) => el('div', { class: 'pr-tile' }, el('b', { text: n }), el('span', { text: label }), sub ? el('em', { text: sub }) : null);
 
@@ -203,9 +208,17 @@ export function render(v) {
 
     // Pace
     parts.push(section('Pace',
-        days.length ? table(['Day', 'Shift', 'Dials', 'Dials per shift hour', 'First to last dial', 'Hub active'],
-            days.map(d => [dayLabel(d.day), shiftText(d), num(d.dials), d.dialsPerClockedHour !== null ? String(d.dialsPerClockedHour) : (d.dials === null || d.shiftUnavailable) ? 'unknown' : 'n/a', d.dials === null ? 'unknown' : d.firstDial ? clockET(d.firstDial) + ' to ' + clockET(d.lastDial) + (d.dialSpanMinutes !== null ? ' (' + mins(d.dialSpanMinutes) + ')' : '') : 'no dials', activityText(d)])) : null,
+        days.length ? table(['Day', 'Shift', 'Dials', 'Dials per shift hour', 'First to last dial', 'Hub active', 'Quiet on shift'],
+            days.map(d => [dayLabel(d.day), shiftText(d), num(d.dials), d.dialsPerClockedHour !== null ? String(d.dialsPerClockedHour) : (d.dials === null || d.shiftUnavailable) ? 'unknown' : 'n/a', d.dials === null ? 'unknown' : d.firstDial ? clockET(d.firstDial) + ' to ' + clockET(d.lastDial) + (d.dialSpanMinutes !== null ? ' (' + mins(d.dialSpanMinutes) + ')' : '') : 'no dials', activityText(d), quietText(d)])) : null,
         el('p', { class: 'pr-small', text: 'Shift is what was declared in the Hub. Hub active is an estimate of minutes with the Hub in use. Neither is payroll; Hubstaff is the source for paid hours.' })));
+
+    // Quiet stretches on shift: when the caller was not working, by day.
+    const qt = v.quiet;
+    parts.push(section('Quiet stretches on shift',
+        !qt ? lede('Not measured in these dates: it needs a declared shift (from Oct 24, 2026), Hub activity and Quo for the same day.')
+            : lede(mins(qt.quietMinutes) + ' quiet out of ' + mins(qt.onShiftMinutes) + ' on shift, in ' + plural(qt.list.length, 'stretch', 'stretches') + ' of 10 minutes or more.' + (qt.daysUnknown ? ' ' + plural(qt.daysUnknown, 'day with a shift is', 'days with a shift are') + ' unknown because a source could not be read.' : '')),
+        qt && qt.list.length ? table(['Day', 'From', 'To', 'Quiet', 'Prompt'], qt.list.map(x => [dayLabel(x.day), clockET(x.from), x.open ? 'now' : clockET(x.to), mins(x.minutes), x.prompted ? (x.answer === 'No answer' ? 'Shown, no answer' : 'Shown: ' + String(x.answer).toLowerCase()) : 'Not shown'])) : null,
+        el('p', { class: 'pr-small', text: "Quiet means no Hub click, key or scroll and no Quo call for 10 minutes or more on a running shift. Breaks are not counted. A call from the phone's own dialer is invisible here. Never deducted from the shift, never payroll." })));
 
     // Logging
     parts.push(section('Logging',
@@ -213,7 +226,7 @@ export function render(v) {
 
     const defs = v.definitions || {};
     parts.push(el('details', { class: 'pr-more pr-defs' }, el('summary', { text: 'How each figure is counted' }),
-        el('dl', null, Object.entries({ Dials: defs.dials, Logged: defs.outcomes, Answered: defs.reached, 'Notes to check': defs.notesToCheck, 'Number problems': defs.numbers, "Prospect's local time": defs.local, 'Call again within 36 hours': defs.nextDay, 'Leads ready to call': defs.supply }).filter(([, d]) => d).flatMap(([k, d]) => [el('dt', { text: k }), el('dd', { text: d })]))));
+        el('dl', null, Object.entries({ Dials: defs.dials, Logged: defs.outcomes, Answered: defs.reached, 'Notes to check': defs.notesToCheck, 'Number problems': defs.numbers, "Prospect's local time": defs.local, 'Call again within 36 hours': defs.nextDay, 'Leads ready to call': defs.supply, 'Quiet on shift': defs.quiet }).filter(([, d]) => d).flatMap(([k, d]) => [el('dt', { text: k }), el('dd', { text: d })]))));
     return parts;
 }
 
@@ -223,10 +236,21 @@ export function init() {
     for (const t of TABS) { const b = $(t.button); if (b) b.addEventListener('click', () => show(t.id, true)); }
     if (tablist) tablist.addEventListener('keydown', e => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-        const i = TABS.findIndex(t => $(t.button) && $(t.button).getAttribute('aria-selected') === 'true');
-        const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
+        const tabs = TABS.filter(shown);
+        const i = tabs.findIndex(t => $(t.button).getAttribute('aria-selected') === 'true');
+        const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
         show(next.id, true); const b = $(next.button); if (b) b.focus();
     });
-    show(new URLSearchParams(location.search).get('tab') === 'review' ? 'review' : 'today', false);
+    const asked = new URLSearchParams(location.search).get('tab');
+    show(asked === 'review' ? 'review' : 'today', false);
+    // Owners open on Right now (unless the link asked for another tab); callers never see it.
+    if ($('tab-live')) ownerCheck().then(owner => {
+        if (!owner) return;
+        $('tab-live').hidden = false;
+        if (asked === 'live' || !asked) show('live', false);
+    });
+}
+async function ownerCheck() {
+    try { const r = await fetch('/api/auth-me/', { cache: 'no-store' }); if (!r.ok) return false; const me = ((await r.json()) || {}).rep; return !!me && (me.role === 'admin' || !!me.financeAccess); } catch { return false; }
 }
 if (typeof document !== 'undefined' && document.getElementById && $('tab-review')) init();

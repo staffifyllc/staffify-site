@@ -30,8 +30,14 @@ export const EVENT_KINDS = Object.freeze({
     task_added: 'Added a task', task_done: 'Completed a task', callback_set: 'Scheduled a callback', suppress: 'Excluded a prospect',
     text_sent: 'Sent a text', overview_sent: 'Sent the overview', instagram_flag: 'Flagged a datapoint',
     shift_start: 'Started a shift', shift_break: 'Took a break', shift_resume: 'Resumed the shift', shift_end: 'Ended the shift', shift_flagged: 'Shift flagged for review', shift_corrected: 'Shift end corrected by an owner',
+    // The idle prompt (assets/js/hub-nudge.js): shown after 10 quiet minutes on a running shift, and the answer.
+    idle_prompt: 'Prompted after 10 quiet minutes on shift', idle_prompt_next: 'Went to the next call from the prompt',
+    idle_prompt_on_call: 'Answered the prompt: on a call', idle_prompt_break: 'Took a break from the prompt',
 });
-export const CLIENT_KINDS = new Set(['page_view', 'leave']);
+// The prompt's events record that it appeared and what was chosen. They are not presence: being
+// prompted is the opposite of activity, so they never count a minute or extend a session.
+export const PROMPT_KINDS = new Set(['idle_prompt', 'idle_prompt_next', 'idle_prompt_on_call', 'idle_prompt_break']);
+export const CLIENT_KINDS = new Set(['page_view', 'leave', ...PROMPT_KINDS]);
 export const MEANINGFUL = new Set(['call_outcome', 'note_saved', 'task_added', 'task_done', 'callback_set', 'suppress', 'text_sent', 'overview_sent', 'instagram_flag']);
 
 const ET = 'America/New_York';

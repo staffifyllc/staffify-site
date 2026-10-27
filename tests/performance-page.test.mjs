@@ -17,22 +17,24 @@ const REVIEW = { ...buildReview(src, { generatedAt: GENERATED, emails: [USER.ema
 function page(href) {
     const dom = makeDom({ href }); const restore = install(dom);
     const tablist = document.createElement('div'); tablist.setAttribute('role', 'tablist');
-    for (const [id, panel, on] of [['tab-today', 'app', true], ['tab-review', 'review', false]]) { const b = document.createElement('button'); b.id = id; b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', panel); b.setAttribute('aria-selected', on ? 'true' : 'false'); tablist.append(b); }
+    for (const [id, panel, on] of [['tab-live', 'live', false], ['tab-today', 'app', true], ['tab-review', 'review', false]]) { const b = document.createElement('button'); b.id = id; b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', panel); b.setAttribute('aria-selected', on ? 'true' : 'false'); if (id === 'tab-live') b.hidden = true; tablist.append(b); }
+    const live = document.createElement('div'); live.id = 'live'; live.hidden = true;
     const today = document.createElement('div'); today.id = 'app'; const review = document.createElement('div'); review.id = 'review'; review.hidden = true;
-    document.body.append(tablist, today, review);
+    document.body.append(tablist, live, today, review);
     return { dom, restore };
 }
 const respond = (asked, me) => async url => { const u = String(url); asked.push(u); const ok = b => ({ ok: true, status: 200, json: async () => b });
     if (u.startsWith('/api/auth-me/')) return me ? ok({ rep: me }) : { ok: false, status: 401, json: async () => ({ error: 'unauthenticated' }) };
     if (u.startsWith('/api/daily-report/?people=1')) return ok({ people: [{ email: USER.email, name: 'Milton Hodgson' }] });
     if (u.startsWith('/api/performance-review/')) return ok({ review: REVIEW });
+    if (u.startsWith('/api/activity/?live=1')) return ok({ generatedAt: GENERATED, people: [{ email: USER.email, name: 'Milton Hodgson', status: { key: 'quiet', label: 'Quiet for 14 min', since: '2026-10-27T14:17:00.000Z', quietMinutes: 14, prompt: { at: '2026-10-27T14:27:00.000Z', answered: false } }, lastHubAt: '2026-10-27T14:17:00.000Z', lastCallAt: '2026-10-27T14:10:00.000Z', quo: 'read', today: { onShiftMinutes: 31, quietMinutes: 14, stretches: [{ from: '2026-10-27T14:17:00.000Z', to: '2026-10-27T14:31:00.000Z', minutes: 14, open: true, prompted: true, answer: 'No answer' }] } }], note: 'Observed, never payroll.' });
     return { ok: false, status: 404, json: async () => ({}) }; };
 const settle = () => new Promise(r => setTimeout(r, 30));
 
 test('the page is called Performance, Today has no "picked up" figure, and the review tab is there', () => {
     assert.match(html, /<title>Performance · Staffify Sales<\/title>/);
     assert.ok(!/Picked up/i.test(html), 'Quo answered counts voicemail and menus; it is not shown as picked up');
-    assert.match(html, /role="tablist"/); assert.match(html, /id="tab-review"[^>]*>Caller review</);
+    assert.match(html, /role="tablist"/); assert.match(html, /id="tab-review"[^>]*>Caller review</); assert.match(html, /id="tab-live"[^>]*hidden>Right now</);
     assert.match(html, /<script type="module" src="\/assets\/js\/performance-review\.js\?v=\d+"><\/script>/);
     assert.ok(!/—/.test(html.match(/<title>.*<\/title>/)[0]));
 });
@@ -41,8 +43,15 @@ test('an owner opens Caller review: the tab switches, the URL remembers it, and 
     const { dom, restore } = page('https://www.gostaffify.com/scoreboard/');
     const asked = []; globalThis.fetch = respond(asked, { email: 'hello@gostaffify.com', name: 'Paul', role: 'admin', financeAccess: true });
     await import(MODULE + '?owner' + Date.now());
-    assert.equal(document.getElementById('review').hidden, true, 'Today opens first');
-    assert.equal(asked.length, 0, 'nothing is fetched for the review until it is opened');
+    await settle();
+    assert.equal(document.getElementById('tab-live').hidden, false, 'an owner gets Right now');
+    assert.equal(document.getElementById('live').hidden, false, 'and the page opens on it');
+    assert.equal(document.getElementById('review').hidden, true);
+    assert.ok(!asked.some(u => u.startsWith('/api/performance-review/')), 'nothing is fetched for the review until it is opened');
+    const liveText = dom.text(document.getElementById('live'));
+    assert.match(liveText, /Right now/); assert.match(liveText, /Milton Hodgson\s*Quiet for 14 min/);
+    assert.match(liveText, /prompt on screen since 10:27 AM, not answered/); assert.match(liveText, /quiet on shift today 14m of 31m/);
+    assert.match(liveText, /1 quiet stretch on shift today/); assert.match(liveText, /10:17 AM to now · 14m · prompted, no answer/);
     document.getElementById('tab-review').click();
     await settle();
     assert.equal(document.getElementById('review').hidden, false); assert.equal(document.getElementById('app').hidden, true);
@@ -78,6 +87,8 @@ test('a caller opening the link sees their own review, with no caller picker and
     await settle();
     assert.equal(document.getElementById('review').hidden, false, '?tab=review opens the review');
     assert.equal(document.getElementById('pr-user'), null);
+    assert.equal(document.getElementById('tab-live').hidden, true, 'a caller never sees Right now');
+    assert.ok(!asked.some(u => u.includes('live=1')), 'and never asks for it');
     assert.ok(asked.includes('/api/performance-review/?from=2026-10-20&to=2026-10-27'), asked.join(' '));
     assert.ok(!asked.some(u => u.includes('people=1')), 'only owners ask who has a review');
     assert.match(dom.text(document.body), /people answered/);

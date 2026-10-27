@@ -8,9 +8,9 @@
  // one at a time by hand, so it is a destination somebody opens on purpose, not a report they go
  // looking for. Next to Calls because that is the work it belongs to. Labelled "Spearhead" because
  // the full "Spearhead accounts" crowds the bar at laptop width; the page's own title still says it.
- for(const args of [['Today','/hub/','navHub'],['Campaigns','/campaigns/industries/'],['Inbox','/outreach-review/?view=replies'],['Calls','/dialer/'],['Spearhead','/spearhead/'],['Pipeline','/pipeline/'],['Commissions','/commissions/']])nav.append(make(...args));
+ for(const args of [['Today','/hub/','navHub'],['Campaigns','/campaigns/industries/'],['Inbox','/outreach-review/?view=replies'],['Calls','/dialer/'],['Spearhead','/spearhead/'],['Performance','/scoreboard/'],['Pipeline','/pipeline/'],['Commissions','/commissions/']])nav.append(make(...args));
  const more=document.createElement('details');more.className='portal-more';const summary=document.createElement('summary');summary.textContent='More';more.append(summary);const menu=document.createElement('div');menu.className='portal-menu';
- for(const args of [['My day','/my-day/','navDay'],['Campaigns (old view)','/campaigns/'],['Lost deals','/lost-deals/'],['Performance','/scoreboard/'],['Activity','/activity/'],['Enterprise accounts','/campaigns/enterprise/'],['Website signups','/website-leads/'],['Training','/training/sales/'],['Applicants','/careers/sales/inbox/'],['Talent Console ↗','https://recruiting.gostaffify.com/dashboard'],['Legacy campaign report','/campaigns/legacy/'],['Founder pilot','/pilot/','navPilot']])menu.append(make(...args));
+ for(const args of [['My day','/my-day/','navDay'],['Campaigns (old view)','/campaigns/'],['Lost deals','/lost-deals/'],['Activity','/activity/'],['Enterprise accounts','/campaigns/enterprise/'],['Website signups','/website-leads/'],['Training','/training/sales/'],['Applicants','/careers/sales/inbox/'],['Talent Console ↗','https://recruiting.gostaffify.com/dashboard'],['Legacy campaign report','/campaigns/legacy/'],['Founder pilot','/pilot/','navPilot']])menu.append(make(...args));
  more.append(menu);nav.append(more);if(old)old.replaceWith(nav);else header.append(nav);
  document.addEventListener('click',e=>{if(!more.contains(e.target))more.open=false;});document.addEventListener('keydown',e=>{if(e.key==='Escape'){more.open=false;summary.focus();}});
  const logo=header.querySelector('img');if(logo&&!logo.closest('a')){const a=make('','/hub/');a.setAttribute('aria-label','Staffify home');logo.replaceWith(a);a.append(logo);}
@@ -19,6 +19,8 @@
  if(document.head&&!document.querySelector('script[src^="/assets/js/hub-activity.js"]')){const s=document.createElement('script');s.src='/assets/js/hub-activity.js?v=20261023';s.defer=true;document.head.append(s);}
  // The shift bar and the phone-link gate. See assets/js/hub-shift.js.
  if(document.head&&!document.querySelector('script[src^="/assets/js/hub-shift.js"]')){const s=document.createElement('script');s.src='/assets/js/hub-shift.js?v=20261024';s.defer=true;document.head.append(s);}
+ // The idle prompt: after 10 quiet minutes on a running shift, ask "Still on your shift?". See assets/js/hub-nudge.js.
+ if(document.head&&!document.querySelector('script[src^="/assets/js/hub-nudge.js"]')){const s=document.createElement('script');s.src='/assets/js/hub-nudge.js?v=20261027';s.defer=true;document.head.append(s);}
  const content=document.querySelector('main,#app,.wrap,.page,.shell');if(content){if(!content.id)content.id='portal-content';const skip=make('Skip to content','#'+content.id);skip.className='portal-skip';document.body.prepend(skip);}
  if(location.hostname==='127.0.0.1'||location.hostname==='localhost'){const note=document.createElement('aside');note.className='portal-preview';note.textContent='Design preview · Sample or saved data. ';note.append(make('Open live Staffify','https://www.gostaffify.com'+location.pathname+location.search));document.body.prepend(note);}
 })();

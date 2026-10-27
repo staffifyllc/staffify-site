@@ -19,6 +19,7 @@ import { buildReport, dayRange, pairCalls, OUTCOME_LABEL } from './_daily-report
 import { etDay } from './_quo.js';
 import { localClock } from './_area-time.js';
 import { NAMES as CAMPAIGN_NAMES } from './_campaigns-model.js';
+import { quietDay } from './_live-status.js';
 
 export const REVIEW_VERSION = 1;
 export const MAX_DAYS = 31;
@@ -167,6 +168,11 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
         const reached = reachedOn(r.day);
         const dayCalls = calls.filter(c => etDay(c.at) === r.day).sort((a, b) => ms(a.at) - ms(b.at));
         const clocked = r.shift && !r.shift.notMeasured ? r.shift.clockedMinutes : null;
+        // Quiet on shift: 10 minutes or more of a running shift with no Hub minute and no Quo call.
+        // Needs all three sources for the day; otherwise unknown.
+        const act = src.activityByDay[r.day];
+        const quiet = quoOk && r.shift && !r.shift.notMeasured && !r.shift.unavailable && act && !act.notMeasured && Array.isArray(act.minuteList)
+            ? quietDay({ day: r.day, minutes: act.minuteList, calls: dayCalls.map(c => ({ at: c.at, seconds: c.seconds })), shiftList: r.shift.list || [], events: act.events || [], now }) : null;
         const active = r.activity && !r.activity.notMeasured ? r.activity.activeMinutes : null;
         return {
             day: r.day, partial: r.partialDay,
@@ -181,6 +187,7 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
             dialSpanMinutes: dayCalls.length > 1 ? Math.round((ms(dayCalls[dayCalls.length - 1].at) - ms(dayCalls[0].at)) / 60000) : null,
             dialsWithoutOutcome: r.calls.dialsWithoutOutcome, outcomesWithoutQuoCall: r.calls.outcomesWithoutQuoCall,
             notesToCheck: hubOk ? read.filter(x => x.day === r.day && x.hint).length : null,
+            onShiftMinutes: quiet ? quiet.onShiftMinutes : null, quietMinutes: quiet ? quiet.quietMinutes : null, quietStretches: quiet ? quiet.stretches : null,
             // Quiet only when every source was read and had nothing: an unread source keeps the row, so its unknowns show.
             quiet: !(r.meetings.booked > 0) && (r.noRecordedActivity || (quoOk && hubOk && r.calls.verifiedAttempts === 0 && r.calls.loggedOutcomes === 0 && !!r.shift && !r.shift.unavailable && !!r.activity && !(clocked > 0) && !(active > 0))),
         };
@@ -280,6 +287,11 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
         segments,
         timing: { buckets: hubOk ? buckets : null, etHours, knownZone: hubOk ? read.filter(x => x.clock).length : null },
         repeats: hubOk ? { prospects: prospects.length, distribution: dist, nextDay: rate(nextDay.length, retryable.length), mostCalled } : null,
+        quiet: worked.some(r => r.quietStretches) ? {
+            onShiftMinutes: worked.reduce((n, r) => n + (r.onShiftMinutes || 0), 0), quietMinutes: worked.reduce((n, r) => n + (r.quietMinutes || 0), 0),
+            daysMeasured: worked.filter(r => r.quietStretches).length, daysUnknown: worked.filter(r => !r.quietStretches && r.shiftMeasured).length,
+            list: worked.flatMap(r => (r.quietStretches || []).map(x => ({ day: r.day, ...x }))),
+        } : null,
         notesToCheck: hubOk ? read.filter(x => x.hint).map(x => ({ at: x.when, company: x.e.company, logged: OUTCOME_LABEL[x.e.outcome] || x.e.outcome, hint: x.hint, note: cleanNote(x.e.notes) })) : null,
         supply: null,
         definitions: {
@@ -291,6 +303,7 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
             local: "The prospect's clock when the call was made, from the dialled number's area code, or the card's number when no Quo call matched.",
             nextDay: 'No answer and voicemail outcomes whose next call was set for 36 hours or less later.',
             supply: 'Cards ready to call with a number, that nobody has called or claimed. Right now, not for the dates above.',
+            quiet: "10 minutes or more of a running, declared shift with no Hub click, key or scroll and no Quo call. Breaks are not counted. A call from the phone's own dialer is invisible here. Never deducted from the shift and never payroll.",
         },
     };
 }

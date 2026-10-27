@@ -173,6 +173,10 @@ export function tally(calls, { actorId } = {}) {
         uniqueNumbers: numbers.size,
         repeatDials: placed.length - numbers.size,
         avgAnsweredSeconds: answered.length ? Math.round(seconds / answered.length) : null,
+        // For the Hub's idle prompt: when this person last placed a call, and whether one is still
+        // going (no completedAt yet, in a live status), so a long call never reads as idle.
+        lastCallAt: placed.reduce((m, c) => (c.createdAt && (!m || c.createdAt > m) ? c.createdAt : m), null),
+        callInProgress: placed.some(c => !c.completedAt && ['queued', 'initiated', 'ringing', 'in-progress', 'answered'].includes(String(c.status || ''))),
         inboundReturned: incoming.length,
         byDay,
         definitions: {

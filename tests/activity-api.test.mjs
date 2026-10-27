@@ -28,6 +28,7 @@ const run = cmd => {
     if (v === 'LTRIM') { const l = Array.isArray(store.get(key)) ? store.get(key) : []; store.set(key, l.slice(Number(args[0]), Number(args[1]) + 1)); return 'OK'; }
     if (v === 'LRANGE') { const l = Array.isArray(store.get(key)) ? store.get(key) : []; const end = Number(args[1]); return l.slice(Number(args[0]), end < 0 ? undefined : end + 1); }
     if (v === 'HGETALL') { const h = store.get(key); return h && typeof h === 'object' && !(h instanceof Set) && !Array.isArray(h) ? Object.entries(h).flat() : []; }
+    if (v === 'HGET') { const h = store.get(key); return h && typeof h === 'object' && !(h instanceof Set) && args[0] in h ? h[args[0]] : null; }
     if (v === 'HSET') { const h = store.get(key) || {}; for (let i = 0; i < args.length; i += 2) h[args[i]] = args[i + 1]; store.set(key, h); return 1; }
     if (v === 'SCAN') { const i = args.findIndex(a => String(a).toUpperCase() === 'MATCH'); const pat = i >= 0 ? String(args[i + 1]).replace('*', '') : ''; return ['0', [...store.keys()].filter(k => k.startsWith(pat))]; }
     throw new Error('unhandled ' + v);
@@ -95,6 +96,21 @@ test('leave closes the session; only page_view and leave are accepted from the b
     Date.now = realNow;
 });
 
+test('the idle prompt is recorded from the page, and being prompted never counts as an active minute', async () => {
+    seed();
+    at('2026-10-23T21:00:00Z'); await call({ method: 'POST', cookie: 'milton-sid', body: { action: 'event', kind: 'page_view', page: '/dialer/' } });
+    for (const [t, kind] of [['2026-10-23T21:12:00Z', 'idle_prompt'], ['2026-10-23T21:13:00Z', 'idle_prompt_on_call'], ['2026-10-23T21:25:00Z', 'idle_prompt'], ['2026-10-23T21:26:00Z', 'idle_prompt_break']]) {
+        at(t); const r = await call({ method: 'POST', cookie: 'milton-sid', body: { action: 'event', kind, page: '/dialer/' } });
+        assert.equal(r.code, 200, kind);
+    }
+    at('2026-10-23T21:30:00Z'); const me = await call({ cookie: 'milton-sid', query: { me: '1', from: '2026-10-23', to: '2026-10-23' } });
+    const d = me.body.days[0];
+    assert.equal(d.activeMinutes, 1, 'only the page view counted a minute');
+    assert.deepEqual(d.counts, { page_view: 1, idle_prompt: 2, idle_prompt_on_call: 1, idle_prompt_break: 1 });
+    assert.ok(d.events.some(e => e.label === 'Prompted after 10 quiet minutes on shift'));
+    Date.now = realNow;
+});
+
 test('permission boundaries: a rep reads only their own; owners read anyone; an admin token has no activity of its own', async () => {
     seed();
     at('2026-10-23T21:00:00Z');
@@ -127,5 +143,26 @@ test('live sessions report when they were created, derived from the life left, a
     assert.equal(r.body.sessions[0].createdAt, '2026-10-23T20:00:00.000Z', 'an hour of life used means created an hour ago');
     assert.ok(!JSON.stringify(r.body).includes('milton-sid'), 'the session token is never returned');
     assert.match(r.body.note, /unavailable, not zero/);
+    Date.now = realNow;
+});
+
+test('right now: an owner sees each caller working, quiet or on break; nobody else can read it', async () => {
+    seed();
+    at('2026-10-27T20:00:00Z');                                      // 4:00 PM ET
+    await call({ method: 'POST', cookie: 'milton-sid', body: { action: 'event', kind: 'page_view', page: '/dialer/' } });
+    store.set('shift:cur:miltion@trystaffify.com', JSON.stringify({ id: 'sh-live', day: '2026-10-27', startedAt: '2026-10-27T19:55:00.000Z', breaks: [] }));
+    at('2026-10-27T20:05:00Z');
+    let r = await call({ cookie: 'paul-sid', query: { live: '1' } });
+    assert.equal(r.code, 200);
+    const m = r.body.people.find(p => p.email === 'miltion@trystaffify.com');
+    assert.equal(m.status.key, 'working'); assert.equal(m.quo, 'not connected'); assert.equal(m.lastHubAt, '2026-10-27T20:01:00.000Z');
+    assert.match(r.body.note, /never payroll/);
+    at('2026-10-27T20:25:00Z');                                      // 24 quiet minutes since the page view
+    r = await call({ cookie: 'paul-sid', query: { live: '1' } });
+    const q = r.body.people.find(p => p.email === 'miltion@trystaffify.com');
+    assert.deepEqual([q.status.key, q.status.label], ['quiet', 'Quiet for 24 min']);
+    assert.deepEqual(q.today.stretches.map(s => [s.minutes, s.open]), [[24, true]]);
+    assert.equal((await call({ cookie: 'milton-sid', query: { live: '1' } })).code, 403, 'a caller cannot watch anyone, including the team');
+    assert.equal((await call({ query: { live: '1' } })).code, 401);
     Date.now = realNow;
 });

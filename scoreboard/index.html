@@ -55,10 +55,10 @@
         .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
         .gate .btn { width:100%; padding:13px; }
         /* Performance tabs and the Caller review (portal look: light, #0071e3 accent). */
-        body .perf-head, body #app.wrap, body #review.wrap { max-width:1040px; margin-left:auto; margin-right:auto; }
+        body .perf-head, body #app.wrap, body #review.wrap, body #live.wrap { max-width:1040px; margin-left:auto; margin-right:auto; }
         body .perf-head { padding:24px 28px 0; }
-        body #app.wrap, body #review.wrap { padding:20px 28px 80px; }
-        @media (max-width:700px){ body .perf-head { padding:20px 16px 0; } body #app.wrap, body #review.wrap { padding:16px 16px 60px; } }
+        body #app.wrap, body #review.wrap, body #live.wrap { padding:20px 28px 80px; }
+        @media (max-width:700px){ body .perf-head { padding:20px 16px 0; } body #app.wrap, body #review.wrap, body #live.wrap { padding:16px 16px 60px; } }
         .perf-title { font-size:28px; font-weight:650; letter-spacing:-0.02em; color:#1d1d1f; margin:0 0 12px; }
         .perf-h2 { font-size:22px; font-weight:800; margin-bottom:2px; }
         .perf-tabs { display:flex; gap:22px; border-bottom:1px solid #e5e5ea; }
@@ -125,14 +125,16 @@
 <div class="perf-head">
     <h1 class="perf-title">Performance</h1>
     <div class="perf-tabs" role="tablist" aria-label="Performance views">
+        <button type="button" class="perf-tab" id="tab-live" role="tab" aria-controls="live" aria-selected="false" tabindex="-1" hidden>Right now</button>
         <button type="button" class="perf-tab on" id="tab-today" role="tab" aria-controls="app" aria-selected="true">Today</button>
         <button type="button" class="perf-tab" id="tab-review" role="tab" aria-controls="review" aria-selected="false" tabindex="-1">Caller review</button>
     </div>
 </div>
 
+<div class="wrap" id="live" role="tabpanel" aria-labelledby="tab-live" hidden></div>
 <div class="wrap" id="app" role="tabpanel" aria-labelledby="tab-today"></div>
 <div class="wrap pr-wrap" id="review" role="tabpanel" aria-labelledby="tab-review" hidden></div>
-<script type="module" src="/assets/js/performance-review.js?v=20261027"></script>
+<script type="module" src="/assets/js/performance-review.js?v=202610272"></script>
 
 <script>
 (function(){

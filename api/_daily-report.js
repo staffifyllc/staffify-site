@@ -371,7 +371,8 @@ export async function gatherRange({ redis, rep, from, to, now = Date.now(), deco
             const [minutes, raw, doc] = await Promise.all([redis.smembers(ACT.minutes(email, day)), redis.lrange(ACT.events(email, day), 0, 499), sessionsRead ? sessionsDoc : redis.get(ACT.sessions(email))]);
             sessionsDoc = doc; sessionsRead = true;
             const events = (raw || []).map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean);
-            activityByDay[day] = { ...summarizeDay({ day, minutes: minutes || [], sessions: sessionsOn(doc, day), events }), events };
+            // minuteList: the active minutes themselves, for quiet stretches on shift (api/_live-status.js).
+            activityByDay[day] = { ...summarizeDay({ day, minutes: minutes || [], sessions: sessionsOn(doc, day), events }), events, minuteList: (minutes || []).map(Number).filter(Number.isFinite) };
         } catch { activityByDay[day] = null; }
     }
 

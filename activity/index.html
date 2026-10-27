@@ -43,6 +43,7 @@
 <header class="topbar"><img src="/assets/brand/logo-blue.svg" alt="Staffify"><nav class="nav"><a href="/hub/">Hub</a></nav><div class="tb-right" id="tbRight"></div></header>
 <main class="wrap" id="app"><p class="act-note">Loading…</p></main>
 <script type="module">
+import { mountLive } from '/assets/js/live-status.js?v=20261027';
 // Hub activity, per person, per day. Reps see their own; owners and admins pick anyone.
 // Every number is an estimate of time in a Hub tab, labelled as such, and never payroll.
 const app = document.getElementById('app');
@@ -64,8 +65,14 @@ const todayET = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York',
   let from = params.get('from') || weekStart(todayET);
   let to = params.get('to') || (addDays(from, 6) > todayET ? todayET : addDays(from, 6));
 
+  // Right now, for owners: is each caller working, and today's quiet stretches on shift
+  // (assets/js/live-status.js). Its own box, redrawn every minute, so the week below is not re-read.
+  const liveBox = el('section');
+  if (owner) mountLive(liveBox);
+
   async function render() {
     app.replaceChildren();
+    if (owner) app.append(liveBox);
     const head = el('div', null, 'act-head');
     const t = el('div'); t.append(el('div', 'Hub activity', 'eyebrow'), el('h1', owner && user !== me.email ? user : 'Your Hub activity'));
     head.append(t);

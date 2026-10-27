@@ -105,8 +105,10 @@ test('the Campaigns tab is the new area, and the old view stays one click away',
 
 test('nothing else fell out of the bar', () => {
     const { links, moreLinks } = build();
-    for (const href of ['/hub/', '/campaigns/industries/', '/dialer/', '/pipeline/', '/commissions/'])
-        assert.ok(links.some(l => l.href === href), href + ' is still a tab');
-    for (const href of ['/my-day/', '/scoreboard/', '/training/sales/'])
+    // Paul, 2026-10-27: "performance should be at the top on its own tab".
+    for (const href of ['/hub/', '/campaigns/industries/', '/dialer/', '/scoreboard/', '/pipeline/', '/commissions/'])
+        assert.ok(links.some(l => l.href === href), href + ' is a tab');
+    assert.ok(!moreLinks.some(l => l.href === '/scoreboard/'), 'Performance is not also under More');
+    for (const href of ['/my-day/', '/training/sales/'])
         assert.ok(moreLinks.some(l => l.href === href), href + ' is still under More');
 });

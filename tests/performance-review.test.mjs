@@ -135,3 +135,22 @@ test('leads still to call: callable, never dialled, unclaimed; and his own follo
     assert.deepEqual(s.byCampaign.map(x => [x.name, x.n]), [['Staffify agency outreach', 2], ['CEO B2B outreach', 1]]);
     assert.equal(s.hisFollowUpsDue, 1, 'claimed through his login alias');
 });
+
+test('quiet stretches on shift, by day: Hub minutes and Quo calls fill the shift, the rest of 10 minutes or more is listed', () => {
+    const v = buildReview(source(), { generatedAt: GENERATED, emails: [USER.email] });
+    const d = v.days.find(x => x.day === '2026-10-26');
+    // Shift 3:55 to 7:55 PM. Hub 3:55 to 4:31 and 5:00 to 5:51. Quo calls (a minute each) at 5:02, 5:20,
+    // 5:30, 5:44, 6:39, and two with nothing logged at 6:55 (70 s) and 7:10.
+    assert.equal(d.onShiftMinutes, 240);
+    assert.deepEqual(d.quietStretches.map(x => [x.from, x.to, x.minutes, x.prompted, x.answer]), [
+        ['2026-10-26T20:31:00.000Z', '2026-10-26T21:00:00.000Z', 29, true, 'Said they were on a call'],
+        ['2026-10-26T21:51:00.000Z', '2026-10-26T22:39:00.000Z', 48, false, null],
+        ['2026-10-26T22:40:00.000Z', '2026-10-26T22:55:00.000Z', 15, false, null],
+        ['2026-10-26T22:56:10.000Z', '2026-10-26T23:10:00.000Z', 13, false, null],     // the 6:55 dial ran 70 seconds
+        ['2026-10-26T23:11:00.000Z', '2026-10-26T23:55:00.000Z', 44, false, null],
+    ]);
+    assert.equal(d.quietMinutes, 149);
+    assert.equal(v.days.find(x => x.day === '2026-10-23').quietStretches, null, 'no declared shift before Oct 24: not measured');
+    assert.deepEqual([v.quiet.quietMinutes, v.quiet.onShiftMinutes, v.quiet.list.length], [149, 240, 5]);
+    assert.equal(buildReview(source({ quoOk: false }), { generatedAt: GENERATED }).days.find(x => x.day === '2026-10-26').quietStretches, null, 'Quo unread: calls unknown, so quiet is unknown');
+});
