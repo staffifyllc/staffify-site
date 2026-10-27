@@ -88,6 +88,27 @@ export default async function handler(req,res) {
     // record the call. For these actions the meaningful conflict is the RECORD, which controlState
     // re-validates on every attempt (still due, not suppressed, not paused), so re-read and
     // re-apply rather than bouncing the person who is on the phone.
+    // One-off repair (PM acceptance check, 2026-10-27). The worker's empty-recipient bug (fixed in
+    // _outreach-worker-core.js) held Talent network rows as bounces though no address existed and nothing
+    // was sent. Machine only, the exact proven predicate, a dry run unless write:true, and refused unless
+    // the count matches the one proven. The rows go back to contact research with the old values on them.
+    if(body.action==='repair-empty-recipient-bounces'){
+      if(!machine)return res.status(403).json({error:'Worker authorization required'});
+      const mid=String(body.replyMessageId||''),expected=Number(body.expected);
+      if(!/^[0-9a-f]{12,20}$/.test(mid)||!Number.isInteger(expected))return res.status(400).json({error:'replyMessageId and expected count required'});
+      const proven=r=>r.campaignId==='staffify-talent-network-outreach'&&r.status==='bounce_hold'&&!r.recipient&&!Number(r.sentTouches||0)&&!Number(r.verifiedSentTouches||0)&&r.replyMessageId===mid;
+      for(let attempt=0;attempt<6;attempt++){
+        const fresh=attempt?await redis.get(KEY):state;
+        const hits=(fresh?.records||[]).filter(proven);
+        const report={found:hits.length,expected,bounceHoldTotal:(fresh?.records||[]).filter(r=>r.status==='bounce_hold').length,ids:hits.map(r=>r.id)};
+        if(body.write!==true)return res.status(200).json({dry:true,...report});
+        if(hits.length!==expected)return res.status(409).json({error:'Count does not match the proven set; nothing changed',...report});
+        const at=new Date().toISOString(),ids=new Set(report.ids);
+        const candidate={...fresh,revision:(fresh.revision||0)+1,records:fresh.records.map(r=>{if(!ids.has(r.id))return r;const {replyMessageId,replyReceivedAt,...rest}=r;return {...rest,status:'contact_research_hold',bounceHoldCleared:{at,why:'Held by the empty-recipient bug: no address, nothing sent, matched one mailer-daemon message',was:{status:r.status,replyMessageId,replyReceivedAt:replyReceivedAt||null}}};})};
+        if(Number(await redis.eval(CAS,[KEY],[String(fresh?.revision||0),JSON.stringify(candidate)]))===1)return res.status(200).json({restored:hits.length,...report});
+      }
+      return res.status(409).json({error:'The queue is busy; nothing changed. Try again.'});
+    }
     const callerAction=['call-outcome','suppress'].includes(body.action);
     if(!callerAction&&body.expectedRevision!==(state?.revision||0))return res.status(409).json({error:'Queue changed; reload before retrying'});
     if(callerAction) {
