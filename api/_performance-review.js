@@ -27,13 +27,29 @@ const ms = s => Date.parse(s);
 const norm = e => String(e || '').trim().toLowerCase();
 
 // ---- reading a note ---------------------------------------------------------------------------
-// Conservative on purpose: a phrase has to say it. A note that says nothing about who answered
-// leaves the outcome he chose standing.
-const STAFF = /\b(assistant|gatekeeper|gk|receptionist|front desk|secretary|office manager)\b/i;
+// Conservative on purpose: a phrase has to say it, and the logged outcome stands when the note is
+// unclear. Staffify sells assistants, so "assistant" alone means nothing: the note has to say staff
+// took the call. A voicemail greeting, a recording or "I hung up" is never a person answering.
+const ROLE = '(?:assistant|gatekeeper|gk|receptionist|front desk|secretary|office manager)';
+const STAFF_TOOK = new RegExp(
+    '\\b' + ROLE + '\\b[^.]{0,30}?\\b(?:answered|picked up|said|stated|took|told)\\b' +
+    '|\\b(?:message|msg) with (?:the |his |her |their |a )?' + ROLE + '\\b' +
+    '|\\b(?:spoke|talked) (?:to|with) (?:the |his |her |their |a )?' + ROLE + '\\b' +
+    "|\\b\\w+(?:'s|\u2019s) " + ROLE + '\\b', 'i');
+// Direct contact with the prospect, which outranks any mention of staff: "spoke with the owner",
+// "talked to Dan" (a capitalised name, not "someone"), "owner picked up". A name followed closely by
+// a staff role ("spoke with Kaya, the assistant") is not direct.
+const DIRECT_WORD = new RegExp('\\b(?:spoke|talked) (?:to|with) (?:the )?(?:owner|ceo|founder|president|principal|broker|him|her)\\b|\\b(?:owner|he|she) (?:picked up|answered)\\b', 'i');
+const DIRECT_NAME = new RegExp('\\b(?:[Ss]poke|[Tt]alked) (?:to|with) [A-Z][a-z]+\\b(?![^.]{0,25}\\b' + ROLE + '\\b)');
+const DIRECT = { test: s => DIRECT_WORD.test(s) || DIRECT_NAME.test(s) };
 // Somebody speaking about the prospect in the third person ("he's in Asia", "she's not in").
-const FOR_THEM = /\b(he|she)(?:'s|’s| is| was) (?:not in|out\b|out of|away|in asia|in europe|traveling|travelling|on vacation|unavailable|not available|with a client|on a shoot|in a meeting)/i;
+const FOR_THEM = /\b(he|she)(?:'s|\u2019s| is| was) (?:not in|out\b|out of|away|in asia|in europe|traveling|travelling|on vacation|unavailable|not available|with a client|on a shoot|in a meeting)/i;
 const HUNG_UP = /\bh(?:ung|ang|anged|angs)[\s-]?up\b/i;
+const I_HUNG = /\bI\s+h(?:ung|ang|anged)[\s-]?up\b/;
+const THEY_HUNG = /\b(?:he|she|they|prospect|owner|someone|guy|lady|man|woman)\s+h(?:ung|ang|anged|angs)[\s-]?up\b/i;
 const SPOKE = /\b(stated|said|spoke|talked|told (?:me|us)|mentioned)\b/i;
+// A machine, or nobody: voicemail, greetings, recordings, or a note that says no one was there.
+const MACHINE = /\b(vm|lvm|voicemail|voice mail|voice-mail|greeting|recording|recorded|mailbox|automated|answering machine)\b|\b(never|nobody|no one|didn'?t|did not)\b|\bsaid nothing\b/i;
 const BAD = /\b(wrong number|not in service|out of service|disconnected|no longer in service|invalid number|not a working number|fax (?:line|number|tone))\b/i;
 const NO_NUMBER = /\bno (?:phone |good |working )?number\b/i;
 const GENERAL_LINE = /\b(general (?:number|line)|business (?:number|line)|main (?:number|line)|company (?:number|line)|switchboard|phone tree|automated (?:line|system|menu)|press \d)\b/i;
@@ -46,13 +62,24 @@ const LIVE = new Set(Object.keys(HOW));
 export function reachedFrom(entry) {
     const o = entry && entry.outcome, note = String((entry && entry.notes) || '');
     if (!o || o === 'wrong_number') return null;
-    const staff = STAFF.test(note) || FOR_THEM.test(note);
-    const hung = HUNG_UP.test(note);
     const logged = OUTCOME_LABEL[o] || o;
-    if (staff) return { who: 'staff', how: 'Spoke to staff', logged, fromNote: true, mislogged: o === 'connected' || o === 'no_answer' || o === 'voicemail', reason: o === 'connected' || !LIVE.has(o) ? 'The note says staff answered.' : null };
-    if (hung) return { who: 'prospect', how: 'Hung up', logged, fromNote: true, mislogged: o === 'connected' || o === 'no_answer' || o === 'voicemail', reason: o === 'connected' || !LIVE.has(o) ? 'The note says they hung up.' : null };
-    if (LIVE.has(o)) return { who: 'prospect', how: HOW[o], logged, fromNote: false, mislogged: false, reason: null };
-    if (SPOKE.test(note)) return { who: 'someone', how: 'Someone answered', logged, fromNote: true, mislogged: true, reason: 'The note says someone answered.' };
+    const hung = HUNG_UP.test(note) && !I_HUNG.test(note);
+    if (LIVE.has(o)) {
+        // He chose an outcome that means a person answered. The note only says who it was.
+        const staff = !DIRECT.test(note) && (STAFF_TOOK.test(note) || FOR_THEM.test(note));
+        if (staff) return { who: 'staff', how: 'Spoke to staff', logged, fromNote: true, mislogged: o === 'connected', reason: o === 'connected' ? 'The note says staff answered.' : null };
+        if (hung) return { who: 'prospect', how: 'Hung up', logged, fromNote: true, mislogged: o === 'connected', reason: o === 'connected' ? 'The note says they hung up.' : null };
+        return { who: 'prospect', how: HOW[o], logged, fromNote: false, mislogged: false, reason: null };
+    }
+    // No answer or voicemail: only the note can say a person answered, and it has to say so plainly.
+    if (numberIssue(entry) === 'Wrong or dead number') return null;
+    const machine = MACHINE.test(note);
+    const someone = (who, how, reason) => ({ who, how, logged, fromNote: true, mislogged: true, reason });
+    if (STAFF_TOOK.test(note)) return someone('staff', 'Spoke to staff', 'The note says staff answered.');
+    if (!machine && FOR_THEM.test(note)) return someone('staff', 'Spoke to staff', 'The note says staff answered.');
+    if (hung && (!machine || THEY_HUNG.test(note))) return someone('prospect', 'Hung up', 'The note says they hung up.');
+    if (!machine && DIRECT.test(note)) return someone('prospect', 'Spoke to them', 'The note says they spoke to them.');
+    if (!machine && SPOKE.test(note)) return someone('someone', 'Someone answered', 'The note says someone answered.');
     return null;
 }
 
@@ -68,9 +95,10 @@ export function numberIssue(entry) {
     return null;
 }
 
-/** A note as shown: no dialable number in it, and short. */
+/** A note as shown: no dialable number in it, and short. Dates (10/27/2026) and money ($1,500) stay readable. */
+const PHONE_ANY = /(?<!\d)\+?\(?\d(?:[\s.()\-\u2013\u2014]{0,3}\d){6,14}(?!\d)/g;
 export function cleanNote(s) {
-    return String(s || '').replace(/(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g, '[number]').replace(/\s+/g, ' ').trim().slice(0, 240);
+    return String(s || '').replace(/\s+/g, ' ').replace(PHONE_ANY, '[number]').trim().slice(0, 240);
 }
 
 export const campaignName = id => (id && CAMPAIGN_NAMES[id] && CAMPAIGN_NAMES[id].name) || (id ? String(id) : 'No campaign');
@@ -120,7 +148,10 @@ export function leadSupply(records, emails) {
  * `src` is gatherRange's result; `records` (optional) is the decorated queue for leadSupply.
  */
 export function buildReview(src, { generatedAt = new Date().toISOString(), now = Date.parse(generatedAt), emails = [src.user.email] } = {}) {
-    const { hub, quo, calendly } = src;
+    const { hub, calendly } = src;
+    // A Quo read that stopped before the end of its pages could be missing any day in the span, so
+    // the whole review treats Quo as unread rather than showing a low count as if it were exact.
+    const quo = src.quo.ok && src.quo.complete === false ? { ...src.quo, ok: false, error: 'Quo had more calls in these dates than could be read' } : src.quo;
     const reports = src.days.map(day => buildReport({ user: src.user, day, generatedAt, range: dayRange(day), hub, quo, calendly, activity: src.activityByDay[day], shift: src.shiftByDay[day], now }));
     const quoOk = !!quo.ok, hubOk = !!hub.ok;
     const span = { from: dayRange(src.from).from, to: dayRange(src.to).to };
@@ -154,13 +185,14 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
             reached: hubOk ? reached.length : null, prospectsReached: hubOk ? reached.filter(x => x.reached.who === 'prospect').length : null, staffReached: hubOk ? reached.filter(x => x.reached.who === 'staff').length : null,
             meetings: r.meetings.booked,
             clockedMinutes: clocked, shiftMeasured: !!(r.shift && !r.shift.notMeasured && !r.shift.unavailable), shiftUnavailable: !r.shift || !!r.shift.unavailable,
-            activeMinutes: active, activityMeasured: !!(r.activity && !r.activity.notMeasured),
+            activeMinutes: active, activityMeasured: !!(r.activity && !r.activity.notMeasured), activityUnavailable: r.activity === null || r.activity === undefined,
             dialsPerClockedHour: clocked >= 30 && r.calls.verifiedAttempts !== null ? Math.round((r.calls.verifiedAttempts / (clocked / 60)) * 10) / 10 : null,
             firstDial: dayCalls.length ? dayCalls[0].at : null, lastDial: dayCalls.length ? dayCalls[dayCalls.length - 1].at : null,
             dialSpanMinutes: dayCalls.length > 1 ? Math.round((ms(dayCalls[dayCalls.length - 1].at) - ms(dayCalls[0].at)) / 60000) : null,
             dialsWithoutOutcome: r.calls.dialsWithoutOutcome, outcomesWithoutQuoCall: r.calls.outcomesWithoutQuoCall,
             mislogged: hubOk ? read.filter(x => x.day === r.day && x.reached && x.reached.mislogged).length : null,
-            quiet: r.noRecordedActivity || (!(r.calls.verifiedAttempts > 0) && !(r.calls.loggedOutcomes > 0) && !(clocked > 0) && !(active > 0)),
+            // Quiet only when every source was read and had nothing: an unread source keeps the row, so its unknowns show.
+            quiet: !(r.meetings.booked > 0) && (r.noRecordedActivity || (quoOk && hubOk && r.calls.verifiedAttempts === 0 && r.calls.loggedOutcomes === 0 && !!r.shift && !r.shift.unavailable && !!r.activity && !(clocked > 0) && !(active > 0))),
         };
     });
     const worked = rows.filter(r => !r.quiet);
@@ -180,8 +212,8 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
         staffReached: hubOk ? reachedAll.filter(x => x.reached.who === 'staff').length : null,
         someoneReached: hubOk ? reachedAll.filter(x => x.reached.who === 'someone').length : null,
         meetings: sum(rows, r => r.meetings),
-        clockedMinutes: rows.some(r => r.shiftMeasured) ? rows.reduce((n, r) => n + (r.clockedMinutes || 0), 0) : null,
-        activeMinutes: rows.some(r => r.activityMeasured) ? rows.reduce((n, r) => n + (r.activeMinutes || 0), 0) : null,
+        clockedMinutes: rows.some(r => !r.quiet && r.shiftUnavailable) ? null : rows.some(r => r.shiftMeasured) ? rows.reduce((n, r) => n + (r.clockedMinutes || 0), 0) : null,
+        activeMinutes: rows.some(r => !r.quiet && r.activityUnavailable) ? null : rows.some(r => r.activityMeasured) ? rows.reduce((n, r) => n + (r.activeMinutes || 0), 0) : null,
         dialsWithoutOutcome: sum(rows, r => r.dialsWithoutOutcome),
         outcomesWithoutQuoCall: sum(rows, r => r.outcomesWithoutQuoCall),
         mislogged: hubOk ? read.filter(x => x.reached && x.reached.mislogged).length : null,
@@ -189,7 +221,10 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
     const byOutcome = {}; for (const k of Object.keys(OUTCOME_LABEL)) byOutcome[k] = 0;
     for (const e of entries) byOutcome[e.outcome] = (byOutcome[e.outcome] || 0) + 1;
     totals.byOutcome = hubOk ? byOutcome : null;
-    totals.reachedPerDial = hubOk && quoOk ? rate(reachedAll.length, calls.length) : null;
+    // Of the Quo dials, how many reached a person. Only answers paired with a Quo dial count, so the
+    // rate can never pass 100%; answers on outcomes with no Quo call are counted beside it.
+    totals.reachedPerDial = hubOk && quoOk ? rate(reachedAll.filter(x => x.verified).length, calls.length) : null;
+    totals.reachedWithoutQuoCall = hubOk && quoOk ? reachedAll.filter(x => !x.verified).length : null;
 
     // Who answered, call by call.
     const reachedList = reachedAll.map(x => ({ at: x.when, day: x.day, company: x.e.company, campaign: campaignName(x.e.campaignId), who: x.reached.who, how: x.reached.how, logged: x.reached.logged, note: cleanNote(x.e.notes), fromNote: x.reached.fromNote, verified: x.verified }));
@@ -232,10 +267,14 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
 
     const coverage = [];
     const r0 = reports[0];
-    if (r0) coverage.push(...r0.coverage.filter(c => /Quo|Hub call log|Calendly/.test(c) && !/this day|that day/.test(c)));
-    coverage.push("People reached is read from the outcome he chose and the words in his notes. Quo marks a call answered when voicemail or a phone menu picks up, so Quo's answered count is not used for it.");
+    if (r0) coverage.push(...r0.coverage.filter(c => /Quo|Hub call log|Calendly/.test(c) && !/this day|that day/.test(c)).map(c => c.replace(/\bhe logged\b/g, 'this caller logged')));
+    if (src.quo.ok && src.quo.complete === false) coverage.push('Quo had more calls in these dates than could be read, so dials are unknown. Pick fewer days.');
+    coverage.push("Who answered is read from the outcome chosen and the words in the note. Quo marks a call answered when voicemail or a phone menu picks up, so Quo's answered count is not used for it.");
     coverage.push("Local times come from each number's area code, which is where the number was issued. A mobile number can travel.");
-    const notMeasuredShift = rows.filter(r => !r.quiet && !r.shiftMeasured).map(r => r.day);
+    const notMeasuredShift = rows.filter(r => !r.quiet && !r.shiftMeasured && !r.shiftUnavailable).map(r => r.day);
+    const shiftUnread = rows.filter(r => !r.quiet && r.shiftUnavailable).length, activityUnread = rows.filter(r => !r.quiet && r.activityUnavailable).length;
+    if (shiftUnread) coverage.push('Shift records could not be read on ' + shiftUnread + (shiftUnread === 1 ? ' day' : ' days') + ', so the shift total is unknown.');
+    if (activityUnread) coverage.push('Hub activity could not be read on ' + activityUnread + (activityUnread === 1 ? ' day' : ' days') + ', so the activity total is unknown.');
     if (notMeasuredShift.length) coverage.push('Shifts were not recorded on ' + notMeasuredShift.length + (notMeasuredShift.length === 1 ? ' day' : ' days') + ' with calls (declared shifts began Oct 24, 2026), so pace per clocked hour is blank there.');
     if (totals.meetings === null) coverage.push('Meetings are unknown for at least one day, because Calendly or the Hub log could not be read.');
 
@@ -251,13 +290,13 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
         numbers: { prospects: hubOk ? prospects.length : null, flagged: hubOk ? flagged.length : null, byIssue: Object.entries(byIssue).map(([issue, n]) => ({ issue, n })).sort((a, b) => b.n - a.n),
             list: flagged.map(p => ({ company: p.company, campaign: campaignName(p.campaignId), issues: [...p.issues], note: p.notes[0] || null })) },
         segments,
-        timing: { buckets, etHours, knownZone: read.filter(x => x.clock).length },
-        repeats: { prospects: prospects.length, distribution: dist, nextDay: rate(nextDay.length, retryable.length), mostCalled },
+        timing: { buckets: hubOk ? buckets : null, etHours, knownZone: hubOk ? read.filter(x => x.clock).length : null },
+        repeats: hubOk ? { prospects: prospects.length, distribution: dist, nextDay: rate(nextDay.length, retryable.length), mostCalled } : null,
         logging: { list: read.filter(x => x.reached && x.reached.mislogged).map(x => ({ at: x.when, company: x.e.company, logged: x.reached.logged, reason: x.reached.reason, note: cleanNote(x.e.notes) })) },
         supply: null,
         definitions: {
-            dials: 'Outbound calls placed through Quo by his own Quo user. The only calls counted as verified.',
-            outcomes: 'What he logged on each card in the Hub. Manual.',
+            dials: "Outbound calls placed through Quo by this caller's own Quo user. The only calls counted as verified.",
+            outcomes: 'What was logged on each card in the Hub. Manual.',
             reached: 'A logged Conversation, Callback agreed, Not now or Not interested, or a note saying a person answered, hung up, or that staff took the call.',
             numbers: 'A Wrong number outcome, or a note saying the number is dead, missing, a general business line, or would not connect.',
             local: "The prospect's clock when the call was made, from the dialled number's area code, or the card's number when no Quo call matched.",

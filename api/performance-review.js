@@ -35,13 +35,15 @@ export default async function handler(req, res, { deps } = {}) {
     if (to > today) return res.status(400).json({ error: 'That day has not started.' });
     if (daysBetween(from, to).length > MAX_DAYS) return res.status(400).json({ error: 'Pick ' + MAX_DAYS + ' days or fewer.' });
     const person = await getRep(target).catch(() => null);
-    if (!person) return res.status(404).json({ error: 'No Hub account for ' + target });
+    if (!person) return res.status(404).json({ error: 'No Hub account for ' + target + '.' });
     try {
         const now = Date.now();
         const src = await gatherRange({ redis, rep: person, from, to, now, decorate: decorator(redis), deps, keepRecords: true });
         const emails = loginAliases(String(person.email).toLowerCase());
         const review = buildReview(src, { generatedAt: new Date(now).toISOString(), now, emails });
-        review.supply = src.hub.ok && src.hub.records ? { asOf: src.hub.readAt, ...leadSupply(src.hub.records, emails) } : null;
+        // A CRM read that failed leaves CRM-only numbers out of the count, so the count is a floor; say so.
+        const crmIncomplete = !!(src.hub.records && src.hub.records.some(r => r.callContact && r.callContact.phoneStatus === 'unavailable'));
+        review.supply = src.hub.ok && src.hub.records ? { asOf: src.hub.readAt, crmIncomplete, ...leadSupply(src.hub.records, emails) } : null;
         return res.status(200).json({ review });
     } catch (e) {
         return res.status(503).json({ error: 'The review could not be built: ' + String((e && e.message) || e).slice(0, 160) });

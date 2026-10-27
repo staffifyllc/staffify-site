@@ -51,7 +51,9 @@ test('an owner opens Caller review: the tab switches, the URL remembers it, and 
     const text = dom.text(document.getElementById('review'));
     assert.match(text, /Milton Hodgson/);
     assert.match(text, /19\s*dials in Quo/); assert.match(text, /9\s*people answered\s*5 prospects, 4 staff/);
-    assert.match(text, /9 of 19 dials reached a person: 5 the prospect, 4 staff\./);
+    assert.match(text, /9 calls reached a person: 5 the prospect, 4 staff\. That is 9 of 19 Quo dials \(47\.4%\)\./);
+    assert.ok(!/\b(he|his)\b/i.test(text.replace(/He hang up|Her cell|She hung up|She stated[^.]*|he's in Asia|Hang up|hung up|his VM[^.]*|His VM[^.]*|Call him on|Nima's assistant, stated that she's not in/gi, '')), 'no he/his in the page copy; notes are his own words');
+    assert.equal(document.querySelector('.portal-skip'), null, 'no shell in this test');
     assert.match(text, /4 prospects of 13 had a number problem/);
     assert.match(text, /2 callable leads nobody has called/);
     assert.match(text, /Published on their own website/); assert.match(text, /CRM number, not found on their website/);

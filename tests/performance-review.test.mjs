@@ -20,7 +20,17 @@ test('who answered is read from the outcome he chose and the words of his note, 
     assert.equal(r('suppress').how, 'Not interested'); assert.equal(r('connected').how, 'Conversation');
     for (const [o, n] of [['no_answer', 'His VM is " Hello this is Dakoda, can you hear me?'], ['voicemail', 'Too late to call'], ['voicemail', 'LVM'], ['voicemail', 'They never answer'], ['no_answer', 'Texted them after the call.'], ['no_answer', 'The VM is not set up'], ['no_answer', 'I think that he block us'], ['wrong_number', 'he hung up'], ['voicemail', '']])
         assert.equal(r(o, n), null, o + ': ' + n);
-    assert.equal(r('no_answer', 'Spoke to the owner briefly').who, 'someone');
+    assert.equal(r('no_answer', 'Spoke to the owner briefly').who, 'prospect');
+    assert.equal(r('no_answer', 'Talked to someone there, they said call back').who, 'someone');
+});
+
+test('the review cases: assistants as a product, voicemail greetings, and "I hung up" are never a person answering', () => {
+    // Staffify sells assistants, so the word alone says nothing about who picked up.
+    for (const [o, n] of [['connected', 'Owner picked up, already has a VA (virtual assistant) from Philippines'], ['connected', 'Talked to owner, wants info on executive assistant pricing'], ['timing', 'Not interested, has an office manager who handles that'], ['callback', "Spoke with Dan, he's traveling until the 3rd"], ['connected', 'Talked with Mike. He is in a meeting now but interested'], ['connected', "Spoke with owner; owner's assistant handles scheduling"]])
+        assert.deepEqual([r(o, n).who, r(o, n).mislogged], ['prospect', false], n);
+    for (const [o, n] of [['no_answer', 'Recording said the number is not in service'], ['voicemail', 'VM said mailbox is full'], ['voicemail', 'LVM, mentioned the email'], ['no_answer', 'Rang out, said nothing'], ['no_answer', 'Never spoke to anyone, left VM'], ['no_answer', 'Nobody picked up, I hung up after 8 rings'], ['no_answer', 'Hung up before VM'], ['voicemail', 'Voicemail greeting said she is on vacation']])
+        assert.equal(r(o, n), null, n);
+    assert.equal(r('no_answer', 'Spoke with the receptionist, owner out').who, 'staff');
 });
 
 test('number problems come from the Wrong number outcome or a note that says so', () => {
@@ -36,6 +46,8 @@ test('number problems come from the Wrong number outcome or a note that says so'
 
 test('a note never shows a dialable number', () => {
     assert.equal(cleanNote('Call him on 612-555-0199 or (612) 555 0198, ext 12'), 'Call him on [number] or [number], ext 12');
+    for (const n of ['Cell 612  555  0199', '612 - 555 - 0199', '612\u2013555\u20130199', '612. 555. 0199', 'call 555-0199', '+44 20 7946 0958']) assert.ok(!/\d{3}/.test(cleanNote(n).replace('[number]', '')), n + ' -> ' + cleanNote(n));
+    assert.equal(cleanNote('Call 10/27/2026 at 2:30, budget $1,500'), 'Call 10/27/2026 at 2:30, budget $1,500', 'dates and money stay readable');
     assert.equal(cleanNote('x'.repeat(400)).length, 240);
 });
 
@@ -52,7 +64,7 @@ test('the review adds up: days, who answered, numbers, local time, repeats, pace
     const t = v.totals;
     assert.equal(t.dials, 19); assert.equal(t.outcomes, 17); assert.equal(t.prospects, 13);
     assert.deepEqual([t.reached, t.prospectsReached, t.staffReached, t.someoneReached], [9, 5, 4, 0]);
-    assert.deepEqual([t.reachedPerDial.num, t.reachedPerDial.den], [9, 19]);
+    assert.deepEqual([t.reachedPerDial.num, t.reachedPerDial.den], [9, 19]); assert.equal(t.reachedWithoutQuoCall, 0);
     assert.equal(t.meetings, 0); assert.equal(t.mislogged, 6);
     assert.equal(t.dialsWithoutOutcome, 2, 'the two dials on Oct 26 with nothing logged'); assert.equal(t.outcomesWithoutQuoCall, 0);
     assert.equal(t.clockedMinutes, 240); assert.equal(t.activeMinutes, 123);
@@ -88,6 +100,25 @@ test('a source that could not be read is unknown, never zero', () => {
     assert.equal(noCal.totals.meetings, null); assert.ok(noCal.coverage.some(c => /Meetings are unknown/.test(c)));
     const noHub = buildReview(source({ hubOk: false }), { generatedAt: GENERATED });
     assert.deepEqual([noHub.totals.outcomes, noHub.totals.reached, noHub.numbers.flagged, noHub.totals.mislogged], [null, null, null, null]);
+    assert.equal(noHub.timing.buckets, null); assert.equal(noHub.repeats, null); assert.ok(noHub.timing.etHours.length > 0, 'the Eastern hours come from Quo and stay');
+    const both = buildReview(source({ quoOk: false, hubOk: false }), { generatedAt: GENERATED });
+    assert.equal(both.quietDays.length, 0, 'a day whose sources could not be read is never called quiet');
+    const cut = source(); cut.quo.complete = false;
+    const truncated = buildReview(cut, { generatedAt: GENERATED });
+    assert.equal(truncated.totals.dials, null, 'a Quo read that stopped early is unknown, never a low count'); assert.ok(truncated.coverage.some(c => /more calls in these dates than could be read/.test(c)));
+});
+
+test('an unreadable shift or activity day keeps its row and makes the total unknown; a booking day is never quiet', () => {
+    const s1 = source(); s1.shiftByDay['2026-10-26'] = { unavailable: true }; s1.activityByDay['2026-10-26'] = null;
+    const v = buildReview(s1, { generatedAt: GENERATED });
+    const d = v.days.find(x => x.day === '2026-10-26');
+    assert.deepEqual([d.shiftUnavailable, d.activityUnavailable], [true, true]);
+    assert.deepEqual([v.totals.clockedMinutes, v.totals.activeMinutes], [null, null]);
+    assert.ok(v.coverage.some(c => /Shift records could not be read on 1 day/.test(c)) && v.coverage.some(c => /Hub activity could not be read on 1 day/.test(c)));
+    const s2 = source(); s2.calendly.bookings = [{ email: 'r4@example.com', createdAt: '2026-10-24T15:00:00.000Z', startTime: '2026-10-29T15:00:00.000Z', eventName: 'Discovery call' }];
+    const v2 = buildReview(s2, { generatedAt: GENERATED });
+    assert.ok(v2.days.some(x => x.day === '2026-10-24' && x.meetings === 1), 'Saturday keeps its row because a meeting was booked');
+    assert.equal(v2.totals.meetings, 1);
 });
 
 test('leads still to call: callable, never dialled, unclaimed; and his own follow-ups that are due', () => {

@@ -42,6 +42,9 @@ function show(tab, remember) {
         if (b) { b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; b.classList.toggle('on', on); }
         if (p) p.hidden = !on;
     }
+    // The shell's "Skip to content" link points at the panel that is showing.
+    const skip = document.querySelector('.portal-skip'), shown = TABS.find(t => t.id === tab);
+    if (skip && shown) skip.setAttribute('href', '#' + shown.panel);
     if (remember) {
         const u = new URL(location.href);
         if (tab === 'today') u.searchParams.delete('tab'); else u.searchParams.set('tab', tab);
@@ -69,8 +72,9 @@ async function start() {
     if (!r || r.status === 401 || !r.ok) { box.replaceChildren(el('p', { class: 'pr-empty', text: r && r.status === 401 ? 'Sign in to your Staffify account to see the caller review.' : 'Your sign-in could not be checked just now. Refresh to try again.' })); return; }
     const me = ((await r.json().catch(() => ({}))) || {}).rep || null;
     state.me = me; state.owner = !!me && (me.role === 'admin' || !!me.financeAccess);
+    let peopleFailed = false;
     if (state.owner) {
-        try { const p = await fetch('/api/daily-report/?people=1', { cache: 'no-store' }); if (p.ok) state.people = ((await p.json()) || {}).people || []; } catch { state.people = []; }
+        try { const p = await fetch('/api/daily-report/?people=1', { cache: 'no-store' }); if (p.ok) state.people = ((await p.json()) || {}).people || []; else peopleFailed = true; } catch { peopleFailed = true; }
     }
     const q = new URLSearchParams(location.search);
     const today = etToday();
@@ -78,7 +82,7 @@ async function start() {
     state.to = isDay(q.get('to')) && q.get('to') <= today ? q.get('to') : today;
     state.from = isDay(q.get('from')) && q.get('from') <= state.to ? q.get('from') : shiftDay(state.to, -13);
     box.replaceChildren(controls(), el('div', { id: 'pr-out' }));
-    if (!state.user) { $('pr-out').replaceChildren(el('p', { class: 'pr-empty', text: 'Nobody has a caller review yet. A review appears for anyone with the caller role.' })); return; }
+    if (!state.user) { $('pr-out').replaceChildren(el('p', { class: 'pr-empty', text: peopleFailed ? 'The list of callers could not be read. Refresh to try again.' : 'Nobody has a caller review yet. A review appears for anyone with the caller role.' })); return; }
     load();
 }
 
@@ -98,7 +102,7 @@ function controls() {
 }
 
 async function load() {
-    const out = $('pr-out'); if (!out) return;
+    const out = $('pr-out'); if (!out || !state.user) return;
     const seq = ++state.seq;
     if (state.from > state.to) { out.replaceChildren(el('p', { class: 'pr-empty', text: 'The start date is after the end date.' })); return; }
     setUrl();
@@ -109,7 +113,7 @@ async function load() {
     if (seq !== state.seq) return;          // a newer choice is already loading
     if (!res) { out.replaceChildren(el('p', { class: 'pr-empty', text: 'The review could not be reached. Refresh to try again. Nothing here is a zero.' })); return; }
     if (res.status === 401) { out.replaceChildren(el('p', { class: 'pr-empty', text: 'Sign in to your Staffify account to see the caller review.' })); return; }
-    if (!res.ok || !body || !body.review) { out.replaceChildren(el('p', { class: 'pr-empty', text: ((body && body.error) || 'The review could not be built.') + ' Nothing here is a zero.' })); return; }
+    if (!res.ok || !body || !body.review) { const msg = (body && body.error) || 'The review could not be built.'; out.replaceChildren(el('p', { class: 'pr-empty', text: msg + (/[.!?]$/.test(msg) ? '' : '.') + ' Nothing here is a zero.' })); return; }
     out.replaceChildren(...render(body.review));
 }
 
@@ -122,6 +126,7 @@ function table(head, rows, { foot, cls } = {}) {
         el('tbody', null, rows.map(r => el('tr', null, r.map(c => el('td', null, c === null || c === undefined ? 'unknown' : c))))),
         foot ? el('tfoot', null, el('tr', null, foot.map(c => el('td', null, c === null || c === undefined ? 'unknown' : c)))) : null));
 }
+const activityText = d => (d.activityUnavailable ? 'unknown' : d.activityMeasured ? mins(d.activeMinutes) : 'not measured');
 const shiftText = d => (d.shiftMeasured ? (d.clockedMinutes ? mins(d.clockedMinutes) : 'none declared') : d.shiftUnavailable ? 'unknown' : 'not recorded');
 const tile = (n, label, sub) => el('div', { class: 'pr-tile' }, el('b', { text: n }), el('span', { text: label }), sub ? el('em', { text: sub }) : null);
 
@@ -133,7 +138,7 @@ export function render(v) {
         el('b', { text: (v.user && v.user.name) || '' }), ' · ' + range + ' (Eastern) · built ' + clockET(v.generatedAt) + (v.partial ? ' · today is still in progress' : ''),
         el('br'), 'Quo: ' + v.sources.quo + ' · Hub call log: ' + v.sources.hubLog + ' · Calendly: ' + v.sources.calendly));
 
-    const reachedSub = t.reached === null ? null : plural(t.prospectsReached, 'prospect', 'prospects') + ', ' + t.staffReached + ' staff' + (t.someoneReached ? ', ' + t.someoneReached + ' unclear' : '') + (pct(t.reachedPerDial) ? ' · ' + pct(t.reachedPerDial) + ' of dials' : '');
+    const reachedSub = t.reached === null ? null : plural(t.prospectsReached, 'prospect', 'prospects') + ', ' + t.staffReached + ' staff' + (t.someoneReached ? ', ' + t.someoneReached + ' unclear' : '') + (pct(t.reachedPerDial) ? ' · ' + pct(t.reachedPerDial) + ' of Quo dials' : '');
     parts.push(el('div', { class: 'pr-tiles' },
         tile(num(t.dials), 'dials in Quo', t.numbers === null ? null : 'to ' + plural(t.numbers, 'number', 'numbers') + ' over ' + plural(t.daysWorked, 'day', 'days')),
         tile(num(t.outcomes), 'outcomes logged', t.prospects === null ? null : 'on ' + plural(t.prospects, 'prospect', 'prospects')),
@@ -145,59 +150,62 @@ export function render(v) {
     const days = v.days || [];
     parts.push(section('Day by day',
         days.length ? table(['Day', 'Dials', 'Logged', 'Answered', 'Meetings', 'Talk', 'Shift', 'Hub active'],
-            days.map(d => [dayLabel(d.day) + (d.partial ? ' (so far)' : ''), num(d.dials), num(d.outcomes), num(d.reached), num(d.meetings), talk(d.talkSeconds), shiftText(d), d.activityMeasured ? mins(d.activeMinutes) : 'not measured']),
-            { foot: ['Total', num(t.dials), num(t.outcomes), num(t.reached), num(t.meetings), talk(t.talkSeconds), t.clockedMinutes === null ? 'not recorded' : mins(t.clockedMinutes), t.activeMinutes === null ? 'not measured' : mins(t.activeMinutes)] })
+            days.map(d => [dayLabel(d.day) + (d.partial ? ' (so far)' : ''), num(d.dials), num(d.outcomes), num(d.reached), num(d.meetings), talk(d.talkSeconds), shiftText(d), activityText(d)]),
+            { foot: ['Total', num(t.dials), num(t.outcomes), num(t.reached), num(t.meetings), talk(t.talkSeconds), t.clockedMinutes === null ? (days.some(d => d.shiftUnavailable) ? 'unknown' : 'not recorded') : mins(t.clockedMinutes), t.activeMinutes === null ? (days.some(d => d.activityUnavailable) ? 'unknown' : 'not measured') : mins(t.activeMinutes)] })
             : el('p', { class: 'pr-empty', text: 'No calls, outcomes, shift or Hub activity in these dates.' }),
         (v.quietDays || []).length ? el('p', { class: 'pr-small', text: 'No calls, outcomes or shift on ' + v.quietDays.map(d => dayLabel(d)).join(', ') + '.' }) : null));
 
     // Who answered
     const list = (v.reached && v.reached.list) || [];
     parts.push(section('Who answered',
-        lede(t.reached === null ? 'Unknown: the Hub call log could not be read.' : (t.dials ? t.reached + ' of ' + plural(t.dials, 'dial', 'dials') : plural(t.reached, 'call', 'calls')) + ' reached a person: ' + t.prospectsReached + ' the prospect, ' + t.staffReached + ' staff' + (t.someoneReached ? ', ' + t.someoneReached + ' unclear' : '') + '.'),
-        list.length ? table(['When', 'Company', 'What happened', 'Logged as', 'His note'], list.map(x => [whenET(x.at), x.company || '', (x.who === 'staff' ? 'Staff: ' : x.who === 'someone' ? 'Unclear: ' : 'Prospect: ') + x.how, x.logged, x.note || ''])) : null,
+        lede(t.reached === null ? 'Unknown: the Hub call log could not be read.' : plural(t.reached, 'call', 'calls') + ' reached a person: ' + t.prospectsReached + ' the prospect, ' + t.staffReached + ' staff' + (t.someoneReached ? ', ' + t.someoneReached + ' unclear' : '') + '.'
+            + (t.reachedPerDial && t.reachedPerDial.den ? ' That is ' + t.reachedPerDial.num + ' of ' + plural(t.reachedPerDial.den, 'Quo dial', 'Quo dials') + (pct(t.reachedPerDial) ? ' (' + pct(t.reachedPerDial) + ')' : '') + '.' : '')
+            + (t.reachedWithoutQuoCall ? ' ' + plural(t.reachedWithoutQuoCall, 'was', 'were').replace(/^(\d+) /, '$1 of them ') + ' logged with no matching Quo call.' : '')),
+        list.length ? table(['When', 'Company', 'What happened', 'Logged as', 'Note'], list.map(x => [whenET(x.at), x.company || '', (x.who === 'staff' ? 'Staff: ' : x.who === 'someone' ? 'Unclear: ' : 'Prospect: ') + x.how, x.logged, x.note || ''])) : null,
         el('p', { class: 'pr-small', text: "Quo counts a call as answered when voicemail or a phone menu picks up, so that count is not used here." })));
 
     // Numbers
     const n = v.numbers || {};
     parts.push(section('Are the numbers bad?',
-        lede(n.flagged === null || n.flagged === undefined ? 'Unknown: the Hub call log could not be read.' : plural(n.flagged, 'prospect', 'prospects') + ' of ' + n.prospects + ' had a number problem in his outcomes or notes.' + ((n.byIssue || []).length ? ' ' + n.byIssue.map(i => i.issue + ': ' + i.n).join(' · ') + '.' : '')),
+        lede(n.flagged === null || n.flagged === undefined ? 'Unknown: the Hub call log could not be read.' : plural(n.flagged, 'prospect', 'prospects') + ' of ' + n.prospects + ' had a number problem in the logged outcomes or notes.' + ((n.byIssue || []).length ? ' ' + n.byIssue.map(i => i.issue + ': ' + i.n).join(' · ') + '.' : '')),
         (v.segments || []).length ? table(['Campaign', 'Prospects', 'Logged', 'Answered', 'Voicemail', 'No answer', 'Number problems'], v.segments.map(s => [s.name, num(s.prospects), num(s.outcomes), num(s.reached), num(s.voicemail), num(s.noAnswer), num(s.flagged)])) : null,
-        (n.list || []).length ? el('details', { class: 'pr-more' }, el('summary', { text: 'The ' + plural(n.list.length, 'prospect', 'prospects') + ' with a number problem' }), table(['Company', 'Campaign', 'Problem', 'His note'], n.list.map(x => [x.company || '', x.campaign, x.issues.join(', '), x.note || '']))) : null));
+        (n.list || []).length ? el('details', { class: 'pr-more' }, el('summary', { text: 'The ' + plural(n.list.length, 'prospect', 'prospects') + ' with a number problem' }), table(['Company', 'Campaign', 'Problem', 'Note'], n.list.map(x => [x.company || '', x.campaign, x.issues.join(', '), x.note || '']))) : null));
 
     // Supply
     const s = v.supply;
     parts.push(section('Leads ready to call, right now',
-        !s ? lede('Unknown: the call queue could not be read.') : lede(plural(s.neverDialled, 'callable lead nobody has called', 'callable leads nobody has called') + '. ' + plural(s.hisFollowUpsDue, 'of his own follow-ups is', 'of his own follow-ups are') + ' due.'),
+        !s ? lede('Unknown: the call queue could not be read.') : lede((s.crmIncomplete ? 'At least ' : '') + plural(s.neverDialled, 'callable lead nobody has called', 'callable leads nobody has called') + '. ' + plural(s.hisFollowUpsDue, "of this caller's own follow-ups is", "of this caller's own follow-ups are") + ' due.'),
+        s && s.crmIncomplete ? el('p', { class: 'pr-small', text: 'The CRM could not be read just now, so leads whose only number is in the CRM are missing from this count.' }) : null,
         s && s.bySource.length ? table(['Where the number came from', 'Leads'], s.bySource.map(x => [x.label, num(x.n)])) : null,
         s && s.byCampaign.length > 1 ? table(['Campaign', 'Leads'], s.byCampaign.map(x => [x.name, num(x.n)])) : null));
 
     // When
-    const tm = v.timing || { buckets: [], etHours: [] };
+    const tm = v.timing || { buckets: null, etHours: [] };
     const maxH = Math.max(1, ...tm.etHours.map(h => h.dials));
     const bar = (n) => { const b = el('span', { class: 'pr-bar' }); b.style.width = Math.round((n / maxH) * 100) + '%'; return el('span', { class: 'pr-barwrap' }, b, el('span', { class: 'pr-barn', text: String(n) })); };
-    parts.push(section('When he calls',
-        lede("Each logged call at the prospect's own clock, from the number's area code."),
-        table(["Prospect's local time", 'Calls logged', 'Answered'], tm.buckets.filter(b => b.outcomes || b.key !== 'unknown').map(b => [b.label, num(b.outcomes), num(b.reached)])),
+    parts.push(section('When the calls were made',
+        tm.buckets ? lede("Each logged call at the prospect's own clock, from the number's area code.") : lede('Unknown: the Hub call log could not be read, so local times are unknown.'),
+        tm.buckets ? table(["Prospect's local time", 'Calls logged', 'Answered'], tm.buckets.filter(b => b.outcomes || b.key !== 'unknown').map(b => [b.label, num(b.outcomes), num(b.reached)])) : null,
         tm.etHours.length ? el('div', { class: 'pr-sub' }, el('h3', { text: 'Dials by hour, Eastern' }), table(['Hour', 'Dials'], tm.etHours.map(h => [h.label.replace(' Eastern', ''), bar(h.dials)]), { cls: 'pr-hours' })) : null));
 
     // Repeats
-    const rp = v.repeats || { distribution: [], mostCalled: [] };
+    const rp = v.repeats;
     parts.push(section('Calling the same people again',
-        lede(rp.nextDay && rp.nextDay.den ? rp.nextDay.num + ' of ' + rp.nextDay.den + ' no answer and voicemail outcomes were set to call again within 36 hours' + (pct(rp.nextDay) ? ' (' + pct(rp.nextDay) + ')' : '') + '.' : 'No no-answer or voicemail outcomes with a next call time.'),
-        table(['Times he called them in these dates', 'Prospects'], rp.distribution.map(d => [d.label, num(d.prospects)])),
-        rp.mostCalled.length ? el('details', { class: 'pr-more' }, el('summary', { text: 'Prospects called more than once' }), table(['Company', 'Calls', 'Outcomes', 'Answered'], rp.mostCalled.map(p => [p.company || '', num(p.attempts), p.outcomes.join(', '), p.reached ? 'yes' : 'no']))) : null));
+        !rp ? lede('Unknown: the Hub call log could not be read.') : lede(rp.nextDay && rp.nextDay.den ? rp.nextDay.num + ' of ' + rp.nextDay.den + ' no answer and voicemail outcomes were set to call again within 36 hours' + (pct(rp.nextDay) ? ' (' + pct(rp.nextDay) + ')' : '') + '.' : 'No no-answer or voicemail outcomes with a next call time.'),
+        rp ? table(['Times called in these dates', 'Prospects'], rp.distribution.map(d => [d.label, num(d.prospects)])) : null,
+        rp && rp.mostCalled.length ? el('details', { class: 'pr-more' }, el('summary', { text: 'Prospects called more than once' }), table(['Company', 'Calls', 'Outcomes', 'Answered'], rp.mostCalled.map(p => [p.company || '', num(p.attempts), p.outcomes.join(', '), p.reached ? 'yes' : 'no']))) : null));
 
     // Pace
     parts.push(section('Pace',
         days.length ? table(['Day', 'Shift', 'Dials', 'Dials per shift hour', 'First to last dial', 'Hub active'],
-            days.map(d => [dayLabel(d.day), shiftText(d), num(d.dials), d.dialsPerClockedHour === null ? 'n/a' : String(d.dialsPerClockedHour), d.firstDial ? clockET(d.firstDial) + ' to ' + clockET(d.lastDial) + (d.dialSpanMinutes !== null ? ' (' + mins(d.dialSpanMinutes) + ')' : '') : 'no dials', d.activityMeasured ? mins(d.activeMinutes) : 'not measured'])) : null,
-        el('p', { class: 'pr-small', text: 'Shift is what he declared in the Hub. Hub active is an estimate of minutes with the Hub in use. Neither is payroll; Hubstaff is the source for paid hours.' })));
+            days.map(d => [dayLabel(d.day), shiftText(d), num(d.dials), d.dialsPerClockedHour === null ? 'n/a' : String(d.dialsPerClockedHour), d.dials === null ? 'unknown' : d.firstDial ? clockET(d.firstDial) + ' to ' + clockET(d.lastDial) + (d.dialSpanMinutes !== null ? ' (' + mins(d.dialSpanMinutes) + ')' : '') : 'no dials', activityText(d)])) : null,
+        el('p', { class: 'pr-small', text: 'Shift is what was declared in the Hub. Hub active is an estimate of minutes with the Hub in use. Neither is payroll; Hubstaff is the source for paid hours.' })));
 
     // Logging
     const lg = (v.logging && v.logging.list) || [];
     parts.push(section('Logging',
         lede(t.dialsWithoutOutcome === null ? 'Unknown: Quo or the Hub call log could not be read.' : plural(t.dialsWithoutOutcome, 'dial has', 'dials have') + ' no outcome logged. ' + plural(t.outcomesWithoutQuoCall, 'outcome has', 'outcomes have') + ' no matching Quo call. ' + plural(t.mislogged || 0, 'outcome disagrees with its note', 'outcomes disagree with their notes') + '.'),
-        lg.length ? table(['When', 'Company', 'Logged as', 'His note', 'Mismatch'], lg.map(x => [whenET(x.at), x.company || '', x.logged, x.note || '', x.reason || ''])) : null));
+        lg.length ? table(['When', 'Company', 'Logged as', 'Note', 'Mismatch'], lg.map(x => [whenET(x.at), x.company || '', x.logged, x.note || '', x.reason || ''])) : null));
 
     const defs = v.definitions || {};
     parts.push(el('details', { class: 'pr-more pr-defs' }, el('summary', { text: 'How each figure is counted' }),

@@ -17,6 +17,8 @@ test('a split area code is settled by the exchange where the data has one, and u
     assert.equal(zoneForNumber('2709990000'), 'America/New_York', 'the rest of 270 falls back to the area code');
     assert.equal(zoneForNumber('4232650000'), 'America/New_York', '423-265 is Chattanooga, Eastern');
     assert.equal(zoneForNumber('6055550100'), null, '605 spans Central and Mountain: unknown, never guessed');
+    assert.equal(zoneForNumber('6895551234'), 'America/New_York', '689 overlays Orlando; the source data says Central');
+    for (const n of ['4485551234', '3645551234', '9305551234']) assert.equal(zoneForNumber(n), null, n + ' overlays a split area code');
 });
 
 test('anything that is not a ten-digit North American number has no zone', () => {

@@ -51,6 +51,12 @@ const AMBIGUOUS = "2082 20830 20831 208320 208325 208328 208329 208330 208332 20
 const PREFIX = new Map();
 BY_ZONE.forEach((list, i) => { for (const p of list.split(' ')) if (p) PREFIX.set(p, ZONES[i]); });
 for (const p of AMBIGUOUS.split(' ')) if (p) PREFIX.set(p, null);
+// Corrections to the source data, each checked by hand:
+//   689  overlays Orlando's 407 and 321 (Eastern); the source maps it to Central.
+//   448, 364, 930  overlay split area codes (850, 270, 812) whose exchanges decide the zone; an
+//   overlay has no exchange list, so a number there is unknown rather than guessed.
+const CORRECTIONS = { '689': 'America/New_York', '448': null, '364': null, '930': null };
+for (const [p, z] of Object.entries(CORRECTIONS)) PREFIX.set(p, z);
 const LONGEST = Math.max(...[...PREFIX.keys()].map(p => p.length));
 
 /** The IANA zone for a 10-digit North American number, or null when it is unknown or split. */
