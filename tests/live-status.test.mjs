@@ -72,3 +72,11 @@ test('the review round: a prompted gap is listed even when Hub minutes ran past 
     const late = quietDay({ day: DAY, minutes: [], calls: [], shiftList: [{ startedAt: iso('23:00'), endedAt: null, state: 'open', breaks: [] }], events: [], now: Date.parse('2026-10-28T03:00:00-04:00'), until: Date.parse('2026-10-28T00:00:00-04:00') });
     assert.equal(late.onShiftMinutes, 60, 'after midnight belongs to the next day, which this day did not read');
 });
+
+test('a prompt answered in the same minute it appeared is still listed', () => {
+    // Hub minutes to 10:04 (heartbeats run past the 10:00 click); prompt 10:10:20; answered 10:10:35, which records minute 10:10.
+    const minutes = [...Array.from({ length: 5 }, (_, i) => mOf('10:00') + i), mOf('10:10')];
+    const events = [{ at: new Date(et('10:10') + 20000).toISOString(), kind: 'idle_prompt' }, { at: new Date(et('10:10') + 35000).toISOString(), kind: 'idle_prompt_on_call' }];
+    const d = quietDay({ day: DAY, minutes, calls: [], shiftList: [{ startedAt: iso('10:00'), endedAt: iso('10:11'), state: 'closed', breaks: [] }], events, now: et('12:00') });
+    assert.deepEqual(d.stretches.map(s => [s.from, s.to, s.prompted, s.answer]), [[iso('10:05'), iso('10:10'), true, 'Said they were on a call']]);
+});

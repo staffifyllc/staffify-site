@@ -83,7 +83,7 @@ async function liveSessions(filterEmail) {
  * left open polling does not hammer it. A Quo read that fails says so; quiet is then unknown, never a figure.
  */
 async function quoToday(email, day) {
-    const key = 'staffify:live-quo:' + email;
+    const key = 'staffify:live-quo:' + email + ':' + day;
     const held = await redis.get(key).catch(() => null);
     if (held && held.day === day && Date.now() - Date.parse(held.readAt) < 60000) return held;
     let out;
@@ -109,17 +109,18 @@ async function liveFor(person, now) {
     const email = norm(person.email), day = dayOf(now);
     const current = await liveCurrent(redis, email).catch(() => undefined);
     // A shift started before midnight Eastern: its first day's minutes and calls count too.
-    const earlier = current && current.day && current.day < day ? current.day : null;
+    // Not for a forgotten (stale) shift: its status is "Shift left open" whatever the earlier day says.
+    const earlier = current && current.day && current.day < day && stateOf(current, now) !== 'stale' ? current.day : null;
     const [minutes, raw, shift, q, minutesBefore, qBefore] = await Promise.all([
         redis.smembers(K.minutes(email, day)).catch(() => null),
         redis.lrange(K.events(email, day), 0, 499).catch(() => null),
         shiftsOn(redis, email, day, now, current).catch(() => null),
         quoToday(email, day),
-        earlier ? redis.smembers(K.minutes(email, earlier)).catch(() => []) : [],
+        earlier ? redis.smembers(K.minutes(email, earlier)).catch(() => null) : [],
         earlier ? quoToday(email, earlier) : { quo: 'read', calls: [] },
     ]);
     const events = (raw || []).map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean);
-    const unreadable = current === undefined || minutes === null || raw === null || shift === null;
+    const unreadable = current === undefined || minutes === null || raw === null || shift === null || (!!earlier && minutesBefore === null);
     const sig = [...signals({ day, minutes: minutes || [], calls: q.calls, now }), ...(earlier ? signals({ day: earlier, minutes: minutesBefore || [], calls: qBefore.calls, now }) : [])].sort((a, b) => a[0] - b[0]);
     const state = current === undefined ? 'unknown' : stateOf(current, now);
     const quoRead = q.quo === 'read' && (!earlier || qBefore.quo === 'read');
@@ -130,7 +131,7 @@ async function liveFor(person, now) {
     const hubMinutes = (minutes || []).map(Number).filter(Number.isFinite);
     const lastCall = q.calls.map(c => c.at).filter(Boolean).sort().slice(-1)[0] || null;
     const lastEvent = events.filter(e => e.kind && !e.kind.startsWith('idle_prompt') && e.kind !== 'leave').map(e => e.at).sort().slice(-1)[0] || null;
-    const hubRead = minutes !== null && raw !== null;
+    const hubRead = minutes !== null && raw !== null && !(earlier && minutesBefore === null);
     return {
         email, name: person.name || email, status, hubRead,
         lastHubAt: !hubRead ? null : hubMinutes.length ? new Date(Math.max(...hubMinutes.map(m => signals({ day, minutes: [m] })[0][1]))).toISOString() : lastEvent,

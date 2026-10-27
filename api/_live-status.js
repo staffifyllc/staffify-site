@@ -73,7 +73,8 @@ export function quietStretches({ windows, signals: sig, events = [], now = Date.
         let cursor = ws;
         // A gap holding a prompt is listed whatever its measured length: the prompt saw 10 quiet
         // minutes, while the Hub's minutes run up to five minutes past the last click.
-        const prompted = (from, to) => prompts.some(p => p.kind === 'idle_prompt' && p.at >= from && p.at <= to);
+        // `to` is the top of the minute that ended the gap, so a prompt inside that minute belongs to it.
+        const prompted = (from, to) => prompts.some(p => p.kind === 'idle_prompt' && p.at >= from && p.at <= to + MIN);
         for (const [a, b] of (sig || []).filter(([a, b]) => b > ws && a < we)) {
             if (a - cursor >= minMs || (a > cursor && prompted(cursor, a))) out.push(gap(cursor, a, false));
             cursor = Math.max(cursor, b);
