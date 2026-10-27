@@ -5,8 +5,11 @@ import {ownerFor} from './_outreach-queue.js';
 import {CONFIG,SCOPES,config,clientId,clientSecret,seal,gmail,access} from './_outreach-gmail.js';
 const callback=SITE+'/api/outreach-connect/?action=callback';
 export default async function handler(req,res){res.setHeader('Cache-Control','private, no-store');try{
- const who=await requireAccess(req),owner=ownerFor(who);if(!owner)return res.status(401).json({error:'Sign in to the Sales Hub'});
- const cfg=await config();const action=req.query?.action||'status';
+ const who=await requireAccess(req),owner=ownerFor(who);const action=req.query?.action||'status';
+ // A caller connecting their OWN mailbox (api/rep-email.js) comes back through this callback too.
+ // They own no outreach mailbox, so ownerFor() is null; the one-time state below proves who started it.
+ if(!owner&&!(action==='callback'&&who&&who.email&&who.email!=='admin'))return res.status(401).json({error:'Sign in to the Sales Hub'});
+ const cfg=await config();
  if(action==='health'){
   if(owner!=='all')return res.status(403).json({error:'Administrator required'});
   const selected=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
@@ -16,10 +19,13 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
  }
  if(action==='callback'){
   const state=await redis.getdel('outreach:oauth-state:'+String(req.query.state||''));if(!state||state.rep!==who.email)return res.status(400).json({error:'Expired authorization; start again'});
-  const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({code:String(req.query.code||''),client_id:clientId(),client_secret:clientSecret(),redirect_uri:callback,grant_type:'authorization_code'}),signal:AbortSignal.timeout(15000)});if(!r.ok)return res.status(400).json({error:'Google authorization failed'});
-  const tok=await r.json();const profile=await gmail(tok.access_token,'profile');if(profile.emailAddress.toLowerCase()!==state.email)return res.status(400).json({error:'Wrong Google account selected'});
-  if(!tok.refresh_token||!(state.readOnly?[SCOPES[0]]:SCOPES).every(s=>(tok.scope||'').split(' ').includes(s)))return res.status(400).json({error:'Both requested Gmail permissions and offline access are required'});
-  await redis.set('outreach:oauth:'+state.email,seal({refresh_token:tok.refresh_token,connectedAt:new Date().toISOString()}));res.writeHead(302,{Location:state.readOnly?'/website-leads/':'/outreach-review/'});return res.end();
+  // A caller is sent back to the page they connected from, with the reason if it did not work.
+  const back=/^\/(?!\/)/.test(String(state.returnTo||''))?state.returnTo:null;
+  const fail=msg=>{if(!back)return res.status(400).json({error:msg});res.writeHead(302,{Location:back+(back.includes('?')?'&':'?')+'gmail='+encodeURIComponent(msg)});return res.end();};
+  const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({code:String(req.query.code||''),client_id:clientId(),client_secret:clientSecret(),redirect_uri:callback,grant_type:'authorization_code'}),signal:AbortSignal.timeout(15000)});if(!r.ok)return fail('Google authorization failed');
+  const tok=await r.json();const profile=await gmail(tok.access_token,'profile');if(profile.emailAddress.toLowerCase()!==state.email)return fail('Wrong Google account selected. Choose '+state.email+'.');
+  if(!tok.refresh_token||!(state.readOnly?[SCOPES[0]]:SCOPES).every(s=>(tok.scope||'').split(' ').includes(s)))return fail('Both requested Gmail permissions and offline access are required');
+  await redis.set('outreach:oauth:'+state.email,seal({refresh_token:tok.refresh_token,connectedAt:new Date().toISOString()}));res.writeHead(302,{Location:back?back+(back.includes('?')?'&':'?')+'gmail=connected':state.readOnly?'/website-leads/':'/outreach-review/'});return res.end();
  }
  if(action==='start-website-reply'){
   const rep=await currentRep(req);if(!rep||!['all','Paul'].includes(owner))return res.status(403).json({error:'Paul must sign in to connect his reply inbox'});

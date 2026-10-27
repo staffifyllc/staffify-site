@@ -194,3 +194,45 @@ body .dw-hear:hover{background:#eaf3ff}
 
 /* The shift gate on a card: the number's place, with the press that opens it. */
 .dw-shiftgate{display:block;margin:0 0 10px}.dw-shiftgate .btn{margin-top:10px}
+
+/* ---- email them: the composer ------------------------------------------------------------ */
+/* Over the card, like the idle prompt. Wide enough for the 400px signature banner; one column on
+   a phone, with the card scrolling inside the screen rather than the page. */
+body .dw-mail{position:fixed;inset:0;z-index:440;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px;background:#1d1d1f59;overflow:auto}
+body .dw-mail-card{width:min(700px,100%);background:#fff;color:#1d1d1f;border-radius:18px;padding:22px 24px 18px;box-shadow:0 24px 60px #0000004d;display:grid;gap:10px}
+body .dw-mail-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+body .dw-mail-head h2{font-size:20px;font-weight:650;letter-spacing:-.3px;margin:0;min-width:0;overflow-wrap:anywhere}
+body .dw-mail-meta{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:0;font-size:13.5px}
+body .dw-mail-meta dt{color:#6e6e73;font-weight:600}
+body .dw-mail-meta dd{margin:0;overflow-wrap:anywhere}
+body .dw-mail-label{display:block;font-size:11.5px;font-weight:650;letter-spacing:1.1px;text-transform:uppercase;color:#6e6e73;margin-top:6px}
+body .dw-mail-tpls{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+body .dw-mail .dw-tpl{min-height:34px;padding:6px 13px;font-size:13px;border-radius:999px}
+body .dw-mail input#mail-subject,body .dw-mail textarea#mail-body{width:100%;font:inherit;font-size:14.5px;line-height:1.5;border:1px solid #d2d2d7;border-radius:10px;padding:10px 12px;background:#fff;color:#1d1d1f}
+body .dw-mail textarea#mail-body{min-height:220px;resize:vertical}
+body .dw-mail input#mail-subject:focus-visible,body .dw-mail textarea#mail-body:focus-visible{outline:2px solid #0071e3;outline-offset:1px}
+body .dw-mail-sig iframe{display:block;width:100%;height:250px;border:1px solid #e5e5ea;border-radius:10px;background:#fff;margin-top:6px}
+body .dw-mail-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
+body .dw-mail-alt{font-size:13px;margin-left:auto}
+body .dw-mail .dw-due{margin:0}
+@media(max-width:600px){body .dw-mail{padding:12px}body .dw-mail-card{padding:18px 16px 14px}body .dw-mail-alt{margin-left:0}}
+
+/* ---- search, on the bar ------------------------------------------------------------------ */
+body .dw-search{position:relative;flex:1 1 260px;max-width:440px;min-width:220px}
+body .dw-search input#dw-search{width:100%;min-height:38px;padding:8px 12px;font:inherit;font-size:14px;border:1px solid #d2d2d7;border-radius:10px;background:#fff;color:#1d1d1f}
+body .dw-search input#dw-search:focus-visible{outline:2px solid #0071e3;outline-offset:1px}
+body .dw-results{position:absolute;top:44px;left:0;right:0;z-index:45;background:#fff;border:1px solid #e5e5ea;border-radius:14px;box-shadow:0 18px 40px rgba(29,29,31,.14);padding:6px;display:grid;gap:2px;max-height:min(420px,70vh);overflow:auto}
+body .dw-results[hidden]{display:none}
+body .dw-hit{display:grid;gap:2px;text-align:left;width:100%;padding:9px 10px;border:0;border-radius:10px;background:transparent;color:#1d1d1f;font:inherit;cursor:pointer;min-height:0}
+body .dw-hit:hover,body .dw-hit:focus-visible{background:#f2f6fb;outline:none}
+body .dw-hit b{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+body .dw-hit-sub{font-size:12.5px;color:#6e6e73;overflow-wrap:anywhere}
+body .dw-hit-note{font-size:12.5px;color:#845400}
+body .dw-noresult{margin:0;padding:10px;font-size:13px;color:#6e6e73}
+/* Below the three-pane width the bar is crowded: search takes its own full-width row under it. */
+@media(max-width:1239px){body .dw-bar{flex-wrap:wrap}body .dw-search{flex-basis:100%;max-width:none;min-width:0;order:10}}
+body .dw-mail-review{padding:12px 14px;border-radius:12px;background:#eef7ee;border:1px solid #cfe5cf;color:#1f4d1f;font-size:13.5px;line-height:1.5}
+body .dw-mail-review[hidden]{display:none}
+body .dw-mail-review ul{margin:6px 0 6px 18px;padding:0}
+body .dw-mail-review p{margin:4px 0 0}
+body .dw-mail-problem{color:#8a1c1c;font-weight:600}

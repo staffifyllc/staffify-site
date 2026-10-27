@@ -60,17 +60,40 @@ const reasonFor = company => "Hey, real quick, I don't make calls like this all 
 const CLOSE = "Would it be worth half an hour to map out what that role actually looks like? No pitch, I genuinely just want to see whether it's a fit.";
 
 const SCRIPTS = {
-    // Media agency owners. This is the only place QC, revisions and turnaround belong.
+    // Real estate media agency owners. This is the only place QC, editing and shoots belong.
+    // Paul, 2026-10-27, after listening to Milton's calls, gave the opening in his own words:
+    // "hey this is milton with staffify how are you? (wait) good, the reason for my call is that we
+    // work with a lot of real estate media agency owners helping them bring video editing costs
+    // down, helping with customer service issues, my founder actually owns his own real estate
+    // media agency too. You mind me asking if you have in covered?" Earlier the same day: "its worth
+    // mentioning EARLY our team was founded by a real estate media company, Flylisted", and "Using
+    // BUZZWORDS like do you have anyone helping you with QC in the morning? What about client issues
+    // while you are out shooting". So: his greeting, a pause for their answer, his reason with
+    // Flylisted named, and his two lines as the first questions. Every line is short enough to say
+    // without reading it twice.
     [CAMPAIGN_ID]: {
-        audience: 'media agency owner',
+        audience: 'real estate media owner',
+        opener: caller => `Hey {first}, this is ${caller} with Staffify. How are you?`,
+        openChoices: [['They answered (good, fine)', 'reason'], ["Who is this? / What's this about?", 'context'], ['Bad time', 'busy'], ['Not interested', 'stop'], ['Wrong person', 'gate']],
+        // Paul, 2026-10-27: "we should say, I apolgoize for calling you out of nowhere but we reached
+        // out a few times". True of everyone on this list: the queue only holds people sent four emails.
+        reason: () => "Good. I apologize for calling you out of nowhere, but we reached out a few times. "
+            + "The reason for my call is that we work with a lot of real estate media agency owners, helping them bring "
+            + 'video editing costs down and helping with customer service issues. My founder actually owns his own real estate media '
+            + 'agency too, Flylisted. Do you mind me asking if you have that covered?',
+        reasonNote: 'Wait for their answer to "how are you" before this. Then say it once and stop talking.',
+        reasonChoices: [["Not really / it's me", 'discover'], ['We have it covered', 'elsewhere'], ['They pushed back', 'busy']],
+        context: them => `Sure. We work with a lot of real estate media agency owners, helping them bring video editing costs down and helping with customer service issues. My founder owns his own real estate media agency too, Flylisted. I'm not selling you anything on this call. I just wanted to find out whether any of that is a problem at ${them}.`,
+        voicemail: (caller, company) => `Hi, it's ${caller} at Staffify. We work with real estate media agency owners on video editing `
+            + `costs and customer service. My founder owns his own real estate media agency too, Flylisted. We sent you a few notes `
+            + `by email about ${company}. If it's useful, replying to that email is the easiest way to reach me. Thanks.`,
         questions: [
-            "If you don't mind me asking, do you still get pulled into the QC and revisions side of things, or have you got that off your plate by now?",
-            // Paul, 2026-10-20: the pain point worth asking a media owner. It works whether or not
-            // they are still doing QC themselves, which is why it sits after the opening probe
-            // rather than competing with it, and it asks for a number rather than a feeling.
-            "And when a client comes back with a problem, a reshoot or a correction, how long does it usually take you to get that resolved?",
-            "And when a heavy week hits, what's the first thing to slip? Is it the editing turnaround, the client follow-up, or the scheduling?",
-            'If you could hand one of those off on Monday and genuinely stop thinking about it, which one would you pick?',
+            "Quick question. Do you have anyone helping you with QC in the morning, or is that still on you?",
+            // Paul, 2026-10-20: ask for a number, not a feeling. Paul, 2026-10-27: frame it as the
+            // client issue that lands while they are out shooting.
+            "And what about client issues while you're out shooting? When an agent needs a fix or a reshoot, how long does it usually take to sort out?",
+            "When a heavy week hits, what slips first? The editing, getting back to agents, or the scheduling?",
+            'If you could hand one of those off on Monday, which one would it be?',
             CLOSE,
         ],
     },
@@ -144,7 +167,7 @@ const voicemail = (caller, company) =>
 // buttons are what THEY just said, so a caller always has the next move in front of them
 // instead of improvising. Terminal nodes name the outcome to log, which is why `log` only ever
 // uses the six dispositions the card actually accepts.
-function callTree(q, company) {
+function callTree(q, company, script = {}) {
     const them = company || 'your business';
     // Indexing q[1] and q[3] by hand broke the moment the media script gained a fifth question:
     // the close node started asking "which would you hand off" instead of asking for the meeting.
@@ -157,11 +180,11 @@ function callTree(q, company) {
     const resolve = q.length >= 5 ? middle[0] : null;
     const bottleneck = resolve ? middle[1] : middle[0];
     return {
-        open: { choices: [['Go ahead', 'reason'], ["What's this about?", 'context'], ['Bad time', 'busy'], ['Not interested', 'stop'], ['Wrong person', 'gate']] },
+        open: { choices: script.openChoices || [['Go ahead', 'reason'], ["What's this about?", 'context'], ['Bad time', 'busy'], ['Not interested', 'stop'], ['Wrong person', 'gate']] },
         // Said before the first question, every time. One beat, then straight into discovery.
-        reason: { say: reasonFor(company), note: 'Say it once and stop talking. The question after this is what the call is for.', choices: [['Keep going', 'discover'], ['They pushed back', 'busy']] },
+        reason: { say: (script.reason || reasonFor)(company), note: script.reasonNote || 'Say it once and stop talking. The question after this is what the call is for.', choices: script.reasonChoices || [['Keep going', 'discover'], ['They pushed back', 'busy']] },
         context: {
-            say: `Fair enough. We place dedicated remote team members with owners like you, people who sit on the editing queue, the client follow-up, the scheduling. I'm not selling you anything on this call. I just wanted to find out whether any of that is actually a problem at ${them}.`,
+            say: script.context ? script.context(them) : `Fair enough. We place dedicated remote team members with owners like you, people who sit on the editing queue, the client follow-up, the scheduling. I'm not selling you anything on this call. I just wanted to find out whether any of that is actually a problem at ${them}.`,
             choices: [['Go ahead', 'reason'], ['Not interested', 'stop']],
         },
         discover: { say: open, choices: [["Yes, that's me", resolve ? 'resolve' : 'dig'], ["No, that's handled", 'elsewhere'], ["It's just me / too small", 'solo']] },
@@ -250,13 +273,13 @@ export function callScript({ campaignId, caller, callerEmail, company, firstName
         audience: pick.audience,
         ...(sector ? { sector: { key: sector.key, label: sector.label, source: sector.source } } : {}),
         ...(igBranch ? { instagramBranch: igBranch } : {}),
-        opener: opener(caller, who).replace('{first}', firstName || 'there'),
+        opener: (pick.opener || opener)(caller, who).replace('{first}', firstName || 'there'),
         questions: pick.questions,
         stages: (STAGE_LABELS[pick.questions.length] || STAGE_LABELS[4]).map((label, i) => ({ label, say: pick.questions[i] })).filter(s => s.say),
         objections: OBJECTIONS.map(([label, say, note]) => ({ label, say, note })),
-        voicemail: voicemail(caller, who),
-        reason: reasonFor(who),
+        voicemail: (pick.voicemail || voicemail)(caller, who),
+        reason: (pick.reason || reasonFor)(who),
         bookingUrl: bookingLinkFor(callerEmail),
-        tree: callTree(pick.questions, company),
+        tree: callTree(pick.questions, company, pick),
     };
 }

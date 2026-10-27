@@ -13,7 +13,7 @@ import {emailCompose} from './dialer-email.js';
 // The API contracts are unchanged: /api/outreach-queue/?view=calls for the queue (now carrying the
 // caller's tasks), /api/outreach-call-brief/ for one card, POST call-outcome / suppress / task-add /
 // task-done to save. Nothing here invents a number, a date or a claim.
-import {orderCallQueue,queueMix} from './call-queue-order.js';
+import {orderCallQueue,queueMix,searchRecords} from './call-queue-order.js';
 import {OUTCOMES,NEEDS_TIME,outcome as outcomeOf,quickPicks,defaultNext,toLocalInput,fmtWhen,localTime,followUps,followUpCount,timeline,lastTouch,shortcut,SHORTCUTS,numberTrust} from './dialer-model.js';
 
 const app=document.getElementById('app');
@@ -22,6 +22,7 @@ const PIN=app.dataset.campaign||null;                      // /spearhead/ pins i
 let selectedCampaign=PIN||params.get('campaign')||'all';
 let selectedOwner=params.get('owner')||'all', selectedIndustry=params.get('industry')||'all', research=false, search='';
 let state=null, current=null, brief=null, requestId=0, busy=false, drawerOpen=false, quoToday=null, whoPane=null;
+let searchText='';                                         // the search bar's text, kept across bar redraws
 const skipped=new Set(), dialled=new Set();
 const session={started:Date.now(),saved:{},texts:0,tasks:0};
 
@@ -67,6 +68,43 @@ function stash(){if(!current)return;const notes=document.getElementById('call-no
 const PINNED={'staffify-tobit-outreach':{eyebrow:'Spearhead accounts',h1:'CEO outreach'}};
 const NAMES={'all':'All campaigns','staffify-agency-outreach':'Staffify agency outreach','staffify-tobit-outreach':'CEO b2b outreach','staffify-talent-network-outreach':'Talent network outreach'};
 function myFollowUps(){return followUps({records:state?.records||[],tasks:state?.tasks||[],me:state?.viewer||'',now:Date.now()});}
+// ---- search ---------------------------------------------------------------------------------
+// Milton, 2026-10-27: "I dont have a search bar to find that lead", and Paul: "it also needs a
+// searchbar". Always on the bar, results as you type, across every prospect this rep can see
+// (callbacks not yet due, people already called, any campaign). Picking one opens their card.
+const fmtPhone=p=>{const d=String(p||'').replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');return d.length===10?'('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6):'';};
+function hitStatus(r){
+ const last=(r.callHistory||[]).slice(-1)[0];
+ if(!last)return 'Not called yet';
+ const next=['callback','timing'].includes(r.callOutcome)&&r.nextCallAt?' · next call '+fmtWhen(r.nextCallAt):'';
+ return (LOGLABEL[last.outcome]||last.outcome)+' '+new Date(last.at).toLocaleDateString([],{month:'short',day:'numeric'})+next+(r.callOwner&&!r.mine?' · '+String(r.callOwner).split('@')[0]:'');
+}
+function openFound(row){
+ if(current&&current.id!==row.id&&!leaveOk())return;
+ if(row.campaignId&&!PIN&&selectedCampaign!=='all'&&selectedCampaign!==row.campaignId){selectedCampaign='all';syncUrl();}
+ searchText='';skipped.delete(row.id);saveSkips();show(row);
+}
+function searchBox(){
+ const box=el('div',null,'dw-search');
+ const q=el('input');q.id='dw-search';q.type='search';q.autocomplete='off';q.spellcheck=false;q.value=searchText;
+ q.placeholder='Search company, name, email, phone or notes';q.setAttribute('aria-label','Search all prospects');q.title='Press / to search';
+ const out=el('div',null,'dw-results');out.setAttribute('role','listbox');out.setAttribute('aria-label','Search results');
+ const draw=()=>{
+  out.replaceChildren();const text=searchText.trim();if(text.length<2){out.hidden=true;return;}
+  const hits=searchRecords(state&&state.records||[],text);out.hidden=false;
+  if(!hits.length){out.append(el('p','No prospect matches "'+text+'".','dw-noresult'));return;}
+  for(const h of hits){const r=h.record;
+   const hit=button(null,()=>openFound(r),'dw-hit');hit.setAttribute('role','option');
+   hit.append(el('b',r.company||r.recipient),el('span',[r.recipient,fmtPhone((r.callContact&&r.callContact.phone)||r.phone)].filter(Boolean).join(' · '),'dw-hit-sub'),el('span',hitStatus(r),'dw-hit-sub'));
+   if(h.note)hit.append(el('span','Note: '+h.note.slice(0,120),'dw-hit-note'));
+   out.append(hit);}
+ };
+ q.oninput=()=>{searchText=q.value;draw();};
+ q.onkeydown=e=>{if(e.key==='Enter'){const first=out.querySelector('.dw-hit');if(first){e.preventDefault();first.click();}}else if(e.key==='Escape'){e.preventDefault();searchText='';q.value='';draw();q.blur();}};
+ box.append(q,out);draw();
+ return box;
+}
+
 function bar(){
  const list=rows(),index=list.findIndex(r=>r.id===current?.id),pin=PINNED[selectedCampaign];
  const b=el('div',null,'dw-bar');
@@ -80,7 +118,7 @@ function bar(){
  // nobody has called, and people who did not pick up, who wait at the back.
  if(!research&&list.length){const m=queueMix(list),parts=[];if(m.callback)parts.push(m.callback+(m.callback===1?' callback due':' callbacks due'));if(m.later)parts.push(m.later+' "not now" due');parts.push(m.new+' new');if(m.retry)parts.push(m.retry+' to try again');pos.append(el('small',parts.join(' · '),'dw-mix'));}
  title.append(pos);
- b.append(title);
+ b.append(title,searchBox());
  // Options: campaign, owner, search, the research tab, refresh. Behind one control so the bar
  // stays a bar.
  const opt=el('details',null,'dw-options');opt.append(el('summary','Queue options'));
@@ -90,10 +128,9 @@ function bar(){
  // Industries present in this view, from the same classifier the Campaigns page uses.
  const inds=new Map();for(const r of state?.records||[])if(r.industry&&r.industry.key&&(selectedCampaign==='all'||r.campaignId===selectedCampaign))inds.set(r.industry.key,r.industry.label||r.industry.key);
  const indSel=el('select');indSel.setAttribute('aria-label','Industry');const allInd=el('option','All industries');allInd.value='all';indSel.append(allInd);for(const [k,l] of [...inds.entries()].sort((a,b)=>a[1].localeCompare(b[1]))){const o=el('option',l);o.value=k;indSel.append(o);}if(selectedIndustry!=='all'&&!inds.has(selectedIndustry)){const o=el('option',selectedIndustry);o.value=selectedIndustry;indSel.append(o);}indSel.value=selectedIndustry;indSel.onchange=()=>{stash();selectedIndustry=indSel.value;syncUrl();current=null;showNext();};
- const find=el('input');find.placeholder='Find company, email or number';find.setAttribute('aria-label','Find prospect');find.value=search;find.onchange=()=>{stash();search=find.value;showNext();};
  const tabs=el('div',null,'dw-nav');for(const [label,value] of [['Ready to call',false],['Number research',true]]){const t=button(label,()=>{stash();research=value;skipped.clear();current=null;showNext();},'btn'+(research===value?' active':''));t.setAttribute('aria-pressed',String(research===value));tabs.append(t);}
  const w=state&&state.numberWork;const held=[];if(w?.findingNumber)held.push(w.findingNumber+' having a number found automatically');if(w?.noNumberPossible)held.push(w.noNumberPossible+' where no number could be found');
- body.append(ownerSel,indSel,find,tabs,button('Refresh queue',()=>refresh().catch(fail),'btn btn-ghost'));
+ body.append(ownerSel,indSel,tabs,button('Refresh queue',()=>refresh().catch(fail),'btn btn-ghost'));
  if(skipped.size)body.append(button(skipped.size+' skipped today · show them again',()=>{skipped.clear();saveSkips();showNext();},'btn btn-ghost'));
  if(held.length)body.append(el('p','Held out of this queue: '+held.join(' · ')+'. Nobody is handed a card without a number.','dw-held'));
  body.append(el('p','Order: callbacks that are due, then "not now" that has come due, then leads nobody has called (numbers from their own website first), then people who did not pick up, fewest tries first.','dw-held'));
@@ -129,15 +166,20 @@ function move(offset){if(busy)return;if(!leaveOk())return;const list=rows(),inde
 // ---- loading and the empty state ----------------------------------------------------------
 function fail(e){app.replaceChildren(bar(),el('div',e.message,'dw-pane dw-loading'),button('Retry',()=>refresh().catch(fail)));}
 const OPEN=params.get('open')||null;let opened=false;
+// Back from connecting Gmail (api/outreach-connect.js adds ?gmail=connected, or the reason it failed).
+const GMAIL=params.get('gmail')||null;
+function backFromGoogle(row){try{const u=new URL(location.href);u.searchParams.delete('gmail');history.replaceState(null,'',u);}catch{}
+ toast(GMAIL==='connected'?'Gmail connected. Your email is ready to send.':'Gmail was not connected: '+GMAIL,GMAIL!=='connected');
+ if(current&&current.id===row.id)openMail(row,brief||{});}
 async function refresh(){stash();state=await api('/api/outreach-queue/?view=calls');loadSkips();
  // A deep link from My Day or the follow-ups list opens that card first, filters or not.
- if(OPEN&&!opened){opened=true;const want=(state.records||[]).find(r=>r.id===OPEN);if(want){skipped.delete(want.id);saveSkips();return show(want);}toast('That prospect is not in the call view right now.',true);}
+ if(OPEN&&!opened){opened=true;const want=(state.records||[]).find(r=>r.id===OPEN);if(want){skipped.delete(want.id);saveSkips();await show(want);if(GMAIL)backFromGoogle(want);return;}toast('That prospect is not in the call view right now.',true);}
  const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
 async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id));if(row)return show(row);current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
 
 // ---- one prospect -------------------------------------------------------------------------
 async function show(row){
- stash();current=row;brief=null;remember(row.id);const version=++requestId;
+ closeMail();stash();current=row;brief=null;remember(row.id);const version=++requestId;
  app.classList.add('dw-wrap');app.classList.remove('call-workspace');
  const grid=el('div',null,'dw-grid');
  const who=el('section',null,'dw-pane dw-who'),talk=el('section',null,'dw-pane dw-talk'),log=el('section',null,'dw-pane dw-log'),hist=el('section',null,'dw-pane dw-hist');
@@ -214,15 +256,11 @@ function renderWho(pane,row,b){
  if(site)links.append(link('Website',/^https?:\/\//.test(site)?site:'https://'+site));
  if(p.crmUrl)links.append(link('CRM contact',p.crmUrl));
  links.append(link('Email thread','https://mail.google.com/mail/u/?authuser='+encodeURIComponent(row.sender)+(row.threadId?'#all/'+encodeURIComponent(row.threadId):'#search/'+encodeURIComponent(row.recipient))));
- // Gmail selects the authenticated rep's account, not the original sequence sender.
- const compose=emailCompose(state?.viewer,row.recipient);
- if(compose){
-  const email=link('Email them',compose.url,'btn');
-  email.id='email-them';email.setAttribute('aria-label','Email '+compose.to+' from '+compose.from);
-  pane.append(email,el('p','From '+compose.from+' · To '+compose.to,'dw-small'),el('p','Opens Gmail for you to review and send. Sign in to this account if prompted.','dw-small'));
- }else{
-  const email=button('Email them',()=>{});email.disabled=true;
-  pane.append(email,el('p','A valid prospect email and signed-in rep email are needed.','dw-small'));
+ // Written and sent here, from the rep's own mailbox with their signature (openMail below).
+ if(row.recipient){
+  const email=button('Email them',()=>openMail(row,b||{}),'btn');
+  email.id='email-them';email.setAttribute('aria-label','Email '+row.recipient);
+  pane.append(email,el('p','To '+row.recipient+' · sent from your own Gmail with your signature','dw-small'));
  }
  pane.append(links);
  if(!b)return;
@@ -285,6 +323,105 @@ function textButton(row,p){
  return btn;
 }
 const TEXT_REASON={opted_out:'this number replied STOP.',already_texted:'this number was already texted once; we never text twice.',no_company:'no company on the record.',no_valid_number:'that is not a textable number.',rate_limited:'the hourly cap is reached.',no_rep_name:'your name is not on your Hub profile.',not_configured:'texting is not configured on the server.',unsupportable_claim:'the message made a claim we cannot back.'};
+
+// ---- email them -----------------------------------------------------------------------------
+// Paul, 2026-10-27: "milton needs to be able to send emails from here, they should be made with
+// his signature" and "we should have some premade message templates 1) should be thanks for your
+// time -> book a meeting". The server owns the mailbox, the signature, the templates and every
+// check (api/rep-email.js); this draws the composer. Nothing is sent without the Send button.
+let mailBox=null;
+const mailDraftKey=id=>'staffify-mail-draft:'+id;
+function readMailDraft(id){try{return JSON.parse(sessionStorage.getItem(mailDraftKey(id))||'null');}catch{return null;}}
+function keepMailDraft(id,d){try{sessionStorage.setItem(mailDraftKey(id),JSON.stringify(d));}catch{}}
+function dropMailDraft(id){try{sessionStorage.removeItem(mailDraftKey(id));}catch{}}
+function newNonce(){try{return crypto.randomUUID();}catch{return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);}}
+function closeMail(){if(mailBox){mailBox.remove();mailBox=null;}}
+async function openMail(row,p,{reconnect=false}={}){
+ closeMail();
+ const box=el('div',null,'dw-mail');box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-labelledby','mail-title');
+ const card=el('div',null,'dw-mail-card');box.append(card);
+ box.addEventListener('click',e=>{if(e.target===box)closeMail();});
+ mailBox=box;document.body.append(box);
+ card.append(el('p','Loading your mailbox…','dw-small'));
+ let info;try{info=await api('/api/rep-email/?email='+encodeURIComponent(row.recipient));}catch(e){info={error:e.message};}
+ if(mailBox!==box)return;   // closed, or another card opened, while it loaded
+ card.replaceChildren();
+ const who=(p.name&&p.name!==row.recipient?firstName(p.name):'')||firstName(row.verifiedFirstName)||(p.identity&&p.identity.askFor?firstName(p.identity.askFor):'');
+ const company=p.company||row.company||'';
+ const head=el('div',null,'dw-mail-head');const h=el('h2','Email '+(who||company||row.recipient));h.id='mail-title';
+ head.append(h,button('Close',closeMail,'btn btn-ghost'));card.append(head);
+ const gmail=emailCompose(state&&state.viewer,row.recipient);
+ const gmailLink=()=>gmail?link('Open in Gmail instead',gmail.url,'dw-mail-alt'):null;
+ if(info.error||!info.mailbox){card.append(el('p',info.error?'Your mailbox could not be loaded ('+info.error+'). Nothing was sent.':info.reason,'dw-due dw-alert'));const g=gmailLink();if(g)card.append(g);return;}
+ const meta=el('dl',null,'dw-mail-meta');
+ for(const [k,v] of [['From',info.name+' <'+info.mailbox+'>'],['To',row.recipient]])meta.append(el('dt',k),el('dd',v));
+ card.append(meta);
+ if(info.history&&info.history.length){const last=info.history[0];card.append(el('p','Already emailed '+new Date(last.at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' by '+last.by+': “'+last.subject+'”','dw-due dw-info'));}
+ const subject=el('input');subject.id='mail-subject';subject.type='text';subject.maxLength=150;subject.autocomplete='off';subject.placeholder='Subject';
+ const body=el('textarea');body.id='mail-body';body.rows=11;body.maxLength=5000;
+ const save=()=>keepMailDraft(row.id,{subject:subject.value,body:body.value});
+ subject.oninput=save;body.oninput=save;
+ // A template fills the real words in, so what is on screen is exactly what goes.
+ const fill=t=>{const v={first:who||'there',company:company||'your business',me:info.me||'',link:t.link||''};const put=x=>String(x).replace(/\{(first|company|me|link)\}/g,(m,k)=>v[k]);subject.value=put(t.subject);body.value=put(t.body);save();};
+ const picks=el('div',null,'dw-mail-picks');picks.append(el('span','Start from a template','dw-mail-label'));
+ const tpls=el('div',null,'dw-mail-tpls');
+ for(const t of info.templates||[])tpls.append(button(t.label,()=>{if((subject.value.trim()||body.value.trim().length>(who.length+5))&&!window.confirm('Replace what you have written with this template?'))return;fill(t);body.focus();},'btn btn-ghost dw-tpl'));
+ picks.append(tpls);card.append(picks);
+ const lab=(text,input)=>{const l=el('label',text,'dw-mail-label');l.htmlFor=input.id;return l;};
+ card.append(lab('Subject',subject),subject,lab('Message',body),body);
+ const draft=readMailDraft(row.id);
+ if(draft&&(draft.subject||draft.body)){subject.value=draft.subject||'';body.value=draft.body||'';}
+ else body.value='Hi '+(who||'there')+',\n\n';
+ // The signature exactly as it is added: the server's HTML, in a sandbox, nothing able to run.
+ const sig=el('div',null,'dw-mail-sig');sig.append(el('span','Your signature goes under the message','dw-mail-label'));
+ const frame=document.createElement('iframe');frame.title='Your email signature';frame.setAttribute('sandbox','');frame.srcdoc='<!doctype html><meta charset="utf-8"><body style="margin:10px;background:#fff">'+(info.signatureHtml||'')+'</body>';
+ sig.append(frame);card.append(sig);
+ const acts=el('div',null,'dw-actions dw-mail-acts');
+ const review=el('div',null,'dw-mail-review');review.hidden=true;   // what the cleanup changed
+ if(!info.connected||reconnect){
+  const back=location.pathname+'?open='+encodeURIComponent(row.id);
+  const c=link('Connect Gmail to send',info.connectUrl+'&back='+encodeURIComponent(back),'btn dw-primary');c.target='_self';c.removeAttribute('rel');c.id='mail-connect';
+  acts.append(c);
+  card.append(el('p','One time only. Google asks you to let the Hub send as '+info.mailbox+'. What you have written here is kept while you connect.','dw-small'));
+ }else{
+  let nonce=newNonce(),reviewed=null;
+  // Paul, 2026-10-27: "it should always take an ai pass at it and clean up any issues". Send runs
+  // the cleanup first. If it changed anything, the cleaned text replaces the draft with a list of
+  // what changed, and the next press sends it. If nothing needed changing, it sends straight away.
+  const send=button('Send email',async()=>{
+   if(send.disabled)return;
+   const s=subject.value.trim(),m=body.value.replace(/\r\n/g,'\n').trim();
+   if(!s){toast('Add a subject.',true);subject.focus();return;}
+   if(m.replace(/^hi\b[^,\n]*,?/i,'').trim().length<2){toast('Write the message first.',true);body.focus();return;}
+   send.disabled=true;
+   if(!reviewed||reviewed.subject!==s||reviewed.body!==m){
+    send.textContent='Checking…';
+    let c;try{c=await api('/api/rep-email/',{action:'clean',email:row.recipient,subject:s,body:m});}catch(e){c=e.payload||{reason:'Could not reach the server. Nothing was sent.'};}
+    if(!c||!c.body){toast((c&&c.reason)||'The cleanup could not run. Nothing was sent.',true);send.disabled=false;send.textContent='Send email';return;}
+    subject.value=c.subject;body.value=c.body;save();reviewed={subject:c.subject,body:c.body};
+    review.replaceChildren();review.hidden=!(c.changed||c.note||c.problem);
+    if(c.changed){review.append(el('b','Cleaned up before sending')); const ul=el('ul');for(const x of c.changes||[])ul.append(el('li',x));review.append(ul);}
+    if(c.note)review.append(el('p',c.note,'dw-small'));
+    if(c.problem){review.append(el('p',c.problem,'dw-mail-problem'));send.disabled=false;send.textContent='Send email';return;}
+    if(c.changed){review.append(el('p','Read it over, then press Send.','dw-small'));send.disabled=false;send.textContent='Send email';body.focus();return;}
+   }
+   send.textContent='Sending…';
+   let j;try{j=await api('/api/rep-email/',{email:row.recipient,subject:reviewed.subject,body:reviewed.body,nonce});}catch(e){j=e.payload||{reason:'Could not reach the server. Nothing was sent.'};}
+   if(j.review)reviewed=null;
+   if(j.sent){dropMailDraft(row.id);closeMail();toast('Sent to '+j.to+' from '+j.from+'. It is in your Gmail Sent folder.');
+    const n=document.getElementById('call-notes');const line='Emailed them: '+j.subject;if(n&&!n.value.includes(line))n.value=(n.value?n.value+'\n':'')+line;return;}
+   toast(j.reason||'Not sent.',true);
+   if(j.connect)return openMail(row,p,{reconnect:true});
+   if(j.uncertain){send.textContent='Check your Sent folder';return;}
+   send.disabled=false;send.textContent='Send email';
+  },'btn dw-primary');
+  send.id='mail-send';acts.append(send);
+ }
+ acts.append(button('Cancel',closeMail,'btn btn-ghost'));const g=gmailLink();if(g)acts.append(g);
+ card.append(review);
+ card.append(acts,el('p','Sent from your Gmail, so it sits in your Sent folder and replies come straight to you. '+(info.sentToday||0)+' of '+info.perDay+' sent today.','dw-small'));
+ (subject.value?body:subject).focus();
+}
 
 function instagramPanel(row,ig){
  const box=el('div',null,'dw-ig');
@@ -446,7 +583,9 @@ function renderNextStep(box,value){
   box.append(el('p',value==='connected'?'Book the discovery call while you have them (link in the talk track), or send the overview below. Saving hands the thread to a human for the reply.':value==='wrong_number'?'That number is retired for this person and a different one is looked for. The lead is not lost.':'They are excluded from every Staffify campaign. Use this for a clear no or a request to stop.','dw-nexthint'));
  }
 }
-function refreshBar(){const old=app.querySelector('.dw-bar');if(old)old.replaceWith(bar());}
+function refreshBar(){const old=app.querySelector('.dw-bar');if(!old)return;const typing=document.activeElement&&document.activeElement.id==='dw-search';old.replaceWith(bar());
+ // A redraw (Quo counts every two minutes) must not throw away a search being typed.
+ if(typing){const q=document.getElementById('dw-search');if(q)q.focus();}}
 
 // Saving. Same contract as before: re-read the queue for the revision and the latest numbers,
 // post the outcome, say what the server did about the callback task, the nurture and the number.
@@ -527,7 +666,9 @@ function followUpRow(it,hot){
 
 // ---- keyboard -------------------------------------------------------------------------------
 document.addEventListener('keydown',e=>{
+ if(e.key==='/'&&!mailBox&&!e.metaKey&&!e.ctrlKey&&!/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||'')){const q=document.getElementById('dw-search');if(q){e.preventDefault();q.focus();return;}}
  const s=shortcut(e);if(!s)return;
+ if(mailBox){if(s.type==='escape'){e.preventDefault();closeMail();}return;}
  if(s.type==='escape'){if(drawerOpen){closeDrawer();e.preventDefault();}return;}
  if(busy)return;
  if(s.type==='save'){const b=document.getElementById('save-outcome');if(b){e.preventDefault();b.click();}return;}

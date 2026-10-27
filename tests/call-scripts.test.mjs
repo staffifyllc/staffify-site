@@ -8,12 +8,40 @@ const spoken=s=>[s.opener,...s.questions,s.voicemail,...s.objections.map(o=>o.sa
 
 test('QC and revisions language is fenced to media agency owners',()=>{
  const media=spoken(make(MEDIA));
- assert.ok(media.includes('qc')&&media.includes('revisions'),'media script asks about QC and revisions');
- assert.ok(media.includes('editing turnaround'),'media script names their actual work');
+ assert.ok(media.includes('qc in the morning'),'media script asks about QC, in Paul\'s words');
+ assert.ok(media.includes('out shooting'),'media script names their actual work');
+ assert.ok(media.includes('flylisted'),'media owners hear where the team came from');
  for(const id of [TOBIT,TALENT]){
   const other=spoken(make(id));
-  for(const word of ['qc','revisions','editing turnaround','gallery']) assert.ok(!other.includes(word),`${id} must not say "${word}"`);
+  for(const word of ['qc','revisions','editing turnaround','gallery','out shooting','flylisted']) assert.ok(!other.includes(word),`${id} must not say "${word}"`);
  }
+});
+
+test('real estate media: Paul\'s opening, word for word, then his two lines lead the questions', ()=>{
+ // Paul, 2026-10-27: "hey this is milton with staffify how are you? (wait) good, the reason for my
+ // call is that we work with a lot of real estate media agency owners helping them bring video
+ // editing costs down, helping with customer service issues, my founder actually owns his own real
+ // estate media agency too. You mind me asking if you have in covered?" Plus: mention Flylisted
+ // early, and "do you have anyone helping you with QC in the morning? What about client issues
+ // while you are out shooting".
+ const m=callScript({campaignId:'staffify-agency-outreach',caller:'Milton',company:'Realkit',firstName:'Nick'});
+ assert.equal(m.opener,'Hey Nick, this is Milton with Staffify. How are you?');
+ assert.match(m.tree.open.choices[0][0],/They answered/,'the first button waits for their answer');
+ assert.equal(m.tree.open.choices[0][1],'reason');
+ assert.match(m.reason,/^Good\. I apologize for calling you out of nowhere, but we reached out a few times\. /,'Paul: the apology, then the emails');
+ assert.match(m.reason,/The reason for my call is that we work with a lot of real estate media agency owners/);
+ assert.match(m.reason,/video editing costs down/); assert.match(m.reason,/customer service issues/);
+ assert.match(m.reason,/My founder actually owns his own real estate media agency too, Flylisted\./,'Flylisted, early');
+ assert.match(m.reason,/Do you mind me asking if you have that covered\?$/);
+ assert.equal(m.tree.reason.say,m.reason);
+ assert.deepEqual(m.tree.reason.choices.map(c=>c[1]),['discover','elsewhere','busy'],'"not really" goes to the questions, "covered" to what is left');
+ assert.match(m.questions[0],/anyone helping you with QC in the morning/);
+ assert.match(m.questions[1],/client issues while you're out shooting/);
+ assert.equal(m.tree.discover.say,m.questions[0]);
+ assert.match(m.tree.context.say,/Flylisted/,'"who is this" gets the same credential');
+ assert.match(m.voicemail,/Flylisted/);
+ assert.ok(!/\d+ (clients|agencies|owners)/i.test(m.reason+m.voicemail+m.tree.context.say),'never a client count');
+ for(const line of [m.opener,m.reason,m.voicemail,m.tree.context.say,...m.questions])assert.ok(!/[\u2014\u2013]/.test(line),'no dashes in anything said aloud');
 });
 
 test('the talent network script never references a resume, applicant or vacancy',()=>{
@@ -22,7 +50,8 @@ test('the talent network script never references a resume, applicant or vacancy'
 });
 
 test('every campaign opens the same way, names the company and offers an exit',()=>{
- for(const id of [MEDIA,TOBIT,TALENT]){
+ // Real estate media opens with Paul's own greeting instead (2026-10-27), tested below.
+ for(const id of [TOBIT,TALENT]){
   const s=make(id);
   assert.ok(s.opener.startsWith('Hi Joel,'),'uses the first name');
   assert.ok(s.opener.includes('Picture KC'),'names the company');
@@ -81,7 +110,7 @@ test('the call tree is complete: every branch leads somewhere and ends on a real
 
 test('the tree asks the campaign-correct discovery question',()=>{
  const media=callScript({campaignId:'staffify-agency-outreach',caller:'M',company:'C',firstName:'J'});
- assert.ok(/QC and revisions/.test(media.tree.discover.say));
+ assert.ok(/QC in the morning/.test(media.tree.discover.say));
  const b2b=callScript({campaignId:'staffify-tobit-outreach',caller:'M',company:'C',firstName:'J'});
  assert.ok(!/QC|revisions/i.test(b2b.tree.discover.say));
  assert.ok(!/QC|revisions/i.test(Object.values(b2b.tree).map(n=>n.say||'').join(' ')));
@@ -90,7 +119,7 @@ test('the tree asks the campaign-correct discovery question',()=>{
 test('media owners are asked how long a client issue takes to resolve',()=>{
  const m=callScript({campaignId:'staffify-agency-outreach',caller:'M',company:'Picture KC',firstName:'J'});
  assert.equal(m.questions.length,5);
- assert.ok(m.questions.some(q=>/how long it|how long you|how long/i.test(q)&&/resolved/i.test(q)),'asks the resolution question');
+ assert.ok(m.questions.some(q=>/how long/i.test(q)&&/sort out|resolved/i.test(q)),'asks the resolution question');
  assert.ok(m.tree.resolve,'the tree has a node for it');
  // Both discovery branches reach it, directly when they admit they are in it and via
  // "what's left then" when they say it is handled, because the question works either way.
@@ -115,7 +144,8 @@ test('the close asks for the meeting at every question count',()=>{
 });
 
 test('the reason beat is said before any question, on every route in',()=>{
- for(const id of ['staffify-agency-outreach','staffify-tobit-outreach','staffify-talent-network-outreach']){
+ // Real estate media has Paul's 2026-10-27 reason instead; its own test covers it.
+ for(const id of ['staffify-tobit-outreach','staffify-talent-network-outreach']){
   const s=callScript({campaignId:id,caller:'Milton',company:'Picture KC',firstName:'Joel'});
   assert.ok(s.reason,'reason present');
   assert.ok(/only call a few people/i.test(s.reason),'the pattern interrupt');

@@ -329,6 +329,9 @@
     },
     "api/cron-daily-report.js": {
       "maxDuration": 300
+    },
+    "api/rep-email.js": {
+      "maxDuration": 60
     }
   }
 }

@@ -63,3 +63,34 @@ export function orderCallQueue(records,{campaign,owner='all',search='',research=
   .sort((a,b)=>RANK[a.g]-RANK[b.g]||within(a.r,b.r,a.g)||String(a.r.id).localeCompare(String(b.r.id)))
   .map(x=>x.r);
 }
+
+// Find any prospect the rep can see, whatever the queue's filters, order or state.
+// ------------------------------------------------------------------
+// Milton, 2026-10-27: "I dont have a search bar to find that lead". The old box sat behind Queue
+// options, ran only on Enter, searched just the cards ready to call (a prospect with a callback set
+// for tomorrow could not be found), and matched a phone number only as typed. This looks at every
+// record: company, email, first name, the notes from past calls ("Nick"), and every number on file
+// by its digits, so "(404) 313-5871", "404-313-5871" and "4043135871" find the same card.
+const digitsOf=s=>String(s||'').replace(/\D/g,'');
+export function searchRecords(records,q,{limit=8}={}){
+ const text=String(q||'').trim().toLowerCase();
+ if(text.length<2)return [];
+ const numeric=/^[\d\s()+.-]+$/.test(text),digits=digitsOf(text);
+ if(numeric&&digits.length<4)return [];
+ const words=text.split(/\s+/).filter(Boolean),hits=[];
+ for(const r of records||[]){
+  if(numeric){
+   const phones=[r.callContact&&r.callContact.phone,r.phone,r.crmPhone].filter(Boolean).map(digitsOf);
+   const want=digits.length>10?digits.slice(-10):digits;
+   if(phones.some(p=>p.includes(want)))hits.push({record:r,matched:'number',score:4});
+   continue;
+  }
+  const company=String(r.company||'').toLowerCase(),email=String(r.recipient||'').toLowerCase(),name=String(r.verifiedFirstName||'').toLowerCase();
+  const notes=(r.callHistory||[]).map(h=>String(h.notes||'')).filter(Boolean);
+  if(!words.every(w=>[company,email,name,...notes.map(n=>n.toLowerCase())].some(f=>f.includes(w))))continue;
+  const inFields=words.every(w=>company.includes(w)||email.includes(w)||name.includes(w));
+  const note=inFields?null:notes.slice().reverse().find(n=>words.some(w=>n.toLowerCase().includes(w)))||null;
+  hits.push({record:r,matched:inFields?(company.includes(text)?'company':'contact'):'notes',note,score:company.startsWith(text)?3:company.includes(text)?2:inFields?1:0});
+ }
+ return hits.sort((a,b)=>b.score-a.score||String(a.record.company||'').localeCompare(String(b.record.company||''))).slice(0,limit).map(({score,...h})=>h);
+}

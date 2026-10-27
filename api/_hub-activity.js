@@ -28,7 +28,7 @@ export const RETAIN_DAYS = 120;
 export const EVENT_KINDS = Object.freeze({
     page_view: 'Opened a page', leave: 'Left the Hub', call_outcome: 'Logged a call', note_saved: 'Saved call notes',
     task_added: 'Added a task', task_done: 'Completed a task', callback_set: 'Scheduled a callback', suppress: 'Excluded a prospect',
-    text_sent: 'Sent a text', overview_sent: 'Sent the overview', instagram_flag: 'Flagged a datapoint',
+    text_sent: 'Sent a text', overview_sent: 'Sent the overview', email_sent: 'Sent an email', instagram_flag: 'Flagged a datapoint',
     shift_start: 'Started a shift', shift_break: 'Took a break', shift_resume: 'Resumed the shift', shift_end: 'Ended the shift', shift_flagged: 'Shift flagged for review', shift_corrected: 'Shift end corrected by an owner',
     // The idle prompt (assets/js/hub-nudge.js): shown after 10 quiet minutes on a running shift, and the answer.
     idle_prompt: 'Prompted after 10 quiet minutes on shift', idle_prompt_next: 'Went to the next call from the prompt',
@@ -38,7 +38,7 @@ export const EVENT_KINDS = Object.freeze({
 // prompted is the opposite of activity, so they never count a minute or extend a session.
 export const PROMPT_KINDS = new Set(['idle_prompt', 'idle_prompt_next', 'idle_prompt_on_call', 'idle_prompt_break']);
 export const CLIENT_KINDS = new Set(['page_view', 'leave', ...PROMPT_KINDS]);
-export const MEANINGFUL = new Set(['call_outcome', 'note_saved', 'task_added', 'task_done', 'callback_set', 'suppress', 'text_sent', 'overview_sent', 'instagram_flag']);
+export const MEANINGFUL = new Set(['call_outcome', 'note_saved', 'task_added', 'task_done', 'callback_set', 'suppress', 'text_sent', 'overview_sent', 'email_sent', 'instagram_flag']);
 
 const ET = 'America/New_York';
 export const dayOf = (t = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: ET, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t));

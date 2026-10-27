@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Staffify marketing site + serverless email handlers",
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
     "@upstash/redis": "^1.34.3"
   }
 }

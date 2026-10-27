@@ -56,6 +56,13 @@ function stubApi() {
         if (u.startsWith('/api/calendly-link/')) return ok({ ok: true, events: [] });
         if (u.startsWith('/api/send-text/')) return ok({ ok: true, sent: true, content: 'Hi Tom, Milton from Staffify here.' });
         if (u.startsWith('/api/send-overview/')) return ok({ sent: true, at: new Date().toISOString() });
+        if (u.startsWith('/api/rep-email/')) {
+            if (!body) return ok({ mailbox: 'milton@trystaffify.com', name: 'Milton Hodgson Gaitan', title: 'Growth Strategist', me: 'Milton', connected: true, connectUrl: '/api/rep-email/?action=connect',
+                signatureHtml: '<b>Milton Hodgson Gaitan</b> Growth Strategist', sentToday: 2, perDay: 30, history: [],
+                templates: [{ id: 'thanks-book', label: 'Thanks for your time, book a meeting', subject: 'Thanks for your time today', body: 'Hi {first},\n\nThanks for taking my call today. Book here:\n\n{link}\n\nWe will look at {company}.\n\n{me}', link: 'https://calendly.com/go-staffify/discovery-call' }] });
+            if (body.action === 'clean') { const fixed = body.body.replace(/\bi\b/g, 'I'); return ok({ subject: body.subject, body: fixed, changed: fixed !== body.body, changes: fixed !== body.body ? ['Capitalized I'] : [], by: 'ai', note: null, problem: null }); }
+            return ok({ sent: true, at: new Date().toISOString(), from: 'milton@trystaffify.com', to: body.email, subject: body.subject, verified: true });
+        }
         return ok({ error: 'unexpected ' + u }, 404);
     };
     return { calls, get state() { return state; } };
@@ -185,6 +192,74 @@ test('the text button posts the approved motion and nothing it should not', asyn
     assert.ok(!('message' in post.body), 'no message is composed in the browser');
     assert.match(dom.text(document.getElementById('toast')), /Text sent: Hi Tom/);
     assert.match(document.getElementById('call-notes').value, /Texted them after the call/);
+});
+
+test('email them: the composer sends from his own mailbox with a template, and keys never reach the card', async () => {
+    document.getElementById('email-them').click();
+    await tick();
+    const box = document.querySelector('.dw-mail');
+    assert.ok(box, 'the composer opens over the card');
+    const text = dom.text(box);
+    assert.match(text, /Milton Hodgson Gaitan <milton@trystaffify\.com>/, 'from his own mailbox, named');
+    assert.match(text, /tom@rileyjonesrem\.com/);
+    assert.equal(document.getElementById('mail-body').value, 'Hi Tom,\n\n', 'a blank message starts with the greeting');
+    key('n');
+    await tick();
+    assert.match(dom.text(document.body), /Riley Jones Real Estate Media/, 'a shortcut key with the composer open does not move the card');
+    byText('.dw-tpl', 'Thanks for your time').click();
+    assert.equal(document.getElementById('mail-subject').value, 'Thanks for your time today');
+    const body = document.getElementById('mail-body').value;
+    assert.match(body, /^Hi Tom,/); assert.match(body, /https:\/\/calendly\.com\/go-staffify\/discovery-call/); assert.match(body, /Riley Jones Real Estate Media/); assert.match(body, /\nMilton$/);
+    assert.ok(!/[{}]/.test(body), 'every placeholder is filled before the rep sees it');
+    key('Escape');
+    assert.equal(document.querySelector('.dw-mail'), null, 'Escape closes it');
+    document.getElementById('email-them').click();
+    await tick();
+    assert.equal(document.getElementById('mail-subject').value, 'Thanks for your time today', 'the draft survives closing the window');
+    const typed = document.getElementById('mail-body');
+    typed.value = typed.value + '\n\nP.S. i can call you Friday too.';
+    document.getElementById('mail-send').click();
+    await tick();
+    const cleanPost = api.calls.filter(c => c.url === '/api/rep-email/' && c.body).pop();
+    assert.equal(cleanPost.body.action, 'clean', 'Send runs the cleanup before anything can go');
+    assert.ok(document.querySelector('.dw-mail'), 'a cleaned-up draft stays open to be read over');
+    assert.match(document.getElementById('mail-body').value, /P\.S\. I can call you Friday too\./, 'the cleaned text replaces the draft');
+    assert.match(dom.text(document.querySelector('.dw-mail-review')), /Cleaned up before sending.*Capitalized I/s);
+    assert.equal(api.calls.filter(c => c.url === '/api/rep-email/' && c.body && !c.body.action).length, 0, 'nothing is sent on the first press when the cleanup changed it');
+    document.getElementById('mail-send').click();
+    await tick();
+    const post = api.calls.filter(c => c.url === '/api/rep-email/' && c.body).pop();
+    assert.ok(!post.body.action, 'the second press sends');
+    assert.match(post.body.body, /I can call you Friday/, 'what was read over is what is sent');
+    assert.equal(post.body.email, 'tom@rileyjonesrem.com');
+    assert.equal(post.body.subject, 'Thanks for your time today');
+    assert.match(post.body.nonce, /^[A-Za-z0-9-]{8,64}$/, 'each compose window carries a nonce, so a retry cannot send twice');
+    assert.ok(!('from' in post.body) && !('signature' in post.body), 'the browser never chooses the mailbox or the signature');
+    assert.equal(document.querySelector('.dw-mail'), null, 'it closes once sent');
+    assert.match(dom.text(document.getElementById('toast')), /Sent to tom@rileyjonesrem\.com from milton@trystaffify\.com/);
+    assert.match(document.getElementById('call-notes').value, /Emailed them: Thanks for your time today/);
+});
+
+test('the search bar finds any prospect by name, number or note, and opens the card', async () => {
+    const q = document.getElementById('dw-search');
+    assert.ok(q, 'search is on the bar, not behind the options');
+    q.value = '(512) 555-0003'; q.oninput();
+    let hits = document.querySelectorAll('.dw-hit');
+    assert.equal(hits.length, 1, 'a formatted phone number finds the card by its digits');
+    assert.match(dom.text(hits[0]), /Blocked Co/);
+    q.value = 'priya'; q.oninput();
+    hits = document.querySelectorAll('.dw-hit');
+    assert.ok(hits.some(h => /Loft & Light/.test(dom.text(h))), 'a person already called (a logged callback) is still findable');
+    q.value = 'lunch'; q.oninput();
+    hits = document.querySelectorAll('.dw-hit');
+    assert.equal(hits.length, 1); assert.match(dom.text(hits[0]), /Note: after lunch, ask for Priya/, 'notes from past calls are searched and shown');
+    q.value = 'riley jones'; q.oninput();
+    hits = document.querySelectorAll('.dw-hit');
+    const before = api.calls.length;
+    hits[0].click();
+    await tick(40);
+    assert.ok(api.calls.slice(before).some(c => c.url.startsWith('/api/outreach-call-brief/?id=r1')), 'picking a result opens that card');
+    assert.equal(document.getElementById('dw-search').value, '', 'the search clears once a card is open');
 });
 
 test('a prospect the live check refuses renders as refused, with its history and no outcomes', async () => {
