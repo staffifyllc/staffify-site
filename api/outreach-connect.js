@@ -10,6 +10,16 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
  // They own no outreach mailbox, so ownerFor() is null; the one-time state below proves who started it.
  if(!owner&&!(action==='callback'&&who&&who.email&&who.email!=='admin'))return res.status(401).json({error:'Sign in to the Sales Hub'});
  const cfg=await config();
+ // Paul, 2026-10-27: "our campaigns aren't going so hot". paul@trystaffify.com's Gmail authorization had
+ // expired, and because the worker pauses every new draft while any mailbox history is unreadable (so
+ // nobody is emailed twice), every follow-up had waited eight days with nothing on screen saying so.
+ // This is the small answer the Hub's red bar reads: is outreach paused, and which mailboxes to reconnect.
+ if(action==='paused'){
+  if(owner!=='all')return res.status(403).json({error:'Owners only'});
+  const run=await redis.get('outreach:cloud:last-run');const errs=(run&&run.mailboxErrors)||[];
+  const paused=!!(cfg.enabled&&errs.length&&/paused/i.test(String(run&&run.reason||'')));
+  return res.status(200).json({paused,since:run&&run.startedAt||null,reason:run&&run.reason||null,mailboxes:errs.map(e=>({email:e.email,error:e.error,reconnect:'/api/outreach-connect/?action=start&email='+encodeURIComponent(e.email)}))});
+ }
  if(action==='health'){
   if(owner!=='all')return res.status(403).json({error:'Administrator required'});
   const selected=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
@@ -25,7 +35,7 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
   const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({code:String(req.query.code||''),client_id:clientId(),client_secret:clientSecret(),redirect_uri:callback,grant_type:'authorization_code'}),signal:AbortSignal.timeout(15000)});if(!r.ok)return fail('Google authorization failed');
   const tok=await r.json();const profile=await gmail(tok.access_token,'profile');if(profile.emailAddress.toLowerCase()!==state.email)return fail('Wrong Google account selected. Choose '+state.email+'.');
   if(!tok.refresh_token||!(state.readOnly?[SCOPES[0]]:SCOPES).every(s=>(tok.scope||'').split(' ').includes(s)))return fail('Both requested Gmail permissions and offline access are required');
-  await redis.set('outreach:oauth:'+state.email,seal({refresh_token:tok.refresh_token,connectedAt:new Date().toISOString()}));res.writeHead(302,{Location:back?back+(back.includes('?')?'&':'?')+'gmail=connected':state.readOnly?'/website-leads/':'/outreach-review/'});return res.end();
+  await redis.set('outreach:oauth:'+state.email,seal({refresh_token:tok.refresh_token,connectedAt:new Date().toISOString(),scope:tok.scope||''}));await redis.del('staffify:rep-inbox:access:'+state.email).catch(()=>{});res.writeHead(302,{Location:back?back+(back.includes('?')?'&':'?')+'gmail=connected':state.readOnly?'/website-leads/':'/outreach-review/'});return res.end();
  }
  if(action==='start-website-reply'){
   const rep=await currentRep(req);if(!rep||!['all','Paul'].includes(owner))return res.status(403).json({error:'Paul must sign in to connect his reply inbox'});

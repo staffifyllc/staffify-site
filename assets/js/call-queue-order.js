@@ -25,7 +25,7 @@ const lastTried=r=>Math.max(0,...(r.callHistory||[]).map(c=>ms(c&&c.at)||0));
 /** Which part of the queue a card is in, from its last outcome. */
 export function queueGroup(r,now=Date.now()){
  const due=ms(r.nextCallAt)!==null&&ms(r.nextCallAt)<=now;
- if(r.callOutcome==='callback'&&due)return 'callback';
+ if((r.callOutcome==='callback'||r.callOutcome==='gatekeeper')&&due)return 'callback';   // a gatekeeper callback is a callback
  if(r.callOutcome==='timing'&&due)return 'later';
  if(r.callOutcome==='no_answer'||r.callOutcome==='voicemail')return 'retry';
  return 'new';
@@ -66,31 +66,68 @@ export function orderCallQueue(records,{campaign,owner='all',search='',research=
 
 // Find any prospect the rep can see, whatever the queue's filters, order or state.
 // ------------------------------------------------------------------
-// Milton, 2026-10-27: "I dont have a search bar to find that lead". The old box sat behind Queue
-// options, ran only on Enter, searched just the cards ready to call (a prospect with a callback set
-// for tomorrow could not be found), and matched a phone number only as typed. This looks at every
-// record: company, email, first name, the notes from past calls ("Nick"), and every number on file
-// by its digits, so "(404) 313-5871", "404-313-5871" and "4043135871" find the same card.
+// Milton, 2026-10-27: "I dont have a search bar to find that lead". Paul, the same day: "make it so
+// we can search by name, company or phone number, any combo of those even just first names".
+//
+// Every word typed has to match something on the card, and the words can be any mix:
+//   a name      the contact's name from HubSpot (`names`, from /api/prospect-names/) or the card's
+//               verified first name: "nick", "nick rossi"
+//   a company   "realkit", "loft light"
+//   a number    three or more digits, against every number on the card: "404", "5181", "313-5871".
+//               Three digits are read as an area code first (Paul searched "740" and got nothing,
+//               because a number used to need four), then as digits anywhere in the number.
+//   an email    "support@realkit"
+//   call notes  the last resort, so "nick" still finds a card whose only mention of Nick is a note
+// A whole phone number however it is written ("(404) 550-5181", "+1 404 550 5181") is one search.
+// Names and companies match from the start of a word, so "jo" finds "Joas" but not "Major".
 const digitsOf=s=>String(s||'').replace(/\D/g,'');
-export function searchRecords(records,q,{limit=8}={}){
- const text=String(q||'').trim().toLowerCase();
+const fold=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\u2018\u2019\u02bc]/g,"'").toLowerCase();
+const wordsOf=s=>fold(s).split(/[^a-z0-9@.']+/).filter(Boolean);
+const squash=s=>fold(s).replace(/[^a-z0-9]/g,'');
+export function searchRecords(records,q,{limit=10,names={}}={}){
+ const text=String(q||'').trim();
  if(text.length<2)return [];
- const numeric=/^[\d\s()+.-]+$/.test(text),digits=digitsOf(text);
- if(numeric&&digits.length<4)return [];
- const words=text.split(/\s+/).filter(Boolean),hits=[];
+ const wholeNumber=/^[\d\s()+.-]+$/.test(text),all=digitsOf(text);
+ if(wholeNumber&&all.length<3)return [];
+ const tokens=wholeNumber?[{d:all.length>10?all.slice(-10):all}]
+  :text.split(/[\s,]+/).filter(Boolean).map(t=>/^[\d()+.-]+$/.test(t)&&digitsOf(t).length>=3?{d:digitsOf(t),t:digitsOf(t)}:{t:fold(t).replace(/[^a-z0-9@.'&_+-]/g,'')})
+   // A lone '&' or '-' is not a word to look for ("loft & light").
+   .filter(x=>x.d||/[a-z0-9]/.test(x.t||''));
+ if(!tokens.length)return [];
+ const hits=[];
  for(const r of records||[]){
-  if(numeric){
-   const phones=[r.callContact&&r.callContact.phone,r.phone,r.crmPhone].filter(Boolean).map(digitsOf);
-   const want=digits.length>10?digits.slice(-10):digits;
-   if(phones.some(p=>p.includes(want)))hits.push({record:r,matched:'number',score:4});
-   continue;
-  }
-  const company=String(r.company||'').toLowerCase(),email=String(r.recipient||'').toLowerCase(),name=String(r.verifiedFirstName||'').toLowerCase();
-  const notes=(r.callHistory||[]).map(h=>String(h.notes||'')).filter(Boolean);
-  if(!words.every(w=>[company,email,name,...notes.map(n=>n.toLowerCase())].some(f=>f.includes(w))))continue;
-  const inFields=words.every(w=>company.includes(w)||email.includes(w)||name.includes(w));
-  const note=inFields?null:notes.slice().reverse().find(n=>words.some(w=>n.toLowerCase().includes(w)))||null;
-  hits.push({record:r,matched:inFields?(company.includes(text)?'company':'contact'):'notes',note,score:company.startsWith(text)?3:company.includes(text)?2:inFields?1:0});
+  const name=[names&&names[r.id],r.verifiedFirstName].filter(Boolean).join(' ');
+  const nameWords=wordsOf(name),companyWords=wordsOf(r.company),company=squash(r.company),email=fold(r.recipient);
+  const phones=[r.callContact&&r.callContact.phone,r.phone,r.crmPhone].filter(Boolean).map(digitsOf);
+  const notes=(r.callHistory||[]).map(h=>String(h.notes||'')).filter(Boolean).reverse();
+  let score=0,note=null;const got=new Set();
+  const ok=tokens.every(tok=>{
+   if(tok.d){
+    const want=tok.d.length>10?tok.d.slice(-10):tok.d,tens=phones.map(p=>p.slice(-10));
+    if(want.length===3&&tens.some(p=>p.startsWith(want))){score+=5;got.add('number');return true;}
+    if(tens.some(p=>p.includes(want))||phones.some(p=>p.includes(tok.d))){score+=4;got.add('number');return true;}
+    const n=tok.d.length>=7&&notes.find(x=>digitsOf(x).includes(tok.d));
+    if(n){score+=2;got.add('notes');note=note||n;return true;}
+    // Not a number on file: digits can still be part of a name or address ("Studio 360", "team360@").
+    if(tok.t&&(company.includes(tok.t)||email.includes(tok.t))){score+=1;got.add(company.includes(tok.t)?'company':'email');return true;}
+    return false;
+   }
+   const t=tok.t,ts=squash(t);
+   if(nameWords.some(w=>w.startsWith(t))||(ts.length>=3&&squash(name).includes(ts))){score+=5;got.add('name');return true;}   // "obrien", "mary-jane"
+   if(companyWords.some(w=>w.startsWith(t))){score+=4;got.add('company');return true;}
+   if(ts.length>=3&&company.includes(ts)){score+=3;got.add('company');return true;}
+   // An address matches by its parts ("nolan" in nolan@eastsidepics.com), or whole when one is typed.
+   if(/[@._+]/.test(t)?email.includes(t):email.split(/[@._+-]+/).some(w=>w.startsWith(t))){score+=2;got.add('email');return true;}
+   const n=notes.find(x=>fold(x).includes(t));
+   if(n){score+=1;got.add('notes');note=note||n;return true;}
+   return false;
+  });
+  if(!ok)continue;
+  const matched=['name','company','number','email','notes'].find(k=>got.has(k));
+  hits.push({record:r,name:name||null,matched,note:got.has('notes')?note:null,score});
  }
- return hits.sort((a,b)=>b.score-a.score||String(a.record.company||'').localeCompare(String(b.record.company||''))).slice(0,limit).map(({score,...h})=>h);
+ const sorted=hits.sort((a,b)=>b.score-a.score||String(a.record.company||'').localeCompare(String(b.record.company||'')));
+ const out=sorted.slice(0,limit).map(({score,...h})=>h);
+ out.total=sorted.length;   // so the screen can say "10 of 37" instead of implying that is all
+ return out;
 }

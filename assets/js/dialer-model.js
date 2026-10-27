@@ -6,14 +6,17 @@
 
 export const OUTCOMES = [
   { value: 'connected',    label: 'Connected',             hint: 'You spoke with them',                key: '1', tone: 'good', next: 'book'  },
-  { value: 'callback',     label: 'Callback',              hint: 'Bad time or gatekeeper, time agreed', key: '2', tone: 'warm', next: 'time'  },
+  { value: 'callback',     label: 'Callback',              hint: 'Bad time, time agreed',              key: '2', tone: 'warm', next: 'time'  },
+  // Paul, 2026-10-27: "I ned a card that says gatkeeper". Its own outcome, shown next to Callback. Key 8,
+  // so the keys a caller already knows (1 to 7) keep meaning what they meant.
+  { value: 'gatekeeper',   label: 'Gatekeeper',            hint: 'Reached staff, not the owner',       key: '8', tone: 'warm', next: 'time'  },
   { value: 'voicemail',    label: 'Left voicemail',        hint: '',                                   key: '3', tone: '',     next: 'retry' },
   { value: 'no_answer',    label: 'No answer',             hint: '',                                   key: '4', tone: '',     next: 'retry' },
   { value: 'timing',       label: 'Not now',               hint: 'Interested, later',                  key: '5', tone: 'warm', next: 'later' },
   { value: 'wrong_number', label: 'Wrong number',          hint: 'The number, not the person',         key: '6', tone: '',     next: null    },
   { value: 'suppress',     label: 'Not interested / stop', hint: 'Excluded from all outreach',         key: '7', tone: 'bad',  next: null    },
 ];
-export const NEEDS_TIME = ['callback', 'no_answer', 'voicemail', 'timing'];
+export const NEEDS_TIME = ['callback', 'gatekeeper', 'no_answer', 'voicemail', 'timing'];
 export const outcome = value => OUTCOMES.find(o => o.value === value) || null;
 
 // ---- time --------------------------------------------------------------------------------------
@@ -40,7 +43,7 @@ export function quickPicks(now = new Date()) {
 export function defaultNext(value, now = new Date()) {
   const n = new Date(now);
   if (value === 'timing') return atHour(n, 90, 10);
-  if (value === 'callback') return atHour(n, 1, 10);
+  if (value === 'callback' || value === 'gatekeeper') return atHour(n, 1, 10);
   if (value === 'voicemail' || value === 'no_answer') return atHour(n, 2, 10);
   return atHour(n, 1, 10);
 }

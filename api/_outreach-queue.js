@@ -47,9 +47,9 @@ export function controlState(previous, {action,owner,email,id,outcome,notes,next
     if(!row||(actor!=='all'&&actor!==row.owner))throw Error('Forbidden');
     // 'timing' is a yes later, not a no. It is deliberately NOT a suppression: the prospect
     // never asked to be left alone, they asked to be asked again.
-    if(!['connected','no_answer','voicemail','callback','timing','wrong_number'].includes(outcome))throw Error('Invalid outcome');
+    if(!['connected','no_answer','voicemail','callback','gatekeeper','timing','wrong_number'].includes(outcome))throw Error('Invalid outcome');
     if(!callReady(row)||previous.pausedOwners?.includes(row.owner)||previous.suppressions?.includes(row.recipient))throw Error('Call is no longer due');
-    if(['no_answer','voicemail','callback','timing'].includes(outcome)&&!(Date.parse(nextCallAt)>Date.now()))throw Error('Choose a future callback time');
+    if(['no_answer','voicemail','callback','gatekeeper','timing'].includes(outcome)&&!(Date.parse(nextCallAt)>Date.now()))throw Error('Choose a future callback time');
     const at=new Date().toISOString(),entry={outcome,notes:String(notes||'').slice(0,4000),at,caller:callerIdentity,nextCallAt:nextCallAt||null,...(dialledNumber(dialled)?{dialled:dialledNumber(dialled)}:{})};
     // Paul, 2026-10-20: "after a teammate works the call, they own it". The FIRST recorded outcome
     // claims the follow-up; opening a card claims nothing. Set once and never overwritten, so a

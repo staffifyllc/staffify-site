@@ -150,7 +150,7 @@ const OBJECTIONS = [
         'Use current approved pricing only. Onboarding is paid in full upfront. No financing, instalments or discounts.'],
     ['Wrong person / gatekeeper',
         'No problem, I may well have the wrong person. Who looks after the day-to-day there? And is there a decent time to catch them?',
-        'Get a name and a time. Log it as a callback with whatever you learned.'],
+        'Get a name and a time. Log it as Gatekeeper with whatever you learned.'],
     ['Not interested / stop',
         "Understood, and I appreciate you telling me straight. I'll take you off the list.",
         'Use Not interested / stop below so the exclusion is recorded. Never argue this one.'],
@@ -231,8 +231,8 @@ function callTree(q, company, script = {}) {
         },
         gate: {
             say: 'No problem, I may well have the wrong person. Who looks after the day-to-day there? And is there a decent time to catch them?',
-            note: 'Log Callback. Put the name and the time in the notes.',
-            log: 'callback',
+            note: 'Log Gatekeeper. Put who answered, who to ask for and the best time in the notes.',
+            log: 'gatekeeper',
         },
         nothing: {
             say: "That's a good place to be, honestly. I'll leave you to it. If it ever gets heavy, you know where we are.",

@@ -42,7 +42,10 @@ export default async function handler(req, res) {
         // here can never hold back a card.
         const q = req.query || {};
         const scope = ownerFor(rep) || 'all';
-        const cacheKey = 'staffify:campaigns-view:' + scope + ':' + String(q.view || 'overview') + ':' + String(q.industry || '') + ':' + String(q.campaign || '');
+        // The gate is part of the key: an owner's build carries numbers, and a caller off shift must
+        // never be served it from the cache (second review, 2026-10-27).
+        const gated = !(await gateFor(redis, rep, ownerFor)).allowed;
+        const cacheKey = 'staffify:campaigns-view:' + scope + (gated ? ':gated' : '') + ':' + String(q.view || 'overview') + ':' + String(q.industry || '') + ':' + String(q.campaign || '');
         if (!q.fresh) {
             const held = await redis.get(cacheKey).catch(() => null);
             if (held && held.builtAt && Date.now() - Date.parse(held.builtAt) < 45000) return res.status(200).json({ ...held, cached: true });
@@ -58,7 +61,7 @@ export default async function handler(req, res) {
         catch { decorated = visibleState(state, ownerFor(rep) || 'all'); }
         // The shift gate: a caller off shift sees the campaign, not the numbers in it. An unreadable
         // shift reads as off. Owners are never gated.
-        if (!(await gateFor(redis, rep, ownerFor)).allowed) decorated = { ...decorated, records: withheldNumbers(decorated.records) };
+        if (gated) decorated = { ...decorated, records: withheldNumbers(decorated.records) };
         const records = decorated.records;
         const stated = (await redis.hgetall(INDUSTRY_KEY).catch(() => null)) || {};
 

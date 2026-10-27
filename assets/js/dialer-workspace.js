@@ -23,6 +23,7 @@ let selectedCampaign=PIN||params.get('campaign')||'all';
 let selectedOwner=params.get('owner')||'all', selectedIndustry=params.get('industry')||'all', research=false, search='';
 let state=null, current=null, brief=null, requestId=0, busy=false, drawerOpen=false, quoToday=null, whoPane=null;
 let searchText='';                                         // the search bar's text, kept across bar redraws
+let names={};                                              // record id -> contact name from HubSpot, for search
 const skipped=new Set(), dialled=new Set();
 const session={started:Date.now(),saved:{},texts:0,tasks:0};
 
@@ -44,7 +45,28 @@ const firstName=s=>String(s||'').trim().split(/\s+/)[0]||'';
 // and still set with textContent, so nothing here is ever interpreted as markup.
 const ENT={nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',hellip:'…',mdash:'-',ndash:'-',rsquo:'\u2019',lsquo:'\u2018',rdquo:'\u201d',ldquo:'\u201c'};
 const plain=s=>String(s||'').replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,n)=>String.fromCodePoint(Number(n))).replace(/&([a-z]+);/gi,(m,k)=>k.toLowerCase() in ENT?ENT[k.toLowerCase()]:m).replace(/\s+/g,' ').trim();
-const rows=()=>orderCallQueue(state.records,{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
+// A card another rep has open, is calling or just called is out of everyone else's queue (live holds below).
+// A card this rep owns (their callback or retry) is always theirs to see, whatever a teammate logged on it.
+const rows=()=>orderCallQueue(state.records.filter(r=>!heldByOther(r.id)||r.mine||(current&&current.id===r.id&&!refused.has(r.id))),{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
+
+// ---- live holds: who has which card -------------------------------------------------------
+// Paul, 2026-10-27: "after that person's called, it should be removed from the database. Otherwise,
+// it's going to be impossible to have multiple sales reps in here working at the same time ... my
+// numbers are also changing and going down too." A called card already left everyone else's pile
+// once its outcome was saved, but only at their next reload, and two reps could open the same first
+// card and both dial it. Now opening a card holds it, Call now holds it longer, a saved outcome marks
+// it called, and every dialer reads the holds every 30 seconds (api/_call-holds.js). Coordination,
+// not a gate: if holds cannot be read, the queue works as before.
+let holds={},holdId=null,holdKind='open';
+const refused=new Set();   // cards a teammate had when this dialer tried to hold them, until the next poll
+const meEmail=()=>String(state&&state.viewer||'').toLowerCase();
+function heldByOther(id){const h=holds[id];return !!h&&String(h.by||'').toLowerCase()!==meEmail()&&(h.untilLocal||Date.parse(h.until))>Date.now();}
+async function loadHolds(){try{const j=await api('/api/call-hold/');const now=Date.now();holds={};for(const [id,h] of Object.entries(j.holds||{}))holds[id]={...h,untilLocal:typeof h.ms==='number'?now+h.ms:Date.parse(h.until)};refused.clear();}catch{/* the queue still works without them */}}
+function holdPost(body){try{return fetch('/api/call-hold/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'same-origin',keepalive:true}).then(r=>r.json()).catch(()=>null);}catch{return Promise.resolve(null);}}
+async function holdCard(id,kind){const r=await holdPost({action:'hold',id,kind});if(r&&r.ok&&r.hold)holds[id]=r.hold;else if(r&&r.ok===false&&r.heldBy){holds[id]={by:'someone-else',...r.heldBy};refused.add(id);}return r;}
+function releaseCard(id){if(!id||refused.has(id))return;const h=holds[id];if(h&&String(h.by||'').toLowerCase()===meEmail()&&h.kind==='open')delete holds[id];holdPost({action:'release',id});}
+function othersWorking(){const now=Date.now(),names=new Set();for(const h of Object.values(holds))if(h&&String(h.by||'').toLowerCase()!==meEmail()&&h.kind!=='called'&&Date.parse(h.until)>now)names.add(h.name||'Someone');return [...names];}
+
 // A skip holds for the day. Paul, 2026-10-23: the queue "is starting every single time on the same
 // prospect": a skip lived in memory, so every reload put the same card back on top. Now a skipped
 // prospect stays out of this rep's queue for 24 hours and the options say how many are out.
@@ -76,7 +98,7 @@ const fmtPhone=p=>{const d=String(p||'').replace(/\D/g,'').replace(/^1(?=\d{10}$
 function hitStatus(r){
  const last=(r.callHistory||[]).slice(-1)[0];
  if(!last)return 'Not called yet';
- const next=['callback','timing'].includes(r.callOutcome)&&r.nextCallAt?' · next call '+fmtWhen(r.nextCallAt):'';
+ const next=['callback','gatekeeper','timing'].includes(r.callOutcome)&&r.nextCallAt?' · next call '+fmtWhen(r.nextCallAt):'';
  return (LOGLABEL[last.outcome]||last.outcome)+' '+new Date(last.at).toLocaleDateString([],{month:'short',day:'numeric'})+next+(r.callOwner&&!r.mine?' · '+String(r.callOwner).split('@')[0]:'');
 }
 function openFound(row){
@@ -84,20 +106,65 @@ function openFound(row){
  if(row.campaignId&&!PIN&&selectedCampaign!=='all'&&selectedCampaign!==row.campaignId){selectedCampaign='all';syncUrl();}
  searchText='';skipped.delete(row.id);saveSkips();show(row);
 }
+// Paul, 2026-10-27, searching (404) 550-5181: "search bars not working, who is this person??" It was
+// Nick at Realkit calling Milton back from his own phone. No card carries a number like that, so the
+// server looks in Quo and HubSpot and names the likely prospect (api/number-lookup.js).
+let lookupSeq=0,lookupTimer=null;
+const whenShort=iso=>{const d=new Date(iso);return isNaN(d)?'':d.toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
+function callLine(c){
+ const mins=c.seconds>=60?Math.round(c.seconds/60)+' min':c.seconds+' sec';
+ const who=c.by?(c.direction==='incoming'?(c.answered?' · answered by '+c.by:' · missed'):' · by '+c.by):(c.direction==='incoming'&&!c.answered?' · missed':'');
+ return (c.direction==='incoming'?'Called in':'Called out')+' '+whenShort(c.at)+' · '+mins+who+(c.line?' · '+c.line:'');
+}
+function lookupNumber(d,out,text){
+ const seq=++lookupSeq;
+ const wait=el('p','Checking Quo calls and HubSpot for this number…','dw-noresult');out.append(wait);
+ clearTimeout(lookupTimer);
+ lookupTimer=setTimeout(async()=>{
+  let j;try{j=await api('/api/number-lookup/?phone='+d);}catch(e){j={error:e.message};}
+  if(seq!==lookupSeq||searchText.trim()!==text||!out.isConnected)return;
+  wait.remove();
+  const box=el('div',null,'dw-lookup');
+  if(j.error){box.append(el('p','Quo and HubSpot could not be checked just now ('+j.error+').','dw-noresult'));out.append(box);return;}
+  const open=(id,label,sub,note)=>{const row=(state.records||[]).find(r=>r.id===id);const b=button(null,()=>{if(row)openFound(row);},'dw-hit');b.append(el('b',label));if(sub)b.append(el('span',sub,'dw-hit-sub'));if(note)b.append(el('span',note,'dw-hit-note'));if(!row){b.disabled=true;b.title='Not in your call view';}return b;};
+  for(const c of j.onCard||[])box.append(open(c.recordId,c.company,'This number is on their card or in their notes'));
+  for(const l of j.likely||[])box.append(open(l.recordId,'Likely '+l.company,l.reason,l.note?'Their last note: '+l.note:null));
+  if(j.hubspot&&j.hubspot.status==='found'){const h=j.hubspot;const label='HubSpot: '+[h.name,h.company].filter(Boolean).join(', ');if(h.recordId)box.append(open(h.recordId,label,h.email));else box.append(el('p',label+(h.email?' · '+h.email:''),'dw-lookup-line'));}
+  else if(j.hubspot&&j.hubspot.status==='failed')box.append(el('p','HubSpot could not be checked'+(j.hubspot.why?' ('+j.hubspot.why+')':'')+'.','dw-lookup-line'));
+  else box.append(el('p','No HubSpot contact found with this number (exact match only; a number stored in another format may not show).','dw-lookup-line'));
+  if((j.calls||[]).length){box.append(el('p','In Quo','dw-lookup-head'));for(const c of j.calls.slice(0,4))box.append(el('p',callLine(c),'dw-lookup-line'));}
+  else box.append(el('p',j.quo&&j.quo.ok===false?'Quo could not be read'+(j.quo.why?' ('+j.quo.why+')':'')+'.':'No calls with this number in Quo.','dw-lookup-line'));
+  if(j.quo&&j.quo.ok===false&&(j.calls||[]).length)box.append(el('p',j.quo.why,'dw-lookup-line'));
+  out.append(box);
+ },350);
+}
+// Contact names live in HubSpot, not on the cards (89 of 870 carry one). Read once per load, quietly:
+// search works without them, and gets names the moment they arrive.
+async function loadNames(){try{const j=await api('/api/prospect-names/');names=j.names||{};const q=document.getElementById('dw-search');if(q&&searchText.trim().length>=2&&typeof q.oninput==='function')q.oninput();}catch{}}
 function searchBox(){
  const box=el('div',null,'dw-search');
  const q=el('input');q.id='dw-search';q.type='search';q.autocomplete='off';q.spellcheck=false;q.value=searchText;
- q.placeholder='Search company, name, email, phone or notes';q.setAttribute('aria-label','Search all prospects');q.title='Press / to search';
+ q.placeholder='Search a name, company or number, in any mix';q.setAttribute('aria-label','Search all prospects');q.title='Press / to search';
  const out=el('div',null,'dw-results');out.setAttribute('role','listbox');out.setAttribute('aria-label','Search results');
  const draw=()=>{
   out.replaceChildren();const text=searchText.trim();if(text.length<2){out.hidden=true;return;}
-  const hits=searchRecords(state&&state.records||[],text);out.hidden=false;
-  if(!hits.length){out.append(el('p','No prospect matches "'+text+'".','dw-noresult'));return;}
+  const hits=searchRecords(state&&state.records||[],text,{names});out.hidden=false;
+  const numberish=/^[\d\s()+.-]+$/.test(text);
+  if(!hits.length&&numberish&&text.replace(/\D/g,'').length<3){out.append(el('p','Type at least three digits to search numbers.','dw-noresult'));return;}
+  // Off shift the numbers are not in the browser at all (the shift gate), so say so instead of "no match".
+  if(!hits.length&&numberish&&(state&&state.records||[]).some(r=>r.callContact&&r.callContact.phone==='withheld')){out.append(el('p','Numbers are hidden until your shift is running. Start your shift to search by number.','dw-noresult'));return;}
+  if(!hits.length){
+   out.append(el('p','No prospect card has "'+text+'".','dw-noresult'));
+   // A whole phone number on no card: someone who called in, or a direct line. Ask who it is.
+   const d=text.replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
+   if(/^[\d\s()+.-]+$/.test(text)&&d.length===10)lookupNumber(d,out,text);
+   return;}
   for(const h of hits){const r=h.record;
    const hit=button(null,()=>openFound(r),'dw-hit');hit.setAttribute('role','option');
-   hit.append(el('b',r.company||r.recipient),el('span',[r.recipient,fmtPhone((r.callContact&&r.callContact.phone)||r.phone)].filter(Boolean).join(' · '),'dw-hit-sub'),el('span',hitStatus(r),'dw-hit-sub'));
+   hit.append(el('b',r.company||r.recipient),el('span',[h.name,r.recipient,fmtPhone((r.callContact&&r.callContact.phone)||r.phone)].filter(Boolean).join(' · '),'dw-hit-sub'),el('span',hitStatus(r),'dw-hit-sub'));
    if(h.note)hit.append(el('span','Note: '+h.note.slice(0,120),'dw-hit-note'));
    out.append(hit);}
+  if(hits.total>hits.length)out.append(el('p','Showing '+hits.length+' of '+hits.total+'. Add a name, company or more digits to narrow it.','dw-noresult'));
  };
  q.oninput=()=>{searchText=q.value;draw();};
  q.onkeydown=e=>{if(e.key==='Enter'){const first=out.querySelector('.dw-hit');if(first){e.preventDefault();first.click();}}else if(e.key==='Escape'){e.preventDefault();searchText='';q.value='';draw();q.blur();}};
@@ -140,6 +207,7 @@ function bar(){
  // Quo's "answered" includes voicemail and phone menus, so it is not shown as picked up.
  if(quoToday&&quoToday.ok){stats.append(stat(quoToday.dials,'dials today'));}
  else if(quoToday&&quoToday.error)stats.append(el('span',quoToday.error==='no seat'?'No Quo seat for this login':'Quo unavailable'));
+ const others=othersWorking();if(others.length){const w=el('span',null,'dw-live');w.append(el('i',null,'dw-dot'),document.createTextNode(others.join(', ')+' working now'));stats.append(w);}
  const logged=Object.values(session.saved).reduce((a,n)=>a+n,0);
  stats.append(stat(logged,'logged this session'));
  if(needsOutcome()){const need=el('span','Needs an outcome','dw-badge hot');need.style.marginLeft='0';stats.append(need);}
@@ -171,14 +239,22 @@ const GMAIL=params.get('gmail')||null;
 function backFromGoogle(row){try{const u=new URL(location.href);u.searchParams.delete('gmail');history.replaceState(null,'',u);}catch{}
  toast(GMAIL==='connected'?'Gmail connected. Your email is ready to send.':'Gmail was not connected: '+GMAIL,GMAIL!=='connected');
  if(current&&current.id===row.id)openMail(row,brief||{});}
-async function refresh(){stash();state=await api('/api/outreach-queue/?view=calls');loadSkips();
+async function refresh(){stash();state=await api('/api/outreach-queue/?view=calls');loadSkips();await loadHolds();
  // A deep link from My Day or the follow-ups list opens that card first, filters or not.
  if(OPEN&&!opened){opened=true;const want=(state.records||[]).find(r=>r.id===OPEN);if(want){skipped.delete(want.id);saveSkips();await show(want);if(GMAIL)backFromGoogle(want);return;}toast('That prospect is not in the call view right now.',true);}
  const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
-async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id));if(row)return show(row);current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
+async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id)&&!refused.has(r.id));if(row)return show(row,{auto:true});if(holdId&&holdKind==='open')releaseCard(holdId);holdId=null;current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
 
 // ---- one prospect -------------------------------------------------------------------------
-async function show(row){
+async function show(row,{auto=false}={}){
+ // Let go of the last card if it was only open; hold this one. Picked for you and somebody else got
+ // there first: move on. Opened on purpose (search, a follow-up): say who has it, and stay.
+ if(holdId&&holdId!==row.id&&holdKind==='open')releaseCard(holdId);
+ holdId=row.id;holdKind='open';
+ holdCard(row.id,'open').then(r=>{if(!r||r.ok!==false||!r.heldBy||!current||current.id!==row.id)return;
+  if(holdId===row.id)holdId=null;
+  if(auto){current=null;showNext();return;}
+  toast(r.heldBy.kind==='called'?r.heldBy.name+' just called them.':r.heldBy.name+' has this card open right now. Pick another unless you two agreed.',true);});
  closeMail();stash();current=row;brief=null;remember(row.id);const version=++requestId;
  app.classList.add('dw-wrap');app.classList.remove('call-workspace');
  const grid=el('div',null,'dw-grid');
@@ -226,7 +302,7 @@ function renderWho(pane,row,b){
  const lt=localTime(p.prospectTimezone&&p.prospectTimezone.timeZone);
  if(lt){const c=el('div',null,'dw-clock');c.append(el('i',null,'dw-dot'+(lt.inHours?'':' off')),document.createTextNode(lt.time+' their time'),el('span','· '+lt.note));pane.append(c);}
  // A callback that has come due is the reason this card is on top. Say so.
- if(row.callOutcome==='callback'&&row.nextCallAt&&Date.parse(row.nextCallAt)<=Date.now()){const last=(row.callHistory||[]).slice(-1)[0]||{};const d=el('div',null,'dw-due');d.append(el('b','Callback due.'),document.createTextNode(' You agreed to call at '+new Date(row.nextCallAt).toLocaleString()+(last.notes?'. Notes: '+last.notes:'.')));pane.append(d);}
+ if((row.callOutcome==='callback'||row.callOutcome==='gatekeeper')&&row.nextCallAt&&Date.parse(row.nextCallAt)<=Date.now()){const last=(row.callHistory||[]).slice(-1)[0]||{};const d=el('div',null,'dw-due');d.append(el('b',row.callOutcome==='gatekeeper'?'Gatekeeper callback due. Ask for the owner.':'Callback due.'),document.createTextNode(' You agreed to call at '+new Date(row.nextCallAt).toLocaleString()+(last.notes?'. Notes: '+last.notes:'.')));pane.append(d);}
  else if(row.callOwner&&!row.mine){const d=el('div',null,'dw-due dw-info');d.append(el('b',row.callOwner),document.createTextNode(' owns this follow-up. You can still work it; the first outcome keeps its owner.'));pane.append(d);}
  // The number.
  const num=el('div',null,'dw-numblock');
@@ -240,10 +316,10 @@ function renderWho(pane,row,b){
   num.append(el('span',trust.word,'dw-trust '+trust.tone));
   if(trust.detail)num.append(el('p',trust.detail,'dw-numdetail'));
   const acts=el('div',null,'dw-actions');
-  const call=link('Call now','tel:'+p.phone,'btn dw-primary');call.id='call-now';call.addEventListener('click',()=>{dialled.add(row.id);refreshBar();});
-  acts.append(call,button('Copy',async()=>{try{await navigator.clipboard.writeText(p.phone);toast('Number copied.');}catch{toast('Select the number and copy it.',true);}},'btn btn-ghost'),textButton(row,p));
+  const call=link('Call now','tel:'+p.phone,'btn dw-primary');call.id='call-now';call.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');refreshBar();});
+  acts.append(call,button('Copy',async()=>{holdKind='calling';holdCard(row.id,'calling');try{await navigator.clipboard.writeText(p.phone);toast('Number copied.');}catch{toast('Select the number and copy it.',true);}},'btn btn-ghost'),textButton(row,p));
   num.append(acts);
-  if(p.dial&&p.dial.alternates&&p.dial.alternates.length){const alts=el('div',null,'dw-alts');alts.append(el('span','Also on file:'));for(const a of p.dial.alternates)alts.append(link(a,'tel:'+a));num.append(alts);}
+  if(p.dial&&p.dial.alternates&&p.dial.alternates.length){const alts=el('div',null,'dw-alts');alts.append(el('span','Also on file:'));for(const a of p.dial.alternates){const t=link(a,'tel:'+a);t.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');});alts.append(t);}num.append(alts);}
   if(p.dial&&p.dial.sourceUrl){const w=el('p',null,'dw-small');w.append(link('Where this number is published',p.dial.sourceUrl));num.append(w);}
   num.append(el('p','On iPhone, tap Call now and use your business line. The Hub does not detect iPhone calls; log the outcome on the right.','dw-small'));
  } else {
@@ -335,6 +411,8 @@ function readMailDraft(id){try{return JSON.parse(sessionStorage.getItem(mailDraf
 function keepMailDraft(id,d){try{sessionStorage.setItem(mailDraftKey(id),JSON.stringify(d));}catch{}}
 function dropMailDraft(id){try{sessionStorage.removeItem(mailDraftKey(id));}catch{}}
 function newNonce(){try{return crypto.randomUUID();}catch{return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);}}
+/** A chosen picture, centre-cropped to a 240px square JPEG data URL. */
+function squarePhoto(f){return new Promise((ok,bad)=>{const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{try{const s=Math.min(img.naturalWidth,img.naturalHeight),c=document.createElement('canvas');c.width=c.height=240;c.getContext('2d').drawImage(img,(img.naturalWidth-s)/2,(img.naturalHeight-s)/2,s,s,0,0,240,240);URL.revokeObjectURL(url);ok(c.toDataURL('image/jpeg',0.86));}catch(e){bad(e);}};img.onerror=()=>{URL.revokeObjectURL(url);bad(Error('That file could not be read as a picture.'));};img.src=url;});}
 function closeMail(){if(mailBox){mailBox.remove();mailBox=null;}}
 async function openMail(row,p,{reconnect=false}={}){
  closeMail();
@@ -346,7 +424,7 @@ async function openMail(row,p,{reconnect=false}={}){
  let info;try{info=await api('/api/rep-email/?email='+encodeURIComponent(row.recipient));}catch(e){info={error:e.message};}
  if(mailBox!==box)return;   // closed, or another card opened, while it loaded
  card.replaceChildren();
- const who=(p.name&&p.name!==row.recipient?firstName(p.name):'')||firstName(row.verifiedFirstName)||(p.identity&&p.identity.askFor?firstName(p.identity.askFor):'');
+ const who=(p.name&&p.name!==row.recipient?firstName(p.name):'')||firstName(row.verifiedFirstName)||firstName(names[row.id])||(p.identity&&p.identity.askFor?firstName(p.identity.askFor):'');
  const company=p.company||row.company||'';
  const head=el('div',null,'dw-mail-head');const h=el('h2','Email '+(who||company||row.recipient));h.id='mail-title';
  head.append(h,button('Close',closeMail,'btn btn-ghost'));card.append(head);
@@ -354,28 +432,49 @@ async function openMail(row,p,{reconnect=false}={}){
  const gmailLink=()=>gmail?link('Open in Gmail instead',gmail.url,'dw-mail-alt'):null;
  if(info.error||!info.mailbox){card.append(el('p',info.error?'Your mailbox could not be loaded ('+info.error+'). Nothing was sent.':info.reason,'dw-due dw-alert'));const g=gmailLink();if(g)card.append(g);return;}
  const meta=el('dl',null,'dw-mail-meta');
- for(const [k,v] of [['From',info.name+' <'+info.mailbox+'>'],['To',row.recipient]])meta.append(el('dt',k),el('dd',v));
+ // To is editable (Milton, 2026-10-27: a gatekeeper gave him a better address). Same company only; the
+ // server checks the domain and runs every do-not-contact check on the address it really goes to.
+ const toIn=el('input');toIn.id='mail-to';toIn.type='email';toIn.autocomplete='off';toIn.value=row.recipient;toIn.setAttribute('aria-label','Send to');
+ const toDd=el('dd');toDd.append(toIn);
+ const alts=(info.alternates||[]).filter(a=>a!==row.recipient);
+ if(alts.length||row.recipient){const pick=el('div',null,'dw-mail-alts');for(const a of [row.recipient,...alts])pick.append(button(a,()=>{toIn.value=a;},'btn btn-ghost dw-tpl'));if(alts.length)toDd.append(pick);}
+ if((info.domains||[]).length)toDd.append(el('span','Got a better address from the gatekeeper? Type it in. It has to be at '+info.domains.join(' or ')+'.','dw-small'));
+ meta.append(el('dt','From'),el('dd',info.name+' <'+info.mailbox+'>'),el('dt','To'),toDd);
  card.append(meta);
+ if(info.pending)card.append(el('p','An email to them on '+new Date(info.pending.at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' was not confirmed by Gmail. Check your Sent folder. Sending again first checks whether it went.','dw-due dw-alert'));
  if(info.history&&info.history.length){const last=info.history[0];card.append(el('p','Already emailed '+new Date(last.at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' by '+last.by+': “'+last.subject+'”','dw-due dw-info'));}
+ // Their first name goes in the subject (Paul, 2026-10-27). Prefilled from what is known; the rep can type it.
+ const firstIn=el('input');firstIn.id='mail-first';firstIn.type='text';firstIn.maxLength=30;firstIn.autocomplete='off';firstIn.value=who;firstIn.placeholder='Their first name';
  const subject=el('input');subject.id='mail-subject';subject.type='text';subject.maxLength=150;subject.autocomplete='off';subject.placeholder='Subject';
  const body=el('textarea');body.id='mail-body';body.rows=11;body.maxLength=5000;
  const save=()=>keepMailDraft(row.id,{subject:subject.value,body:body.value});
  subject.oninput=save;body.oninput=save;
  // A template fills the real words in, so what is on screen is exactly what goes.
- const fill=t=>{const v={first:who||'there',company:company||'your business',me:info.me||'',link:t.link||''};const put=x=>String(x).replace(/\{(first|company|me|link)\}/g,(m,k)=>v[k]);subject.value=put(t.subject);body.value=put(t.body);save();};
+ const fill=t=>{const f=firstIn.value.trim();const v={first:f||'there',company:company||'your business',me:info.me||'',link:t.link||''};const put=x=>String(x).replace(/\{(first|company|me|link)\}/g,(m,k)=>v[k]);subject.value=put(f?t.subject:(t.subjectNoName||t.subject));body.value=put(t.body);save();};
  const picks=el('div',null,'dw-mail-picks');picks.append(el('span','Start from a template','dw-mail-label'));
  const tpls=el('div',null,'dw-mail-tpls');
  for(const t of info.templates||[])tpls.append(button(t.label,()=>{if((subject.value.trim()||body.value.trim().length>(who.length+5))&&!window.confirm('Replace what you have written with this template?'))return;fill(t);body.focus();},'btn btn-ghost dw-tpl'));
  picks.append(tpls);card.append(picks);
  const lab=(text,input)=>{const l=el('label',text,'dw-mail-label');l.htmlFor=input.id;return l;};
- card.append(lab('Subject',subject),subject,lab('Message',body),body);
+ card.append(lab('First name',firstIn),firstIn,lab('Subject',subject),subject,lab('Message',body),body);
  const draft=readMailDraft(row.id);
  if(draft&&(draft.subject||draft.body)){subject.value=draft.subject||'';body.value=draft.body||'';}
  else body.value='Hi '+(who||'there')+',\n\n';
  // The signature exactly as it is added: the server's HTML, in a sandbox, nothing able to run.
  const sig=el('div',null,'dw-mail-sig');sig.append(el('span','Your signature goes under the message','dw-mail-label'));
  const frame=document.createElement('iframe');frame.title='Your email signature';frame.setAttribute('sandbox','');frame.srcdoc='<!doctype html><meta charset="utf-8"><body style="margin:10px;background:#fff">'+(info.signatureHtml||'')+'</body>';
- sig.append(frame);card.append(sig);
+ sig.append(frame);
+ // His own headshot for the signature (Paul, 2026-10-27: "his photo added!"). Cropped square and made
+ // small here, so what is uploaded is just the 240px picture the signature shows.
+ const photoRow=el('div',null,'dw-mail-photo');
+ const file=el('input');file.type='file';file.accept='image/jpeg,image/png';file.id='mail-photo';file.hidden=true;
+ const choose=button(info.photo?'Change your photo':'Add your photo',()=>file.click(),'btn btn-ghost');
+ file.onchange=async()=>{const f=file.files&&file.files[0];if(!f)return;choose.disabled=true;choose.textContent='Uploading…';
+  try{const image=await squarePhoto(f);const r=await api('/api/rep-email/',{action:'photo',image});if(!r.ok)throw Error(r.reason||'not saved');toast('Photo added to your signature.');return openMail(row,p);}
+  catch(e){toast('Photo not saved: '+((e.payload&&e.payload.reason)||e.message),true);choose.disabled=false;choose.textContent=info.photo?'Change your photo':'Add your photo';}};
+ photoRow.append(choose,file);
+ if(info.photo)photoRow.append(button('Remove photo',async()=>{try{await api('/api/rep-email/',{action:'photo-remove'});toast('Photo removed.');openMail(row,p);}catch(e){toast('Could not remove it: '+e.message,true);}},'btn btn-ghost'));
+ sig.append(photoRow);card.append(sig);
  const acts=el('div',null,'dw-actions dw-mail-acts');
  const review=el('div',null,'dw-mail-review');review.hidden=true;   // what the cleanup changed
  if(!info.connected||reconnect){
@@ -396,7 +495,7 @@ async function openMail(row,p,{reconnect=false}={}){
    send.disabled=true;
    if(!reviewed||reviewed.subject!==s||reviewed.body!==m){
     send.textContent='Checking…';
-    let c;try{c=await api('/api/rep-email/',{action:'clean',email:row.recipient,subject:s,body:m});}catch(e){c=e.payload||{reason:'Could not reach the server. Nothing was sent.'};}
+    let c;try{c=await api('/api/rep-email/',{action:'clean',email:row.recipient,to:toIn.value.trim(),subject:s,body:m,first:firstIn.value.trim()});}catch(e){c=e.payload||{reason:'Could not reach the server. Nothing was sent.'};}
     if(!c||!c.body){toast((c&&c.reason)||'The cleanup could not run. Nothing was sent.',true);send.disabled=false;send.textContent='Send email';return;}
     subject.value=c.subject;body.value=c.body;save();reviewed={subject:c.subject,body:c.body};
     review.replaceChildren();review.hidden=!(c.changed||c.note||c.problem);
@@ -406,7 +505,9 @@ async function openMail(row,p,{reconnect=false}={}){
     if(c.changed){review.append(el('p','Read it over, then press Send.','dw-small'));send.disabled=false;send.textContent='Send email';body.focus();return;}
    }
    send.textContent='Sending…';
-   let j;try{j=await api('/api/rep-email/',{email:row.recipient,subject:reviewed.subject,body:reviewed.body,nonce});}catch(e){j=e.payload||{reason:'Could not reach the server. Nothing was sent.'};}
+   // No answer at all (a dropped connection, a timeout page) is not "nothing was sent": Gmail may have
+   // sent it. Held like any unconfirmed send, so it is checked before anything goes again.
+   let j;try{j=await api('/api/rep-email/',{email:row.recipient,to:toIn.value.trim(),subject:reviewed.subject,body:reviewed.body,nonce,first:firstIn.value.trim()});}catch(e){j=e.payload||{sent:false,uncertain:true,reason:'The Hub could not confirm whether this was sent. Check your Gmail Sent folder before sending again.'};}
    if(j.review)reviewed=null;
    if(j.sent){dropMailDraft(row.id);closeMail();toast('Sent to '+j.to+' from '+j.from+'. It is in your Gmail Sent folder.');
     const n=document.getElementById('call-notes');const line='Emailed them: '+j.subject;if(n&&!n.value.includes(line))n.value=(n.value?n.value+'\n':'')+line;return;}
@@ -464,12 +565,12 @@ function renderTalk(pane,row,b){
     const row2=el('div',null,'dw-choices');
     row2.append(button('Log as '+(LOGLABEL[node.log]||node.log)+' →',()=>{selectOutcome(node.log);document.getElementById('call-notes')?.focus();},'btn dw-choice win'));
     parts.push(row2);
-    if(node.log==='callback'){
+    if(node.log==='callback'||node.log==='gatekeeper'){
      // Paul, 2026-10-22: "if they select bad time can we make a task time to call them back that
      // reminds the sales person." The agreed time is picked here and the save is one click.
      const cb=el('div',null,'dw-cbk');cb.append(el('div','When should you call back?','dw-step'));
      const lt=localTime(b.prospectTimezone&&b.prospectTimezone.timeZone);if(lt)cb.append(el('p','It is '+lt.time+' their time. Times below are yours.','dw-note'));
-     const picks=el('div',null,'dw-picks');for(const q of quickPicks())picks.append(button(q.label,()=>{selectOutcome('callback',q.at);const n=document.getElementById('call-notes');if(n&&!n.value.trim())n.value='Bad time. Agreed to call back '+q.at.toLocaleString()+'.';toast('Callback set for '+fmtWhen(q.at)+'. Save when you are ready, or ⌘↵.');},'btn dw-pick'));
+     const picks=el('div',null,'dw-picks');for(const q of quickPicks())picks.append(button(q.label,()=>{selectOutcome(node.log,q.at);const n=document.getElementById('call-notes');if(n&&!n.value.trim())n.value=(node.log==='gatekeeper'?'Gatekeeper answered. Ask for the owner '+q.at.toLocaleString()+'. Who answered: ':'Bad time. Agreed to call back '+q.at.toLocaleString()+'.');toast('Callback set for '+fmtWhen(q.at)+'. Save when you are ready, or ⌘↵.');},'btn dw-pick'));
      cb.append(picks);parts.push(cb);
     }
    }
@@ -576,7 +677,7 @@ function renderNextStep(box,value){
   const picks=el('div',null,'dw-picks');
   for(const q of quickPicks())picks.append(button(q.label,()=>{due.value=toLocalInput(q.at);for(const x of picks.children)x.classList.toggle('on',x.textContent===q.label);stash();},'btn dw-pick'));
   box.insertBefore(picks,due);
-  box.append(el('p',value==='callback'?'Saved as a callback: it returns to the top of your queue at this time and a HubSpot task reminds you if you have a HubSpot user.':value==='timing'?'A warm later. They join the email nurture and come back to you on this date.':'Retried on this date. Leave a voicemail once, then text once; three quiet attempts and the lead rests.','dw-nexthint'));
+  box.append(el('p',value==='gatekeeper'?'Saved as a gatekeeper: it returns to the top of your queue at this time to ask for the owner, with a HubSpot task if you have a HubSpot user. Note who answered and who to ask for.':value==='callback'?'Saved as a callback: it returns to the top of your queue at this time and a HubSpot task reminds you if you have a HubSpot user.':value==='timing'?'A warm later. They join the email nurture and come back to you on this date.':'Retried on this date. Leave a voicemail once, then text once; three quiet attempts and the lead rests.','dw-nexthint'));
  } else {
   due.hidden=true;
   if(value==='connected'){const sent=el('div',null,'dw-picks');for(const tag of ['Meeting booked','Interested','Referred me on','Not a fit']){sent.append(button(tag,()=>{const n=document.getElementById('call-notes');if(!n)return;n.value=n.value.replace(/^\[(Meeting booked|Interested|Referred me on|Not a fit)\]\s*/,'');n.value='['+tag+'] '+n.value;for(const x of sent.children)x.classList.toggle('on',x.textContent===tag);stash();},'btn dw-pick'));}box.append(sent);}
@@ -610,6 +711,7 @@ async function saveOutcome(row,b,status,save){
   if(!state.nurture&&!state.callbackTask&&!state.wrongNumber)toast('Saved: '+(LOGLABEL[choice]||choice)+'.');
   const phones=new Map(latest.records.map(r=>[r.id,r.callContact]));state.records=state.records.map(r=>({...r,callContact:phones.get(r.id)||r.callContact}));
   // A logged card leaves the queue because its state changed (callReady recomputed on the server), not because it was skipped.
+  holdCard(row.id,'called');holdId=null;
   dropDraft(row.id);current=null;choice='';await showNext();
  }catch(e){status.textContent='Not saved: '+e.message+'. Your notes are still here.';status.className='dw-status';}
  finally{busy=false;save.disabled=false;refreshBar();}
@@ -691,5 +793,10 @@ async function loadQuo(){
 
 app.classList.add('dw-wrap');
 app.textContent='';app.append(el('div','Loading your call queue…','dw-pane dw-loading'));
-refresh().catch(fail);
+refresh().then(loadNames).catch(fail);
 loadQuo();setInterval(loadQuo,120000);
+// Holds: read every 30 seconds so counts drop as teammates work; this rep's own hold renewed every 2 minutes.
+setInterval(async()=>{if(document.visibilityState==='hidden'||!state)return;await loadHolds();refreshBar();},30000);
+setInterval(()=>{if(document.visibilityState!=='hidden'&&holdId&&current&&current.id===holdId)holdCard(holdId,holdKind);},120000);
+if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&holdId&&current&&current.id===holdId)holdCard(holdId,holdKind);});
+if(typeof window!=='undefined'&&typeof window.addEventListener==='function')window.addEventListener('pagehide',()=>{if(holdId&&holdKind==='open')holdPost({action:'release',id:holdId});});

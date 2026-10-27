@@ -44,8 +44,9 @@ export const sentCount = r => Number(r.verifiedSentTouches ?? r.sentTouches ?? 0
 export const replied = r => (r.events || []).some(e => e && e.kind === 'received') || REPLY_STATUSES.has(r.status);
 export const needsHuman = r => HUMAN_STATUSES.has(r.status);
 export const connected = r => r.callOutcome === 'connected';
-export const callbackDue = (r, now = Date.now()) => r.callOutcome === 'callback' && !!r.nextCallAt && Date.parse(r.nextCallAt) <= now;
-export const callbackSet = (r, now = Date.now()) => r.callOutcome === 'callback' && !!r.nextCallAt && Date.parse(r.nextCallAt) > now;
+const isCallback = r => r.callOutcome === 'callback' || r.callOutcome === 'gatekeeper';   // a gatekeeper callback is a callback
+export const callbackDue = (r, now = Date.now()) => isCallback(r) && !!r.nextCallAt && Date.parse(r.nextCallAt) <= now;
+export const callbackSet = (r, now = Date.now()) => isCallback(r) && !!r.nextCallAt && Date.parse(r.nextCallAt) > now;
 
 /** The state a prospect is in, in words a rep uses. One state per record, first match wins. */
 export function prospectState(r, now = Date.now()) {

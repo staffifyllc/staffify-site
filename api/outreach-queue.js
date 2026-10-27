@@ -91,7 +91,7 @@ export default async function handler(req,res) {
           // A callback becomes a CRM task with a reminder, owned by the caller. Same rule as the
           // nurture above: only after the save landed, and it can never fail the save.
           let callbackTask=null;
-          if(body.action==='call-outcome'&&body.outcome==='callback'&&body.nextCallAt) {
+          if(body.action==='call-outcome'&&(body.outcome==='callback'||body.outcome==='gatekeeper')&&body.nextCallAt) {
             const row=(fresh?.records||[]).find(r=>r.id===body.id);
             if(row)callbackTask=await scheduleCallbackTask({redis,row,rep,nextCallAt:body.nextCallAt,notes:body.notes});
           }

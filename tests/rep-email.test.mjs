@@ -21,21 +21,23 @@ const { SESSION_TTL } = await import('../api/_auth.js');
 
 const MILTON = { email: 'miltion@trystaffify.com', name: 'Milton', role: 'caller' };   // the misspelt Hub record
 const PAUL = { email: 'hello@gostaffify.com', name: 'Paul', role: 'admin' };
+const MADISON = { email: 'madison@gostaffify.com', name: 'Madison', role: 'rep' };   // no sending mailbox in the Hub
 const ROW = { id: 'r1', company: 'Realkit', recipient: 'support@realkit.com', phone: '+14043135871', sender: 'paul@trystaffify.com' };
 const decode = raw => Buffer.from(raw.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
 const parts = mime => [...mime.matchAll(/Content-Type: (text\/\w+); charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n([\s\S]*?)\r\n--/g)].map(m => [m[1], Buffer.from(m[2].replace(/\r\n/g, ''), 'base64').toString('utf8')]);
 
 // ---- the mailbox, the signature ---------------------------------------------------------------
-test('Milton sends from milton@trystaffify.com, whichever spelling his Hub record has; nobody else has a mailbox', () => {
+test('Milton sends from milton@trystaffify.com, whichever spelling his Hub record has; Paul from hello@; nobody else', () => {
     assert.equal(R.mailboxFor(MILTON), 'milton@trystaffify.com');
     assert.equal(R.mailboxFor({ email: 'milton@trystaffify.com' }), 'milton@trystaffify.com');
-    assert.equal(R.mailboxFor(PAUL), null, 'a rep with no entry gets no mailbox, never a guessed one');
+    assert.equal(R.mailboxFor(PAUL), 'hello@gostaffify.com', 'Paul opened it as himself and was told he had no mailbox');
+    assert.equal(R.mailboxFor(MADISON), null, 'a rep with no entry gets no mailbox, never a guessed one');
     assert.equal(R.mailboxFor({ email: 'admin', role: 'admin' }), null);
 });
 
 test('the signature: his name, Growth Strategist, the Staffify wordmark, images from gostaffify.com only', () => {
     const html = R.signatureHtml('milton@trystaffify.com', { phone: { e164: '+15551234567', display: '(555) 123-4567' } });
-    assert.match(html, /Milton Hodgson Gaitan/);
+    assert.match(html, />Milton Hodgson</); assert.ok(!/Gaitan/.test(html), 'Paul: no second last name');
     assert.match(html, /Growth Strategist/, 'Paul, 2026-10-27: "his email signautre should be growth strategist"');
     assert.match(html, /mailto:milton@trystaffify\.com/);
     assert.match(html, /tel:\+15551234567/); assert.match(html, /\(555\) 123-4567/);
@@ -45,7 +47,14 @@ test('the signature: his name, Growth Strategist, the Staffify wordmark, images 
     assert.ok(!/—/.test(html));
     const bare = R.signatureHtml('milton@trystaffify.com');
     assert.ok(!/tel:/.test(bare), 'no phone row when Quo cannot say which line is his');
-    assert.match(R.signatureText('milton@trystaffify.com'), /Milton Hodgson Gaitan\nGrowth Strategist, Staffify\nmilton@trystaffify\.com/);
+    assert.match(R.signatureText('milton@trystaffify.com'), /Milton Hodgson\nGrowth Strategist, Staffify\nmilton@trystaffify\.com/);
+});
+
+test('Paul\'s signature is the one he already uses: Founder, the main line, hello@', () => {
+    const html = R.signatureHtml('hello@gostaffify.com', { phone: R.profileFor('hello@gostaffify.com').phone });
+    assert.match(html, /Paul Chareth/); assert.match(html, />Founder</);
+    assert.match(html, /tel:\+13056369210/); assert.match(html, /\(305\) 636-9210/);
+    assert.match(html, /mailto:hello@gostaffify\.com/);
 });
 
 test('his line comes from Quo only when it is unmistakably his', () => {
@@ -196,7 +205,7 @@ test('the send: his mailbox, his signature, drafts then send, read back, receipt
     assert.equal(r.body.sent, true); assert.equal(r.body.from, 'milton@trystaffify.com'); assert.equal(r.body.to, 'support@realkit.com'); assert.equal(r.body.verified, true);
     assert.deepEqual(g.calls.map(x => x.path.split('?')[0]), ['drafts', 'drafts/send', 'messages/m1']);
     const mime = decode(g.calls[0].body.message.raw);
-    assert.match(mime, /From: "Milton Hodgson Gaitan" <milton@trystaffify\.com>/);
+    assert.match(mime, /From: "Milton Hodgson" <milton@trystaffify\.com>/);
     assert.match(mime, /To: support@realkit\.com/);
     const html = parts(mime).find(p => p[0] === 'text/html')[1];
     assert.match(html, /Growth Strategist/); assert.match(html, /Thanks for taking my call today/);
@@ -242,8 +251,50 @@ test('opt-outs, clients, a check that could not answer, strangers and the daily 
     const c = await cleaned(deps);
     const capped = await sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c }, deps, now: Date.parse('2026-10-27T21:30:00Z') });
     assert.match(capped.body.reason, /daily limit/); assert.equal(g.calls.length, 0);
-    const paul = await sendRepEmail({ rep: PAUL, input: DRAFT, deps });
-    assert.equal(paul.status, 403, 'no mailbox, no send');
+    const nobody = await sendRepEmail({ rep: MADISON, input: DRAFT, deps });
+    assert.equal(nobody.status, 403, 'no mailbox, no send'); assert.match(nobody.body.reason, /madison@gostaffify\.com/, 'it says which login has no mailbox');
+});
+
+test('the send refuses a suppressed prospect and whatever the gates stop, before Gmail is touched', async () => {
+    const { deps, g } = setup({ deps: { findRow: async () => ({ ...ROW, status: 'suppressed' }), stops: async row => (row.status === 'suppressed' ? 'This person is excluded from all outreach (Not interested / stop).' : null) } });
+    const c = await cleaned(deps);
+    const r = await sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c }, deps });
+    assert.equal(r.body.sent, false); assert.match(r.body.reason, /excluded from all outreach/); assert.equal(g.calls.length, 0);
+    const broken = setup({ deps: { stops: async () => { throw Error('down'); } } });
+    const c2 = await cleaned(broken.deps);
+    const r2 = await sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c2 }, deps: broken.deps });
+    assert.equal(r2.body.sent, false); assert.match(r2.body.reason, /could not run/, 'a check that failed is never a pass');
+});
+
+test('an unconfirmed send is checked before anything goes to that person again, from any window', async () => {
+    let draftStill = 'unknown';
+    const { deps, g, kv } = setup({ failSend: true });
+    const c = await cleaned(deps);
+    const first = await sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c }, deps });
+    assert.equal(first.body.uncertain, true);
+    assert.ok(await kv.get(K.uncertain('milton@trystaffify.com', 'support@realkit.com')), 'held by recipient, not just by window');
+    const gm = async (t, path, body, method) => {
+        g.calls.push({ path, method });
+        if (path === 'drafts/d1' && !method) { if (draftStill === 'gone') throw Error('Gmail drafts/d1 failed 404: Not Found'); if (draftStill === 'there') return { id: 'd1' }; throw Error('Gmail drafts/d1 failed 500'); }
+        if (path === 'drafts/d1' && method === 'DELETE') return {};
+        if (path === 'drafts') return { id: 'd2' };
+        if (path === 'drafts/send') return { id: 'm2', threadId: 't2' };
+        if (path.startsWith('messages/')) return { labelIds: ['SENT'], payload: { headers: [{ name: 'To', value: 'support@realkit.com' }] } };
+        throw Error('unexpected ' + path);
+    };
+    const again = (nonce) => sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c, nonce }, deps: { ...deps, gmail: gm } });
+    const unknown = await again('nonce-0002');
+    assert.equal(unknown.body.sent, false); assert.match(unknown.body.reason, /cannot be checked/, 'Gmail unreadable: refuse');
+    draftStill = 'gone';
+    const went = await again('nonce-0003');
+    assert.equal(went.body.sent, false); assert.equal(went.body.already, true); assert.match(went.body.reason, /did go out/);
+    assert.equal(g.calls.filter(x => x.path === 'drafts/send').length, 1, 'the second window never sent');
+    assert.equal(await kv.get(K.uncertain('milton@trystaffify.com', 'support@realkit.com')), null);
+    await kv.set(K.uncertain('milton@trystaffify.com', 'support@realkit.com'), { draftId: 'd1', at: new Date().toISOString() });
+    draftStill = 'there';
+    const never = await again('nonce-0004');
+    assert.equal(never.body.sent, true, 'the draft was still there, so the first never went: this one sends');
+    assert.ok(g.calls.some(x => x.path === 'drafts/d1' && x.method === 'DELETE'), 'and the stuck draft is cleared');
 });
 
 test('no Gmail connection: it says connect, keeps the message, and lets the same window send after', async () => {
@@ -263,9 +314,34 @@ test('status: mailbox, templates, signature and what was already sent to this pr
     await kv.lpush(K.sent('support@realkit.com'), JSON.stringify({ at: '2026-10-27T21:00:00Z', by: 'Milton', from: 'milton@trystaffify.com', subject: 'Thanks for your time today' }));
     const s = await repEmailStatus({ rep: MILTON, email: 'Support@Realkit.com', kv, line: async () => null });
     assert.equal(s.mailbox, 'milton@trystaffify.com'); assert.equal(s.title, 'Growth Strategist'); assert.equal(s.connected, false);
-    assert.equal(s.templates[0].id, 'thanks-book'); assert.match(s.signatureHtml, /Milton Hodgson Gaitan/);
+    assert.equal(s.templates[0].id, 'thanks-book'); assert.match(s.signatureHtml, /Milton Hodgson/);
     assert.equal(s.history.length, 1); assert.equal(s.history[0].subject, 'Thanks for your time today');
-    assert.equal((await repEmailStatus({ rep: PAUL, kv })).mailbox, null);
+    assert.equal((await repEmailStatus({ rep: MADISON, kv })).mailbox, null);
+    assert.equal((await repEmailStatus({ rep: PAUL, kv, line: async () => null })).mailbox, 'hello@gostaffify.com');
+});
+
+test('connected means the stored token may SEND: a read-only connection asks to connect again', async () => {
+    const { seal } = await import('../api/_outreach-gmail.js');
+    const { canSendWith } = await import('../api/rep-email.js');
+    const ro = seal({ refresh_token: 'r', connectedAt: 'x', scope: 'https://www.googleapis.com/auth/gmail.readonly' });
+    const rw = seal({ refresh_token: 'r', connectedAt: 'x', scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose' });
+    const old = seal({ refresh_token: 'r', connectedAt: 'x' });
+    assert.equal(canSendWith(ro), false, 'hello@ was connected read-only for website replies');
+    assert.equal(canSendWith(old), false, 'a token from before scopes were recorded cannot be trusted to send');
+    assert.equal(canSendWith(rw), true);
+    assert.equal(canSendWith(null), false); assert.equal(canSendWith({ iv: 'bad', tag: 'bad', body: 'bad' }), false);
+    const kv = fakeKv(); kv.m.set(K.token('hello@gostaffify.com'), ro);
+    assert.equal((await repEmailStatus({ rep: PAUL, kv, line: async () => null })).connected, false);
+    kv.m.set(K.token('hello@gostaffify.com'), rw);
+    assert.equal((await repEmailStatus({ rep: PAUL, kv, line: async () => null })).connected, true);
+});
+
+test('Gmail refusing the draft for lack of permission asks to connect again, and keeps the message', async () => {
+    const { deps, g } = setup({ deps: { gmail: async (t, path) => { if (path === 'drafts') throw Error('Gmail drafts failed 403: Request had insufficient authentication scopes.'); throw Error('unexpected'); } } });
+    const c = await cleaned(deps);
+    const r = await sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c }, deps });
+    assert.equal(r.body.sent, false); assert.equal(r.body.connect, true); assert.match(r.body.reason, /permission to send/);
+    void g;
 });
 
 // ---- the handlers, with the real auth path ------------------------------------------------------
@@ -343,6 +419,61 @@ test('connect: Google consent for HIS mailbox only, and the callback brings him 
     const ok = await call(connect, { cookie: 'milton-sid', query: { action: 'callback', state: state2, code: 'c' } });
     assert.equal(ok.code, 302); assert.equal(ok.location, '/dialer/?open=r1&gmail=connected');
     assert.ok(store.get('outreach:oauth:milton@trystaffify.com'), 'his token is stored, sealed');
+    const { canSendWith } = await import('../api/rep-email.js');
+    assert.equal(canSendWith(store.get('outreach:oauth:milton@trystaffify.com')), true, 'the granted scopes are sealed with it, so the composer knows it can send');
     const paulTries = await call(connect, { cookie: 'paul-sid', query: { action: 'callback', state: 'nope', code: 'c' } });
     assert.equal(paulTries.code, 400, 'a state nobody started is refused');
+});
+
+test('outreach paused by an unreadable mailbox is reported to owners only, with the reconnect link', async () => {
+    // Paul, 2026-10-27: "our campaigns aren't going so hot". paul@trystaffify.com had expired and
+    // every new draft and follow-up waited eight days with nothing on screen saying so.
+    seed();
+    store.set('outreach:cloud:config', JSON.stringify({ enabled: true, accounts: [{ email: 'paul@trystaffify.com', owner: 'Paul', brand: 'Staffify', draftEnabled: true }], expectedAccounts: 1 }));
+    store.set('outreach:cloud:last-run', JSON.stringify({ startedAt: '2026-10-27T22:12:32.297Z', reason: 'One or more mailbox histories are unavailable; new drafts paused to prevent duplicate outreach', mailboxErrors: [{ email: 'paul@trystaffify.com', error: 'Mailbox authorization expired: paul@trystaffify.com' }] }));
+    const owner = await call(connect, { cookie: 'paul-sid', query: { action: 'paused' } });
+    assert.equal(owner.code, 200); assert.equal(owner.body.paused, true);
+    assert.deepEqual(owner.body.mailboxes.map(m => m.reconnect), ['/api/outreach-connect/?action=start&email=paul%40trystaffify.com']);
+    assert.equal((await call(connect, { cookie: 'milton-sid', query: { action: 'paused' } })).code, 401, 'a caller is not shown the outreach controls');
+    store.set('outreach:cloud:last-run', JSON.stringify({ startedAt: '2026-10-27T23:00:00Z', reason: null, mailboxErrors: [] }));
+    assert.equal((await call(connect, { cookie: 'paul-sid', query: { action: 'paused' } })).body.paused, false);
+});
+
+test('another address at the same company, from a gatekeeper: allowed, checked, and remembered on the card', async () => {
+    // Milton, 2026-10-27: "the one that you texted is not the right email I got a different one from the GK which is: deana@mckinstry.com"
+    const MCK = { id: 'mk', company: 'McKinstry', recipient: 'dean@mckinstry.com', website: 'https://www.mckinstry.com', status: 'sent' };
+    assert.deepEqual(R.companyDomains(MCK), ['mckinstry.com']);
+    assert.equal(R.otherAddressProblem(MCK, 'deana@mckinstry.com'), null);
+    assert.equal(R.otherAddressProblem(MCK, 'Deana@McKinstry.com'), null);
+    assert.equal(R.otherAddressProblem(MCK, 'deana@ops.mckinstry.com'), null, 'a subdomain of the company');
+    assert.match(R.otherAddressProblem(MCK, 'deana@gmail.com'), /Use an address at mckinstry\.com/);
+    assert.match(R.otherAddressProblem(MCK, 'deana@mckinstry.com.evil.example'), /Use an address at/);
+    assert.match(R.otherAddressProblem({ recipient: 'owner@gmail.com' }, 'x@gmail.com'), /no company domain/, 'a free mailbox proves no company');
+    const seenTo = [];
+    const { deps, g, kv } = setup({ deps: { findRow: async () => MCK, firstName: async () => 'Dean', stops: async (row, to) => { seenTo.push(to); return null; } } });
+    const draft = { ...DRAFT, email: 'dean@mckinstry.com', to: 'deana@mckinstry.com', first: 'Deana', subject: 'Thanks for your time today', body: 'Hi Deana,\n\nThanks for passing me along.\n\nMilton' };
+    const c = (await cleanRepEmail({ rep: MILTON, input: draft, deps })).body;
+    assert.equal(c.subject, 'Deana, thanks for your time today', 'the name typed for the new address, not the card\'s');
+    const r = await sendRepEmail({ rep: MILTON, input: { ...draft, subject: c.subject, body: c.body }, deps });
+    assert.equal(r.body.sent, true); assert.equal(r.body.to, 'deana@mckinstry.com');
+    assert.deepEqual(seenTo, ['deana@mckinstry.com'], 'the do-not-contact checks ran on the address it really went to');
+    const mime = decode(g.calls.find(x => x.path === 'drafts').body.message.raw);
+    assert.match(mime, /\r\nTo: deana@mckinstry\.com\r\n/);
+    assert.equal((kv.lists.get(K.sent('dean@mckinstry.com')) || []).length, 1, 'the card shows it was emailed');
+    const bad = await sendRepEmail({ rep: MILTON, input: { ...draft, to: 'deana@gmail.com', subject: c.subject, body: c.body, nonce: 'nonce-9999' }, deps });
+    assert.equal(bad.status, 400); assert.match(bad.body.reason, /mckinstry\.com/);
+});
+
+test('the headshot: a real JPEG or PNG only, small, versioned, and in the signature', async () => {
+    const { savePhoto, photoUrlFor } = await import('../api/rep-email.js');
+    const kv = fakeKv();
+    const jpeg = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]).toString('base64');
+    const r = await savePhoto('milton@trystaffify.com', jpeg, kv, Date.parse('2026-10-27T23:00:00Z'));
+    assert.equal(r.ok, true); assert.match(r.url, /^https:\/\/www\.gostaffify\.com\/api\/rep-photo\/\?m=milton%40trystaffify\.com&v=\d+$/);
+    assert.equal(await photoUrlFor('milton@trystaffify.com', kv), r.url);
+    assert.equal((await savePhoto('milton@trystaffify.com', 'data:image/jpeg;base64,' + Buffer.from('<svg onload=x>').toString('base64'), kv)).ok, false, 'not a picture');
+    assert.equal((await savePhoto('milton@trystaffify.com', 'data:text/html;base64,PGI+', kv)).ok, false);
+    assert.equal((await savePhoto('milton@trystaffify.com', 'data:image/jpeg;base64,' + Buffer.alloc(300 * 1024, 0xff).toString('base64'), kv)).ok, false, 'too large');
+    const html = R.signatureHtml('milton@trystaffify.com', { photo: r.url });
+    assert.match(html, /border-radius:50%/); assert.ok(html.includes(r.url.replace('&', '&amp;')), 'the address is in the src, escaped as HTML');
 });

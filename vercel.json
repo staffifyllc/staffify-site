@@ -332,6 +332,9 @@
     },
     "api/rep-email.js": {
       "maxDuration": 60
+    },
+    "api/rep-inbox.js": {
+      "maxDuration": 60
     }
   }
 }

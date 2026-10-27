@@ -48,7 +48,7 @@ export function dayRange(day) {
     return { from: iso(startOf(day)), to: iso(startOf(next) - 1), timezone: TZ };
 }
 
-export const OUTCOME_LABEL = { connected: 'Conversation', callback: 'Callback agreed', voicemail: 'Voicemail', no_answer: 'No answer', timing: 'Not now', wrong_number: 'Bad number', suppress: 'Opt-out' };
+export const OUTCOME_LABEL = { connected: 'Conversation', callback: 'Callback agreed', gatekeeper: 'Gatekeeper', voicemail: 'Voicemail', no_answer: 'No answer', timing: 'Not now', wrong_number: 'Bad number', suppress: 'Opt-out' };
 const TAG = n => (String(n || '').match(/^\[(Meeting booked|Interested|Referred me on|Not a fit)\]/) || [])[1] || null;
 
 // ---- the pure part ----------------------------------------------------------------------------
@@ -114,8 +114,9 @@ export function buildReport({ user, day, generatedAt, range, hub, quo, calendly,
     const cards = (hub.ok && hub.cards) || {};
     const historyOf = id => (cards[id] && cards[id].history) || all.filter(x => x.recordId === id);
     const resolved = e => historyOf(e.recordId).some(x => ms(x.at) > ms(e.at) && ms(x.at) <= end) || (cards[e.recordId] && cards[e.recordId].status === 'suppressed');
-    const callbacks = all.filter(e => e.outcome === 'callback' && e.nextCallAt && ms(e.at) <= end)
-        .filter(e => !all.some(x => x.recordId === e.recordId && x.outcome === 'callback' && ms(x.at) > ms(e.at) && ms(x.at) < ms(e.nextCallAt) && ms(x.at) <= end));
+    const isCb = o => o === 'callback' || o === 'gatekeeper';
+    const callbacks = all.filter(e => isCb(e.outcome) && e.nextCallAt && ms(e.at) <= end)
+        .filter(e => !all.some(x => x.recordId === e.recordId && isCb(x.outcome) && ms(x.at) > ms(e.at) && ms(x.at) < ms(e.nextCallAt) && ms(x.at) <= end));
     const dueToday = callbacks.filter(e => etDay(e.nextCallAt) === day);
     const cbRows = callbacks.filter(e => etDay(e.nextCallAt) <= day).map(e => ({ recordId: e.recordId, company: e.company, setAt: e.at, dueAt: e.nextCallAt, done: resolved(e), dueToday: etDay(e.nextCallAt) === day }));
 
@@ -228,7 +229,7 @@ export function slackText(r, { link } = {}) {
         if (c.loggedOutcomes == null) lines.push('Logged in the Hub: unknown.');
         else {
             const b = c.byOutcome;
-            lines.push(`Logged in the Hub: ${c.loggedOutcomes} outcomes on ${c.loggedProspects} prospects. Conversations ${b.connected} · voicemail ${b.voicemail} · no answer ${b.no_answer} · callback agreed ${b.callback} · not now ${b.timing} · bad number ${b.wrong_number} · opt-outs ${v(c.optOuts)}. Tagged interested ${c.interested}, not a fit ${c.tags['Not a fit']}.`);
+            lines.push(`Logged in the Hub: ${c.loggedOutcomes} outcomes on ${c.loggedProspects} prospects. Conversations ${b.connected} · voicemail ${b.voicemail} · no answer ${b.no_answer} · callback agreed ${b.callback} · gatekeeper ${b.gatekeeper || 0} · not now ${b.timing} · bad number ${b.wrong_number} · opt-outs ${v(c.optOuts)}. Tagged interested ${c.interested}, not a fit ${c.tags['Not a fit']}.`);
         }
         if (c.numbersDialledWithoutOutcome != null) lines.push(`Not reconciled: ${c.numbersDialledWithoutOutcome} numbers dialled with no outcome logged; ${c.outcomesWithoutQuoCall} outcomes logged with no matching Quo call.`);
         lines.push(`Discovery calls booked by prospects he called: ${v(r.meetings.booked)}.`);

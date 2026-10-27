@@ -29,6 +29,24 @@ async function hs(path, opts = {}, tries = 2) {
     return { ok: false, status: 0, body: null, raw: 'unreachable' };
 }
 
+/**
+ * First and last names for many contacts at once, for the dialer's name search. Read-only.
+ * Batches of 100 (HubSpot's batch-read limit). A batch that fails is counted, never read as "no name".
+ */
+export async function readContactNames(ids) {
+    const want = [...new Set((ids || []).map(String).filter(Boolean))];
+    if (!token()) return { ok: false, names: {}, failed: want.length, why: 'no_token' };
+    const names = {};
+    let failed = 0;
+    for (let i = 0; i < want.length; i += 100) {
+        const chunk = want.slice(i, i + 100);
+        const r = await hs('/crm/v3/objects/contacts/batch/read', { method: 'POST', body: JSON.stringify({ properties: ['firstname', 'lastname'], inputs: chunk.map(id => ({ id })) }) });
+        if (!r.ok || !r.body || !Array.isArray(r.body.results)) { failed += chunk.length; continue; }
+        for (const c of r.body.results) names[String(c.id)] = { first: String(c.properties && c.properties.firstname || '').trim(), last: String(c.properties && c.properties.lastname || '').trim() };
+    }
+    return { ok: failed === 0, names, failed, why: failed ? `${failed} of ${want.length} contacts could not be read` : null };
+}
+
 // ---- Contact ----------------------------------------------------------------
 // Match on phone first (that is what a dialer has), then email. Create only when nothing matches,
 // so repeat activity on the same prospect keeps stacking on one record instead of making duplicates.

@@ -116,8 +116,10 @@ test('keys: outcomes 1-7, N P S F C, save with the command key, and nothing whil
     assert.equal(shortcut({ key: '1', ...typing }), null, 'typing a 1 in the notes is not an outcome');
     assert.deepEqual(shortcut({ key: 'Enter', metaKey: true, ...typing }), { type: 'save' }, 'but cmd-enter still saves');
     assert.deepEqual(shortcut({ key: 'Escape', ...typing }), { type: 'escape' });
-    assert.equal(OUTCOMES.map(o => o.key).join(''), '1234567');
-    assert.deepEqual(NEEDS_TIME, ['callback', 'no_answer', 'voicemail', 'timing']);
+    // Gatekeeper (2026-10-27) sits next to Callback on key 8, so 1 to 7 keep their meaning.
+    assert.equal(OUTCOMES.map(o => o.key).join(''), '12834567');
+    assert.equal(OUTCOMES.find(o => o.key === '8').value, 'gatekeeper');
+    assert.deepEqual(NEEDS_TIME, ['callback', 'gatekeeper', 'no_answer', 'voicemail', 'timing']);
 });
 
 test('number trust reads the brief\'s label, and no number is said plainly', () => {

@@ -84,7 +84,7 @@ test('objections separate what is said from the caller note',()=>{
 });
 
 test('the call tree is complete: every branch leads somewhere and ends on a real disposition',()=>{
- const OUTCOMES=new Set(['connected','callback','timing','no_answer','voicemail','wrong_number','suppress']);
+ const OUTCOMES=new Set(['connected','callback','gatekeeper','timing','no_answer','voicemail','wrong_number','suppress']);
  for(const id of ['staffify-agency-outreach','staffify-tobit-outreach','staffify-talent-network-outreach']){
   const t=callScript({campaignId:id,caller:'Milton',company:'Picture KC',firstName:'Joel'}).tree;
   assert.ok(t.open,'has an entry node');

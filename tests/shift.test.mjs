@@ -135,3 +135,24 @@ test('deep withholding replaces numbers inside ids and text with a stable token,
     assert.equal(maskPhoneRuns('+19107695931'), maskPhoneRuns('9107695931'));
     assert.notEqual(maskPhoneRuns('9107695931'), maskPhoneRuns('5125550102'));
 });
+
+test('off shift, every copy of a number leaves the browser, not just the dialable one', () => {
+    // The 2026-10-27 review: the CRM copy on `phone` reached an off-shift caller, and the new search
+    // bar showed it and matched digits against it.
+    const [a, b] = withheldNumbers([
+        { id: 'a', phone: '+14043135871', crmPhone: '+14043135871', callContact: { phone: '+19107695931', phoneStatus: 'business_listed', phoneAlternates: ['+19105550000'], phoneEvidence: { phone: '+19107695931', source: 'site' } } },
+        { id: 'b', phone: '+14045550100', callOutcome: 'callback' },
+    ]);
+    assert.equal(a.phone, null); assert.equal(a.crmPhone, null);
+    assert.equal(a.callContact.phone, 'withheld'); assert.deepEqual(a.callContact.phoneAlternates, []); assert.equal(a.callContact.phoneEvidence.phone, null);
+    assert.equal(a.callContact.phoneEvidence.source, 'site', 'what the evidence says stays; only the number goes');
+    assert.equal(b.phone, null, 'a worked card with no callContact loses its number too');
+    assert.ok(!JSON.stringify([a, b]).match(/\d{10}/), 'no ten-digit run left anywhere');
+});
+
+test('second review: off shift, the number each call dialled and numbers typed in notes go too', () => {
+    const [a] = withheldNumbers([{ id: 'a', callContact: { phone: null, phoneAlternates: ['+14045550100'] }, callHistory: [{ outcome: 'callback', dialled: '+14043135871', notes: 'his cell is (404) 550-5181, call after 2' }] }]);
+    assert.equal(a.callHistory[0].dialled, null);
+    assert.ok(!/550-5181/.test(a.callHistory[0].notes) && /call after 2/.test(a.callHistory[0].notes), 'the number is masked, the note is kept');
+    assert.deepEqual(a.callContact.phoneAlternates, [], 'alternates go even when the main number is empty');
+});

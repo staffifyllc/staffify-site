@@ -72,3 +72,13 @@ test('the plan carries the ledger handle that ties it to the QBO evidence', () =
  assert.equal(callerPlanByHandle('paul'), null, 'a percentage rep has no trial plan');
  assert.deepEqual(CALLER_HANDLES, ['milton']);
 });
+
+test('an owner reading a card sees the caller who works it, never "[your name]" where one is assigned', async () => {
+    const { cardCallerName } = await import('../api/_caller-plan.js');
+    // Paul, 2026-10-27, in his own view of the dialer: "Hey Nolan, this is [your name] with Staffify."
+    assert.equal(cardCallerName({ campaignId: 'staffify-tobit-outreach' }, 'Paul Chareth'), 'Milton', 'the Spearhead list is his');
+    assert.equal(cardCallerName({ campaignId: 'staffify-agency-outreach' }, 'Paul Chareth'), 'Paul', 'the shared queue: whoever reads it is the one calling');
+    assert.equal(cardCallerName({ campaignId: 'staffify-agency-outreach', callOwner: 'miltion@trystaffify.com' }, 'Paul'), 'Paul');
+    assert.equal(cardCallerName({ campaignId: 'staffify-talent-network-outreach' }, ''), null, 'nothing known: the placeholder stays');
+    assert.equal(cardCallerName(null, null), null);
+});

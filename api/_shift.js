@@ -174,7 +174,25 @@ export function withholdPhones(x, { deep = false } = {}) {
 
 /** Queue rows with the dialable number replaced by "withheld", keeping order and status. Pure. */
 export function withheldNumbers(records) {
-    return (records || []).map(r => (r && r.callContact && r.callContact.phone ? { ...r, callContact: { ...r.callContact, phone: 'withheld' } } : r));
+    // The dialable number becomes 'withheld' (the queue still knows the card has one). Every other
+    // copy of a number goes too: the review of 2026-10-27 found the CRM copy on `phone` reaching the
+    // browser off shift, where the new search bar showed it and matched digits against it.
+    const strip = r => { const o = { ...r }; for (const k of ['phone', 'crmPhone', 'mobilephone']) if (o[k]) o[k] = null; return o; };
+    // The second review found three more copies: the number each logged call recorded (dialled), a
+    // number typed into a note, and alternates on a card whose main number was empty.
+    return (records || []).map(r => {
+        if (!r) return r;
+        const o = strip(r);
+        if (r.callContact) {
+            const cc = { ...r.callContact };
+            if (cc.phone) cc.phone = 'withheld';
+            if (cc.phoneAlternates) cc.phoneAlternates = [];
+            if (cc.phoneEvidence && cc.phoneEvidence.phone) cc.phoneEvidence = { ...cc.phoneEvidence, phone: null };
+            o.callContact = cc;
+        }
+        if (Array.isArray(r.callHistory)) o.callHistory = r.callHistory.map(h => (h && typeof h === 'object' ? { ...h, dialled: h.dialled ? null : h.dialled, notes: typeof h.notes === 'string' ? maskPhoneRuns(h.notes) : h.notes } : h));
+        return o;
+    });
 }
 /** The gate for a signed-in rep, read from the store. Unreadable reads as off: it fails closed. */
 export async function gateFor(redis, rep, ownerFor, now = Date.now()) {

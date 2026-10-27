@@ -33,6 +33,7 @@ const BRIEF = (row, name) => ({ callable: true, checkedAt: new Date().toISOStrin
     events: [{ kind: 'sent', at: '2026-10-01T18:25:22Z', subject: '15 tasks to hand off', body: 'Hi there, I am Paul.', mailbox: 'paul@trystaffify.com' }], instagram: null });
 
 // ---- the stubbed API: records every request so the test can read what was posted ---------------
+let HOLDS = {}, REFUSE = new Set();
 function stubApi() {
     const calls = [];
     let state = STATE();
@@ -56,6 +57,10 @@ function stubApi() {
         if (u.startsWith('/api/calendly-link/')) return ok({ ok: true, events: [] });
         if (u.startsWith('/api/send-text/')) return ok({ ok: true, sent: true, content: 'Hi Tom, Milton from Staffify here.' });
         if (u.startsWith('/api/send-overview/')) return ok({ sent: true, at: new Date().toISOString() });
+        if (u.startsWith('/api/call-hold/')) { if (!body) return ok({ me: ME, holds: HOLDS }); if (body.action === 'hold' && REFUSE.has(body.id)) return ok({ ok: false, heldBy: { name: 'Paul', kind: 'open', until: new Date(Date.now() + 240000).toISOString() } }); return ok({ ok: true, hold: { id: body.id, by: ME, name: 'Milton', kind: body.kind || 'open', until: new Date(Date.now() + 240000).toISOString() } }); }
+        if (u.startsWith('/api/number-lookup/?phone=4045505181')) return ok({ number: '(404) 550-5181', onCard: [], quo: { ok: true, why: null },
+            calls: [{ at: '2026-10-27T20:15:35.680Z', direction: 'incoming', seconds: 180, answered: true, line: 'Primary', by: 'Milton Hodgson' }],
+            hubspot: { status: 'absent' }, likely: [{ recordId: 'r2', company: 'Loft & Light', reason: 'Milton logged a callback on their business line (ending 0002) 33 minutes before this call, same 404 area code.', note: 'after lunch, ask for Priya' }] });
         if (u.startsWith('/api/rep-email/')) {
             if (!body) return ok({ mailbox: 'milton@trystaffify.com', name: 'Milton Hodgson Gaitan', title: 'Growth Strategist', me: 'Milton', connected: true, connectUrl: '/api/rep-email/?action=connect',
                 signatureHtml: '<b>Milton Hodgson Gaitan</b> Growth Strategist', sentToday: 2, perDay: 30, history: [],
@@ -94,7 +99,8 @@ test('boot: the due callback is first, the card reads whole, and the bar knows t
     assert.match(text, /5 ?dials today/); assert.ok(!/picked up/.test(text), 'Quo answered includes voicemail; not shown as picked up');
     assert.match(text, /3 having a number found automatically/);
     const ocs = document.querySelectorAll('.dw-oc');
-    assert.equal(ocs.length, 7); assert.deepEqual(ocs.map(o => o.dataset.outcome), ['connected', 'callback', 'voicemail', 'no_answer', 'timing', 'wrong_number', 'suppress']);
+    assert.equal(ocs.length, 8); assert.deepEqual(ocs.map(o => o.dataset.outcome), ['connected', 'callback', 'gatekeeper', 'voicemail', 'no_answer', 'timing', 'wrong_number', 'suppress']);
+    assert.equal(dom.text(ocs[2].querySelector('.k')), '8', 'Gatekeeper is its own card, on key 8');
     assert.equal(dom.text(ocs[1].querySelector('.k')), '2');
     const badge = document.querySelector('.dw-badge');
     assert.ok(badge && badge.classList.contains('hot') && dom.text(badge) === '1', 'one follow-up is due now');
@@ -201,7 +207,7 @@ test('email them: the composer sends from his own mailbox with a template, and k
     assert.ok(box, 'the composer opens over the card');
     const text = dom.text(box);
     assert.match(text, /Milton Hodgson Gaitan <milton@trystaffify\.com>/, 'from his own mailbox, named');
-    assert.match(text, /tom@rileyjonesrem\.com/);
+    assert.equal(document.getElementById('mail-to').value, 'tom@rileyjonesrem.com', 'To starts as the card\'s address, and can be changed');
     assert.equal(document.getElementById('mail-body').value, 'Hi Tom,\n\n', 'a blank message starts with the greeting');
     key('n');
     await tick();
@@ -253,6 +259,15 @@ test('the search bar finds any prospect by name, number or note, and opens the c
     q.value = 'lunch'; q.oninput();
     hits = document.querySelectorAll('.dw-hit');
     assert.equal(hits.length, 1); assert.match(dom.text(hits[0]), /Note: after lunch, ask for Priya/, 'notes from past calls are searched and shown');
+    q.value = '(404) 550-5181'; q.oninput();
+    assert.match(dom.text(document.querySelector('.dw-results')), /No prospect card has "\(404\) 550-5181"\.\s*Checking Quo calls and HubSpot/);
+    await tick(450);
+    const look = dom.text(document.querySelector('.dw-lookup'));
+    assert.match(look, /Likely Loft & Light/, 'a number on no card names the likely prospect');
+    assert.match(look, /33 minutes before this call, same 404 area code/, 'with the reason, not as a fact');
+    assert.match(look, /Called in .* 3 min · answered by Milton Hodgson · Primary/, 'and what Quo saw');
+    assert.match(look, /No HubSpot contact found with this number \(exact match only/);
+    assert.ok(api.calls.some(c => c.url === '/api/number-lookup/?phone=4045505181'), 'asked once the typing settled');
     q.value = 'riley jones'; q.oninput();
     hits = document.querySelectorAll('.dw-hit');
     const before = api.calls.length;
@@ -274,6 +289,41 @@ test('a prospect the live check refuses renders as refused, with its history and
     assert.equal(document.querySelectorAll('.dw-oc').length, 0);
     assert.match(text, /\+15125550003 is shown for reference only/);
     assert.equal(document.getElementById('call-now'), null, 'no dial button on a refused card');
+});
+
+test('a card a teammate has open leaves this rep\'s queue and count, and the bar says who is working', async () => {
+    // Paul has every other card open: only the card on screen is left in this rep's queue.
+    const until = new Date(Date.now() + 240000).toISOString();
+    HOLDS = Object.fromEntries(api.state.records.map(r => [r.id, { by: 'hello@gostaffify.com', name: 'Paul', kind: 'open', until }]));
+    byText('button', 'Refresh queue').click();
+    await tick(80);
+    assert.match(dom.text(document.querySelector('.dw-pos')), /^1 of 1(?!\d)/, 'teammates\' cards are out of the count; the card on screen stays');
+    assert.match(dom.text(document.querySelector('.dw-bar')), /Paul working now/);
+    assert.ok(api.calls.some(c => c.url === '/api/call-hold/' && c.body && c.body.action === 'hold'), 'opening a card holds it');
+    HOLDS = {};
+    byText('button', 'Refresh queue').click();
+    await tick(80);
+});
+
+test('second review: two reps racing for the same next card never loop; the loser moves on', async () => {
+    // Paul got there first on every card but one. Skipping must land on that one and stop.
+    const ids = api.state.records.map(r => r.id);
+    const cur = dom.text(document.querySelector('.dw-company') || document.body);
+    const keep = (api.state.records.find(r => r.callReady && !r.callOwner && !cur.includes(r.company)) || {}).id;
+    if (!keep) return;   // nothing else in this fixture's queue to race for
+    for (const id of ids) if (id !== keep) REFUSE.add(id);
+    const skipKey = 'staffify-dialer-skipped:' + ME, skipsBefore = localStorage.getItem(skipKey);
+    const before = api.calls.filter(c => c.url === '/api/call-hold/' && c.body && c.body.action === 'hold').length;
+    byText('button', 'Skip').click();
+    await tick(150);
+    const holdsSent = api.calls.filter(c => c.url === '/api/call-hold/' && c.body && c.body.action === 'hold').length - before;
+    assert.ok(holdsSent <= ids.length + 2, 'a bounded number of attempts, not a loop (' + holdsSent + ')');
+    REFUSE.clear();
+    localStorage.setItem(skipKey, skipsBefore || '{}');   // only this test's skip is undone
+    byText('button', 'Refresh queue').click(); await tick(80);
+    // Put the card the next test expects back on screen.
+    const back = api.state.records.find(r => cur.includes(r.company));
+    if (back) { const q = document.getElementById('dw-search'); q.value = back.company; q.oninput(); const hit = document.querySelector('.dw-hit'); if (hit) hit.click(); await tick(80); }
 });
 
 test('a skip holds for the day, and the industry select narrows the queue to that industry', async () => {
@@ -311,7 +361,7 @@ test('a caller off shift gets the card without the number; Start on the card bri
     assert.match(text, /Loft & Light/); assert.match(text, /Start your shift to call\./); assert.match(text, /Notes and outcomes still save/);
     assert.equal(document.getElementById('call-now'), null, 'no dial link off shift');
     assert.ok(!/\+15125550002/.test(text), 'the number is not on the page');
-    assert.ok(document.getElementById('call-notes'), 'notes are still there'); assert.equal(document.querySelectorAll('.dw-oc').length, 7, 'outcomes can still be logged');
+    assert.ok(document.getElementById('call-notes'), 'notes are still there'); assert.equal(document.querySelectorAll('.dw-oc').length, 8, 'outcomes can still be logged');
     assert.match(text, /Hi Priya, this is Milton/, 'the talk track still loads');
     document.getElementById('shift-gate-action').click(); await tick(80);
     assert.deepEqual(presses, ['start']);

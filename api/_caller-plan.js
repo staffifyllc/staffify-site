@@ -102,6 +102,13 @@ export const CAMPAIGN_CALLERS = Object.freeze({
     'staffify-tobit-outreach': 'milton@trystaffify.com',
 });
 export const designatedCaller = campaignId => CAMPAIGN_CALLERS[String(campaignId || '').trim()] || null;
+/**
+ * The name an owner's talk track uses on a card. A campaign with an assigned caller names them (the
+ * Spearhead list is Milton's: "its going to be Milton with Staffify, I will not be calling", Paul,
+ * 2026-10-22). The shared queue is worked by whoever opens it (Paul, 2026-10-27: "multiple sales
+ * reps in here working at the same time"), so there it is the reader's own first name.
+ */
+export const cardCallerName = (row, viewerName) => (row && (callerPlan(designatedCaller(row.campaignId)) || {}).name) || String(viewerName || '').trim().split(/\s+/)[0] || null;
 
 /** 5.2 and 6: everything that must be true before a commission is owed. */
 export const ELIGIBILITY = Object.freeze([

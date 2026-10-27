@@ -36,12 +36,13 @@ const norm = e => String(e || '').trim().toLowerCase();
 // Notes only feed a short "notes to check" list: a No answer or Voicemail whose note sounds like a
 // person answered, or a Conversation whose note sounds like staff or a hang-up. A person reads them;
 // they are never added to any figure, so a wrong guess costs a glance, not a wrong number.
-const HOW = { connected: 'Conversation', callback: 'Callback agreed', timing: 'Not now', suppress: 'Not interested' };
+const HOW = { connected: 'Conversation', callback: 'Callback agreed', gatekeeper: 'Gatekeeper', timing: 'Not now', suppress: 'Not interested' };
 
 /** A person answered, by the outcome chosen. `verified`: a Quo dial was paired with it. */
 export function answeredFrom(entry, { verified = false } = {}) {
     const o = entry && entry.outcome;
-    if (o === 'connected' || o === 'callback' || o === 'timing') return { how: HOW[o] };
+    // A gatekeeper is a person answering, just not the owner (until 2026-10-27 it was logged as Callback).
+    if (o === 'connected' || o === 'callback' || o === 'gatekeeper' || o === 'timing') return { how: HOW[o] };
     if (o === 'suppress' && verified) return { how: HOW[o] };
     return null;
 }

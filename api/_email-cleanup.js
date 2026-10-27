@@ -43,12 +43,22 @@ House rules, always applied:
 Write each change as a few plain words a rep would understand, such as "Capitalized I" or "Fixed the spelling of receive". At most six.`;
 
 // ---- the rules -------------------------------------------------------------------------------
-const ABBREV = /(?:\b(?:a\.m|p\.m|e\.g|i\.e|etc|vs|approx|mr|mrs|ms|dr|st|no)\.)$/i;
+const ABBREV = /(?:\b(?:a\.m|p\.m|e\.g|i\.e|etc|vs|approx|mr|mrs|ms|dr|st|no|inc|co|corp|llc|ltd|jr|sr|dept|est|u\.s|u\.k|ave|blvd|rd)\.)$/i;
 const notWord = t => /^(?:https?:|www\.)/i.test(t) || /@/.test(t);
 
 function capitalizeSentences(text) {
-    // The first letter of each line ("hi Tom," / "thanks,"), unless the line is a link or an address.
-    let t = text.replace(/^([ \t]*)([a-z])(\S*)/gm, (m, sp, c, rest) => (notWord(c + rest) ? m : sp + c.toUpperCase() + rest));
+    // The first letter of a line that starts something ("hi Tom," / "thanks,"): the first line, or a
+    // line after a blank one or after a line that ended a sentence. A hard-wrapped sentence's next
+    // line is left alone. Never a link or an address.
+    const lines = text.split('\n');
+    // A list after a line ending in a colon: every item gets the same treatment, not just the first.
+    let inList = false;
+    let t = lines.map((line, i) => {
+        const prev = i ? lines[i - 1].trim() : '';
+        if (!line.trim()) inList = false; else if (/:$/.test(prev)) inList = true;
+        const starts = i === 0 || !prev || inList || /[.!?:,]["”')]?$/.test(prev);
+        return starts ? line.replace(/^([ \t]*)([a-z])(\S*)/, (m, sp, c, rest) => (notWord(c + rest) ? m : sp + c.toUpperCase() + rest)) : line;
+    }).join('\n');
     // After a full stop, question mark or exclamation mark, unless it closed an abbreviation (10 a.m. on).
     t = t.replace(/([.!?]["”')]?[ \t]+)([a-z])(\S*)/g, (m, gap, c, rest, at, all) => {
         const before = all.slice(0, at + 1).trimEnd();
@@ -62,10 +72,19 @@ export function ruleClean({ subject, body }) {
     const changes = [];
     const run = (s, isSubject) => {
         let t = String(s || '');
-        const dashed = t.replace(/[ \t]*—[ \t]*/g, ', ').replace(/[ \t]+–[ \t]+/g, ', ').replace(/, ([.,;:!?])/g, '$1');
+        // An em dash always goes. A spaced en dash goes too, unless it is a range: between two
+        // numbers or two day or month names ("9 – 5", "Mon – Fri"), where it stays.
+        const DAY_MONTH = '(?:mon|monday|tue|tues|tuesday|wed|wednesday|thu|thur|thurs|thursday|fri|friday|sat|saturday|sun|sunday|jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\\.?';
+        // A range end: a number with an optional currency sign or am/pm ("$500", "2pm", "5 p.m."), or a whole day or month name.
+        const END = new RegExp('(?:[$£€]?\\d[\\d,.]*\\s?(?:k|am|pm|a\\.m\\.|p\\.m\\.)?|\\b' + DAY_MONTH + ')$', 'i');
+        const START = new RegExp('^(?:[$£€]?\\d|' + DAY_MONTH + '(?![a-z]))', 'i');
+        const dashed = t.replace(/[ \t]*—[ \t]*/g, ', ')
+            .replace(/([^\n]*?)[ \t]+–[ \t]+(?=(\S+))/g, (m, before, after) => (END.test(before) && START.test(after) ? m : before + ', '))
+            .replace(/, ([.,;:!?])/g, '$1');
         if (dashed !== t && !changes.includes('Replaced dashes')) changes.push('Replaced dashes');
         t = dashed;
-        const eye = t.replace(/(^|[\s("“])i(?=$|[\s,.!?;:)"”]|['’](?:m|ll|ve|d)\b)/g, '$1I');
+        // A lone i, not the i of "i.e." or "e.i.": a full stop counts only when no letter follows it.
+        const eye = t.replace(/(^|[\s("“])i(?=$|[\s,!?;:)"”]|\.(?![a-z])|['’](?:m|ll|ve|d)\b)/g, '$1I');
         if (eye !== t && !changes.includes('Capitalized I')) changes.push('Capitalized I');
         t = eye;
         const caps = isSubject ? t.replace(/^(\s*)([a-z])/, (m, sp, c) => sp + c.toUpperCase()) : capitalizeSentences(t);

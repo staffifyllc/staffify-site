@@ -10,6 +10,7 @@ import {industryFor} from './_industry.js';
 import {resolveTimezone} from './_outreach-timezone.js';
 import {knownIdentity,TRIED_KEY} from './_contact-identity.js';
 import {gate as shiftGateOf,liveCurrent as currentShift,shiftRequired} from './_shift.js';
+import {cardCallerName} from './_caller-plan.js';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store');
  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed'});
@@ -19,12 +20,15 @@ export default async function handler(req,res){
  let state=null,row=null,stored=async()=>({callable:false});
  try{
   const t0=Date.now(),timings={};const mark=k=>{timings[k]=Date.now()-t0;};
-  const rep=await requireAccess(req);const owner=canUseCallQueue(rep)?'all':null;const caller=rep?.role==='admin'?'[your name]':rep?.name||'[your name]';if(!owner)return res.status(401).json({error:'Sign in to the Hub'});
+  const rep=await requireAccess(req);const owner=canUseCallQueue(rep)?'all':null;let caller=rep?.role==='admin'?'[your name]':rep?.name||'[your name]';if(!owner)return res.status(401).json({error:'Sign in to the Hub'});
   // The shift gate. A caller (anyone who is not a sales owner) sees the number only on a running shift;
   // off shift, on a break or past twelve hours the card still loads, the number is withheld and the
   // reason is on it. Owners are never gated. Outcomes save regardless: that endpoint is not this one.
   const shiftGate=shiftGateOf(await currentShift(redis,rep.email),Date.now(),{required:shiftRequired(rep,ownerFor)});mark('shift');
   state=await redis.get(KEY);row=visibleState(state,owner).records.find(r=>r.id===req.query.id);mark('state');
+  // An owner reading a card: the campaign's assigned caller where there is one, else their own name
+  // (api/_caller-plan.js cardCallerName). "[your name]" only when neither is known.
+  if(rep?.role==='admin'&&row)caller=cardCallerName(row,rep.name)||caller;
   if(!row)return res.status(404).json({error:'Record not available'});
   // What we already know about this prospect, from the last worker sync. Shown even when the live
  // check refuses the call, because a caller still needs to see the proof, the site and the emails

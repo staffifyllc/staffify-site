@@ -236,3 +236,14 @@ body .dw-mail-review[hidden]{display:none}
 body .dw-mail-review ul{margin:6px 0 6px 18px;padding:0}
 body .dw-mail-review p{margin:4px 0 0}
 body .dw-mail-problem{color:#8a1c1c;font-weight:600}
+body .dw-lookup{display:grid;gap:4px;padding:2px 4px 6px}
+body .dw-lookup-head{margin:6px 6px 0;font-size:11.5px;font-weight:650;letter-spacing:1.1px;text-transform:uppercase;color:#6e6e73}
+body .dw-lookup-line{margin:0 6px;font-size:13px;color:#414146;overflow-wrap:anywhere}
+body .dw-hit:disabled{cursor:default;opacity:.75}
+body .dw-mail input#mail-first{width:min(260px,100%);font:inherit;font-size:14.5px;border:1px solid #d2d2d7;border-radius:10px;padding:8px 12px;background:#fff;color:#1d1d1f}
+/* Teammates on cards right now (live holds, 2026-10-27). */
+.dw-live{display:inline-flex;align-items:center;gap:6px;color:#1f6b3a;font-weight:600}
+.dw-live .dw-dot{width:7px;height:7px;border-radius:50%;background:#2e9d5b;display:inline-block}
+body .dw-mail input#mail-to{width:100%;font:inherit;font-size:14px;border:1px solid #d2d2d7;border-radius:8px;padding:6px 10px;background:#fff;color:#1d1d1f}
+body .dw-mail-alts{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+body .dw-mail-photo{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}

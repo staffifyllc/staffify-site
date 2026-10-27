@@ -73,6 +73,8 @@ export default async function handler(req, res) {
         const row = visibleState(state, 'all').records.find(r => String(r.recipient || '').toLowerCase() === email);
         if (!row) return res.status(404).json({ sent: false, reason: 'That prospect is not in the queue, so nothing was sent.' });
 
+        // Not interested / stop lands in the queue's own suppression list (status 'suppressed').
+        if (row.status === 'suppressed' || row.status === 'bounce_hold') return res.status(200).json({ sent: false, reason: 'This person is excluded from all outreach. Nothing was sent.' });
         const phone = (row.callContact && row.callContact.phone) || row.phone || '';
         if (await isOptedOut({ email, phone })) {
             return res.status(200).json({ sent: false, reason: 'This person is on the do-not-contact list. Nothing was sent.' });
