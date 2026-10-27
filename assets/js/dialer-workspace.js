@@ -55,7 +55,8 @@ const ENT={nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',hellip:'…',mdash:'
 const plain=s=>String(s||'').replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,n)=>String.fromCodePoint(Number(n))).replace(/&([a-z]+);/gi,(m,k)=>k.toLowerCase() in ENT?ENT[k.toLowerCase()]:m).replace(/\s+/g,' ').trim();
 // A card another rep has open, is calling or just called is out of everyone else's queue (live holds below).
 // A card this rep owns (their callback or retry) is always theirs to see, whatever a teammate logged on it.
-const rows=()=>orderCallQueue(pausedView?state.records.filter(r=>r.pausedFollowUp).map(r=>({...r,dueForMe:true})):state.records.filter(r=>!r.pausedFollowUp&&(ownerView()&&!teamPool?r.mine:true)&&(!heldByOther(r.id)||r.mine||(current&&current.id===r.id&&!refused.has(r.id)))),{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
+// A queue that failed to load has no rows: the error page draws the bar too, and must not throw on it.
+const rows=()=>!state?[]:orderCallQueue(pausedView?state.records.filter(r=>r.pausedFollowUp).map(r=>({...r,dueForMe:true})):state.records.filter(r=>!r.pausedFollowUp&&(ownerView()&&!teamPool?r.mine:true)&&(!heldByOther(r.id)||r.mine||(current&&current.id===r.id&&!refused.has(r.id)))),{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
 
 // ---- live holds: who has which card -------------------------------------------------------
 // Paul, 2026-10-27: "after that person's called, it should be removed from the database. Otherwise,
