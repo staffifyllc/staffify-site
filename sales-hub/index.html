@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sales Hub | Staffify</title>
+<meta name="description" content="Sales Hub is the private workspace where a sales team calls, follows up and sees how the work is going. Built for your business for $4,995.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://www.gostaffify.com/sales-hub/">
+<meta property="og:title" content="Meet Sales Hub.">
+<meta property="og:description" content="The private workspace where your sales team calls, follows up and sees how the work is going. Built for you, $4,995.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.gostaffify.com/sales-hub/">
+<meta property="og:image" content="https://www.gostaffify.com/assets/brand/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/assets/brand/icon.svg?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/icon-32.png?v=2">
+<link rel="apple-touch-icon" href="/assets/brand/icon-180.png?v=2">
+<style>
+/* Layout: an Apple-style product page. Full-width bands alternate ink and paper; each holds one centred column and a product shot built from the Hub's own screens. One world, painted explicitly. */
+:root{
+  --ink:#05080c; --ink-2:#0c1218; --ink-3:#141c24; --line-ink:#1f2a35;
+  --paper:#f3f6f8; --white:#ffffff; --line:#dde4ea;
+  --text:#12171c; --text-soft:#5b6670; --on-ink:#eef4f8; --on-ink-soft:#8d9aa6;
+  --cyan:#0bbcdf; --cyan-deep:#0a7fa8; --cyan-glow:#0bbcdf40;
+  --ok:#1f9d6b; --ok-bg:#e3f5ec; --call:#2f7fe0; --call-bg:#e5effc; --quiet:#d9472f; --quiet-bg:#fde9e5; --brk:#b7790a; --brk-bg:#fdf2dc; --off:#6b7480; --off-bg:#eceff2;
+  --display:"SF Pro Display",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --body:"SF Pro Text",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --col:1080px;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--on-ink);font-family:var(--body);font-size:17px;line-height:1.47;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--ink)}
+a{color:inherit}
+.band{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.band.ink{background:var(--ink);color:var(--on-ink)}
+.band.paper{background:var(--paper);color:var(--text)}
+.band.white{background:var(--white);color:var(--text)}
+.wrap{max-width:var(--col);margin:0 auto;padding-block:clamp(72px,11vw,140px)}
+.eyebrow{font-family:var(--display);font-size:clamp(17px,1.6vw,21px);font-weight:600;letter-spacing:.005em;color:var(--cyan-deep);margin:0 0 10px}
+.ink .eyebrow{color:var(--cyan)}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h2{font-size:clamp(40px,6.4vw,80px);line-height:1.04;font-weight:700;letter-spacing:-.025em}
+.lede{font-size:clamp(19px,2vw,24px);line-height:1.38;font-weight:500;letter-spacing:-.005em;max-width:38ch;margin:22px 0 0;color:var(--text-soft)}
+.ink .lede{color:var(--on-ink-soft)}
+.points{list-style:none;padding:0;margin:34px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px 32px;max-width:900px}
+.points li{font-size:16px;line-height:1.45;padding-top:14px;border-top:1px solid var(--line);color:var(--text)}
+.ink .points li{border-top-color:var(--line-ink);color:var(--on-ink)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(32px,6vw,80px);align-items:center}
+.split > *{min-width:0}
+.stage{margin-top:clamp(40px,6vw,72px)}
+@media (max-width:820px){.split{grid-template-columns:1fr}}
+
+/* local nav */
+.lnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:#05080cd9;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid #ffffff14}
+.lnav .in{max-width:var(--col);margin:0 auto;height:52px;display:flex;align-items:center;gap:22px}
+.lnav .name{font-family:var(--display);font-weight:600;font-size:21px;letter-spacing:-.01em;text-decoration:none;color:var(--on-ink);margin-right:auto}
+.lnav .links{display:flex;gap:22px}
+.lnav .links a{font-size:12.5px;color:var(--on-ink-soft);text-decoration:none}
+.lnav .links a:hover{color:var(--on-ink)}
+.pill{display:inline-flex;align-items:center;justify-content:center;border-radius:980px;background:var(--cyan);color:#022a35;font-weight:600;text-decoration:none;border:0;cursor:pointer;font-family:var(--body)}
+.lnav .pill{font-size:12px;padding:5px 12px}
+.pill:hover{background:#2fd0ee}
+a:focus-visible,button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:8px}
+@media (max-width:760px){.lnav .links{display:none}}
+
+/* hero */
+.hero .wrap{padding-block:clamp(56px,8vw,96px) 0;text-align:center}
+.hero .wordmark{height:24px;width:auto;color:var(--cyan);display:block;margin:0 auto 26px}
+.hero h1{font-size:clamp(56px,11vw,140px);line-height:.96;font-weight:700;letter-spacing:-.04em;background:linear-gradient(180deg,#ffffff 0%,#d9f6fd 45%,var(--cyan) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lede{margin:24px auto 0;max-width:30ch;color:var(--on-ink-soft);font-size:clamp(20px,2.3vw,28px)}
+.ctas{display:flex;gap:26px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:32px}
+.ctas .pill{font-size:17px;padding:12px 24px}
+.more{color:var(--cyan);text-decoration:none;font-size:17px}
+.more:hover{text-decoration:underline}
+.hero .glow{position:relative;margin-top:clamp(44px,7vw,84px)}
+.hero .glow::before{content:"";position:absolute;left:50%;top:18%;width:min(900px,90%);height:70%;transform:translateX(-50%);background:radial-gradient(closest-side,var(--cyan-glow),transparent);filter:blur(30px);z-index:0}
+
+/* the display that frames the hero shot */
+.display{position:relative;z-index:1;max-width:1000px;margin:0 auto;border-radius:22px 22px 0 0;padding:12px 12px 0;background:linear-gradient(180deg,#2a323b,#151b21);box-shadow:0 0 0 1px #ffffff1a inset,0 -30px 80px #0bbcdf1f}
+.screen{border-radius:12px 12px 0 0;overflow:hidden;background:#f4f6f8;color:#1d2228;font-family:var(--body);font-size:clamp(7.5px,1.12vw,12px);text-align:left}
+
+/* Hub UI pieces (sample data) */
+.hub-top{display:flex;align-items:center;gap:1.6em;padding:1em 1.6em;background:#fff;border-bottom:1px solid #e6eaee}
+.hub-top .wordmark{height:1.5em;width:auto;color:var(--cyan);margin:0}
+.hub-top nav{display:flex;gap:1.3em;color:#5e6873;font-weight:500}
+.hub-top nav b{color:#0a66b8;background:#e8f2fd;padding:.2em .7em;border-radius:1em;font-weight:600}
+.shiftpill{margin-left:auto;display:flex;align-items:center;gap:.6em;font-weight:600;white-space:nowrap}
+.dot{width:.75em;height:.75em;border-radius:50%;background:var(--ok);box-shadow:0 0 0 .3em #1f9d6b26;flex:none}
+.clock{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.02em}
+.btn{display:inline-flex;align-items:center;border:1px solid #d3d9df;background:#fff;border-radius:2em;padding:.35em .95em;font-weight:600;font-size:1em;color:#1d2228;font-family:inherit}
+.btn.primary{background:#0071e3;border-color:#0071e3;color:#fff}
+.qbar{display:flex;align-items:center;gap:1em;padding:.9em 1.6em;background:#fff;border-bottom:1px solid #e6eaee}
+.qbar .pos{font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:.45em;padding:.25em .75em;border-radius:1em;background:#eef2f5;color:#46515c;font-weight:600}
+.chip i{width:.6em;height:.6em;border-radius:50%;display:inline-block}
+.panes{display:grid;grid-template-columns:1fr 1.45fr 1fr;gap:1.1em;padding:1.3em 1.6em 1.6em}
+.pane{background:#fff;border:1px solid #e3e8ec;border-radius:1em;padding:1.2em 1.3em;min-width:0}
+.pane h4{margin:0 0 .2em;font-size:1.55em;font-family:var(--display);letter-spacing:-.01em}
+.muted{color:#6b7480}
+.tag{display:inline-block;background:#eaf6ef;color:#1d6f4c;border-radius:1em;padding:.15em .7em;font-weight:600;margin:.4em 0}
+.num{font-size:1.4em;font-weight:700;color:#0a66b8;letter-spacing:.01em;margin:.5em 0 .2em}
+.say{background:#f2f7fd;border-left:.25em solid #0a66b8;border-radius:.4em;padding:.8em 1em;line-height:1.55;margin:.4em 0 .9em}
+.lbl{font-size:.82em;letter-spacing:.12em;text-transform:uppercase;color:#7a848e;font-weight:700;margin:.2em 0 .4em}
+.replies{display:flex;flex-wrap:wrap;gap:.5em}
+.replies span{border:1px solid #d6dde3;border-radius:2em;padding:.25em .8em;background:#fff}
+.oc{display:flex;justify-content:space-between;align-items:center;border:1px solid #e1e6eb;border-radius:.6em;padding:.45em .7em;margin:0 0 .45em;font-weight:600}
+.oc kbd{font-family:var(--mono);font-size:.85em;border:1px solid #d6dde3;border-bottom-width:2px;border-radius:.35em;padding:0 .45em;color:#5e6873;background:#f7f9fa}
+.oc.sel{background:#eaf3ff;border-color:#9cc3ef;color:#0a5fae}
+.savebar{margin-top:.8em;background:#0071e3;color:#fff;border-radius:.7em;text-align:center;padding:.65em;font-weight:700}
+@media (max-width:640px){.panes{grid-template-columns:1fr}.panes .talk{display:none}.hub-top nav{display:none}}
+
+/* queue */
+.queue{position:relative;background:var(--white);border:1px solid var(--line);border-radius:28px;padding:22px;box-shadow:0 30px 60px -30px #0a2b3d33}
+.qrow{display:flex;align-items:center;gap:14px;height:64px;padding:0 16px;border-radius:16px;margin-bottom:10px;background:var(--paper);font-weight:600;font-size:16px}
+.qrow:last-child{margin-bottom:0}
+.qrow .why{margin-left:auto;font-size:13px;font-weight:600;color:var(--text-soft);white-space:nowrap}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff;flex:none}
+.qrow .who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lane-k{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--text-soft);margin:16px 4px 8px}
+.lane-k:first-child{margin-top:0}
+.mover{position:absolute;left:22px;right:22px;top:22px;height:64px;border-radius:16px;background:#fff;border:1.5px solid var(--cyan);box-shadow:0 14px 30px -12px #0a7fa866;display:flex;align-items:center;gap:14px;padding:0 16px;font-weight:600;font-size:16px;animation:send 9s cubic-bezier(.65,0,.35,1) infinite}
+.mover .tagline{margin-left:auto;position:relative;font-size:13px;font-weight:700;color:var(--cyan-deep);white-space:nowrap;min-width:0}
+.mover .t1,.mover .t2{display:inline-block}
+.mover .t2{position:absolute;right:0;top:0;opacity:0}
+.mover .t1{animation:fadeA 9s steps(1) infinite}.mover .t2{animation:fadeB 9s steps(1) infinite}
+@keyframes fadeA{0%,38%{opacity:1}39%,96%{opacity:0}97%,100%{opacity:1}}
+@keyframes fadeB{0%,38%{opacity:0}39%,96%{opacity:1}97%,100%{opacity:0}}
+@keyframes send{0%,30%{transform:translateY(0)}48%,82%{transform:translateY(var(--drop))}100%{transform:translateY(0)}}
+.queue .slot,.queue .end{visibility:hidden}
+@media (max-width:480px){.mover .t2{font-size:12px}.qrow .why{display:none}}
+
+/* keypad */
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.key{background:linear-gradient(180deg,#1b242d,#121920);border:1px solid #26323e;border-bottom-width:3px;border-radius:16px;padding:16px 14px 14px;min-height:108px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .12s,border-color .12s,background .12s;cursor:default}
+.key b{font-family:var(--mono);font-size:30px;font-weight:600;color:var(--on-ink);line-height:1}
+.key span{font-size:13.5px;color:var(--on-ink-soft);font-weight:600;line-height:1.25}
+.key.on{transform:translateY(2px);border-color:var(--cyan);background:linear-gradient(180deg,#0e3542,#0a2731)}
+.key.on span{color:var(--on-ink)}
+.keys .wide{grid-column:span 2}
+.hint{margin-top:16px;font-size:14px;color:var(--on-ink-soft)}
+.hint kbd{font-family:var(--mono);border:1px solid var(--line-ink);border-radius:6px;padding:1px 6px;color:var(--on-ink)}
+@media (max-width:560px){.keys{grid-template-columns:repeat(2,minmax(0,1fr))}.keys .wide{grid-column:span 2}}
+
+/* shift */
+.shiftbig{display:flex;align-items:center;flex-wrap:wrap;gap:18px 22px;background:var(--white);border:1px solid var(--line);border-radius:28px;padding:28px 32px;box-shadow:0 30px 60px -30px #0a2b3d33;font-size:20px}
+.shiftbig .dot{width:14px;height:14px}
+.shiftbig .state{font-weight:700}
+.shiftbig .clock{font-size:clamp(36px,5vw,56px);font-weight:600;letter-spacing:-.01em;color:var(--text)}
+.shiftbig .btns{display:flex;gap:10px;margin-left:auto}
+.shiftbig .btn{font-size:16px;padding:8px 18px}
+.devices{display:flex;gap:18px;margin-top:18px;align-items:flex-end}
+.dev{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:15px}
+.dev .clock{font-size:15px}
+.dev small{color:var(--text-soft);font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-right:6px}
+
+/* check-in */
+.checkin .wrap{text-align:center}
+.checkin .lede{margin-left:auto;margin-right:auto}
+.dialog-stage{position:relative;margin:clamp(40px,6vw,64px) auto 0;max-width:560px}
+.dialog-stage::before{content:"";position:absolute;inset:-12% -18%;background:radial-gradient(closest-side,#0bbcdf33,transparent);filter:blur(10px)}
+.dialog{position:relative;background:#fff;color:#1d1d1f;border-radius:22px;padding:30px 30px 24px;text-align:left;box-shadow:0 40px 90px #0000008c}
+.dialog h3{font-size:26px;font-weight:700;letter-spacing:-.015em}
+.dialog p{color:#454c54;font-size:17px;margin:8px 0 20px}
+.dialog .acts{display:flex;gap:10px;flex-wrap:wrap}
+.dialog .btn{font-size:16px;padding:9px 18px}
+.dialog small{display:block;margin-top:16px;color:#6b7480;font-size:13px}
+
+/* right now */
+.live{background:var(--white);border:1px solid var(--line);border-radius:28px;padding:8px 24px;box-shadow:0 30px 60px -30px #0a2b3d33}
+.lrow{display:grid;grid-template-columns:44px minmax(0,140px) auto minmax(0,1fr);align-items:center;gap:14px;padding:16px 0;border-top:1px solid var(--line)}
+.lrow:first-child{border-top:0}
+.lrow b{font-size:17px;font-family:var(--display)}
+.st{justify-self:start;font-size:13px;font-weight:700;border-radius:980px;padding:4px 12px;white-space:nowrap}
+.st.ok{background:var(--ok-bg);color:#11734c}.st.call{background:var(--call-bg);color:#1a5fb4}.st.quiet{background:var(--quiet-bg);color:#ad2f1b}.st.brk{background:var(--brk-bg);color:#8a5a03}.st.off{background:var(--off-bg);color:var(--off)}
+.lrow .f{color:var(--text-soft);font-size:14px;min-width:0}
+@media (max-width:620px){.lrow{grid-template-columns:40px minmax(0,1fr) auto}.lrow .f{grid-column:2 / -1}}
+
+/* review bento */
+.bento{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.tile{background:var(--ink-2);border:1px solid var(--line-ink);border-radius:26px;padding:24px;min-height:220px;display:flex;flex-direction:column;justify-content:space-between;gap:18px;min-width:0}
+.tile h3{font-size:22px;font-weight:700;letter-spacing:-.01em;color:var(--on-ink)}
+.tile p{margin:6px 0 0;color:var(--on-ink-soft);font-size:15px;line-height:1.4}
+.t2{grid-column:span 2}.t3{grid-column:span 3}.t4{grid-column:span 4}
+@media (max-width:900px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.t2,.t3,.t4{grid-column:span 2}}
+.bars{display:flex;align-items:flex-end;gap:8px;height:90px}
+.bars i{flex:1;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--cyan),#0a6f8f)}
+.bars i.lo{background:linear-gradient(180deg,#36515f,#24353f)}
+.clockface{display:block;width:100%;max-width:220px;height:auto;margin:0 auto}
+.dots{display:grid;grid-template-columns:repeat(10,1fr);gap:7px}
+.dots i{aspect-ratio:1;border-radius:50%;background:#26323e;max-width:100%}
+.dots i.c{background:var(--cyan)}.dots i.h{background:#7fe2f5}
+.timeline{display:flex;height:34px;border-radius:10px;overflow:hidden;gap:3px}
+.timeline i{background:var(--cyan)}.timeline i.q{background:repeating-linear-gradient(45deg,#3a2622 0 6px,#2a1c19 6px 12px)}.timeline i.b{background:#3c3216}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--on-ink-soft)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--cyan)}
+.legend .q::before{background:repeating-linear-gradient(45deg,#7a3e33 0 3px,#4a2a24 3px 6px)}.legend .b::before{background:#8a6d1c}
+.spark{width:100%;height:90px;display:block}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{font-size:13px;font-weight:600;border-radius:980px;padding:5px 12px;background:#16212b;color:var(--on-ink);border:1px solid var(--line-ink)}
+.chips span.y{background:#0c3340;border-color:#0f5266;color:#c9f3fc}
+
+/* report */
+.report{background:var(--white);border:1px solid var(--line);border-radius:28px;overflow:hidden;box-shadow:0 30px 60px -30px #0a2b3d33}
+.report .head{padding:22px 26px;background:linear-gradient(120deg,#fff4e2,#fde7cf 40%,#e3f6fb);display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.report .head b{font-family:var(--display);font-size:22px}
+.report .head span{color:#7a6a55;font-size:14px;font-weight:600}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cols > div{padding:22px 26px;min-width:0}
+.cols > div + div{border-left:1px solid var(--line)}
+.cols h4{margin:0 0 14px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-soft)}
+.line{height:12px;border-radius:6px;background:#e6ecf0;margin:0 0 12px}
+.line.c{background:#bfeaf5}.line.m{background:#ffd9a8}
+.report .foot{padding:16px 26px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600}
+.cal{width:22px;height:22px;border-radius:6px;border:2px solid var(--text);position:relative;flex:none}
+.cal::before{content:"";position:absolute;left:-2px;right:-2px;top:-2px;height:7px;background:var(--quiet);border-radius:5px 5px 0 0}
+
+/* truth */
+.truth .big{list-style:none;padding:0;margin:40px 0 0;display:grid;gap:6px}
+.truth .big li{font-family:var(--display);font-size:clamp(28px,4.2vw,52px);font-weight:700;letter-spacing:-.02em;line-height:1.12;color:#4b5966}
+.truth .big li strong{color:var(--on-ink);font-weight:700}
+
+/* everything */
+.areas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:clamp(36px,5vw,56px)}
+.area{background:var(--white);border:1px solid var(--line);border-radius:22px;padding:22px 22px 24px;min-width:0}
+.area svg{width:30px;height:30px;color:var(--cyan-deep);display:block;margin-bottom:14px}
+.area h3{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.area p{margin:6px 0 0;color:var(--text-soft);font-size:15px;line-height:1.4}
+@media (max-width:820px){.areas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.areas{grid-template-columns:1fr}}
+
+/* closing */
+.closing .wrap{text-align:center}
+.closing h2{font-size:clamp(44px,8vw,104px);background:linear-gradient(180deg,#ffffff,#9fe6f6 70%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.closing .lede{margin-left:auto;margin-right:auto}
+.closing .kicker{font-family:var(--display);font-size:clamp(20px,2.4vw,28px);font-weight:600;color:var(--on-ink);margin:0 0 18px}
+footer.band{background:var(--ink);color:var(--on-ink-soft);border-top:1px solid #ffffff12}
+footer .wrap{padding-block:34px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:13px}
+footer .wordmark{height:18px;width:auto;color:var(--on-ink-soft)}
+footer p{margin:0}
+
+
+/* pricing */
+.pricing .wrap{text-align:center}
+.pricing .lede{margin-left:auto;margin-right:auto}
+.price{font-family:var(--display);font-size:clamp(64px,11vw,132px);font-weight:700;letter-spacing:-.04em;line-height:1;margin:22px 0 0;background:linear-gradient(180deg,var(--text) 30%,var(--cyan-deep));-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.pricing .ctas{margin-top:34px}
+.fine{margin:22px auto 0;max-width:52ch;font-size:14px;color:var(--text-soft);text-wrap:balance}
+
+@media (prefers-reduced-motion:reduce){.mover,.mover .t1,.mover .t2{animation:none}.key{transition:none}}
+</style>
+</head>
+<body>
+
+<nav class="lnav band" aria-label="Sales Hub">
+  <div class="in">
+    <a class="name" href="#top">Sales Hub</a>
+    <div class="links"><a href="#queue">Queue</a><a href="#card">Call card</a><a href="#shift">Shifts</a><a href="#rightnow">Right now</a><a href="#review">Review</a><a href="#pricing">Pricing</a></div>
+    <a class="pill" href="#pricing">Try it</a>
+  </div>
+</nav>
+
+<header class="band ink hero" id="top">
+  <div class="wrap">
+    <svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 864 256" role="img" aria-label="Staffify"> <path fill="currentColor" d="M81.31,204.21c-19.72,0-36.23-4.16-49.53-12.48-13.3-8.32-22.66-19.9-28.09-34.74l41.53-24.16c7.06,16.83,19.54,25.24,37.46,25.24,14.83,0,22.26-4.25,22.26-12.76,0-5.43-4.25-9.95-12.76-13.57-2.9-1.09-10.86-3.53-23.88-7.33-18.46-5.25-32.48-12.57-42.07-21.98-9.59-9.41-14.38-21.89-14.38-37.46,0-17.55,6.24-31.76,18.73-42.61,12.85-10.86,28.59-16.28,47.23-16.28,15.92,0,30.03,3.76,42.34,11.26,12.3,7.51,21.71,18.23,28.23,32.16l-40.71,23.88c-5.97-14.11-15.84-21.17-29.58-21.17-5.61,0-9.95,1.13-13.03,3.39-3.08,2.26-4.61,5.29-4.61,9.09,0,4.16,2.21,7.69,6.65,10.58,4.43,2.9,13.07,6.24,25.92,10.04,9.59,2.9,17.01,5.43,22.26,7.6,5.97,2.54,12.12,5.97,18.46,10.31,13.21,8.69,19.81,22.53,19.81,41.53s-6.61,33.21-19.81,43.7c-13.21,10.5-30.67,15.74-52.38,15.74Z"/> <path fill="currentColor" d="M245.24,64.43v43.16h-28.23v39.35c0,5.79,2.04,9.46,6.11,10.99,4.07,1.54,11.44,2.04,22.12,1.49v40.71c-26.78,3.26-45.78.81-57-7.33-10.86-8.5-16.28-23.43-16.28-44.78v-40.44h-20.36v-43.16h20.36v-24.43l45.05-13.57v38h28.23Z"/> <path fill="currentColor" d="M557.67,3.36v41.8c-15.38-1.09-23.07,4.44-23.07,16.56v2.71h23.07v43.16h-23.07v92.55h-45.33v-92.55h-31.48v92.55h-45.05v-92.55h-17.1v-43.16h17.1c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.43v41.8c-15.56-1.09-23.34,4.44-23.34,16.56h31.48v-2.71c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.44Z"/> <path fill="currentColor" d="M607.88,45.7c-5.07,5.07-11.13,7.6-18.18,7.6s-13.21-2.53-18.46-7.6c-5.07-5.25-7.6-11.4-7.6-18.46s2.53-13.12,7.6-18.18c5.25-5.06,11.4-7.6,18.46-7.6s13.12,2.54,18.18,7.6c5.24,5.07,7.87,11.13,7.87,18.18s-2.63,13.21-7.87,18.46ZM612.22,200.13h-45.06V64.43h45.06v135.71Z"/> <path fill="currentColor" d="M705.88,6.07v41.8c-15.56-1.09-23.34,4.44-23.34,16.56h23.34v43.16h-23.34v92.55h-45.06v-92.55h-17.1v-43.16h17.1c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.43Z"/> <path fill="currentColor" d="M789.2,143.14l21.17-78.71h49.94l-46.41,133.54c-7.24,20.44-17.46,35.19-30.67,44.24-13.21,9.05-30.31,13.12-51.3,12.21v-42.34c9.59,0,16.83-1.18,21.71-3.53,4.88-2.35,8.86-6.61,11.94-12.76l-54.28-131.36h50.48l27.41,78.71Z"/> <path fill="currentColor" fill-rule="evenodd" d="M320.32,61.17h0c-38.37,0-69.48,31.11-69.48,69.48h0c0,24.3,12.49,45.68,31.38,58.09,8.41-12.02,22.35-19.9,38.1-19.9,20.31,0,37.61,13.1,43.92,31.29h25.56v-69.48c0-38.37-31.11-69.48-69.48-69.48ZM351.31,131.31c0,16.75-13.58,30.33-30.33,30.33s-31.13-13.2-31.63-30.05c-.52-17.51,13.58-31.93,30.97-31.93s30.99,13.9,30.99,30.99v.66Z"/> </svg>
+    <h1>Meet Sales Hub.</h1>
+    <p class="lede">The private workspace where your sales team calls, follows up and sees how the work is going. Everything in its place.</p>
+    <div class="ctas"><a class="pill" href="#pricing">Try it in your business</a><a class="more" href="#queue">See how it works&nbsp;&rsaquo;</a></div>
+    <div class="glow">
+      <div class="display" role="img" aria-label="The Sales Hub dialer, with sample data: a shift clock running in the header, the next person to call, the talk track and seven outcomes.">
+        <div class="screen" aria-hidden="true">
+          <div class="hub-top"><svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 864 256" role="img" aria-label="Staffify"> <path fill="currentColor" d="M81.31,204.21c-19.72,0-36.23-4.16-49.53-12.48-13.3-8.32-22.66-19.9-28.09-34.74l41.53-24.16c7.06,16.83,19.54,25.24,37.46,25.24,14.83,0,22.26-4.25,22.26-12.76,0-5.43-4.25-9.95-12.76-13.57-2.9-1.09-10.86-3.53-23.88-7.33-18.46-5.25-32.48-12.57-42.07-21.98-9.59-9.41-14.38-21.89-14.38-37.46,0-17.55,6.24-31.76,18.73-42.61,12.85-10.86,28.59-16.28,47.23-16.28,15.92,0,30.03,3.76,42.34,11.26,12.3,7.51,21.71,18.23,28.23,32.16l-40.71,23.88c-5.97-14.11-15.84-21.17-29.58-21.17-5.61,0-9.95,1.13-13.03,3.39-3.08,2.26-4.61,5.29-4.61,9.09,0,4.16,2.21,7.69,6.65,10.58,4.43,2.9,13.07,6.24,25.92,10.04,9.59,2.9,17.01,5.43,22.26,7.6,5.97,2.54,12.12,5.97,18.46,10.31,13.21,8.69,19.81,22.53,19.81,41.53s-6.61,33.21-19.81,43.7c-13.21,10.5-30.67,15.74-52.38,15.74Z"/> <path fill="currentColor" d="M245.24,64.43v43.16h-28.23v39.35c0,5.79,2.04,9.46,6.11,10.99,4.07,1.54,11.44,2.04,22.12,1.49v40.71c-26.78,3.26-45.78.81-57-7.33-10.86-8.5-16.28-23.43-16.28-44.78v-40.44h-20.36v-43.16h20.36v-24.43l45.05-13.57v38h28.23Z"/> <path fill="currentColor" d="M557.67,3.36v41.8c-15.38-1.09-23.07,4.44-23.07,16.56v2.71h23.07v43.16h-23.07v92.55h-45.33v-92.55h-31.48v92.55h-45.05v-92.55h-17.1v-43.16h17.1c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.43v41.8c-15.56-1.09-23.34,4.44-23.34,16.56h31.48v-2.71c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.44Z"/> <path fill="currentColor" d="M607.88,45.7c-5.07,5.07-11.13,7.6-18.18,7.6s-13.21-2.53-18.46-7.6c-5.07-5.25-7.6-11.4-7.6-18.46s2.53-13.12,7.6-18.18c5.25-5.06,11.4-7.6,18.46-7.6s13.12,2.54,18.18,7.6c5.24,5.07,7.87,11.13,7.87,18.18s-2.63,13.21-7.87,18.46ZM612.22,200.13h-45.06V64.43h45.06v135.71Z"/> <path fill="currentColor" d="M705.88,6.07v41.8c-15.56-1.09-23.34,4.44-23.34,16.56h23.34v43.16h-23.34v92.55h-45.06v-92.55h-17.1v-43.16h17.1c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.43Z"/> <path fill="currentColor" d="M789.2,143.14l21.17-78.71h49.94l-46.41,133.54c-7.24,20.44-17.46,35.19-30.67,44.24-13.21,9.05-30.31,13.12-51.3,12.21v-42.34c9.59,0,16.83-1.18,21.71-3.53,4.88-2.35,8.86-6.61,11.94-12.76l-54.28-131.36h50.48l27.41,78.71Z"/> <path fill="currentColor" fill-rule="evenodd" d="M320.32,61.17h0c-38.37,0-69.48,31.11-69.48,69.48h0c0,24.3,12.49,45.68,31.38,58.09,8.41-12.02,22.35-19.9,38.1-19.9,20.31,0,37.61,13.1,43.92,31.29h25.56v-69.48c0-38.37-31.11-69.48-69.48-69.48ZM351.31,131.31c0,16.75-13.58,30.33-30.33,30.33s-31.13-13.2-31.63-30.05c-.52-17.51,13.58-31.93,30.97-31.93s30.99,13.9,30.99,30.99v.66Z"/> </svg>
+            <nav><span>Today</span><span>Campaigns</span><span>Inbox</span><b>Calls</b><span>Spearhead</span><span>Performance</span></nav>
+            <div class="shiftpill"><i class="dot"></i>On shift <span class="clock" data-clock="4325">01:12:05</span><span class="btn">Break</span><span class="btn">End shift</span></div>
+          </div>
+          <div class="qbar"><span class="pos">Next up</span><span class="chip"><i style="background:#e0533d"></i>Callbacks due</span><span class="chip"><i style="background:#0bbcdf"></i>New</span><span class="chip"><i style="background:#9aa5b0"></i>To try again</span></div>
+          <div class="panes">
+            <div class="pane">
+              <h4>Avery Lane</h4><div class="muted">Harbor &amp; Pine Studio</div>
+              <div class="tag">11:42 AM their time · Business hours</div>
+              <div class="num">(555) 010-2048</div><div class="muted">Listed on their own website</div>
+              <div style="display:flex;gap:.5em;margin-top:.9em"><span class="btn primary">Call</span><span class="btn">Text</span><span class="btn">Copy</span></div>
+            </div>
+            <div class="pane talk">
+              <div class="lbl">Open</div>
+              <div class="say">Hi Avery, this is Sam with Staffify. I'll be straight with you, this is a cold call. Do you have a quick second?</div>
+              <div class="lbl">They heard the opener. What did they say?</div>
+              <div class="replies"><span>Go ahead</span><span>What's this about?</span><span>Bad time</span><span>Not interested</span></div>
+            </div>
+            <div class="pane">
+              <div class="lbl">How did it go?</div>
+              <div class="oc">Connected <kbd>1</kbd></div><div class="oc sel">Callback <kbd>2</kbd></div><div class="oc">Left voicemail <kbd>3</kbd></div><div class="oc">No answer <kbd>4</kbd></div>
+              <div class="savebar">Save &amp; next</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="band paper" id="queue">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">The queue</p>
+      <h2>It remembers.</h2>
+      <p class="lede">The last outcome decides where each person goes next. Callbacks someone asked for come first when they are due. Then "not now" leads whose time has come. Then people nobody has called yet, best numbers first.</p>
+      <ul class="points">
+        <li>Didn't pick up? They wait at the back, fewest tries first.</li>
+        <li>Wrong number? The lead goes looking for a better one.</li>
+        <li>Not interested stops all outreach to that person.</li>
+        <li>The top bar shows callbacks due, new and to try again.</li>
+      </ul>
+    </div>
+    <div class="queue" role="img" aria-label="Sample queue: a callback that is due, a not-now lead whose time has come, two new leads, and the back of the line where anyone who did not pick up waits.">
+      <div class="lane-k">Callback due</div>
+      <div class="qrow"><span class="av" style="background:#e0533d">JM</span><span class="who">Asked for 3 PM</span><span class="why">First</span></div>
+      <div class="lane-k">Not now, time's up</div>
+      <div class="qrow"><span class="av" style="background:#b7790a">RC</span><span class="who">Said try in the spring</span><span class="why">Next</span></div>
+      <div class="lane-k">Never called</div>
+      <div class="qrow slot"><span class="av">AL</span><span class="who">.</span></div>
+      <div class="qrow"><span class="av" style="background:#0a7fa8">TB</span><span class="who">Number on their website</span><span class="why">Best number first</span></div>
+      <div class="lane-k">Didn't pick up</div>
+      <div class="qrow"><span class="av" style="background:#8b96a1">KD</span><span class="who">Tried once</span><span class="why">Back of the line</span></div>
+      <div class="qrow end" aria-hidden="true"></div>
+      <div class="mover" aria-hidden="true"><span class="av" style="background:#0bbcdf">AL</span><span class="who">Avery Lane</span><span class="tagline"><span class="t1">Calling now</span><span class="t2">No answer. Back of the line.</span></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="band ink" id="card">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">The call card</p>
+      <h2>One person. One call.</h2>
+      <p class="lede">The dialer hands you one prospect at a time. Who they are. Their local time, and whether it's business hours there. The number, and where it came from. A talk track that branches with every reply.</p>
+      <ul class="points">
+        <li>Objection handling, ready when the conversation turns.</li>
+        <li>Seven outcomes on number keys 1 to 7.</li>
+        <li>Notes, the next step and tasks on the same card.</li>
+        <li>Save &amp; next. The next person is already up.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="keys" id="keys">
+        <div class="key" data-k="1"><b>1</b><span>Connected</span></div>
+        <div class="key" data-k="2"><b>2</b><span>Callback</span></div>
+        <div class="key" data-k="3"><b>3</b><span>Left voicemail</span></div>
+        <div class="key" data-k="4"><b>4</b><span>No answer</span></div>
+        <div class="key" data-k="5"><b>5</b><span>Not now</span></div>
+        <div class="key" data-k="6"><b>6</b><span>Wrong number</span></div>
+        <div class="key wide" data-k="7"><b>7</b><span>Not interested / stop</span></div>
+      </div>
+      <p class="hint">Try it. Press <kbd>1</kbd> to <kbd>7</kbd>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band paper" id="shift">
+  <div class="wrap">
+    <p class="eyebrow">Shifts</p>
+    <h2>One clock. Every screen.</h2>
+    <p class="lede">Start, Break, Resume and End sit in the header beside a running clock. The server keeps the time, so it reads the same in every tab and on every device. Phone numbers appear only while a shift is running.</p>
+    <div class="stage">
+      <div class="shiftbig" role="img" aria-label="Sample shift clock, running.">
+        <i class="dot"></i><span class="state">On shift</span><span class="clock" data-clock="8047">02:14:07</span>
+        <span class="btns"><span class="btn">Break</span><span class="btn">End shift</span></span>
+      </div>
+      <div class="devices" aria-hidden="true">
+        <div class="dev"><small>Laptop</small><i class="dot"></i><span class="clock" data-clock="8047">02:14:07</span></div>
+        <div class="dev"><small>Phone</small><i class="dot"></i><span class="clock" data-clock="8047">02:14:07</span></div>
+      </div>
+      <ul class="points"><li>Take a break. The clock knows.</li><li>Switch devices mid-shift. The clock follows.</li></ul>
+    </div>
+  </div>
+</section>
+
+<section class="band ink checkin" id="checkin">
+  <div class="wrap">
+    <p class="eyebrow">A gentle check-in</p>
+    <h2>Still on your shift?</h2>
+    <p class="lede">After 10 quiet minutes on a running shift, with no activity in the Hub and no call, one question appears. It reads the way a good teammate would ask it. Your shift time stays exactly as it was.</p>
+    <div class="dialog-stage">
+      <div class="dialog" role="img" aria-label="The check-in prompt: Still on your shift? with three answers.">
+        <h3>Still on your shift?</h3>
+        <p>Nothing in the Hub or on the phone for 10 minutes. Your next call is ready in the dialer.</p>
+        <div class="acts"><span class="btn primary">Next call</span><span class="btn">I'm on a call</span><span class="btn">Take a break</span></div>
+        <small>This only checks in. Your shift time is not changed.</small>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band paper" id="rightnow">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Right now</p>
+      <h2>Know without asking.</h2>
+      <p class="lede">Owners see every caller, live. Working, on a call, quiet and for how long, on break or off shift. Last activity, last call and today's quiet stretches sit beside each name.</p>
+    </div>
+    <div class="live" role="img" aria-label="Sample Right now view with five callers in different states.">
+      <div class="lrow"><span class="av" style="background:#1f9d6b">JR</span><b>Jordan</b><span class="st ok">Working</span><span class="f">Last activity 2 min ago</span></div>
+      <div class="lrow"><span class="av" style="background:#2f7fe0">AM</span><b>Alex</b><span class="st call">On a call</span><span class="f">Since 2:41 PM</span></div>
+      <div class="lrow"><span class="av" style="background:#d9472f">KT</span><b>Kai</b><span class="st quiet">Quiet for 14 min</span><span class="f">Check-in on screen, not answered</span></div>
+      <div class="lrow"><span class="av" style="background:#b7790a">SP</span><b>Sam</b><span class="st brk">On break</span><span class="f">Since 2:30 PM</span></div>
+      <div class="lrow"><span class="av" style="background:#8b96a1">RD</span><b>Riley</b><span class="st off">Off shift</span><span class="f">Back tomorrow</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="band ink" id="review">
+  <div class="wrap">
+    <p class="eyebrow">Caller review</p>
+    <h2>Pick the dates. See the work.</h2>
+    <p class="lede">Choose any date range and read it day by day. Calls placed, outcomes logged and meetings booked. Who actually answered, going by the outcome the caller chose. Owners see the team. Each caller sees their own.</p>
+    <div class="bento stage" aria-label="What the review shows, with sample shapes instead of figures">
+      <div class="tile t4"><div><h3>Day by day</h3><p>Calls placed, outcomes logged, who answered and meetings booked.</p></div>
+        <div class="bars" aria-hidden="true"><i style="height:55%"></i><i style="height:72%"></i><i class="lo" style="height:30%"></i><i style="height:64%"></i><i style="height:88%"></i><i class="lo" style="height:12%"></i><i style="height:76%"></i></div></div>
+      <div class="tile t2"><div><h3>Their local time</h3><p>Calls by the prospect's own clock.</p></div>
+        <svg class="clockface" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="48" fill="none" stroke="#26323e" stroke-width="14"/><path d="M60 12 A48 48 0 0 1 101.6 84" fill="none" stroke="#0bbcdf" stroke-width="14" stroke-linecap="round"/><circle cx="60" cy="60" r="3" fill="#eef4f8"/><path d="M60 60 L60 30" stroke="#eef4f8" stroke-width="3" stroke-linecap="round"/><path d="M60 60 L80 66" stroke="#8d9aa6" stroke-width="3" stroke-linecap="round"/></svg></div>
+      <div class="tile t2"><div><h3>Who answered</h3><p>Going by the outcome the caller chose.</p></div>
+        <div class="chips" aria-hidden="true"><span class="y">Conversation</span><span class="y">Callback</span><span>Voicemail</span><span>No answer</span><span class="y">Not now</span></div></div>
+      <div class="tile t2"><div><h3>Called again</h3><p>Who got called again and again.</p></div>
+        <div class="dots" aria-hidden="true"><i class="c"></i><i></i><i></i><i class="c"></i><i></i><i class="h"></i><i></i><i></i><i class="c"></i><i></i><i></i><i class="h"></i><i class="h"></i><i></i><i></i><i class="c"></i><i></i><i></i><i class="h"></i><i></i></div></div>
+      <div class="tile t2"><div><h3>Numbers and leads</h3><p>Numbers that turned out bad, and leads still waiting.</p></div>
+        <div class="chips" aria-hidden="true"><span>Wrong number</span><span>Main line</span><span class="y">Ready to call</span></div></div>
+      <div class="tile t3"><div><h3>Pace</h3><p>Pace per shift hour, and the gaps in logging.</p></div>
+        <svg class="spark" viewBox="0 0 300 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 C40 60 60 30 100 38 S160 70 200 44 S260 20 300 28 L300 90 L0 90 Z" fill="#0bbcdf22"/><path d="M0 70 C40 60 60 30 100 38 S160 70 200 44 S260 20 300 28" fill="none" stroke="#0bbcdf" stroke-width="3"/><circle cx="300" cy="28" r="5" fill="#0bbcdf"/></svg></div>
+      <div class="tile t3"><div><h3>Quiet stretches</h3><p>Time on shift with no activity and no call, and whether a check-in appeared.</p></div>
+        <div><div class="timeline" aria-hidden="true"><i style="flex:5"></i><i class="q" style="flex:1.2"></i><i style="flex:3"></i><i class="b" style="flex:1"></i><i style="flex:4"></i><i class="q" style="flex:.9"></i><i style="flex:2"></i></div>
+        <div class="legend" style="margin-top:10px"><span>Working</span><span class="q">Quiet</span><span class="b">Break</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="band paper" id="report">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Daily report</p>
+      <h2>Yesterday, by breakfast.</h2>
+      <p class="lede">Every morning, the Hub lays out the day before in one report. Calls the phone system recorded sit beside the calls that were logged, so any gap is plain to see. Meetings come straight from the calendar.</p>
+    </div>
+    <div class="report" role="img" aria-label="Sample daily report: phone system calls beside logged calls, and meetings from the calendar.">
+      <div class="head"><b>Yesterday</b><span>Ready at 8 AM</span></div>
+      <div class="cols">
+        <div><h4>Phone system</h4><div class="line c" style="width:92%"></div><div class="line c" style="width:76%"></div><div class="line c" style="width:84%"></div><div class="line c" style="width:60%"></div></div>
+        <div><h4>Logged</h4><div class="line" style="width:92%"></div><div class="line" style="width:76%"></div><div class="line" style="width:84%"></div><div class="line m" style="width:34%"></div></div>
+      </div>
+      <div class="foot"><span class="cal" aria-hidden="true"></span>Meetings, from the calendar</div>
+    </div>
+  </div>
+</section>
+
+<section class="band ink truth" id="truth">
+  <div class="wrap">
+    <p class="eyebrow">Honesty</p>
+    <h2>No flattering numbers.</h2>
+    <p class="lede">Only the phone system's record counts as a verified call. There is no "picked up" rate, because voicemail and phone menus pick up too. Anything the Hub could not read says unknown.</p>
+    <ul class="big">
+      <li><strong>A blank never passes for a zero.</strong></li>
+      <li>Activity is never turned into payroll.</li>
+      <li>Callers see their own work. Owners see the team.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="band paper" id="everything">
+  <div class="wrap">
+    <p class="eyebrow">And the rest</p>
+    <h2>Everything around the call.</h2>
+    <p class="lede">The dialer is where the calls happen. The rest of the working day lives right beside it, in the same private workspace.</p>
+    <div class="areas">
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><h3>Today</h3><p>Home. Where the day starts.</p></div>
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><h3>My Day</h3><p>Callbacks and priorities first.</p></div>
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><h3>Campaigns</h3><p>Email first, then a call.</p></div>
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 2h6l1-2h5"/></svg><h3>Inbox</h3><p>Where the replies are.</p></div>
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><h3>Spearhead</h3><p>A short list of named accounts, one at a time.</p></div>
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="6" rx="1.5"/></svg><h3>Pipeline</h3><p>Where every deal stands.</p></div>
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6.5v11"/></svg><h3>Commissions</h3><p>What each person has earned.</p></div>
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 19V5"/><path d="M8 7h7"/></svg><h3>Training</h3><p>The calls, learned before they are made.</p></div>
+      <div class="area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 004 0"/></svg><h3>Follow-ups</h3><p>Every promised callback, one click away.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band white pricing" id="pricing">
+  <div class="wrap">
+    <p class="eyebrow">Try it in your business</p>
+    <h2>Built for you.</h2>
+    <p class="price">$4,995</p>
+    <p class="lede">Sales Hub, built for your business and your team.</p>
+    <div class="ctas"><a class="pill" href="/book/?utm_content=sales-hub-pricing">Try it in your business</a></div>
+    <p class="fine">Doesn't include the subscriptions needed for outreach servers.</p>
+  </div>
+</section>
+
+<section class="band ink closing">
+  <div class="wrap">
+    <p class="kicker">Everyone knows where they stand.</p>
+    <h2>Your next call is ready.</h2>
+    <p class="lede">Start a shift. The Hub hands you the first person to call, and the one after that.</p>
+    <div class="ctas"><a class="pill" href="/book/?utm_content=sales-hub-closing">Try it in your business</a><a class="more" href="#pricing">See pricing&nbsp;&rsaquo;</a></div>
+  </div>
+</section>
+
+<footer class="band">
+  <div class="wrap"><a href="/" aria-label="Staffify home" style="display:inline-flex"><svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 864 256" role="img" aria-label="Staffify"> <path fill="currentColor" d="M81.31,204.21c-19.72,0-36.23-4.16-49.53-12.48-13.3-8.32-22.66-19.9-28.09-34.74l41.53-24.16c7.06,16.83,19.54,25.24,37.46,25.24,14.83,0,22.26-4.25,22.26-12.76,0-5.43-4.25-9.95-12.76-13.57-2.9-1.09-10.86-3.53-23.88-7.33-18.46-5.25-32.48-12.57-42.07-21.98-9.59-9.41-14.38-21.89-14.38-37.46,0-17.55,6.24-31.76,18.73-42.61,12.85-10.86,28.59-16.28,47.23-16.28,15.92,0,30.03,3.76,42.34,11.26,12.3,7.51,21.71,18.23,28.23,32.16l-40.71,23.88c-5.97-14.11-15.84-21.17-29.58-21.17-5.61,0-9.95,1.13-13.03,3.39-3.08,2.26-4.61,5.29-4.61,9.09,0,4.16,2.21,7.69,6.65,10.58,4.43,2.9,13.07,6.24,25.92,10.04,9.59,2.9,17.01,5.43,22.26,7.6,5.97,2.54,12.12,5.97,18.46,10.31,13.21,8.69,19.81,22.53,19.81,41.53s-6.61,33.21-19.81,43.7c-13.21,10.5-30.67,15.74-52.38,15.74Z"/> <path fill="currentColor" d="M245.24,64.43v43.16h-28.23v39.35c0,5.79,2.04,9.46,6.11,10.99,4.07,1.54,11.44,2.04,22.12,1.49v40.71c-26.78,3.26-45.78.81-57-7.33-10.86-8.5-16.28-23.43-16.28-44.78v-40.44h-20.36v-43.16h20.36v-24.43l45.05-13.57v38h28.23Z"/> <path fill="currentColor" d="M557.67,3.36v41.8c-15.38-1.09-23.07,4.44-23.07,16.56v2.71h23.07v43.16h-23.07v92.55h-45.33v-92.55h-31.48v92.55h-45.05v-92.55h-17.1v-43.16h17.1c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.43v41.8c-15.56-1.09-23.34,4.44-23.34,16.56h31.48v-2.71c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.44Z"/> <path fill="currentColor" d="M607.88,45.7c-5.07,5.07-11.13,7.6-18.18,7.6s-13.21-2.53-18.46-7.6c-5.07-5.25-7.6-11.4-7.6-18.46s2.53-13.12,7.6-18.18c5.25-5.06,11.4-7.6,18.46-7.6s13.12,2.54,18.18,7.6c5.24,5.07,7.87,11.13,7.87,18.18s-2.63,13.21-7.87,18.46ZM612.22,200.13h-45.06V64.43h45.06v135.71Z"/> <path fill="currentColor" d="M705.88,6.07v41.8c-15.56-1.09-23.34,4.44-23.34,16.56h23.34v43.16h-23.34v92.55h-45.06v-92.55h-17.1v-43.16h17.1c0-19.72,5.79-34.69,17.37-44.92,11.58-10.22,28.59-14.7,51.03-13.43Z"/> <path fill="currentColor" d="M789.2,143.14l21.17-78.71h49.94l-46.41,133.54c-7.24,20.44-17.46,35.19-30.67,44.24-13.21,9.05-30.31,13.12-51.3,12.21v-42.34c9.59,0,16.83-1.18,21.71-3.53,4.88-2.35,8.86-6.61,11.94-12.76l-54.28-131.36h50.48l27.41,78.71Z"/> <path fill="currentColor" fill-rule="evenodd" d="M320.32,61.17h0c-38.37,0-69.48,31.11-69.48,69.48h0c0,24.3,12.49,45.68,31.38,58.09,8.41-12.02,22.35-19.9,38.1-19.9,20.31,0,37.61,13.1,43.92,31.29h25.56v-69.48c0-38.37-31.11-69.48-69.48-69.48ZM351.31,131.31c0,16.75-13.58,30.33-30.33,30.33s-31.13-13.2-31.63-30.05c-.52-17.51,13.58-31.93,30.97-31.93s30.99,13.9,30.99,30.99v.66Z"/> </svg></a><p>Sales Hub is the workspace the Staffify sales team uses every day. Screens on this page show sample data.</p></div>
+</footer>
+
+<script>
+(function(){
+  // Running clocks: each starts at its data-clock seconds and ticks with the real clock.
+  var clocks=[].slice.call(document.querySelectorAll('[data-clock]'));var t0=Date.now();
+  function pad(n){return String(n).padStart(2,'0');}
+  function tick(){var s=Math.floor((Date.now()-t0)/1000);clocks.forEach(function(c){var v=Number(c.getAttribute('data-clock'))+s;c.textContent=pad(Math.floor(v/3600))+':'+pad(Math.floor(v/60)%60)+':'+pad(v%60);});}
+  tick();setInterval(tick,1000);
+  // The queue's moving card: drop it to the back row.
+  var q=document.querySelector('.queue'),mover=q&&q.querySelector('.mover'),slot=q&&q.querySelector('.slot'),end=q&&q.querySelector('.end');
+  function place(){if(!q||!mover||!slot||!end)return;var top=slot.offsetTop;mover.style.top=top+'px';mover.style.setProperty('--drop',(end.offsetTop-top)+'px');}
+  place();window.addEventListener('resize',place);
+  // Keys 1 to 7 light the matching outcome, the way the dialer takes them.
+  var keys=document.getElementById('keys');
+  function press(k){if(!keys)return;var el=keys.querySelector('[data-k="'+k+'"]');if(!el)return;el.classList.add('on');setTimeout(function(){el.classList.remove('on');},260);}
+  document.addEventListener('keydown',function(e){if(e.target&&/input|textarea/i.test(e.target.tagName))return;if(/^[1-7]$/.test(e.key))press(e.key);});
+  if(keys)keys.addEventListener('pointerdown',function(e){var k=e.target.closest('.key');if(k)press(k.getAttribute('data-k'));});
+})();
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+<script src="/assets/js/analytics.js?v=1" defer></script>
+</body>
+</html>
