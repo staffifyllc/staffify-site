@@ -33,6 +33,24 @@ test('the review cases: assistants as a product, voicemail greetings, and "I hun
     assert.equal(r('no_answer', 'Spoke with the receptionist, owner out').who, 'staff');
 });
 
+test('the second review: role words that describe a hire, staff named as the contact, and "nobody" phrasing', () => {
+    // A prospect talking about the assistant they want or have is still the prospect.
+    for (const [o, n] of [['connected', 'Interested in an executive assistant, said to email pricing'], ['connected', 'Needs a virtual assistant, stated budget is tight'], ['suppress', 'Already has an assistant, said not interested'], ['timing', 'Has an office manager, told me to call in Q1'], ['callback', 'Wants a receptionist, said call back Monday'], ['connected', "Good convo, he's traveling next week so call after"]])
+        assert.deepEqual([r(o, n).who, r(o, n).mislogged], ['prospect', false], n);
+    // Staff named as the person spoken to is staff, whatever the outcome.
+    for (const [o, n] of [['connected', "Spoke with her assistant, she said he's out until Monday"], ['connected', "Talked with the owner's office manager, not interested"], ['callback', "Spoke with the owner's assistant, call back Thursday"], ['connected', 'Spoke with Kaya, GK. Owner out'], ['no_answer', 'Spoke with Kaya (GK), call back tomorrow'], ['connected', 'Office manager picked up, she answered our questions']])
+        assert.equal(r(o, n).who, 'staff', n);
+    // Gatekeeper shorthand on a no-answer.
+    for (const n of ['Left msg w/ GK', 'LM with GK', 'Reached GK, owner unavailable', 'Got the receptionist, left message', 'GK - owner out'])
+        assert.deepEqual([r('no_answer', n).who, r('no_answer', n).mislogged], ['staff', true], n);
+    // Nobody, a voicemail, or the caller hanging up: not a person.
+    for (const [o, n] of [['no_answer', 'Called the front desk, no one answered'], ['no_answer', 'Front desk line rang out, nobody answered'], ['no_answer', 'Receptionist never picked up'], ['voicemail', "Left VM for Nima's assistant"], ['voicemail', 'Assistant voicemail said she is out'], ['no_answer', 'I just hung up after it rang out'], ['no_answer', 'i hung up after 8 rings'], ['no_answer', 'Rang 10 times then hung up'], ['no_answer', 'Had to hang up, kept ringing']])
+        assert.equal(r(o, n), null, n);
+    // A conversation logged as no answer is still caught, negation words or not.
+    for (const [o, n] of [['no_answer', "Spoke to the owner, he didn't want to hear it"], ['no_answer', 'Talked to Dan, said they never hire remote'], ['voicemail', 'Spoke with owner, did not need help right now'], ['no_answer', 'Spoke with the owner, mentioned the voicemail I left']])
+        assert.deepEqual([r(o, n).who, r(o, n).mislogged], ['prospect', true], n);
+});
+
 test('number problems come from the Wrong number outcome or a note that says so', () => {
     const i = (outcome, notes) => numberIssue({ outcome, notes });
     assert.equal(i('wrong_number', ''), 'Wrong or dead number');
@@ -48,6 +66,7 @@ test('a note never shows a dialable number', () => {
     assert.equal(cleanNote('Call him on 612-555-0199 or (612) 555 0198, ext 12'), 'Call him on [number] or [number], ext 12');
     for (const n of ['Cell 612  555  0199', '612 - 555 - 0199', '612\u2013555\u20130199', '612. 555. 0199', 'call 555-0199', '+44 20 7946 0958']) assert.ok(!/\d{3}/.test(cleanNote(n).replace('[number]', '')), n + ' -> ' + cleanNote(n));
     assert.equal(cleanNote('Call 10/27/2026 at 2:30, budget $1,500'), 'Call 10/27/2026 at 2:30, budget $1,500', 'dates and money stay readable');
+    for (const n of ['212/555/0166', '612 / 555 / 0199', '212\u2011555\u20110155', '612\u2212555\u22120199']) assert.equal(cleanNote('alt ' + n), 'alt [number]', n);
     assert.equal(cleanNote('x'.repeat(400)).length, 240);
 });
 
@@ -65,7 +84,7 @@ test('the review adds up: days, who answered, numbers, local time, repeats, pace
     assert.equal(t.dials, 19); assert.equal(t.outcomes, 17); assert.equal(t.prospects, 13);
     assert.deepEqual([t.reached, t.prospectsReached, t.staffReached, t.someoneReached], [9, 5, 4, 0]);
     assert.deepEqual([t.reachedPerDial.num, t.reachedPerDial.den], [9, 19]); assert.equal(t.reachedWithoutQuoCall, 0);
-    assert.equal(t.meetings, 0); assert.equal(t.mislogged, 6);
+    assert.equal(t.meetings, 0); assert.equal(t.mislogged, 6); assert.equal(t.daysWorked, 5);
     assert.equal(t.dialsWithoutOutcome, 2, 'the two dials on Oct 26 with nothing logged'); assert.equal(t.outcomesWithoutQuoCall, 0);
     assert.equal(t.clockedMinutes, 240); assert.equal(t.activeMinutes, 123);
     const oct26 = v.days.find(d => d.day === '2026-10-26');
@@ -100,6 +119,7 @@ test('a source that could not be read is unknown, never zero', () => {
     assert.equal(noCal.totals.meetings, null); assert.ok(noCal.coverage.some(c => /Meetings are unknown/.test(c)));
     const noHub = buildReview(source({ hubOk: false }), { generatedAt: GENERATED });
     assert.deepEqual([noHub.totals.outcomes, noHub.totals.reached, noHub.numbers.flagged, noHub.totals.mislogged], [null, null, null, null]);
+    assert.equal(noHub.totals.daysWorked, 5, 'a kept day with no evidence is not a day worked');
     assert.equal(noHub.timing.buckets, null); assert.equal(noHub.repeats, null); assert.ok(noHub.timing.etHours.length > 0, 'the Eastern hours come from Quo and stay');
     const both = buildReview(source({ quoOk: false, hubOk: false }), { generatedAt: GENERATED });
     assert.equal(both.quietDays.length, 0, 'a day whose sources could not be read is never called quiet');

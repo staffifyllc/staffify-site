@@ -159,8 +159,8 @@ export function render(v) {
     const list = (v.reached && v.reached.list) || [];
     parts.push(section('Who answered',
         lede(t.reached === null ? 'Unknown: the Hub call log could not be read.' : plural(t.reached, 'call', 'calls') + ' reached a person: ' + t.prospectsReached + ' the prospect, ' + t.staffReached + ' staff' + (t.someoneReached ? ', ' + t.someoneReached + ' unclear' : '') + '.'
-            + (t.reachedPerDial && t.reachedPerDial.den ? ' That is ' + t.reachedPerDial.num + ' of ' + plural(t.reachedPerDial.den, 'Quo dial', 'Quo dials') + (pct(t.reachedPerDial) ? ' (' + pct(t.reachedPerDial) + ')' : '') + '.' : '')
-            + (t.reachedWithoutQuoCall ? ' ' + plural(t.reachedWithoutQuoCall, 'was', 'were').replace(/^(\d+) /, '$1 of them ') + ' logged with no matching Quo call.' : '')),
+            + (t.reachedPerDial && t.reachedPerDial.den ? ' Of the ' + plural(t.reachedPerDial.den, 'Quo dial', 'Quo dials') + ', ' + t.reachedPerDial.num + ' reached a person' + (pct(t.reachedPerDial) ? ' (' + pct(t.reachedPerDial) + ')' : '') + '.' : '')
+            + (t.reachedWithoutQuoCall ? ' The other ' + t.reachedWithoutQuoCall + (t.reachedWithoutQuoCall === 1 ? ' was' : ' were') + ' logged with no matching Quo call.' : '')),
         list.length ? table(['When', 'Company', 'What happened', 'Logged as', 'Note'], list.map(x => [whenET(x.at), x.company || '', (x.who === 'staff' ? 'Staff: ' : x.who === 'someone' ? 'Unclear: ' : 'Prospect: ') + x.how, x.logged, x.note || ''])) : null,
         el('p', { class: 'pr-small', text: "Quo counts a call as answered when voicemail or a phone menu picks up, so that count is not used here." })));
 
@@ -174,8 +174,8 @@ export function render(v) {
     // Supply
     const s = v.supply;
     parts.push(section('Leads ready to call, right now',
-        !s ? lede('Unknown: the call queue could not be read.') : lede((s.crmIncomplete ? 'At least ' : '') + plural(s.neverDialled, 'callable lead nobody has called', 'callable leads nobody has called') + '. ' + plural(s.hisFollowUpsDue, "of this caller's own follow-ups is", "of this caller's own follow-ups are") + ' due.'),
-        s && s.crmIncomplete ? el('p', { class: 'pr-small', text: 'The CRM could not be read just now, so leads whose only number is in the CRM are missing from this count.' }) : null,
+        !s ? lede('Unknown: the call queue could not be read.') : lede((s.crmIncomplete ? 'At least ' : '') + plural(s.neverDialled, 'callable lead nobody has called', 'callable leads nobody has called') + '. ' + (s.crmIncomplete ? 'At least ' : '') + plural(s.hisFollowUpsDue, "of this caller's own follow-ups is", "of this caller's own follow-ups are") + ' due.'),
+        s && s.crmIncomplete ? el('p', { class: 'pr-small', text: 'The CRM could not be read just now, so leads and follow-ups whose only number is in the CRM are missing from both counts.' }) : null,
         s && s.bySource.length ? table(['Where the number came from', 'Leads'], s.bySource.map(x => [x.label, num(x.n)])) : null,
         s && s.byCampaign.length > 1 ? table(['Campaign', 'Leads'], s.byCampaign.map(x => [x.name, num(x.n)])) : null));
 
@@ -198,7 +198,7 @@ export function render(v) {
     // Pace
     parts.push(section('Pace',
         days.length ? table(['Day', 'Shift', 'Dials', 'Dials per shift hour', 'First to last dial', 'Hub active'],
-            days.map(d => [dayLabel(d.day), shiftText(d), num(d.dials), d.dialsPerClockedHour === null ? 'n/a' : String(d.dialsPerClockedHour), d.dials === null ? 'unknown' : d.firstDial ? clockET(d.firstDial) + ' to ' + clockET(d.lastDial) + (d.dialSpanMinutes !== null ? ' (' + mins(d.dialSpanMinutes) + ')' : '') : 'no dials', activityText(d)])) : null,
+            days.map(d => [dayLabel(d.day), shiftText(d), num(d.dials), d.dialsPerClockedHour !== null ? String(d.dialsPerClockedHour) : (d.dials === null || d.shiftUnavailable) ? 'unknown' : 'n/a', d.dials === null ? 'unknown' : d.firstDial ? clockET(d.firstDial) + ' to ' + clockET(d.lastDial) + (d.dialSpanMinutes !== null ? ' (' + mins(d.dialSpanMinutes) + ')' : '') : 'no dials', activityText(d)])) : null,
         el('p', { class: 'pr-small', text: 'Shift is what was declared in the Hub. Hub active is an estimate of minutes with the Hub in use. Neither is payroll; Hubstaff is the source for paid hours.' })));
 
     // Logging
