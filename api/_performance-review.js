@@ -7,9 +7,8 @@
 // Every day in the review IS that day's buildReport (api/_daily-report.js), cut from sources read
 // once for the whole span, so the review and the daily report never disagree about a day. On top of
 // the days it answers the questions that came up reading them:
-//   who answered            the outcome he chose plus the words in his notes. Quo marks a call
-//                           answered when voicemail or a phone menu picks up, so Quo's answered
-//                           flag is never used for this.
+//   who answered            the outcome the caller chose (never Quo's answered flag, which
+//                           voicemail and phone menus also set); notes only feed a list to check
 //   are the numbers bad     outcomes and notes that say so, per prospect and per campaign
 //   is there enough to call callable cards nobody has dialled yet, by where the number came from
 //   when he calls           each call at the prospect's local time, inferred from the area code
@@ -26,86 +25,51 @@ export const MAX_DAYS = 31;
 const ms = s => Date.parse(s);
 const norm = e => String(e || '').trim().toLowerCase();
 
-// ---- reading a note ---------------------------------------------------------------------------
-// Conservative on purpose: a phrase has to say it, and the logged outcome stands when the note is
-// unclear. Three rules carry most of the weight, each found by reading real and adversarial notes:
-//   Staffify sells assistants, so a role word alone ("wants an assistant", "has an office manager")
-//   says nothing. Staff answered only when the role is the one talking or taking the message:
-//   "Kaya, Nima's assistant, stated", "the receptionist said", "left msg w/ GK", "got the receptionist".
-//   Direct contact ("spoke with the owner", "talked to Dan") outranks a mention of staff, unless the
-//   person named is the staff member ("spoke with her assistant", "Spoke with Kaya, GK").
-//   A machine or nobody is never a person: voicemail, greetings, recordings, "nobody answered",
-//   "I hung up", "rang out then hung up".
-const ROLE = '(?:assistant|gatekeeper|gk|receptionist|front desk|secretary|office manager)';
-const ROLE_RE = new RegExp('\\b' + ROLE + '\\b', 'i');
-const STAFF_TOOK = new RegExp(
-    // the role is the one speaking: at the start, after punctuation, after the/his/her/their, or after a possessive
-    "(?:^|[.,;:(]\\s*|\\b(?:the|his|her|their)\\s+|\\b\\w+(?:'s|’s)\\s+)" + ROLE + ',?\\s+(?:answered|picked up|said|stated|took|told)\\b' +
-    // a message left with them
-    '|\\b(?:message|msg|lm)\\s+(?:with|w\\/)\\s*(?:the\\s+|his\\s+|her\\s+|their\\s+|a\\s+)?' + ROLE + '\\b' +
-    // reached them, or spoke to them
-    '|\\b(?:reached|got)\\s+(?:the\\s+|a\\s+)?' + ROLE + '\\b' +
-    '|\\b(?:spoke|talked)\\s+(?:to|with)\\s+(?:the\\s+|his\\s+|her\\s+|their\\s+|a\\s+)?(?:\\w+(?:\'s|’s)\\s+)?' + ROLE + '\\b' +
-    // a name introduced as staff: "Kaya, Nima's assistant", "Kaya (GK)", "Kaya, GK"
-    "|\\b\\w+\\s*(?:,|\\()\\s*(?:the\\s+|\\w+(?:'s|’s)\\s+)?" + ROLE + '\\b' +
-    // the role opening the note: "GK - owner out", "Receptionist: call back at 3"
-    '|^\\s*' + ROLE + '\\s*[-:,]', 'i');
-const DIRECT_WORD = new RegExp("\\b(?:spoke|talked)\\s+(?:to|with)\\s+(?:the\\s+)?(?:owner|ceo|founder|president|principal|broker|him|her)\\b(?!(?:'s|’s)|\\s+" + ROLE + ')|\\bowner\\s+(?:picked up|answered)\\b', 'i');
-const NAMED = /\b(?:[Ss]poke|[Tt]alked)\s+(?:to|with)\s+([A-Z][a-z]+)\b/g;
-/** "spoke with the owner" or "talked to Dan", where the person named is not staff. */
-function direct(note) {
-    if (DIRECT_WORD.test(note)) return true;
-    for (const m of note.matchAll(NAMED)) {
-        if (ROLE_RE.test(m[1])) continue;                                     // "Spoke with Assistant ..."
-        if (ROLE_RE.test(note.slice(m.index + m[0].length, m.index + m[0].length + 25))) continue;   // "Spoke with Kaya, GK"
-        return true;
-    }
-    return false;
+// ---- who answered, and notes worth a second look ------------------------------------------------
+// Three review rounds (2026-10-27) fed this file hundreds of real and invented caller notes. Every
+// keyword rule for "who answered" misread common ones: Staffify sells assistants, so prospects talk
+// about assistants; gatekeeper shorthand is endless; "LVM, spoke to him last week" is past tense.
+// So the count never reads notes. A call reached a person when the OUTCOME the caller chose says so:
+// Conversation, Callback agreed, Not now, or Not interested on a call Quo confirms (the stop button
+// is also used for closed businesses, so an unconfirmed one is not counted). That is exact.
+// Notes only feed a short "notes to check" list: a No answer or Voicemail whose note sounds like a
+// person answered, or a Conversation whose note sounds like staff or a hang-up. A person reads them;
+// they are never added to any figure, so a wrong guess costs a glance, not a wrong number.
+const HOW = { connected: 'Conversation', callback: 'Callback agreed', timing: 'Not now', suppress: 'Not interested' };
+
+/** A person answered, by the outcome chosen. `verified`: a Quo dial was paired with it. */
+export function answeredFrom(entry, { verified = false } = {}) {
+    const o = entry && entry.outcome;
+    if (o === 'connected' || o === 'callback' || o === 'timing') return { how: HOW[o] };
+    if (o === 'suppress' && verified) return { how: HOW[o] };
+    return null;
 }
-// Somebody speaking about the prospect in the third person ("he's in Asia", "she's not in").
-const FOR_THEM = /\b(he|she)(?:'s|’s| is| was) (?:not in|out\b|out of|away|in asia|in europe|traveling|travelling|on vacation|unavailable|not available|with a client|on a shoot|in a meeting)/i;
-// ...said by a named third party ("Carla stated that he's in Asia"), not by the prospect.
-const THIRD_SPEAKER = /\b(?!(?:He|She|They|I|We|Owner|Prospect|Client)\b)[A-Z][a-z]+\s+(?:said|stated|told)\b/;
-const HUNG_UP = /\bh(?:ung|ang|anged|angs)[\s-]?up\b/i;
-const I_HUNG = /\b(?:I|we)\b[^.]{0,15}?\bh(?:ung|ang|anged)[\s-]?up\b/i;
-const RINGING = /\b(rang|ringing|rings|ring out|rang out)\b/i;
-const THEY_HUNG = /\b(?:he|she|they|prospect|owner|someone|guy|lady|man|woman)\s+h(?:ung|ang|anged|angs)[\s-]?up\b/i;
-const SPOKE = /\b(stated|said|spoke|talked|told (?:me|us)|mentioned)\b/i;
-const MACHINE = /\b(vm|lvm|voicemail|voice mail|voice-mail|greeting|recording|recorded|mailbox|automated|answering machine)\b/i;
-const NOBODY = /\b(?:never|nobody|no one|didn'?t|did not)\b[^.]{0,20}?\b(?:answer(?:ed)?|pick(?:ed)? up|spoke|talked|reached)\b|\bsaid nothing\b|\brang out\b/i;
-const BAD = /\b(wrong number|not in service|out of service|disconnected|no longer in service|invalid number|not a working number|fax (?:line|number|tone))\b/i;
+
+const STAFFISH = /\b(assistant|asst|gatekeeper|gk|receptionist|front desk|secretary|office (?:manager|mgr)|ea|admin|chief of staff|answering service|wife|husband)\b/i;
+const PERSONISH = /\bh(?:ung|ang|anged|angs)[\s-]?up\b|\bhu\b|\b(?:answered|picked up|spoke|talked|said|stated|told|asked)\b|\bline went dead\b/i;
+const MACHINE_ONLY = /^(?:\[[^\]]*\]\s*)?(?:lvm|vm|left (?:a )?(?:vm|voicemail|message)|na|no answer|nvm\w*|rang out|texted[^.]*|they never answer\w*|too late to call|the vm is not set up)[.!\s]*$/i;
+const NOBODY = /\b(?:never|nobody|no one|didn'?t|did not)\b[^.]{0,20}?\b(?:answer(?:ed)?|pick(?:ed)? up)\b/i;
+
+/** For the "notes to check" list only: what a note may say that the outcome does not. */
+export function noteHint(entry) {
+    const o = entry && entry.outcome, note = String((entry && entry.notes) || '').replace(/\s+/g, ' ').trim();
+    if (!note || MACHINE_ONLY.test(note)) return null;
+    if (o === 'no_answer' || o === 'voicemail') {
+        if (NOBODY.test(note)) return null;
+        if (STAFFISH.test(note) || PERSONISH.test(note)) return 'Logged as ' + (o === 'voicemail' ? 'voicemail' : 'no answer') + ', but the note may describe a person answering.';
+        return null;
+    }
+    if (o === 'connected') {
+        if (/\bh(?:ung|ang|anged|angs)[\s-]?up\b|\bhu\b/i.test(note)) return 'Logged as a conversation, but the note mentions a hang-up.';
+        if (STAFFISH.test(note)) return 'Logged as a conversation, but the note may describe staff rather than the prospect.';
+    }
+    return null;
+}
+
+const BAD = /\b(wrong number|not in service|out of service|no longer in service|invalid number|not a working number|fax (?:line|number|tone)|(?:number|line|phone)(?: is| was)? disconnected|disconnected (?:number|line))\b/i;
 const NO_NUMBER = /\bno (?:phone |good |working )?number\b/i;
 const GENERAL_LINE = /\b(general (?:number|line)|business (?:number|line)|main (?:number|line)|company (?:number|line)|switchboard|phone tree|automated (?:line|system|menu)|press \d)\b/i;
 const NO_CONNECT = /\b(won'?t dial|wont dial|can'?t dial|cant dial|could not dial|did not go through|didn'?t go through|wouldn'?t go through|call failed)\b/i;
-
-const HOW = { connected: 'Conversation', callback: 'Callback agreed', timing: 'Not now', suppress: 'Not interested' };
-const LIVE = new Set(Object.keys(HOW));
-
-/** Whether a person answered this call, read from the outcome and the note. null when nothing says so. */
-export function reachedFrom(entry) {
-    const o = entry && entry.outcome, note = String((entry && entry.notes) || '').replace(/\s+/g, ' ').trim();
-    if (!o || o === 'wrong_number') return null;
-    const logged = OUTCOME_LABEL[o] || o;
-    const isDirect = direct(note);
-    const staffSpoke = !isDirect && (STAFF_TOOK.test(note) || (FOR_THEM.test(note) && THIRD_SPEAKER.test(note)));
-    const theyHung = HUNG_UP.test(note) && !I_HUNG.test(note);
-    if (LIVE.has(o)) {
-        // He chose an outcome that means a person answered. The note only says who it was.
-        if (staffSpoke) return { who: 'staff', how: 'Spoke to staff', logged, fromNote: true, mislogged: o === 'connected', reason: o === 'connected' ? 'The note says staff answered.' : null };
-        if (theyHung) return { who: 'prospect', how: 'Hung up', logged, fromNote: true, mislogged: o === 'connected', reason: o === 'connected' ? 'The note says they hung up.' : null };
-        return { who: 'prospect', how: HOW[o], logged, fromNote: false, mislogged: false, reason: null };
-    }
-    // No answer or voicemail: only the note can say a person answered, and it has to say so plainly.
-    if (numberIssue(entry) === 'Wrong or dead number' || NOBODY.test(note)) return null;
-    const machine = MACHINE.test(note);
-    const someone = (who, how, reason) => ({ who, how, logged, fromNote: true, mislogged: true, reason });
-    if (isDirect) return someone('prospect', 'Spoke to them', 'The note says they spoke to them.');
-    if (machine) return null;
-    if (staffSpoke) return someone('staff', 'Spoke to staff', 'The note says staff answered.');
-    if (theyHung && (!RINGING.test(note) || THEY_HUNG.test(note))) return someone('prospect', 'Hung up', 'The note says they hung up.');
-    if (SPOKE.test(note)) return someone('someone', 'Someone answered', 'The note says someone answered.');
-    return null;
-}
 
 /** What the outcome or the note says is wrong with the number, or null. */
 export function numberIssue(entry) {
@@ -119,11 +83,12 @@ export function numberIssue(entry) {
     return null;
 }
 
-/** A note as shown: no dialable number in it, and short. Dates (10/27/2026) and money ($1,500) stay readable. */
-const PHONE_ANY = /(?<!\d)\+?\(?\d(?:[\s.()\-\u2010-\u2015\u2212]{0,3}\d){6,14}(?!\d)/g;
-const PHONE_SLASH = /(?<!\d)\(?\d{3}\)?\s?\/\s?\d{3}\s?[\/.\-\u2010-\u2015\u2212]\s?\d{4}(?!\d)/g;
+/** A note as shown: no dialable number in it, and short. Dates (10/27/2026, 10-28-2026) and money ranges ($1,500, 1500-2000) stay readable. */
+const NUMBER_RUN = /(?<![\d$])\+?\(?\d(?:[\s.()\/\-­‐-―−﹣－]{0,3}\d){6,14}(?!\d)/g;
+const DATE_LIKE = /^\d{1,2}\s?[-\/.]\s?\d{1,2}\s?[-\/.]\s?\d{2,4}$/;
+const RANGE_LIKE = /^\d{4,6}\s?[-–]\s?\d{4,6}$/;
 export function cleanNote(s) {
-    return String(s || '').replace(/\s+/g, ' ').replace(PHONE_SLASH, '[number]').replace(PHONE_ANY, '[number]').trim().slice(0, 240);
+    return String(s || '').replace(/\s+/g, ' ').replace(NUMBER_RUN, m => (DATE_LIKE.test(m) || RANGE_LIKE.test(m) ? m : '[number]')).trim().slice(0, 240);
 }
 
 export const campaignName = id => (id && CAMPAIGN_NAMES[id] && CAMPAIGN_NAMES[id].name) || (id ? String(id) : 'No campaign');
@@ -164,7 +129,6 @@ export function leadSupply(records, emails) {
         bySource: count(fresh, r => r.callContact.phoneStatus).map(([status, n]) => ({ status, label: SOURCE_LABEL[status] || status, n })),
         byCampaign: count(fresh, r => r.campaignId || null).map(([id, n]) => ({ campaignId: id, name: campaignName(id), n })),
         hisFollowUpsDue: (records || []).filter(r => callable(r) && r.callOwner && mine.has(norm(r.callOwner))).length,
-        followUpsUnread: (records || []).filter(r => r && r.callOwner && mine.has(norm(r.callOwner)) && r.callContact && r.callContact.phoneStatus === 'unavailable').length,
     };
 }
 
@@ -194,7 +158,7 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
         const when = dial ? dial.at : e.at;
         const number = (dial && dial.number) || (e.numbers && e.numbers[0]) || null;
         const clock = number ? localClock(when, number) : null;
-        return { e, day: etDay(e.at), when, clock, bucket: bucketOf(clock), reached: reachedFrom(e), issue: numberIssue(e), verified: !!dial };
+        return { e, day: etDay(e.at), when, clock, bucket: bucketOf(clock), reached: answeredFrom(e, { verified: !!dial }), hint: noteHint(e), issue: numberIssue(e), verified: !!dial };
     }).sort((a, b) => ms(a.when) - ms(b.when));
 
     // Day by day. A day with nothing on any source is listed as quiet rather than as a row of zeros.
@@ -208,7 +172,7 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
             day: r.day, partial: r.partialDay,
             dials: r.calls.verifiedAttempts, numbers: r.calls.uniqueNumbersCalled, talkSeconds: r.calls.talkSeconds,
             outcomes: r.calls.loggedOutcomes, prospects: r.calls.loggedProspects, byOutcome: r.calls.byOutcome,
-            reached: hubOk ? reached.length : null, prospectsReached: hubOk ? reached.filter(x => x.reached.who === 'prospect').length : null, staffReached: hubOk ? reached.filter(x => x.reached.who === 'staff').length : null,
+            reached: hubOk ? reached.length : null,
             meetings: r.meetings.booked,
             clockedMinutes: clocked, shiftMeasured: !!(r.shift && !r.shift.notMeasured && !r.shift.unavailable), shiftUnavailable: !r.shift || !!r.shift.unavailable,
             activeMinutes: active, activityMeasured: !!(r.activity && !r.activity.notMeasured), activityUnavailable: r.activity === null || r.activity === undefined,
@@ -216,7 +180,7 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
             firstDial: dayCalls.length ? dayCalls[0].at : null, lastDial: dayCalls.length ? dayCalls[dayCalls.length - 1].at : null,
             dialSpanMinutes: dayCalls.length > 1 ? Math.round((ms(dayCalls[dayCalls.length - 1].at) - ms(dayCalls[0].at)) / 60000) : null,
             dialsWithoutOutcome: r.calls.dialsWithoutOutcome, outcomesWithoutQuoCall: r.calls.outcomesWithoutQuoCall,
-            mislogged: hubOk ? read.filter(x => x.day === r.day && x.reached && x.reached.mislogged).length : null,
+            notesToCheck: hubOk ? read.filter(x => x.day === r.day && x.hint).length : null,
             // Quiet only when every source was read and had nothing: an unread source keeps the row, so its unknowns show.
             quiet: !(r.meetings.booked > 0) && (r.noRecordedActivity || (quoOk && hubOk && r.calls.verifiedAttempts === 0 && r.calls.loggedOutcomes === 0 && !!r.shift && !r.shift.unavailable && !!r.activity && !(clocked > 0) && !(active > 0))),
         };
@@ -234,15 +198,13 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
         outcomes: hubOk ? entries.length : null,
         prospects: hubOk ? new Set(entries.map(e => e.recordId)).size : null,
         reached: hubOk ? reachedAll.length : null,
-        prospectsReached: hubOk ? reachedAll.filter(x => x.reached.who === 'prospect').length : null,
-        staffReached: hubOk ? reachedAll.filter(x => x.reached.who === 'staff').length : null,
-        someoneReached: hubOk ? reachedAll.filter(x => x.reached.who === 'someone').length : null,
+        reachedByHow: hubOk ? Object.values(HOW).map(how => ({ how, n: reachedAll.filter(x => x.reached.how === how).length })).filter(x => x.n) : null,
         meetings: sum(rows, r => r.meetings),
         clockedMinutes: rows.some(r => !r.quiet && r.shiftUnavailable) ? null : rows.some(r => r.shiftMeasured) ? rows.reduce((n, r) => n + (r.clockedMinutes || 0), 0) : null,
         activeMinutes: rows.some(r => !r.quiet && r.activityUnavailable) ? null : rows.some(r => r.activityMeasured) ? rows.reduce((n, r) => n + (r.activeMinutes || 0), 0) : null,
         dialsWithoutOutcome: sum(rows, r => r.dialsWithoutOutcome),
         outcomesWithoutQuoCall: sum(rows, r => r.outcomesWithoutQuoCall),
-        mislogged: hubOk ? read.filter(x => x.reached && x.reached.mislogged).length : null,
+        notesToCheck: hubOk ? read.filter(x => x.hint).length : null,
     };
     const byOutcome = {}; for (const k of Object.keys(OUTCOME_LABEL)) byOutcome[k] = 0;
     for (const e of entries) byOutcome[e.outcome] = (byOutcome[e.outcome] || 0) + 1;
@@ -253,7 +215,7 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
     totals.reachedWithoutQuoCall = hubOk && quoOk ? reachedAll.filter(x => !x.verified).length : null;
 
     // Who answered, call by call.
-    const reachedList = reachedAll.map(x => ({ at: x.when, day: x.day, company: x.e.company, campaign: campaignName(x.e.campaignId), who: x.reached.who, how: x.reached.how, logged: x.reached.logged, note: cleanNote(x.e.notes), fromNote: x.reached.fromNote, verified: x.verified }));
+    const reachedList = reachedAll.map(x => ({ at: x.when, day: x.day, company: x.e.company, campaign: campaignName(x.e.campaignId), how: x.reached.how, note: cleanNote(x.e.notes), verified: x.verified }));
 
     // Numbers: per prospect, anything the outcomes or notes say is wrong with the number.
     const perProspect = new Map();
@@ -270,9 +232,9 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
     const segMap = new Map();
     for (const x of read) {
         const id = x.e.campaignId || null;
-        const s = segMap.get(id) || { campaignId: id, name: campaignName(id), prospects: new Set(), outcomes: 0, reached: 0, prospectsReached: 0, voicemail: 0, noAnswer: 0, flagged: new Set() };
+        const s = segMap.get(id) || { campaignId: id, name: campaignName(id), prospects: new Set(), outcomes: 0, reached: 0, voicemail: 0, noAnswer: 0, flagged: new Set() };
         s.prospects.add(x.e.recordId); s.outcomes++;
-        if (x.reached) { s.reached++; if (x.reached.who === 'prospect') s.prospectsReached++; }
+        if (x.reached) s.reached++;
         if (x.e.outcome === 'voicemail') s.voicemail++; if (x.e.outcome === 'no_answer') s.noAnswer++;
         if (x.issue) s.flagged.add(x.e.recordId);
         segMap.set(id, s);
@@ -295,7 +257,7 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
     const r0 = reports[0];
     if (r0) coverage.push(...r0.coverage.filter(c => /Quo|Hub call log|Calendly/.test(c) && !/this day|that day/.test(c)).map(c => c.replace(/\bhe logged\b/g, 'this caller logged')));
     if (src.quo.ok && src.quo.complete === false) coverage.push('Quo had more calls in these dates than could be read, so dials are unknown. Pick fewer days.');
-    coverage.push("Who answered is read from the outcome chosen and the words in the note. Quo marks a call answered when voicemail or a phone menu picks up, so Quo's answered count is not used for it.");
+    coverage.push("Who answered comes from the outcome chosen on each call, not from Quo: Quo marks a call answered when voicemail or a phone menu picks up. Notes are never counted; ones that may disagree with their outcome are listed to check.");
     coverage.push("Local times come from each number's area code, which is where the number was issued. A mobile number can travel.");
     const notMeasuredShift = rows.filter(r => !r.quiet && !r.shiftMeasured && !r.shiftUnavailable && (r.dials > 0 || r.outcomes > 0)).map(r => r.day);
     const shiftUnread = rows.filter(r => !r.quiet && r.shiftUnavailable).length, activityUnread = rows.filter(r => !r.quiet && r.activityUnavailable).length;
@@ -318,12 +280,13 @@ export function buildReview(src, { generatedAt = new Date().toISOString(), now =
         segments,
         timing: { buckets: hubOk ? buckets : null, etHours, knownZone: hubOk ? read.filter(x => x.clock).length : null },
         repeats: hubOk ? { prospects: prospects.length, distribution: dist, nextDay: rate(nextDay.length, retryable.length), mostCalled } : null,
-        logging: { list: read.filter(x => x.reached && x.reached.mislogged).map(x => ({ at: x.when, company: x.e.company, logged: x.reached.logged, reason: x.reached.reason, note: cleanNote(x.e.notes) })) },
+        notesToCheck: hubOk ? read.filter(x => x.hint).map(x => ({ at: x.when, company: x.e.company, logged: OUTCOME_LABEL[x.e.outcome] || x.e.outcome, hint: x.hint, note: cleanNote(x.e.notes) })) : null,
         supply: null,
         definitions: {
             dials: "Outbound calls placed through Quo by this caller's own Quo user. The only calls counted as verified.",
             outcomes: 'What was logged on each card in the Hub. Manual.',
-            reached: 'A logged Conversation, Callback agreed, Not now or Not interested, or a note saying a person answered, hung up, or that staff took the call.',
+            reached: 'A call logged as Conversation, Callback agreed or Not now, or Not interested on a call Quo confirms. Who it was (owner or staff) is in the note.',
+            notesToCheck: 'A No answer or Voicemail whose note may describe a person answering, or a Conversation whose note may describe staff or a hang-up. Read from the words of the note, so some are false alarms; never counted in any figure.',
             numbers: 'A Wrong number outcome, or a note saying the number is dead, missing, a general business line, or would not connect.',
             local: "The prospect's clock when the call was made, from the dialled number's area code, or the card's number when no Quo call matched.",
             nextDay: 'No answer and voicemail outcomes whose next call was set for 36 hours or less later.',

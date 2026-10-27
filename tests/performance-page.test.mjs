@@ -50,8 +50,9 @@ test('an owner opens Caller review: the tab switches, the URL remembers it, and 
     assert.match(location.href, /tab=review/); assert.match(location.href, /user=miltion%40trystaffify\.com/);
     const text = dom.text(document.getElementById('review'));
     assert.match(text, /Milton Hodgson/);
-    assert.match(text, /19\s*dials in Quo/); assert.match(text, /9\s*people answered\s*5 prospects, 4 staff/);
-    assert.match(text, /9 calls reached a person: 5 the prospect, 4 staff\. Of the 19 Quo dials, 9 reached a person \(47\.4%\)\./);
+    assert.match(text, /19\s*dials in Quo/); assert.match(text, /5\s*people answered\s*2 conversations, 2 callbacks agreed, 1 not now/);
+    assert.match(text, /5 calls reached a person, by the outcome chosen: 2 conversations, 2 callbacks agreed, 1 not now\. Of the 19 Quo dials, 5 reached a person \(26\.3%\)\./);
+    assert.match(text, /Notes to check6 notes read as if the outcome may be wrong\. They are not counted above/);
     assert.ok(!/\b(he|his)\b/i.test(text.replace(/He hang up|Her cell|She hung up|She stated[^.]*|he's in Asia|Hang up|hung up|his VM[^.]*|His VM[^.]*|Call him on|Nima's assistant, stated that she's not in/gi, '')), 'no he/his in the page copy; notes are his own words');
     assert.equal(document.querySelector('.portal-skip'), null, 'no shell in this test');
     assert.match(text, /4 prospects of 13 had a number problem/);
@@ -59,7 +60,7 @@ test('an owner opens Caller review: the tab switches, the URL remembers it, and 
     assert.match(text, /Published on their own website/); assert.match(text, /CRM number, not found on their website/);
     assert.match(text, /Prospect's local time/); assert.match(text, /After 6 PM/);
     assert.match(text, /10 of 11 no answer and voicemail outcomes were set to call again within 36 hours/);
-    assert.match(text, /2 dials have no outcome logged/); assert.match(text, /6 outcomes disagree with their notes\./);
+    assert.match(text, /2 dials have no outcome logged/); assert.match(text, /6 notes are listed to check under Who answered\./);
     assert.match(text, /Sat, Oct 24/, 'quiet days are named');
     assert.ok(!/undefined|NaN|\[object|null/.test(text), 'nothing unformatted');
     assert.ok(!/—/.test(text), 'no em dash');

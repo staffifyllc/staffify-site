@@ -138,7 +138,9 @@ export function render(v) {
         el('b', { text: (v.user && v.user.name) || '' }), ' · ' + range + ' (Eastern) · built ' + clockET(v.generatedAt) + (v.partial ? ' · today is still in progress' : ''),
         el('br'), 'Quo: ' + v.sources.quo + ' · Hub call log: ' + v.sources.hubLog + ' · Calendly: ' + v.sources.calendly));
 
-    const reachedSub = t.reached === null ? null : plural(t.prospectsReached, 'prospect', 'prospects') + ', ' + t.staffReached + ' staff' + (t.someoneReached ? ', ' + t.someoneReached + ' unclear' : '') + (pct(t.reachedPerDial) ? ' · ' + pct(t.reachedPerDial) + ' of Quo dials' : '');
+    const HOWS = { Conversation: ['conversation', 'conversations'], 'Callback agreed': ['callback agreed', 'callbacks agreed'], 'Not now': ['not now', 'not now'], 'Not interested': ['not interested', 'not interested'] };
+    const byHow = (t.reachedByHow || []).map(x => { const w = HOWS[x.how] || [x.how.toLowerCase(), x.how.toLowerCase()]; return x.n + ' ' + (x.n === 1 ? w[0] : w[1]); }).join(', ');
+    const reachedSub = t.reached === null ? null : (byHow || 'none') + (pct(t.reachedPerDial) ? ' · ' + pct(t.reachedPerDial) + ' of Quo dials' : '');
     parts.push(el('div', { class: 'pr-tiles' },
         tile(num(t.dials), 'dials in Quo', t.numbers === null ? null : 'to ' + plural(t.numbers, 'number', 'numbers') + ' over ' + plural(t.daysWorked, 'day', 'days')),
         tile(num(t.outcomes), 'outcomes logged', t.prospects === null ? null : 'on ' + plural(t.prospects, 'prospect', 'prospects')),
@@ -157,12 +159,16 @@ export function render(v) {
 
     // Who answered
     const list = (v.reached && v.reached.list) || [];
+    const checks = v.notesToCheck === undefined ? [] : v.notesToCheck;
     parts.push(section('Who answered',
-        lede(t.reached === null ? 'Unknown: the Hub call log could not be read.' : plural(t.reached, 'call', 'calls') + ' reached a person: ' + t.prospectsReached + ' the prospect, ' + t.staffReached + ' staff' + (t.someoneReached ? ', ' + t.someoneReached + ' unclear' : '') + '.'
-            + (t.reachedPerDial && t.reachedPerDial.den ? ' Of the ' + plural(t.reachedPerDial.den, 'Quo dial', 'Quo dials') + ', ' + t.reachedPerDial.num + ' reached a person' + (pct(t.reachedPerDial) ? ' (' + pct(t.reachedPerDial) + ')' : '') + '.' : '')
-            + (t.reachedWithoutQuoCall ? ' The other ' + t.reachedWithoutQuoCall + (t.reachedWithoutQuoCall === 1 ? ' was' : ' were') + ' logged with no matching Quo call.' : '')),
-        list.length ? table(['When', 'Company', 'What happened', 'Logged as', 'Note'], list.map(x => [whenET(x.at), x.company || '', (x.who === 'staff' ? 'Staff: ' : x.who === 'someone' ? 'Unclear: ' : 'Prospect: ') + x.how, x.logged, x.note || ''])) : null,
-        el('p', { class: 'pr-small', text: "Quo counts a call as answered when voicemail or a phone menu picks up, so that count is not used here." })));
+        lede(t.reached === null ? 'Unknown: the Hub call log could not be read.' : plural(t.reached, 'call', 'calls') + ' reached a person, by the outcome chosen' + (byHow ? ': ' + byHow : '') + '.'
+            + (t.reachedPerDial && t.reachedPerDial.den ? ' Of the ' + plural(t.reachedPerDial.den, 'Quo dial', 'Quo dials') + ', ' + t.reachedPerDial.num + ' reached a person' + (pct(t.reachedPerDial) ? ' (' + pct(t.reachedPerDial) + ')' : '') + '.' + (t.reachedWithoutQuoCall ? ' The other ' + t.reachedWithoutQuoCall + (t.reachedWithoutQuoCall === 1 ? ' was' : ' were') + ' logged with no matching Quo call.' : '')
+                : t.reachedPerDial && t.reached ? ' None matched a Quo call: Quo shows no dials in these dates.' : '')),
+        list.length ? table(['When', 'Company', 'Outcome', 'Note'], list.map(x => [whenET(x.at), x.company || '', x.how, x.note || ''])) : null,
+        el('p', { class: 'pr-small', text: "Quo counts a call as answered when voicemail or a phone menu picks up, so that count is not used here. Who it was, owner or staff, is in the note." }),
+        checks === null ? null : el('div', { class: 'pr-sub' }, el('h3', { text: 'Notes to check' }),
+            el('p', { class: 'pr-small', text: checks.length ? plural(checks.length, 'note reads', 'notes read') + ' as if the outcome may be wrong. They are not counted above. Some are false alarms, so open the card before changing anything.' : 'No notes disagree with their outcome.' }),
+            checks.length ? table(['When', 'Company', 'Logged as', 'Note', 'Why it is listed'], checks.map(x => [whenET(x.at), x.company || '', x.logged, x.note || '', x.hint])) : null)));
 
     // Numbers
     const n = v.numbers || {};
@@ -202,14 +208,12 @@ export function render(v) {
         el('p', { class: 'pr-small', text: 'Shift is what was declared in the Hub. Hub active is an estimate of minutes with the Hub in use. Neither is payroll; Hubstaff is the source for paid hours.' })));
 
     // Logging
-    const lg = (v.logging && v.logging.list) || [];
     parts.push(section('Logging',
-        lede(t.dialsWithoutOutcome === null ? 'Unknown: Quo or the Hub call log could not be read.' : plural(t.dialsWithoutOutcome, 'dial has', 'dials have') + ' no outcome logged. ' + plural(t.outcomesWithoutQuoCall, 'outcome has', 'outcomes have') + ' no matching Quo call. ' + plural(t.mislogged || 0, 'outcome disagrees with its note', 'outcomes disagree with their notes') + '.'),
-        lg.length ? table(['When', 'Company', 'Logged as', 'Note', 'Mismatch'], lg.map(x => [whenET(x.at), x.company || '', x.logged, x.note || '', x.reason || ''])) : null));
+        lede(t.dialsWithoutOutcome === null ? 'Unknown: Quo or the Hub call log could not be read.' : plural(t.dialsWithoutOutcome, 'dial has', 'dials have') + ' no outcome logged. ' + plural(t.outcomesWithoutQuoCall, 'outcome has', 'outcomes have') + ' no matching Quo call.' + (t.notesToCheck ? ' ' + plural(t.notesToCheck, 'note is', 'notes are') + ' listed to check under Who answered.' : ''))));
 
     const defs = v.definitions || {};
     parts.push(el('details', { class: 'pr-more pr-defs' }, el('summary', { text: 'How each figure is counted' }),
-        el('dl', null, Object.entries({ Dials: defs.dials, Logged: defs.outcomes, Answered: defs.reached, 'Number problems': defs.numbers, "Prospect's local time": defs.local, 'Call again within 36 hours': defs.nextDay, 'Leads ready to call': defs.supply }).filter(([, d]) => d).flatMap(([k, d]) => [el('dt', { text: k }), el('dd', { text: d })]))));
+        el('dl', null, Object.entries({ Dials: defs.dials, Logged: defs.outcomes, Answered: defs.reached, 'Notes to check': defs.notesToCheck, 'Number problems': defs.numbers, "Prospect's local time": defs.local, 'Call again within 36 hours': defs.nextDay, 'Leads ready to call': defs.supply }).filter(([, d]) => d).flatMap(([k, d]) => [el('dt', { text: k }), el('dd', { text: d })]))));
     return parts;
 }
 

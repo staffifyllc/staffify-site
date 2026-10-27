@@ -91,8 +91,8 @@ test('only his own calls count, the note is shown without its number, and source
     assert.equal(code, 200);
     const v = body.review;
     assert.equal(v.totals.outcomes, 1, "another rep's call on the shared log is not his");
-    assert.equal(v.totals.reached, 1); assert.equal(v.reached.list[0].how, 'Hung up');
-    assert.equal(v.reached.list[0].note, 'She hung up. Her cell is [number]');
+    assert.equal(v.totals.reached, 0, 'a note never changes the count');
+    assert.equal(v.notesToCheck.length, 1); assert.equal(v.notesToCheck[0].note, 'She hung up. Her cell is [number]');
     assert.equal(v.totals.dials, null, 'Quo is not connected in this test: dials unknown, not zero'); assert.equal(v.sources.quo, 'not connected');
     assert.equal(v.totals.meetings, null); assert.equal(v.sources.calendly, 'not connected');
     assert.ok(v.supply && typeof v.supply.neverDialled === 'number');
