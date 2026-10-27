@@ -1,3 +1,4 @@
+import {emailCompose} from './dialer-email.js';
 // The call workspace: who you are calling, what you say, what you log. One prospect at a time.
 // ------------------------------------------------------------------
 // Paul, 2026-10-23: "I want the rep to be able to see everything and have it run and work to its
@@ -213,7 +214,16 @@ function renderWho(pane,row,b){
  if(site)links.append(link('Website',/^https?:\/\//.test(site)?site:'https://'+site));
  if(p.crmUrl)links.append(link('CRM contact',p.crmUrl));
  links.append(link('Email thread','https://mail.google.com/mail/u/?authuser='+encodeURIComponent(row.sender)+(row.threadId?'#all/'+encodeURIComponent(row.threadId):'#search/'+encodeURIComponent(row.recipient))));
- links.append(link(row.recipient,'mailto:'+row.recipient));
+ // Gmail selects the authenticated rep's account, not the original sequence sender.
+ const compose=emailCompose(state?.viewer,row.recipient);
+ if(compose){
+  const email=link('Email them',compose.url,'btn');
+  email.id='email-them';email.setAttribute('aria-label','Email '+compose.to+' from '+compose.from);
+  pane.append(email,el('p','From '+compose.from+' · To '+compose.to,'dw-small'),el('p','Opens Gmail for you to review and send. Sign in to this account if prompted.','dw-small'));
+ }else{
+  const email=button('Email them',()=>{});email.disabled=true;
+  pane.append(email,el('p','A valid prospect email and signed-in rep email are needed.','dw-small'));
+ }
  pane.append(links);
  if(!b)return;
  // Why this card exists, in one line.
