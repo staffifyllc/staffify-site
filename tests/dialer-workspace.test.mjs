@@ -77,13 +77,14 @@ test('boot: the due callback is first, the card reads whole, and the bar knows t
     await tick(60);
     const text = dom.text(document.body);
     assert.match(text, /1 of 3/, 'three callable records, due callback first');
+    assert.match(text, /1 callback due · 2 new/, 'the bar says what the queue holds, so it is plain who has been called');
     assert.match(text, /Loft & Light/);
     assert.match(text, /Callback due\. You agreed to call at/);
     assert.match(text, /after lunch, ask for Priya/, 'the note from the last call is on the banner');
     assert.match(text, /\+15125550002/); assert.match(text, /Listed on their site/);
     assert.match(text, /their time ?· (Business hours|After hours there|Early there|Weekend there)/, 'the prospect clock reads from the CRM zone');
     assert.match(text, /Hi Priya, this is Milton with Staffify/);
-    assert.match(text, /5 ?dials today/); assert.match(text, /2 ?picked up/);
+    assert.match(text, /5 ?dials today/); assert.ok(!/picked up/.test(text), 'Quo answered includes voicemail; not shown as picked up');
     assert.match(text, /3 having a number found automatically/);
     const ocs = document.querySelectorAll('.dw-oc');
     assert.equal(ocs.length, 7); assert.deepEqual(ocs.map(o => o.dataset.outcome), ['connected', 'callback', 'voicemail', 'no_answer', 'timing', 'wrong_number', 'suppress']);

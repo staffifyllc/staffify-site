@@ -12,7 +12,7 @@
 // The API contracts are unchanged: /api/outreach-queue/?view=calls for the queue (now carrying the
 // caller's tasks), /api/outreach-call-brief/ for one card, POST call-outcome / suppress / task-add /
 // task-done to save. Nothing here invents a number, a date or a claim.
-import {orderCallQueue} from './call-queue-order.js';
+import {orderCallQueue,queueMix} from './call-queue-order.js';
 import {OUTCOMES,NEEDS_TIME,outcome as outcomeOf,quickPicks,defaultNext,toLocalInput,fmtWhen,localTime,followUps,followUpCount,timeline,lastTouch,shortcut,SHORTCUTS,numberTrust} from './dialer-model.js';
 
 const app=document.getElementById('app');
@@ -75,6 +75,9 @@ function bar(){
  pos.append(document.createTextNode(list.length?`${Math.max(1,index+1)} of ${list.length}`:'Queue complete'));
  const indLabel=selectedIndustry!=='all'?((state?.records||[]).find(r=>r.industry&&r.industry.key===selectedIndustry)||{}).industry?.label||selectedIndustry:null;
  pos.append(el('small',research?'Numbers that need confirming':[(pin?pin.h1:NAMES[selectedCampaign]||selectedCampaign),indLabel].filter(Boolean).join(' · ')));
+ // What the queue holds, so it is plain that it remembers who was called: callbacks due, leads
+ // nobody has called, and people who did not pick up, who wait at the back.
+ if(!research&&list.length){const m=queueMix(list),parts=[];if(m.callback)parts.push(m.callback+(m.callback===1?' callback due':' callbacks due'));if(m.later)parts.push(m.later+' "not now" due');parts.push(m.new+' new');if(m.retry)parts.push(m.retry+' to try again');pos.append(el('small',parts.join(' · '),'dw-mix'));}
  title.append(pos);
  b.append(title);
  // Options: campaign, owner, search, the research tab, refresh. Behind one control so the bar
@@ -92,11 +95,12 @@ function bar(){
  body.append(ownerSel,indSel,find,tabs,button('Refresh queue',()=>refresh().catch(fail),'btn btn-ghost'));
  if(skipped.size)body.append(button(skipped.size+' skipped today · show them again',()=>{skipped.clear();saveSkips();showNext();},'btn btn-ghost'));
  if(held.length)body.append(el('p','Held out of this queue: '+held.join(' · ')+'. Nobody is handed a card without a number.','dw-held'));
- body.append(el('p','Order: callbacks that are due, then numbers listed on the business website, then the oldest fourth email.','dw-held'));
+ body.append(el('p','Order: callbacks that are due, then "not now" that has come due, then leads nobody has called (numbers from their own website first), then people who did not pick up, fewest tries first.','dw-held'));
  opt.append(body);b.append(opt);
  // Live counts. Quo is the truth for dials; the session counts what was logged here since open.
  const stats=el('div',null,'dw-stats');
- if(quoToday&&quoToday.ok){stats.append(stat(quoToday.dials,'dials today'),stat(quoToday.connected,'picked up'));}
+ // Quo's "answered" includes voicemail and phone menus, so it is not shown as picked up.
+ if(quoToday&&quoToday.ok){stats.append(stat(quoToday.dials,'dials today'));}
  else if(quoToday&&quoToday.error)stats.append(el('span',quoToday.error==='no seat'?'No Quo seat for this login':'Quo unavailable'));
  const logged=Object.values(session.saved).reduce((a,n)=>a+n,0);
  stats.append(stat(logged,'logged this session'));
