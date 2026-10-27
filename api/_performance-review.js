@@ -1,0 +1,268 @@
+// Caller review: how one caller's calling went over a run of days, from the records that prove it.
+// ------------------------------------------------------------------
+// Paul, 2026-10-27: "can we get some data on how miltons performance has been he really said the
+// data isn't great", then "idk where we are getting the 'Picked up' data from but it doesn't appear
+// to be correct", then "we need that view put into performance as a tab".
+//
+// Every day in the review IS that day's buildReport (api/_daily-report.js), cut from sources read
+// once for the whole span, so the review and the daily report never disagree about a day. On top of
+// the days it answers the questions that came up reading them:
+//   who answered            the outcome he chose plus the words in his notes. Quo marks a call
+//                           answered when voicemail or a phone menu picks up, so Quo's answered
+//                           flag is never used for this.
+//   are the numbers bad     outcomes and notes that say so, per prospect and per campaign
+//   is there enough to call callable cards nobody has dialled yet, by where the number came from
+//   when he calls           each call at the prospect's local time, inferred from the area code
+//   who he calls again      attempts per prospect and next-day callbacks
+//   pace and logging        dials per clocked hour, Hub activity, dials with no outcome logged
+// No quota, target or judgement is applied, and a source that could not be read stays unknown.
+import { buildReport, dayRange, pairCalls, OUTCOME_LABEL } from './_daily-report.js';
+import { etDay } from './_quo.js';
+import { localClock } from './_area-time.js';
+import { NAMES as CAMPAIGN_NAMES } from './_campaigns-model.js';
+
+export const REVIEW_VERSION = 1;
+export const MAX_DAYS = 31;
+const ms = s => Date.parse(s);
+const norm = e => String(e || '').trim().toLowerCase();
+
+// ---- reading a note ---------------------------------------------------------------------------
+// Conservative on purpose: a phrase has to say it. A note that says nothing about who answered
+// leaves the outcome he chose standing.
+const STAFF = /\b(assistant|gatekeeper|gk|receptionist|front desk|secretary|office manager)\b/i;
+// Somebody speaking about the prospect in the third person ("he's in Asia", "she's not in").
+const FOR_THEM = /\b(he|she)(?:'s|’s| is| was) (?:not in|out\b|out of|away|in asia|in europe|traveling|travelling|on vacation|unavailable|not available|with a client|on a shoot|in a meeting)/i;
+const HUNG_UP = /\bh(?:ung|ang|anged|angs)[\s-]?up\b/i;
+const SPOKE = /\b(stated|said|spoke|talked|told (?:me|us)|mentioned)\b/i;
+const BAD = /\b(wrong number|not in service|out of service|disconnected|no longer in service|invalid number|not a working number|fax (?:line|number|tone))\b/i;
+const NO_NUMBER = /\bno (?:phone |good |working )?number\b/i;
+const GENERAL_LINE = /\b(general (?:number|line)|business (?:number|line)|main (?:number|line)|company (?:number|line)|switchboard|phone tree|automated (?:line|system|menu)|press \d)\b/i;
+const NO_CONNECT = /\b(won'?t dial|wont dial|can'?t dial|cant dial|could not dial|did not go through|didn'?t go through|wouldn'?t go through|call failed)\b/i;
+
+const HOW = { connected: 'Conversation', callback: 'Callback agreed', timing: 'Not now', suppress: 'Not interested' };
+const LIVE = new Set(Object.keys(HOW));
+
+/** Whether a person answered this call, read from the outcome and the note. null when nothing says so. */
+export function reachedFrom(entry) {
+    const o = entry && entry.outcome, note = String((entry && entry.notes) || '');
+    if (!o || o === 'wrong_number') return null;
+    const staff = STAFF.test(note) || FOR_THEM.test(note);
+    const hung = HUNG_UP.test(note);
+    const logged = OUTCOME_LABEL[o] || o;
+    if (staff) return { who: 'staff', how: 'Spoke to staff', logged, fromNote: true, mislogged: o === 'connected' || o === 'no_answer' || o === 'voicemail', reason: o === 'connected' || !LIVE.has(o) ? 'The note says staff answered.' : null };
+    if (hung) return { who: 'prospect', how: 'Hung up', logged, fromNote: true, mislogged: o === 'connected' || o === 'no_answer' || o === 'voicemail', reason: o === 'connected' || !LIVE.has(o) ? 'The note says they hung up.' : null };
+    if (LIVE.has(o)) return { who: 'prospect', how: HOW[o], logged, fromNote: false, mislogged: false, reason: null };
+    if (SPOKE.test(note)) return { who: 'someone', how: 'Someone answered', logged, fromNote: true, mislogged: true, reason: 'The note says someone answered.' };
+    return null;
+}
+
+/** What the outcome or the note says is wrong with the number, or null. */
+export function numberIssue(entry) {
+    if (!entry) return null;
+    if (entry.outcome === 'wrong_number') return 'Wrong or dead number';
+    const note = String(entry.notes || '');
+    if (BAD.test(note)) return 'Wrong or dead number';
+    if (NO_NUMBER.test(note)) return 'No number';
+    if (GENERAL_LINE.test(note)) return 'General business line';
+    if (NO_CONNECT.test(note)) return 'Call would not go through';
+    return null;
+}
+
+/** A note as shown: no dialable number in it, and short. */
+export function cleanNote(s) {
+    return String(s || '').replace(/(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g, '[number]').replace(/\s+/g, ' ').trim().slice(0, 240);
+}
+
+export const campaignName = id => (id && CAMPAIGN_NAMES[id] && CAMPAIGN_NAMES[id].name) || (id ? String(id) : 'No campaign');
+
+// ---- the clock --------------------------------------------------------------------------------
+export const BUCKETS = [
+    ['before9', 'Before 9 AM'], ['morning', '9 AM to noon'], ['afternoon', 'Noon to 5 PM'],
+    ['five', '5 to 6 PM'], ['evening', 'After 6 PM'], ['unknown', 'Time zone unknown'],
+];
+export function bucketOf(clock) {
+    if (!clock) return 'unknown';
+    const m = clock.hour * 60 + clock.minute;
+    return m < 540 ? 'before9' : m < 720 ? 'morning' : m < 1020 ? 'afternoon' : m < 1080 ? 'five' : 'evening';
+}
+const etHour = iso => Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }).format(new Date(iso))) % 24;
+const hourLabel = h => (h % 12 || 12) + (h < 12 ? ' AM' : ' PM');
+
+const rate = (num, den) => (den > 0 ? { num, den, pct: Math.round((num / den) * 1000) / 10 } : { num, den, pct: null });
+const sum = (rows, f) => { let n = 0; for (const r of rows) { const v = f(r); if (v === null || v === undefined) return null; n += v; } return n; };
+
+// ---- leads still to call ----------------------------------------------------------------------
+const DIALABLE = ['business_listed', 'available', 'vendor_direct', 'site_main', 'crm_unconfirmed'];
+export const SOURCE_LABEL = {
+    business_listed: 'Published on their own website',
+    site_main: 'Main line from their website',
+    vendor_direct: 'Direct dial from a data vendor',
+    crm_unconfirmed: 'CRM number, not found on their website',
+    available: 'CRM number, website not checked yet',
+};
+/** Callable cards nobody has dialled or claimed, as the dialer would offer them, and his own due follow-ups. */
+export function leadSupply(records, emails) {
+    const mine = new Set((emails || []).map(norm));
+    const callable = r => r && r.callReady && r.callContact && r.callContact.phone && DIALABLE.includes(r.callContact.phoneStatus);
+    const fresh = (records || []).filter(r => callable(r) && !r.callOwner && !(r.callHistory || []).some(c => c && c.at));
+    const count = (rows, key) => { const m = new Map(); for (const r of rows) { const k = key(r); m.set(k, (m.get(k) || 0) + 1); } return [...m].sort((a, b) => b[1] - a[1]); };
+    return {
+        neverDialled: fresh.length,
+        bySource: count(fresh, r => r.callContact.phoneStatus).map(([status, n]) => ({ status, label: SOURCE_LABEL[status] || status, n })),
+        byCampaign: count(fresh, r => r.campaignId || null).map(([id, n]) => ({ campaignId: id, name: campaignName(id), n })),
+        hisFollowUpsDue: (records || []).filter(r => callable(r) && r.callOwner && mine.has(norm(r.callOwner))).length,
+    };
+}
+
+// ---- the review -------------------------------------------------------------------------------
+/**
+ * The review, from sources already read by gatherRange. Pure, so it is tested without a network.
+ * `src` is gatherRange's result; `records` (optional) is the decorated queue for leadSupply.
+ */
+export function buildReview(src, { generatedAt = new Date().toISOString(), now = Date.parse(generatedAt), emails = [src.user.email] } = {}) {
+    const { hub, quo, calendly } = src;
+    const reports = src.days.map(day => buildReport({ user: src.user, day, generatedAt, range: dayRange(day), hub, quo, calendly, activity: src.activityByDay[day], shift: src.shiftByDay[day], now }));
+    const quoOk = !!quo.ok, hubOk = !!hub.ok;
+    const span = { from: dayRange(src.from).from, to: dayRange(src.to).to };
+    const inSpan = iso => { const d = etDay(iso); return d >= src.from && d <= src.to; };
+    const entries = hubOk ? hub.entries.filter(e => inSpan(e.at)) : [];
+    const calls = quoOk ? quo.calls.filter(c => inSpan(c.at)) : [];
+    // Pair across the whole span so a call just before midnight still finds its outcome.
+    const { dials, outcomes } = pairCalls(calls, entries);
+    const dialById = new Map(dials.map(d => [d.id, d]));
+
+    // Each logged outcome, read once.
+    const read = outcomes.map(e => {
+        const dial = e.pairedWith ? dialById.get(e.pairedWith) : null;
+        const when = dial ? dial.at : e.at;
+        const number = (dial && dial.number) || (e.numbers && e.numbers[0]) || null;
+        const clock = number ? localClock(when, number) : null;
+        return { e, day: etDay(e.at), when, clock, bucket: bucketOf(clock), reached: reachedFrom(e), issue: numberIssue(e), verified: !!dial };
+    }).sort((a, b) => ms(a.when) - ms(b.when));
+
+    // Day by day. A day with nothing on any source is listed as quiet rather than as a row of zeros.
+    const reachedOn = day => read.filter(x => x.day === day && x.reached);
+    const rows = reports.map(r => {
+        const reached = reachedOn(r.day);
+        const dayCalls = calls.filter(c => etDay(c.at) === r.day).sort((a, b) => ms(a.at) - ms(b.at));
+        const clocked = r.shift && !r.shift.notMeasured ? r.shift.clockedMinutes : null;
+        const active = r.activity && !r.activity.notMeasured ? r.activity.activeMinutes : null;
+        return {
+            day: r.day, partial: r.partialDay,
+            dials: r.calls.verifiedAttempts, numbers: r.calls.uniqueNumbersCalled, talkSeconds: r.calls.talkSeconds,
+            outcomes: r.calls.loggedOutcomes, prospects: r.calls.loggedProspects, byOutcome: r.calls.byOutcome,
+            reached: hubOk ? reached.length : null, prospectsReached: hubOk ? reached.filter(x => x.reached.who === 'prospect').length : null, staffReached: hubOk ? reached.filter(x => x.reached.who === 'staff').length : null,
+            meetings: r.meetings.booked,
+            clockedMinutes: clocked, shiftMeasured: !!(r.shift && !r.shift.notMeasured && !r.shift.unavailable), shiftUnavailable: !r.shift || !!r.shift.unavailable,
+            activeMinutes: active, activityMeasured: !!(r.activity && !r.activity.notMeasured),
+            dialsPerClockedHour: clocked >= 30 && r.calls.verifiedAttempts !== null ? Math.round((r.calls.verifiedAttempts / (clocked / 60)) * 10) / 10 : null,
+            firstDial: dayCalls.length ? dayCalls[0].at : null, lastDial: dayCalls.length ? dayCalls[dayCalls.length - 1].at : null,
+            dialSpanMinutes: dayCalls.length > 1 ? Math.round((ms(dayCalls[dayCalls.length - 1].at) - ms(dayCalls[0].at)) / 60000) : null,
+            dialsWithoutOutcome: r.calls.dialsWithoutOutcome, outcomesWithoutQuoCall: r.calls.outcomesWithoutQuoCall,
+            mislogged: hubOk ? read.filter(x => x.day === r.day && x.reached && x.reached.mislogged).length : null,
+            quiet: r.noRecordedActivity || (!(r.calls.verifiedAttempts > 0) && !(r.calls.loggedOutcomes > 0) && !(clocked > 0) && !(active > 0)),
+        };
+    });
+    const worked = rows.filter(r => !r.quiet);
+    const quietDays = rows.filter(r => r.quiet).map(r => r.day);
+
+    const reachedAll = read.filter(x => x.reached);
+    const dialsTotal = quoOk ? calls.length : null;
+    const totals = {
+        daysWorked: worked.length,
+        dials: dialsTotal,
+        numbers: quoOk ? new Set(calls.map(c => c.number).filter(Boolean)).size : null,
+        talkSeconds: quoOk ? calls.reduce((n, c) => n + (c.seconds || 0), 0) : null,
+        outcomes: hubOk ? entries.length : null,
+        prospects: hubOk ? new Set(entries.map(e => e.recordId)).size : null,
+        reached: hubOk ? reachedAll.length : null,
+        prospectsReached: hubOk ? reachedAll.filter(x => x.reached.who === 'prospect').length : null,
+        staffReached: hubOk ? reachedAll.filter(x => x.reached.who === 'staff').length : null,
+        someoneReached: hubOk ? reachedAll.filter(x => x.reached.who === 'someone').length : null,
+        meetings: sum(rows, r => r.meetings),
+        clockedMinutes: rows.some(r => r.shiftMeasured) ? rows.reduce((n, r) => n + (r.clockedMinutes || 0), 0) : null,
+        activeMinutes: rows.some(r => r.activityMeasured) ? rows.reduce((n, r) => n + (r.activeMinutes || 0), 0) : null,
+        dialsWithoutOutcome: sum(rows, r => r.dialsWithoutOutcome),
+        outcomesWithoutQuoCall: sum(rows, r => r.outcomesWithoutQuoCall),
+        mislogged: hubOk ? read.filter(x => x.reached && x.reached.mislogged).length : null,
+    };
+    const byOutcome = {}; for (const k of Object.keys(OUTCOME_LABEL)) byOutcome[k] = 0;
+    for (const e of entries) byOutcome[e.outcome] = (byOutcome[e.outcome] || 0) + 1;
+    totals.byOutcome = hubOk ? byOutcome : null;
+    totals.reachedPerDial = hubOk && quoOk ? rate(reachedAll.length, calls.length) : null;
+
+    // Who answered, call by call.
+    const reachedList = reachedAll.map(x => ({ at: x.when, day: x.day, company: x.e.company, campaign: campaignName(x.e.campaignId), who: x.reached.who, how: x.reached.how, logged: x.reached.logged, note: cleanNote(x.e.notes), fromNote: x.reached.fromNote, verified: x.verified }));
+
+    // Numbers: per prospect, anything the outcomes or notes say is wrong with the number.
+    const perProspect = new Map();
+    for (const x of read) {
+        const p = perProspect.get(x.e.recordId) || { recordId: x.e.recordId, company: x.e.company, campaignId: x.e.campaignId || null, attempts: 0, outcomes: [], reached: false, issues: new Set(), notes: [], lastAt: null };
+        p.attempts++; p.outcomes.push(OUTCOME_LABEL[x.e.outcome] || x.e.outcome); if (x.reached) p.reached = true;
+        if (x.issue) { p.issues.add(x.issue); if (x.e.notes) p.notes.push(cleanNote(x.e.notes)); }
+        p.lastAt = x.when; perProspect.set(x.e.recordId, p);
+    }
+    const prospects = [...perProspect.values()];
+    const flagged = prospects.filter(p => p.issues.size);
+    const byIssue = {}; for (const p of flagged) for (const i of p.issues) byIssue[i] = (byIssue[i] || 0) + 1;
+
+    const segMap = new Map();
+    for (const x of read) {
+        const id = x.e.campaignId || null;
+        const s = segMap.get(id) || { campaignId: id, name: campaignName(id), prospects: new Set(), outcomes: 0, reached: 0, prospectsReached: 0, voicemail: 0, noAnswer: 0, flagged: new Set() };
+        s.prospects.add(x.e.recordId); s.outcomes++;
+        if (x.reached) { s.reached++; if (x.reached.who === 'prospect') s.prospectsReached++; }
+        if (x.e.outcome === 'voicemail') s.voicemail++; if (x.e.outcome === 'no_answer') s.noAnswer++;
+        if (x.issue) s.flagged.add(x.e.recordId);
+        segMap.set(id, s);
+    }
+    const segments = [...segMap.values()].map(s => ({ ...s, prospects: s.prospects.size, flagged: s.flagged.size })).sort((a, b) => b.outcomes - a.outcomes);
+
+    // When: the prospect's local time for each logged call, and the Eastern hour of each Quo dial.
+    const buckets = BUCKETS.map(([key, label]) => { const xs = read.filter(x => x.bucket === key); return { key, label, outcomes: xs.length, reached: xs.filter(x => x.reached).length }; });
+    const hours = new Map(); for (const c of calls) { const h = etHour(c.at); hours.set(h, (hours.get(h) || 0) + 1); }
+    const etHours = [...hours].sort((a, b) => a[0] - b[0]).map(([hour, n]) => ({ hour, label: hourLabel(hour) + ' Eastern', dials: n }));
+
+    // Calling the same people again.
+    const dist = [['Once', p => p.attempts === 1], ['Twice', p => p.attempts === 2], ['Three times', p => p.attempts === 3], ['Four or more', p => p.attempts >= 4]].map(([label, f]) => ({ label, prospects: prospects.filter(f).length }));
+    const retryable = read.filter(x => (x.e.outcome === 'no_answer' || x.e.outcome === 'voicemail') && x.e.nextCallAt);
+    const nextDay = retryable.filter(x => ms(x.e.nextCallAt) - ms(x.e.at) <= 36 * 3600000);
+    const mostCalled = prospects.filter(p => p.attempts >= 2).sort((a, b) => b.attempts - a.attempts || ms(b.lastAt) - ms(a.lastAt)).slice(0, 12)
+        .map(p => ({ company: p.company, campaign: campaignName(p.campaignId), attempts: p.attempts, outcomes: p.outcomes, reached: p.reached, lastAt: p.lastAt }));
+
+    const coverage = [];
+    const r0 = reports[0];
+    if (r0) coverage.push(...r0.coverage.filter(c => /Quo|Hub call log|Calendly/.test(c) && !/this day|that day/.test(c)));
+    coverage.push("People reached is read from the outcome he chose and the words in his notes. Quo marks a call answered when voicemail or a phone menu picks up, so Quo's answered count is not used for it.");
+    coverage.push("Local times come from each number's area code, which is where the number was issued. A mobile number can travel.");
+    const notMeasuredShift = rows.filter(r => !r.quiet && !r.shiftMeasured).map(r => r.day);
+    if (notMeasuredShift.length) coverage.push('Shifts were not recorded on ' + notMeasuredShift.length + (notMeasuredShift.length === 1 ? ' day' : ' days') + ' with calls (declared shifts began Oct 24, 2026), so pace per clocked hour is blank there.');
+    if (totals.meetings === null) coverage.push('Meetings are unknown for at least one day, because Calendly or the Hub log could not be read.');
+
+    return {
+        version: REVIEW_VERSION, user: src.user, from: src.from, to: src.to, span, generatedAt,
+        partial: now < ms(span.to),
+        sources: { quo: quoOk ? 'read' : !quo.configured ? 'not connected' : quo.error ? 'unavailable' : !quo.seat ? 'no seat for this login' : 'unavailable', hubLog: hubOk ? 'read' : 'unavailable', calendly: calendly.ok ? 'read' : !calendly.configured ? 'not connected' : 'unavailable' },
+        freshness: { hubLog: hub.readAt || null, quo: quo.readAt || null, calendly: calendly.readAt || null },
+        coverage,
+        totals,
+        days: worked, quietDays,
+        reached: { list: reachedList },
+        numbers: { prospects: hubOk ? prospects.length : null, flagged: hubOk ? flagged.length : null, byIssue: Object.entries(byIssue).map(([issue, n]) => ({ issue, n })).sort((a, b) => b.n - a.n),
+            list: flagged.map(p => ({ company: p.company, campaign: campaignName(p.campaignId), issues: [...p.issues], note: p.notes[0] || null })) },
+        segments,
+        timing: { buckets, etHours, knownZone: read.filter(x => x.clock).length },
+        repeats: { prospects: prospects.length, distribution: dist, nextDay: rate(nextDay.length, retryable.length), mostCalled },
+        logging: { list: read.filter(x => x.reached && x.reached.mislogged).map(x => ({ at: x.when, company: x.e.company, logged: x.reached.logged, reason: x.reached.reason, note: cleanNote(x.e.notes) })) },
+        supply: null,
+        definitions: {
+            dials: 'Outbound calls placed through Quo by his own Quo user. The only calls counted as verified.',
+            outcomes: 'What he logged on each card in the Hub. Manual.',
+            reached: 'A logged Conversation, Callback agreed, Not now or Not interested, or a note saying a person answered, hung up, or that staff took the call.',
+            numbers: 'A Wrong number outcome, or a note saying the number is dead, missing, a general business line, or would not connect.',
+            local: "The prospect's clock when the call was made, from the dialled number's area code, or the card's number when no Quo call matched.",
+            nextDay: 'No answer and voicemail outcomes whose next call was set for 36 hours or less later.',
+            supply: 'Cards ready to call with a number, that nobody has called or claimed. Right now, not for the dates above.',
+        },
+    };
+}

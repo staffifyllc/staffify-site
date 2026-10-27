@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scoreboard — Staffify Sales</title>
+    <title>Performance · Staffify Sales</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,6 +54,52 @@
         .gate h2 { font-size:20px; font-weight:800; margin-bottom:8px; } .gate p { color:var(--muted); font-size:14px; margin-bottom:18px; }
         .gate input { width:100%; font-family:inherit; font-size:15px; color:var(--white); background:rgba(255,255,255,0.05); border:1.5px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
         .gate .btn { width:100%; padding:13px; }
+        /* Performance tabs and the Caller review (portal look: light, #0071e3 accent). */
+        .perf-head { max-width:1040px; margin:0 auto; padding:24px 22px 0; }
+        .perf-title { font-size:28px; font-weight:650; letter-spacing:-0.02em; color:#1d1d1f; margin:0 0 12px; }
+        .perf-h2 { font-size:22px; font-weight:800; margin-bottom:2px; }
+        .perf-tabs { display:flex; gap:22px; border-bottom:1px solid #e5e5ea; }
+        body .perf-tab { background:none; border:0; border-bottom:2px solid transparent; border-radius:0; box-shadow:none; min-height:0; padding:10px 0 9px; margin-bottom:-1px; font:inherit; font-size:14.5px; font-weight:600; color:#6e6e73; cursor:pointer; }
+        body .perf-tab:hover { background:none; color:#1d1d1f; }
+        body .perf-tab.on { color:#1d1d1f; border-bottom-color:#0071e3; background:none; }
+        body .perf-tab:focus-visible { outline:2px solid #0071e3; outline-offset:3px; border-radius:4px; }
+        .pr-wrap { max-width:1040px; }
+        .pr-ctl { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin:4px 0 16px; }
+        .pr-field { display:flex; flex-direction:column; gap:4px; font-size:12px; color:#6e6e73; font-weight:600; }
+        body .pr-field select, body .pr-field input { min-height:38px; padding:7px 10px; font-size:14px; }
+        .pr-presets { display:flex; gap:6px; flex-wrap:wrap; }
+        body .pr-preset { min-height:38px; padding:7px 12px; font-size:13px; }
+        .pr-meta { font-size:13px; color:#6e6e73; line-height:1.6; margin:0 0 12px; }
+        .pr-meta b { color:#1d1d1f; font-weight:600; }
+        .pr-note { font-size:13px; line-height:1.55; background:#f5f7fa; border:1px solid #e5e5ea; border-radius:10px; padding:10px 12px; margin:0 0 8px; color:#414146; }
+        .pr-coverage { margin:0 0 16px; padding-left:18px; font-size:12.5px; line-height:1.55; color:#6e6e73; display:grid; gap:3px; max-width:90ch; }
+        .pr-empty { color:#6e6e73; font-size:14px; background:#fafafa; border-radius:12px; padding:18px; }
+        .pr-tiles { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:16px 0; }
+        @media (max-width:760px){ .pr-tiles { grid-template-columns:1fr 1fr; } }
+        .pr-tile { background:#fff; border:1px solid #e5e5ea; border-radius:14px; padding:14px 16px; }
+        .pr-tile b { display:block; font-size:28px; font-weight:650; letter-spacing:-0.6px; color:#1d1d1f; font-variant-numeric:tabular-nums; }
+        .pr-tile span { display:block; font-size:13px; color:#1d1d1f; }
+        .pr-tile em { display:block; font-style:normal; font-size:12px; color:#6e6e73; margin-top:2px; line-height:1.4; }
+        .pr-sec { background:#fff; border:1px solid #e5e5ea; border-radius:14px; padding:16px 18px; margin:0 0 14px; }
+        .pr-sec h2 { font-size:16px; font-weight:650; color:#1d1d1f; margin:0 0 8px; }
+        .pr-sub h3 { font-size:13px; font-weight:650; color:#414146; margin:16px 0 6px; }
+        .pr-lede { font-size:14px; color:#1d1d1f; line-height:1.55; margin:0 0 10px; max-width:70ch; }
+        .pr-small { font-size:12.5px; color:#6e6e73; line-height:1.5; margin:10px 0 0; }
+        .pr-scroll { overflow-x:auto; }
+        body table.pr-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+        body table.pr-table th { font-size:11.5px; letter-spacing:.6px; text-transform:uppercase; color:#6e6e73; font-weight:650; text-align:left; padding:8px 10px; border-bottom:1px solid #e5e5ea; white-space:nowrap; }
+        body table.pr-table td { padding:8px 10px; border-bottom:1px solid #f0f0f3; vertical-align:top; color:#1d1d1f; font-variant-numeric:tabular-nums; }
+        body table.pr-table tfoot td { font-weight:650; border-top:1px solid #e5e5ea; border-bottom:0; }
+        body table.pr-table tbody tr:last-child td { border-bottom:0; }
+        table.pr-hours td:last-child { width:70%; }
+        .pr-barwrap { display:flex; align-items:center; gap:8px; }
+        .pr-bar { display:inline-block; height:10px; min-width:2px; background:#0071e3; border-radius:3px; }
+        .pr-barn { font-size:12.5px; color:#414146; }
+        .pr-more { margin:12px 0 0; }
+        .pr-defs dl { display:grid; grid-template-columns:minmax(140px,220px) 1fr; gap:6px 16px; font-size:13px; color:#414146; }
+        .pr-defs dt { font-weight:600; color:#1d1d1f; }
+        .pr-defs dd { margin:0; }
+        @media (max-width:560px){ .pr-defs dl { grid-template-columns:1fr; } .perf-tabs { gap:16px; } }
     </style>
     <script id="vtag-ai-js" async src="https://r2.leadsy.ai/tag.js" data-pid="17PMqPWtsqz2Rzt3y" data-version="062024"></script>
 <link rel="stylesheet" href="/assets/css/portal.css?v=20261013"><script defer src="/assets/js/portal-shell.js?v=20261013"></script></head>
@@ -74,7 +120,17 @@
     <div class="tb-right" id="tbRight"></div>
 </header>
 
-<div class="wrap" id="app"></div>
+<div class="perf-head">
+    <h1 class="perf-title">Performance</h1>
+    <div class="perf-tabs" role="tablist" aria-label="Performance views">
+        <button type="button" class="perf-tab on" id="tab-today" role="tab" aria-controls="app" aria-selected="true">Today</button>
+        <button type="button" class="perf-tab" id="tab-review" role="tab" aria-controls="review" aria-selected="false" tabindex="-1">Caller review</button>
+    </div>
+</div>
+
+<div class="wrap" id="app" role="tabpanel" aria-labelledby="tab-today"></div>
+<div class="wrap pr-wrap" id="review" role="tabpanel" aria-labelledby="tab-review" hidden></div>
+<script type="module" src="/assets/js/performance-review.js?v=20261027"></script>
 
 <script>
 (function(){
@@ -123,15 +179,13 @@
       return '<div class="lead-row"><div class="rank">'+(i+1)+'</div><div class="rname">'+esc(x.rep&&x.rep.name||'Rep')+'</div>'+
         '<div class="rstat">Dials <b>'+(x.dials||0)+'</b>'+
         (x.uniqueNumbers!=null?' to <b>'+x.uniqueNumbers+'</b> numbers':'')+
-        ' &middot; Picked up <b>'+(x.connected||0)+'</b>'+(x.connectRate!=null?' ('+x.connectRate+'%)':'')+
-        (x.avgAnsweredSeconds!=null?' averaging <b>'+x.avgAnsweredSeconds+'s</b>':'')+
         ' &middot; Talk <b>'+mins+' min</b>'+
         (x.truncated?' &middot; <span style="opacity:.6">partial</span>':'')+'</div></div>';
     }).join(''):'<div class="empty">Nobody has dialled through Quo in this window.</div>';
     box.innerHTML='<div class="lbl2">Dialled in Quo &middot; '+esc(d.window&&d.window.from||'')+(d.window&&d.window.to!==d.window.from?' to '+esc(d.window.to):'')+'</div>'+
       rows+
       '<p class="sub" style="margin-top:10px">'+esc(d.caveat||'')+' Counted separately from the dispositions above, never added to them. '+
-      'Picked up means the line was answered by anything, a gatekeeper or an answering machine included, so read it with the average length beside it.</p>';
+      'Quo counts a call as answered when voicemail or a phone menu picks up, so that count is not shown. The Caller review tab shows who actually answered, from logged outcomes and notes.</p>';
   }
 
   function render(s){
@@ -160,7 +214,7 @@
 
 
     app.innerHTML=
-      '<div class="eyebrow">Live Numbers</div><h1><span class="grad">Scoreboard</span></h1><div class="sub">'+esc(s.date||'today')+' &middot; live from the call log</div>'+
+      '<div class="eyebrow">Live Numbers</div><h2 class="perf-h2"><span class="grad">Scoreboard</span></h2><div class="sub">'+esc(s.date||'today')+' &middot; live from the call log</div>'+
       cards+
       '<div class="conv"><span>Pickup rate <b>'+pct(t.answers,t.dials)+'</b></span><span>Interest rate <b>'+pct(t.interested,t.answers)+'</b></span></div>'+
       '<div class="lbl2">Rep leaderboard</div>'+board+

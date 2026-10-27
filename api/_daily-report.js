@@ -20,7 +20,7 @@ import { quoConfigured, listUsers, listCalls, findSeat, counterparty, connected,
 import { calendlyConfigured, whoAmI, pastEvents, invitees } from './_calendly.js';
 import { loginAliases } from './_login-aliases.js';
 import { K as ACT, sessionsOn, summarizeDay, EVENT_KINDS } from './_hub-activity.js';
-import { shiftsOn } from './_shift.js';
+import { shiftsOn, readCurrent } from './_shift.js';
 
 export const REPORT_VERSION = 1;
 export const TZ = 'America/New_York';
@@ -261,7 +261,7 @@ export function hubEntriesFrom(records, emails, extraNumbers = {}) {
             if (!c || !want.has(norm(c.caller)) || !c.at) return;
             touched = true;
             const dialled = last10(c.dialled);
-            out.push({ id: r.id + '#' + i, recordId: r.id, company: r.company || r.recipient || null, recipient: r.recipient || null, at: c.at, outcome: c.outcome, tag: TAG(c.notes), nextCallAt: c.nextCallAt || null,
+            out.push({ id: r.id + '#' + i, recordId: r.id, company: r.company || r.recipient || null, recipient: r.recipient || null, campaignId: r.campaignId || null, at: c.at, outcome: c.outcome, tag: TAG(c.notes), notes: String(c.notes || '').slice(0, 600), nextCallAt: c.nextCallAt || null,
                 numbers: [...new Set([...(dialled.length === 10 ? [dialled] : []), ...cardNums])], dialledRecorded: dialled.length === 10 });
         });
         if (touched) cards[r.id] = { status: r.status || null, history: (r.callHistory || []).filter(c => c && c.at).map(c => ({ at: c.at, outcome: c.outcome, caller: norm(c.caller) })) };
@@ -285,14 +285,34 @@ async function numbersFor(redis, records) {
     return out;
 }
 
+/** Every ET calendar day from `from` to `to`, inclusive. */
+export function daysBetween(from, to) {
+    const out = [];
+    for (let t = Date.parse(from + 'T12:00:00Z'); out.length < 400; t += 86400000) { const d = etDay(new Date(t)); if (d > to) break; out.push(d); }
+    return out;
+}
+
 /**
  * Read every source for one person and one ET day. Each read is isolated: one failing makes that
  * section unavailable and leaves the rest. `deps` exists so tests can stand in for the network.
  */
 export async function gather({ redis, rep, day, now = Date.now(), decorate, deps = {} }) {
+    const src = await gatherRange({ redis, rep, from: day, to: day, now, decorate, deps });
+    return { user: src.user, day, range: dayRange(day), hub: src.hub, quo: src.quo, calendly: src.calendly, activity: src.activityByDay[day], shift: src.shiftByDay[day], now };
+}
+
+/**
+ * The same sources for a run of ET days, each read once for the whole run: the queue, Quo and
+ * Calendly over the span, Hub activity and shifts per day. buildReport then cuts out one day at a
+ * time, so a day in a range reads exactly as that day's own report. `keepRecords` also hands back
+ * the decorated queue, for questions about the cards rather than the calls (leads still to call).
+ */
+export async function gatherRange({ redis, rep, from, to, now = Date.now(), decorate, deps = {}, keepRecords = false }) {
     const email = norm(rep.email);
     const emails = loginAliases(email);
-    const range = dayRange(day);
+    const days = daysBetween(from, to);
+    const span = { from: dayRange(from).from, to: dayRange(to).to };
+    const inSpan = d => d >= from && d <= to;
     const at = () => new Date().toISOString();
 
     const hub = { ok: false };
@@ -305,7 +325,7 @@ export async function gather({ redis, rep, day, now = Date.now(), decorate, deps
         let extra = {};
         try { extra = await numbersFor(redis, mine); } catch { extra = {}; }
         const { entries, cards } = hubEntriesFrom(view.records, emails, extra);
-        Object.assign(hub, { ok: true, entries, cards, readAt: at(), stateUpdatedAt: state.queueUpdatedAt || state.updatedAt || null });
+        Object.assign(hub, { ok: true, entries, cards, readAt: at(), stateUpdatedAt: state.queueUpdatedAt || state.updatedAt || null }, keepRecords ? { records: view.records } : {});
     } catch (e) { hub.error = String((e && e.message) || e).slice(0, 120); }
 
     const q = { configured: (deps.quoConfigured || quoConfigured)(), ok: false, seat: null };
@@ -314,8 +334,7 @@ export async function gather({ redis, rep, day, now = Date.now(), decorate, deps
             const users = await (deps.listUsers || listUsers)();
             q.seat = findSeat(users, emails);
             if (q.seat) {
-                const b = etDayBounds(day);
-                const { items, complete } = await (deps.listCalls || listCalls)({ actorId: q.seat.actorId, direction: 'outgoing', from: b.from, to: b.to });
+                const { items, complete } = await (deps.listCalls || listCalls)({ actorId: q.seat.actorId, direction: 'outgoing', from: etDayBounds(from).from, to: etDayBounds(to).to });
                 const placed = (items || []).filter(c => c.direction === 'outgoing' && (!c.initiatedBy || c.initiatedBy === q.seat.actorId));
                 Object.assign(q, { ok: true, complete, readAt: at(), calls: placed.map(c => ({ id: c.id, at: c.createdAt, number: last10(counterparty(c)), answered: connected(c), seconds: talkSeconds(c) })) });
             }
@@ -328,13 +347,13 @@ export async function gather({ redis, rep, day, now = Date.now(), decorate, deps
             const me = await (deps.whoAmI || whoAmI)();
             const scope = me && me.organization ? { organization: me.organization } : me && me.uri ? { user: me.uri } : null;
             if (!scope) throw Error('no Calendly scope');
-            // Bookings MADE that day can be for any later date, so the window runs forward from it.
-            const { items, complete } = await (deps.pastEvents || pastEvents)({ since: range.from, until: new Date(ms(range.to) + 120 * 86400000).toISOString(), ...scope, maxPages: 10 });
+            // Bookings MADE in the span can be for any later date, so the window runs forward from it.
+            const { items, complete } = await (deps.pastEvents || pastEvents)({ since: span.from, until: new Date(ms(span.to) + 120 * 86400000).toISOString(), ...scope, maxPages: 10 });
             if (complete === false) throw Error('more Calendly events than were read');
             const bookings = [];
             for (const ev of items || []) {
-                if (etDay(ev.created_at) !== day || !/discovery/i.test(String(ev.name || ''))) continue;
-                // A failed invitee read makes meetings unknown for the day, never a silent zero.
+                if (!inSpan(etDay(ev.created_at)) || !/discovery/i.test(String(ev.name || ''))) continue;
+                // A failed invitee read makes meetings unknown for the span, never a silent zero.
                 const people = await (deps.invitees || invitees)(ev.uri);
                 for (const p of people) if (p.email && (!p.status || p.status === 'active') && !p.oldInvitee) bookings.push({ email: p.email, createdAt: ev.created_at, startTime: ev.start_time, eventName: ev.name || null });
             }
@@ -342,20 +361,28 @@ export async function gather({ redis, rep, day, now = Date.now(), decorate, deps
         } catch (e) { cal.error = String((e && e.message) || e).slice(0, 120); }
     }
 
-    let activity = null;
-    if (day < ACTIVITY_SINCE) activity = { notMeasured: true, reason: 'Hub activity was not measured before Oct 23, 2026.' };
-    else if (day < daysBefore(etDay(new Date(now)), ACTIVITY_RETAIN_DAYS)) activity = { notMeasured: true, reason: 'Hub activity is kept for 120 days; this day is older.' };
-    else {
+    const activityByDay = {};
+    const oldest = daysBefore(etDay(new Date(now)), ACTIVITY_RETAIN_DAYS);
+    let sessionsDoc; let sessionsRead = false;
+    for (const day of days) {
+        if (day < ACTIVITY_SINCE) { activityByDay[day] = { notMeasured: true, reason: 'Hub activity was not measured before Oct 23, 2026.' }; continue; }
+        if (day < oldest) { activityByDay[day] = { notMeasured: true, reason: 'Hub activity is kept for 120 days; this day is older.' }; continue; }
         try {
-            const [minutes, raw, doc] = await Promise.all([redis.smembers(ACT.minutes(email, day)), redis.lrange(ACT.events(email, day), 0, 499), redis.get(ACT.sessions(email))]);
+            const [minutes, raw, doc] = await Promise.all([redis.smembers(ACT.minutes(email, day)), redis.lrange(ACT.events(email, day), 0, 499), sessionsRead ? sessionsDoc : redis.get(ACT.sessions(email))]);
+            sessionsDoc = doc; sessionsRead = true;
             const events = (raw || []).map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean);
-            activity = { ...summarizeDay({ day, minutes: minutes || [], sessions: sessionsOn(doc, day), events }), events };
-        } catch { activity = null; }
+            activityByDay[day] = { ...summarizeDay({ day, minutes: minutes || [], sessions: sessionsOn(doc, day), events }), events };
+        } catch { activityByDay[day] = null; }
     }
 
-    let shift = null;
-    if (day < SHIFT_SINCE) shift = { notMeasured: true, reason: 'Shifts were not declared in the Hub before Oct 24, 2026.' };
-    else { try { shift = await shiftsOn(redis, email, day, now); } catch { shift = { unavailable: true }; } }
+    const shiftByDay = {};
+    // One read of the running shift serves every day; on a failure each day reads it for itself.
+    let current;
+    if (days.length > 1) { try { current = await readCurrent(redis, email); } catch { current = undefined; } }
+    for (const day of days) {
+        if (day < SHIFT_SINCE) { shiftByDay[day] = { notMeasured: true, reason: 'Shifts were not declared in the Hub before Oct 24, 2026.' }; continue; }
+        try { shiftByDay[day] = await shiftsOn(redis, email, day, now, current); } catch { shiftByDay[day] = { unavailable: true }; }
+    }
 
-    return { user: { email, name: rep.name || email }, day, range, hub, quo: q, calendly: cal, activity, shift, now };
+    return { user: { email, name: rep.name || email }, from, to, days, span, hub, quo: q, calendly: cal, activityByDay, shiftByDay, now };
 }
