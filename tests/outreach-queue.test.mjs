@@ -24,7 +24,8 @@ test('caller access does not confer sales owner access and shared queue excludes
  const caller={email:'caller@example.com',role:'caller'};
  assert.equal(canUseCallQueue(caller),true);assert.equal(ownerFor(caller),null);
  assert.equal(canUseCallQueue({email:'outsider@example.com',role:'rep'}),false);
- const due={...row,status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01'};
+ // The tobit list: the real estate media (agency) list is paused for new calls since 2026-10-27, tested below.
+ const due={...row,campaignId:'staffify-tobit-outreach',status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01'};
  const s={revision:1,records:[due,{...due,id:'two',owner:'Madison',recipient:'b@example.com'},{...due,id:'reply',status:'human_reply_hold'}],assignments:[],pausedOwners:[],suppressions:[]};
  assert.equal(sharedCallState(s).records.length,2);assert.equal(sharedCallState(s).assignments,undefined);
  // Nothing is claimed until somebody records an outcome, so both are offered as work.
@@ -87,4 +88,17 @@ test('a timing lead comes back round when its date arrives, and not before',()=>
  assert.equal(callReady({...base,nextCallAt:soon}),false,'not due yet');
  assert.equal(callReady({...base,nextCallAt:past}),true,'due now');
  assert.equal(callReady({...base,nextCallAt:null}),false,'no date means it never returns blindly');
+});
+
+test('real estate media is paused: its unworked cards leave the pool, an owned callback stays, and the worker never sends for it', async () => {
+ // Paul, 2026-10-27: "Stop targeting real estate media/REP agencies ... without deleting records or hiding owned callbacks."
+ const { withPauses } = await import('../api/_outreach-gmail.js');
+ const agency={...row,status:'sent',sentTouches:4,verifiedSentTouches:4,lastSentAt:'2026-01-01'};
+ const owned={...agency,id:'mine',recipient:'m@example.com',callOwner:'caller@example.com',callOutcome:'callback',nextCallAt:'2026-01-02T15:00:00Z',callHistory:[{outcome:'callback',caller:'caller@example.com',at:'2026-01-01'}]};
+ const v=sharedCallState({revision:1,records:[agency,owned],assignments:[],pausedOwners:[],suppressions:[]},'caller@example.com').records;
+ assert.equal(v.find(r=>r.id==='one').unclaimed,false,'not offered as new work to anyone');
+ assert.equal(v.find(r=>r.id==='mine').dueForMe,true,'the callback a caller promised is still theirs');
+ assert.equal(v.length,2,'nothing deleted');
+ assert.deepEqual(withPauses({allowedCampaignIds:null}).allowedCampaignIds,['staffify-tobit-outreach','staffify-talent-network-outreach'],'no stored list: everything but the paused campaign');
+ assert.deepEqual(withPauses({allowedCampaignIds:['staffify-agency-outreach','staffify-talent-network-outreach']}).allowedCampaignIds,['staffify-talent-network-outreach'],'a stored list that names it cannot re-enable it');
 });

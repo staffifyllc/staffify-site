@@ -96,8 +96,15 @@ export async function firstNameFor(row, { kv = redis, read = readContactNames } 
         if (!first && !(cached && cached.byContact && id in cached.byContact)) { const r = await read([id]).catch(() => null); first = r && r.names && r.names[id] ? r.names[id].first : ''; }
     }
     if (!first) first = row.verifiedFirstName || '';
-    if (!first) { const k = await knownIdentity(kv, row.recipient).catch(() => null); first = k && k.firstName || ''; }
+    // Not the researched "ask for" name of a shared inbox: that is a guess about who reads it.
     return cleanFirst(first) || null;
+}
+
+/** On the queue's own stop list, or a suppressed or bounced card of its own. Unreadable throws (fails closed). */
+async function queueSuppressed(email, kv = redis) {
+    const s = visibleState(await kv.get(KEY), 'all');
+    const e = String(email || '').toLowerCase();
+    return (s.suppressions || []).map(x => String(x).toLowerCase()).includes(e) || s.records.some(r => String(r.recipient || '').toLowerCase() === e && ['suppressed', 'bounce_hold'].includes(r.status));
 }
 
 async function queueRow(email, kv = redis) {
@@ -122,6 +129,15 @@ export async function settlePending({ kv, gmail: g, token, box, email, rep }) {
         return null;
     }
     if (still === false) {
+        // Gone could also mean deleted by hand. Only the Sent folder says it went.
+        let went = null;
+        try {
+            const q = 'in:sent to:' + email + ' newer_than:3d';
+            const r = await g(token, 'messages?' + new URLSearchParams({ q, maxResults: '10' }));
+            went = (r.messages || []).length > 0;
+        } catch { went = null; }
+        if (went === null) return { reason: 'An earlier send to this person was not confirmed, and Gmail cannot be checked just now. Look in your Sent folder before sending again. Nothing was sent.' };
+        if (!went) { await kv.del(K.uncertain(box, email)); return null; }
         await kv.lpush(K.sent(email), JSON.stringify({ at: p.at, by: rep && (rep.name || rep.email), from: box, to: email, subject: p.subject || null, verified: false })).catch(() => {});
         await kv.del(K.uncertain(box, email));
         return { already: true, reason: `Your earlier email to ${email} did go out (${new Date(p.at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ET). Nothing new was sent.` };
@@ -182,12 +198,21 @@ export async function sendRepEmail({ rep, input, deps, now = Date.now() }) {
     const sameCard = to === email;
     // Paul, 2026-10-27: "the subject line should have their first name for any emails Milton sends".
     // The card's name belongs to the card's address; for another address only the name typed counts.
-    const first = (sameCard && deps.firstName ? await deps.firstName(row).catch(() => null) : null) || cleanFirst(input.first) || null;
+    // The name the rep typed wins (they heard it on the call); otherwise what the CRM knows for this address.
+    const first = cleanFirst(input.first) || (sameCard && deps.firstName ? await deps.firstName(row).catch(() => null) : null) || null;
     if (first && !subjectHasName(subject, first)) return out(409, { sent: false, review: true, reason: `Their first name, ${first}, goes in the subject. Press Send again and the cleanup adds it.` });
     // The stored row carries the CRM number as `phone`; callContact only exists in the dialer's view.
     if (await deps.isOptedOut({ email: to, phone: row.phone || '' })) return out(200, { sent: false, reason: 'This person is on the do-not-contact list. Nothing was sent.' });
     const stop = deps.stops ? await deps.stops(row, to).catch(() => 'The do-not-contact checks could not run just now.') : null;
     if (stop) return out(200, { sent: false, reason: stop + ' Nothing was sent.' });
+    if (!sameCard) {
+        // Someone else at the company: the card's own contact's stops still count, and so does the new
+        // address's own place on the queue's stop list.
+        if (await deps.isOptedOut({ email })) return out(200, { sent: false, reason: 'The contact on this card opted out of all outreach. Ask Paul before emailing anyone else there. Nothing was sent.' });
+        const cardStop = deps.stops ? await deps.stops(row, email).catch(() => 'The do-not-contact checks could not run just now.') : null;
+        if (cardStop) return out(200, { sent: false, reason: cardStop + ' Nothing was sent.' });
+        if (deps.suppressed && await deps.suppressed(to).catch(() => true)) return out(200, { sent: false, reason: 'That address is excluded from all outreach. Nothing was sent.' });
+    }
     const client = await deps.clientCheck({ email: to, company: row.company }).catch(() => ({ status: 'unknown' }));
     if (client.status !== 'clear') return out(200, { sent: false, reason: CLIENT_REASON[client.status] || CLIENT_REASON.unknown });
 
@@ -211,7 +236,11 @@ export async function sendRepEmail({ rep, input, deps, now = Date.now() }) {
         return out(200, { sent: false, connect: true, reason: missing ? `Connect your Gmail (${box}) once, then send. Your message is kept.` : `Your Gmail connection needs renewing. Reconnect ${box}, then send. Your message is kept.` });
     }
     const pending = await settlePending({ kv, gmail: deps.gmail, token, box, email: to, rep });
-    if (pending) { await kv.del(op); return out(200, { sent: false, ...pending }); }
+    if (pending) {
+        if (pending.already) await kv.set(op, { status: 'sent', receipt: { at: new Date(now).toISOString(), from: box, to, subject, already: true } }, { ex: 86400 });
+        else await kv.del(op);
+        return out(200, { sent: false, ...pending });
+    }
     const line = await deps.line(box, rep).catch(() => null);
     const signed = { phone: line, photo: deps.photo ? await deps.photo(box).catch(() => null) : null };
     const mime = buildMime({ from: box, fromName: profile.name, to, subject, text: body + '\n\n-- \n' + signatureText(box, signed), html: bodyHtml(body, signatureHtml(box, signed)) });
@@ -226,6 +255,8 @@ export async function sendRepEmail({ rep, input, deps, now = Date.now() }) {
     }
     if (!draft || !draft.id) { await kv.del(op); return out(502, { sent: false, reason: 'Gmail did not return a draft, so nothing was sent.' }); }
 
+    // Marked before Gmail is asked, so a function killed mid-send still leaves the hold behind.
+    await kv.set(K.uncertain(box, to), { draftId: draft.id, at: new Date(now).toISOString(), subject }, { ex: 86400 }).catch(() => {});
     let sent;
     try { sent = await deps.gmail(token, 'drafts/send', { id: draft.id }); }
     catch (e) {
@@ -243,6 +274,7 @@ export async function sendRepEmail({ rep, input, deps, now = Date.now() }) {
 
     const receipt = { at: new Date(now).toISOString(), by: rep.name || rep.email, from: box, to, subject, messageId: sent.id || null, threadId: sent.threadId || null, verified, company: row.company || null, recordId: row.id || null };
     await kv.set(op, { status: 'sent', receipt }, { ex: 86400 });
+    await kv.del(K.uncertain(box, to)).catch(() => {});
     await kv.incr(K.count(box, day)).catch(() => {});
     await kv.expire(K.count(box, day), 3 * 86400).catch(() => {});
     // Kept under the card's address too, so the card shows it was emailed, and the other address is
@@ -272,7 +304,7 @@ export async function cleanRepEmail({ rep, input, deps, now = Date.now() }) {
     // Their first name goes in the subject, from what we hold about them, else what the rep typed.
     const row = deps.findRow && input.email ? await deps.findRow(String(input.email).trim().toLowerCase()).catch(() => null) : null;
     const toAddr = String(input.to || '').trim().toLowerCase(), sameCard = !toAddr || toAddr === String(input.email || '').trim().toLowerCase();
-    const first = (sameCard && deps.firstName && row ? await deps.firstName(row).catch(() => null) : null) || cleanFirst(input.first) || null;
+    const first = cleanFirst(input.first) || (sameCard && deps.firstName && row ? await deps.firstName(row).catch(() => null) : null) || null;
     const named = withFirstName(c.subject, first);
     if (named !== c.subject) { c.subject = named; c.changes = [...(c.changes || []), `Added ${first} to the subject`]; }
     await deps.redis.set(K.clean(box, c.subject, c.body), { at: new Date(now).toISOString(), by: c.by }, { ex: 6 * 3600 });
@@ -352,7 +384,7 @@ export default async function handler(req, res) {
         }
         const { status, body } = await sendRepEmail({
             rep, input,
-            deps: { redis, findRow: e => queueRow(e), isOptedOut, clientCheck, access, gmail, line: (box, r) => quoLine(box, r), firstName: r => firstNameFor(r), photo: box => photoUrlFor(box),
+            deps: { redis, findRow: e => queueRow(e), isOptedOut, clientCheck, access, gmail, line: (box, r) => quoLine(box, r), firstName: r => firstNameFor(r), photo: box => photoUrlFor(box), suppressed: e => queueSuppressed(e),
                 stops: (row, email) => stopsFor(row, email, { kv: redis, isOptedOut, contact }) },
         });
         return res.status(status).json(body);

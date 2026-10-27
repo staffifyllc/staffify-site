@@ -11,6 +11,7 @@ import {listTasks,addTask,completeTask} from './_rep-tasks.js';
 import {classified} from './_campaigns-model.js';
 import {recordActivity} from './_hub-activity.js';
 import {gateFor,withheldNumbers} from './_shift.js';
+import {poolPaused} from './_campaign-pause.js';
 import {INDUSTRY_KEY} from './_campaign-industry.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
@@ -39,7 +40,13 @@ export default async function handler(req,res) {
        // industry there is that industry here. Same classifier, same stated overrides.
        const stated=(await redis.hgetall(INDUSTRY_KEY).catch(()=>null))||{};
        out.records=classified(out.records,stated).map(({r,v})=>({...r,industry:v&&v.key?{key:v.key,label:v.label,source:v.source}:null}));
+       // A card from a paused industry (real estate media) is out of the unworked pool on any campaign;
+       // one a caller already owns stays theirs (api/_campaign-pause.js).
+       out.records=out.records.map(r=>poolPaused(r)&&r.unclaimed?{...r,unclaimed:false,pausedFromPool:true}:r);
        out.tasks=await listTasks(redis,rep.email);
+       // An owner (Paul) is not a caller: the dialer opens on their own follow-ups and keeps the team's pool
+       // one click away (Paul, 2026-10-27: "if my guys are already doing it I shouldn't be").
+       out.viewerOwner=!!ownerFor(rep);
        // The shift gate, here too: a caller off shift gets the queue in its real order, but every
        // number reads "withheld" until the shift is running. An unreadable shift reads as off.
        const g=await gateFor(redis,rep,ownerFor);

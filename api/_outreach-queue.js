@@ -1,3 +1,4 @@
+import {campaignPaused,poolPaused} from './_campaign-pause.js';
 import {tagCampaign} from './_outreach-campaign.js';
 import {callReady} from './_outreach-policy.js';
 import {hasCallerPlan} from './_caller-plan.js';
@@ -94,7 +95,8 @@ export function sharedCallState(state, viewer=null) {
       return {...r,callQueue:'shared',salesOwner:r.owner,callOwner,callOwnerAt:r.callOwnerAt||null,
         // claimed: somebody owns the follow-up. unclaimed work is what a caller should be handed next.
         claimed:!!callOwner,mine,
-        unclaimed:!!r.callReady&&!callOwner,
+        // A paused campaign's unworked cards are nobody's next call (api/_campaign-pause.js).
+        unclaimed:!!r.callReady&&!callOwner&&!campaignPaused(r),
         dueForMe:!!r.callReady&&mine};
     })};
 }

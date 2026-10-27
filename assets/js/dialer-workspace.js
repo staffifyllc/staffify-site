@@ -23,6 +23,11 @@ let selectedCampaign=PIN||params.get('campaign')||'all';
 let selectedOwner=params.get('owner')||'all', selectedIndustry=params.get('industry')||'all', research=false, search='';
 let state=null, current=null, brief=null, requestId=0, busy=false, drawerOpen=false, quoToday=null, whoPane=null;
 let searchText='';                                         // the search bar's text, kept across bar redraws
+// Paul, 2026-10-27: "its still showing me like 780 people to call, but thats not true, it should be followed
+// if my guys are already doing it I shouldn't be". An owner's dialer holds their own follow-ups; the shared
+// pool the reps work is the Team pool, opened on purpose. A caller's queue is unchanged.
+let teamPool=params.get('pool')==='team';
+const ownerView=()=>!!(state&&state.viewerOwner);
 let names={};                                              // record id -> contact name from HubSpot, for search
 const skipped=new Set(), dialled=new Set();
 const session={started:Date.now(),saved:{},texts:0,tasks:0};
@@ -47,7 +52,7 @@ const ENT={nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',hellip:'…',mdash:'
 const plain=s=>String(s||'').replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,n)=>String.fromCodePoint(Number(n))).replace(/&([a-z]+);/gi,(m,k)=>k.toLowerCase() in ENT?ENT[k.toLowerCase()]:m).replace(/\s+/g,' ').trim();
 // A card another rep has open, is calling or just called is out of everyone else's queue (live holds below).
 // A card this rep owns (their callback or retry) is always theirs to see, whatever a teammate logged on it.
-const rows=()=>orderCallQueue(state.records.filter(r=>!heldByOther(r.id)||r.mine||(current&&current.id===r.id&&!refused.has(r.id))),{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
+const rows=()=>orderCallQueue(state.records.filter(r=>(ownerView()&&!teamPool?r.mine:true)&&(!heldByOther(r.id)||r.mine||(current&&current.id===r.id&&!refused.has(r.id)))),{campaign:selectedCampaign,owner:selectedOwner,search,research,industry:selectedIndustry});
 
 // ---- live holds: who has which card -------------------------------------------------------
 // Paul, 2026-10-27: "after that person's called, it should be removed from the database. Otherwise,
@@ -176,7 +181,7 @@ function bar(){
  const list=rows(),index=list.findIndex(r=>r.id===current?.id),pin=PINNED[selectedCampaign];
  const b=el('div',null,'dw-bar');
  const title=el('div',null,'dw-title');
- title.append(el('div',pin?pin.eyebrow:'Shared call queue','dw-eyebrow'));
+ title.append(el('div',pin?pin.eyebrow:ownerView()?(teamPool?'Team pool':'Your follow-ups'):'Shared call queue','dw-eyebrow'));
  const pos=el('div',null,'dw-pos');
  pos.append(document.createTextNode(list.length?`${Math.max(1,index+1)} of ${list.length}`:'Queue complete'));
  const indLabel=selectedIndustry!=='all'?((state?.records||[]).find(r=>r.industry&&r.industry.key===selectedIndustry)||{}).industry?.label||selectedIndustry:null;
@@ -186,6 +191,7 @@ function bar(){
  if(!research&&list.length){const m=queueMix(list),parts=[];if(m.callback)parts.push(m.callback+(m.callback===1?' callback due':' callbacks due'));if(m.later)parts.push(m.later+' "not now" due');parts.push(m.new+' new');if(m.retry)parts.push(m.retry+' to try again');pos.append(el('small',parts.join(' · '),'dw-mix'));}
  title.append(pos);
  b.append(title,searchBox());
+ if(ownerView()&&!PIN){const pool=(state.records||[]).filter(r=>r.unclaimed&&!heldByOther(r.id)).length;const sw=button(teamPool?'Back to your follow-ups':'Team pool · '+pool+' left',()=>{teamPool=!teamPool;const u=new URL(location.href);teamPool?u.searchParams.set('pool','team'):u.searchParams.delete('pool');history.replaceState(null,'',u);current=null;showNext();},'btn btn-ghost dw-poolbtn');sw.id='dw-pool';b.append(sw);}
  // Options: campaign, owner, search, the research tab, refresh. Behind one control so the bar
  // stays a bar.
  const opt=el('details',null,'dw-options');opt.append(el('summary','Queue options'));
@@ -243,7 +249,8 @@ async function refresh(){stash();state=await api('/api/outreach-queue/?view=call
  // A deep link from My Day or the follow-ups list opens that card first, filters or not.
  if(OPEN&&!opened){opened=true;const want=(state.records||[]).find(r=>r.id===OPEN);if(want){skipped.delete(want.id);saveSkips();await show(want);if(GMAIL)backFromGoogle(want);return;}toast('That prospect is not in the call view right now.',true);}
  const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
-async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id)&&!refused.has(r.id));if(row)return show(row,{auto:true});if(holdId&&holdKind==='open')releaseCard(holdId);holdId=null;current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
+async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id)&&!refused.has(r.id));if(row)return show(row,{auto:true});if(holdId&&holdKind==='open')releaseCard(holdId);holdId=null;
+ if(ownerView()&&!teamPool&&!PIN){current=null;brief=null;app.replaceChildren(bar());const pool=(state.records||[]).filter(r=>r.unclaimed&&!heldByOther(r.id)).length,others=othersWorking();const e=el('section',null,'dw-pane dw-empty');e.append(el('h2','No follow-ups of yours'),el('p',pool+' people are left in the team pool'+(others.length?'. '+others.join(', ')+' working now.':'.')+' Your reps work those; nothing here is waiting on you.'),button('Open the team pool',()=>{teamPool=true;const u=new URL(location.href);u.searchParams.set('pool','team');history.replaceState(null,'',u);showNext();},'btn'));app.append(e);return;}current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
 
 // ---- one prospect -------------------------------------------------------------------------
 async function show(row,{auto=false}={}){
@@ -512,6 +519,7 @@ async function openMail(row,p,{reconnect=false}={}){
    if(j.sent){dropMailDraft(row.id);closeMail();toast('Sent to '+j.to+' from '+j.from+'. It is in your Gmail Sent folder.');
     const n=document.getElementById('call-notes');const line='Emailed them: '+j.subject;if(n&&!n.value.includes(line))n.value=(n.value?n.value+'\n':'')+line;return;}
    toast(j.reason||'Not sent.',true);
+   if(j.already){dropMailDraft(row.id);closeMail();return;}   // the earlier send did go out: nothing more to do
    if(j.connect)return openMail(row,p,{reconnect:true});
    if(j.uncertain){send.textContent='Check your Sent folder';return;}
    send.disabled=false;send.textContent='Send email';

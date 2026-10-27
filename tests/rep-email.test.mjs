@@ -277,6 +277,7 @@ test('an unconfirmed send is checked before anything goes to that person again, 
         g.calls.push({ path, method });
         if (path === 'drafts/d1' && !method) { if (draftStill === 'gone') throw Error('Gmail drafts/d1 failed 404: Not Found'); if (draftStill === 'there') return { id: 'd1' }; throw Error('Gmail drafts/d1 failed 500'); }
         if (path === 'drafts/d1' && method === 'DELETE') return {};
+        if (path.startsWith('messages?')) return { messages: draftStill === 'gone' ? [{ id: 'm1' }] : [] };   // the Sent folder decides
         if (path === 'drafts') return { id: 'd2' };
         if (path === 'drafts/send') return { id: 'm2', threadId: 't2' };
         if (path.startsWith('messages/')) return { labelIds: ['SENT'], payload: { headers: [{ name: 'To', value: 'support@realkit.com' }] } };
@@ -456,7 +457,7 @@ test('another address at the same company, from a gatekeeper: allowed, checked, 
     assert.equal(c.subject, 'Deana, thanks for your time today', 'the name typed for the new address, not the card\'s');
     const r = await sendRepEmail({ rep: MILTON, input: { ...draft, subject: c.subject, body: c.body }, deps });
     assert.equal(r.body.sent, true); assert.equal(r.body.to, 'deana@mckinstry.com');
-    assert.deepEqual(seenTo, ['deana@mckinstry.com'], 'the do-not-contact checks ran on the address it really went to');
+    assert.deepEqual(seenTo, ['deana@mckinstry.com', 'dean@mckinstry.com'], 'the checks ran on the address it went to, and the card\'s own contact still counts');
     const mime = decode(g.calls.find(x => x.path === 'drafts').body.message.raw);
     assert.match(mime, /\r\nTo: deana@mckinstry\.com\r\n/);
     assert.equal((kv.lists.get(K.sent('dean@mckinstry.com')) || []).length, 1, 'the card shows it was emailed');

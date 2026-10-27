@@ -14,7 +14,7 @@
 // A store or CRM read that fails is a stop, never a pass.
 
 // The same three named exclusions as api/_outreach-crm.js draftBlockReason.
-export const EXCLUDED_NAMES = ['trey tatro', 'mike haymes', 'blake watkins'];
+export const EXCLUDED_NAMES = ['trey tatro', 'mike haymes', 'michael haymes', 'blake watkins'];
 
 export function rowStop(row) {
     if (row && row.status === 'suppressed') return 'This person is excluded from all outreach (Not interested / stop).';
@@ -28,7 +28,11 @@ export function crmStop(p, { reply = false } = {}) {
     const name = (String(p.firstname || '') + ' ' + String(p.lastname || '')).toLowerCase();
     if (EXCLUDED_NAMES.some(n => name.includes(n))) return 'This person is on the do-not-contact list.';
     if (p.hs_email_optout === 'true' || p.do_not_contact === 'true') return 'The CRM marks this person do not contact.';
-    if (['DNC', 'NOT_INTERESTED'].includes(p.rep_lifecycle_state) || /DNC|NOT_INTERESTED|OPT/i.test(String(p.rep_terminal_state || ''))) return 'The CRM says this person asked not to be contacted.';
+    if (['DNC', 'NOT_INTERESTED', 'LEGAL'].includes(p.rep_lifecycle_state) || /DNC|NOT_INTERESTED|OPT|LEGAL/i.test(String(p.rep_terminal_state || ''))) return 'The CRM says this person asked not to be contacted.';
+    // Any other end state the sequences stop on (a booked or closed record): not a cold email either.
+    if (p.rep_terminal_state) return 'The CRM records this person as finished (' + p.rep_terminal_state + '). Check with Paul first.';
+    // The human-led cohort: Paul is handling them himself (rep_outreach_mode HUMAN_LED).
+    if (p.rep_outreach_mode && p.rep_outreach_mode !== 'AUTOMATED') return 'Paul is handling this person himself. Check with him first.';
     if (reply) return null;
     if (p.lifecyclestage === 'customer') return 'This person is a Staffify client.';
     if (p.lifecyclestage === 'opportunity') return 'This person has an open deal in the CRM, which Paul handles.';
@@ -61,6 +65,13 @@ export async function stopsFor(row, email, { kv, isOptedOut, contact, reply = fa
     try { numbers = await knownNumbers(row || { recipient: email }, kv); }
     catch { return 'The do-not-contact list could not be checked just now.'; }
     for (const n of numbers) if (await isOptedOut({ phone: n })) return 'A number on file for this person replied STOP.';
-    try { const c = await contact(email); return crmStop(c && c.properties, { reply }); }
-    catch (e) { return /CRM contact missing/.test(String(e && e.message)) ? null : 'The CRM could not be checked just now.'; }
+    let props = null;
+    try { const c = await contact(email); props = (c && c.properties) || null; }
+    catch (e) { if (!/CRM contact missing/.test(String(e && e.message))) return 'The CRM could not be checked just now.'; }
+    const crm = crmStop(props, { reply });
+    if (crm) return crm;
+    // The CRM's own numbers too: row.phone keeps only one of phone and mobile, and a STOP can come from either.
+    for (const n of [props && props.phone, props && props.mobilephone].map(x => String(x || '').replace(/\D/g, '').slice(-10)).filter(d => d.length === 10 && !numbers.includes(d)))
+        if (await isOptedOut({ phone: n })) return 'A number on file for this person replied STOP.';
+    return null;
 }
