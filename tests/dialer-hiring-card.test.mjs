@@ -56,7 +56,7 @@ test('a Hiring now card reads as a first touch about their job post, with the jo
     assert.match(text, /Hiring: L1 Technical Support Agent/, 'the meta line names the job, not an email count');
     assert.ok(!/emails · last/.test(text), 'no "4 emails" line on a card nobody emailed');
     assert.match(text, /Nothing has been emailed; this is the first touch/);
-    assert.match(text, /this is Milton with Staffify\. I'm looking to speak with Harman, or the person in charge of hiring/);
+    assert.match(text, /this is Milton with Staffify\. I'm calling about the L1 Technical Support Agent job you posted\. I'm looking to speak with Harman, or the person in charge of hiring/);
     assert.ok(!/sent you over a few notes/i.test(text), 'the email campaigns opener never appears');
     assert.match(text, /\+18777391545/); assert.match(text, /Listed on their site/);
     const links = dom.queryAll(document.body, 'a').map(a => [dom.text(a), a.href]);

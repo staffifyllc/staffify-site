@@ -292,17 +292,29 @@ const HIRING_WORK = { support: 'customer support', admin: 'admin and executive s
 // Paul, 2026-10-28: "Ultimately, we're looking to create partnerships with people where we are doing all
 // their hiring for remote teams, like customer service, sales, and admin support." The open role is the
 // reason for the call; the offer is to run that hiring for them, this seat and the ones after it.
+/** A posted title as a caller says it: "Customer Service Representative - $40k-$60k/yr + commission" is "Customer Service Representative". */
+export function spokenRole(title) {
+    const t = String(title || '').split(/\s[-–—|]\s|\(|,|;|\s\$/)[0].replace(/\s*\/\s*/g, ' and ').replace(/\s+/g, ' ').replace(/[\s:.-]+$/, '').trim();
+    return t || String(title || '').trim().slice(0, 60);
+}
+/** "a" or "an" as it is said: an Account Manager, an L1 Technical Support Agent, an SDR, a Senior Paralegal. */
+export const articleFor = w => (/^[aeiou]/i.test(w) || /^[FHLMNRSX][A-Z0-9]*\b/.test(w) ? 'an' : 'a');
 export function hiringCallScript({ caller, callerEmail, company, firstName, jobTitle, family, offshore, city }) {
     const who = company || 'your company';
-    const role = jobTitle || 'that role';
+    const role = jobTitle ? spokenRole(jobTitle) : 'that role';
+    const aRole = articleFor(role) + ' ' + role;
+    const inCity = city ? ' in ' + city : '';
     const work = HIRING_WORK[family] || 'support';
     // Paul, 2026-10-28: "Can our script say I'm looking to speak with (prospect name i.e Eric) or the person in
     // charge of hiring". The number is usually a front desk or main line, so the opener asks for the person; the
     // cold-call line comes once they are on (the tree's 'intro').
+    // Paul, later the same day: "can the beginning of the call script mention the job we're calling about?" The
+    // job comes first, so whoever answers knows why we are calling before we ask for anyone. The intro names it
+    // again, because the person put through has not heard the opener.
     const opener = firstName
-        ? `Hi, this is ${caller} with Staffify. I'm looking to speak with ${firstName}, or the person in charge of hiring. Is that you?`
-        : `Hi, this is ${caller} with Staffify. I'm looking to speak with the person in charge of hiring for the ${role} role${city ? ' in ' + city : ''}. Is that you, or could you point me to them?`;
-    const intro = `Great. I'll be straight with you, this is a cold call. I saw ${who} is hiring a ${role}${city ? ' in ' + city : ''} and I had one quick question about it. Do you have a second?`;
+        ? `Hi, this is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}. I'm looking to speak with ${firstName}, or the person in charge of hiring. Is that you?`
+        : `Hi, this is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}. I'm looking to speak with the person in charge of hiring for it. Is that you, or could you point me to them?`;
+    const intro = `Great. I'll be straight with you, this is a cold call. I saw ${who} is hiring ${aRole}${inCity} and I had one quick question about it. Do you have a second?`;
     const reason = `The reason I'm calling: we run the hiring for remote customer service, sales and admin roles. We recruit, vet and manage dedicated people from Latin America and the Philippines, so the seat gets filled and you are not starting from scratch every time.`
         + (offshore ? ` I noticed your post is open to candidates in ${offshore}, which is exactly where our people are.` : '')
         + ` Since the ${role} role is open right now, I wanted to see if it would help to have a few vetted people in front of you.`;
@@ -316,7 +328,7 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
         open: { choices: [["That's me / putting you through", 'intro'], ["What's this about?", 'context'], ['Not here / someone else', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
         intro: { say: intro, choices: [['Go ahead', 'reason'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
         reason: { say: reason, note: 'Say it once and stop talking. The question after this is what the call is for.', choices: [['Keep going', 'discover'], ['They pushed back', 'busy']] },
-        context: { say: `Of course. I saw your post for a ${role}. We run hiring for remote customer service, sales and admin roles: we find the people, vet them and manage them for you. I just wanted to ask how the search is going.`, choices: [['Go ahead', 'discover'], ['Not interested', 'stop']] },
+        context: { say: `Of course. I saw your post for ${aRole}. We run hiring for remote customer service, sales and admin roles: we find the people, vet them and manage them for you. I just wanted to ask how the search is going.`, choices: [['Go ahead', 'discover'], ['Not interested', 'stop']] },
         discover: { say: questions[0], choices: [['Still looking', 'dig'], ['Filled it', 'filled'], ['We only hire in-house', 'inhouse']] },
         dig: { say: questions[1], note: 'Write down the work, the hours and the tools. It is what we match people to.', choices: [['They described it', 'offer']] },
         offer: { say: questions[2], choices: [['Yes', 'close'], ['Maybe, send something', 'sendinfo'], ['No', 'future']] },
@@ -345,7 +357,7 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
         opener, reason, questions,
         stages: STAGE_LABELS[4].map((label, i) => ({ label, say: questions[i] })),
         objections: objections.map(([label, say, note]) => ({ label, say, note })),
-        voicemail: `Hi${firstName ? ' ' + firstName : ''}, it's ${caller} at Staffify. I saw ${who} is hiring a ${role}. We run hiring for remote customer service, sales and admin roles, and I can have a few vetted candidates in front of you this week if that helps. I'll try you again in a couple of days. Thanks.`,
+        voicemail: `Hi${firstName ? ' ' + firstName : ''}, it's ${caller} at Staffify. I saw ${who} is hiring ${aRole}. We run hiring for remote customer service, sales and admin roles, and I can have a few vetted candidates in front of you this week if that helps. I'll try you again in a couple of days. Thanks.`,
         bookingUrl: bookingLinkFor(callerEmail),
         tree,
     };

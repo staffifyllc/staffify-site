@@ -6,7 +6,7 @@ import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadD
 import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
-import { hiringCallScript } from '../api/_call-scripts.js';
+import { hiringCallScript, spokenRole, articleFor } from '../api/_call-scripts.js';
 import { crmStop } from '../api/_rep-email-gates.js';
 import { loadBad, isBad } from '../api/_bad-numbers.js';
 import { stats } from '../api/_campaigns-model.js';
@@ -334,8 +334,9 @@ test('the call-first script never claims an email was sent', () => {
         for (const n of Object.values(s.tree)) if (n.log) assert.ok(['connected', 'callback', 'gatekeeper', 'timing', 'suppress'].includes(n.log));
     }
     // Paul, 2026-10-28: ask for the person first, by name when we have one.
-    assert.match(named.opener, /I'm looking to speak with Dana, or the person in charge of hiring\. Is that you\?/);
-    assert.match(anon.opener, /I'm looking to speak with the person in charge of hiring for the Customer Support Specialist role/);
+    // and, later that day, to name the job first: "can the beginning of the call script mention the job we're calling about?"
+    assert.match(named.opener, /^Hi, this is Milton with Staffify\. I'm calling about the Customer Support Specialist job you posted\. I'm looking to speak with Dana, or the person in charge of hiring\. Is that you\?$/);
+    assert.match(anon.opener, /I'm calling about the Customer Support Specialist job you posted\. I'm looking to speak with the person in charge of hiring for it\./);
     assert.match(named.tree.intro.say, /this is a cold call\. I saw Acme is hiring a Customer Support Specialist/);
     assert.equal(named.tree.open.choices[0][1], 'intro');
     assert.match(named.reason, /Latin America/);
@@ -999,4 +1000,19 @@ test('a spreadsheet date kept as an Excel serial is read as the date it is, so a
     const after = await getRecord(w.kv, rec.id);
     assert.equal(after.job.postedAt, '2026-09-01T12:00:00.000Z'); assert.equal(after.job.state, 'stale'); assert.equal(after.job.postedLabel, 'Posted 2026-09-01');
     assert.equal(after.callHistory.length, 1); assert.equal(hiringCallReady(after, NOW), false);
+});
+
+test('the opener says the job the way a person would, not the posting\'s full title', () => {
+    assert.equal(spokenRole('Customer Service Representative - $40k-$60k/yr + commission'), 'Customer Service Representative');
+    assert.equal(spokenRole('Family Law Paralegal (remote in Florida, $15-$35/hr, FT/PT)'), 'Family Law Paralegal');
+    assert.equal(spokenRole('Account Manager - Fully Remote - US, $65k-$95k + commission'), 'Account Manager');
+    assert.equal(spokenRole('Executive Assistant / Account Manager (remote)'), 'Executive Assistant and Account Manager');
+    assert.equal(spokenRole('Customer Service Rep / Appointment Setter – Full-Time, In-Office (Phone-Based) – $18–$25/hr'), 'Customer Service Rep and Appointment Setter');
+    assert.equal(spokenRole('CSR 2'), 'CSR 2');
+    assert.deepEqual(['Account Manager', 'L1 Technical Support Agent', 'SDR', 'Senior Paralegal', 'HR Assistant', 'Legal Assistant'].map(articleFor), ['an', 'an', 'an', 'a', 'an', 'a']);
+    const s = hiringCallScript({ caller: 'Milton', company: 'Farmers Insurance - Zachary Rogers', firstName: 'Zachary', jobTitle: 'Customer Service Representative - $40k-$60k/yr + commission', family: 'support', city: 'Tucson' });
+    assert.equal(s.opener, "Hi, this is Milton with Staffify. I'm calling about the Customer Service Representative job you posted in Tucson. I'm looking to speak with Zachary, or the person in charge of hiring. Is that you?");
+    assert.match(s.tree.intro.say, /is hiring a Customer Service Representative in Tucson/, 'the person put through hears the job too');
+    const a = hiringCallScript({ caller: 'Milton', company: 'Acme', firstName: '', jobTitle: 'Account Manager - Fully Remote', family: 'account' });
+    assert.match(a.tree.intro.say, /is hiring an Account Manager and/); assert.match(a.voicemail, /is hiring an Account Manager\./);
 });
