@@ -47,8 +47,21 @@ const dialHref=n=>{const d=String(n||'').replace(/[^+\d]/g,'');return PHONE_UA?'
 const QUO_KEY='staffify-dialer-quo-setup';
 const heading=t=>el('h3',t,'dw-h');
 // Hear a name said aloud by the browser's own voice. Rendered only where speech is available.
+// Paul, 2026-10-28: "madisons Ai voice "hear it" is totally fucked, it sounds demonic". Left to itself the browser
+// can pick one of the Mac's novelty voices (Bad News, Zarvox, Whisper...) or an old robotic one, and it was slowed to
+// 0.85. Now a natural voice is chosen by name, novelty and robotic voices never are, and it speaks at normal speed.
+const NOVELTY_VOICE=/^(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox|fred|junior|ralph|kathy|princess|grandma|grandpa|rocko|eddy|flo|reed|sandy|shelley)\b/i;
+const GOOD_VOICES=[/google us english/i,/microsoft (aria|jenny|ava|andrew|emma|brian|guy|michelle).*(natural|online)/i,/\b(ava|samantha|allison|susan|zoe|evan|nathan|joelle|noelle|tom)\b.*\((premium|enhanced)\)/i,/^(samantha|ava|allison|susan|alex|tom|nicky)\b/i,/microsoft (zira|david|mark)/i,/google uk english/i];
+function bestVoice(){
+ const all=(window.speechSynthesis.getVoices&&window.speechSynthesis.getVoices())||[];
+ const ok=all.filter(v=>/^en([-_]|$)/i.test(v.lang||'')&&!NOVELTY_VOICE.test(v.name||''));
+ for(const re of GOOD_VOICES){const v=ok.find(x=>re.test(x.name)&&/en[-_]US/i.test(x.lang))||ok.find(x=>re.test(x.name));if(v)return v;}
+ return null;}
+// Voices load after the page in Chrome: ask early, and wait briefly for them on the first click.
+const voicesReady=()=>new Promise(res=>{try{if((window.speechSynthesis.getVoices()||[]).length)return res();const t=setTimeout(res,1200);window.speechSynthesis.addEventListener?.('voiceschanged',()=>{clearTimeout(t);res();},{once:true});}catch{res();}});
+try{if(typeof window!=='undefined'&&window.speechSynthesis&&window.speechSynthesis.getVoices)window.speechSynthesis.getVoices();}catch{}
 function hearButton(text){if(!text||typeof window==='undefined'||!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined')return null;
- const b=button(null,()=>{try{window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(text));u.lang='en-US';u.rate=0.85;window.speechSynthesis.speak(u);}catch{toast('This browser cannot read names aloud.',true);}},'btn btn-ghost dw-hear');
+ const b=button(null,async()=>{try{await voicesReady();const v=bestVoice();if(!v){toast('This browser has no natural voice installed, so the name is not read out. Chrome or Edge have one.',true);return;}window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(text));u.voice=v;u.lang=v.lang||'en-US';u.rate=1;u.pitch=1;window.speechSynthesis.speak(u);}catch{toast('This browser cannot read names aloud.',true);}},'btn btn-ghost dw-hear');
  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');
  const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M11 5L6 9H2v6h4l5 4V5z M15.5 8.5a5 5 0 010 7 M19 6a9 9 0 010 12');svg.append(path);
  b.append(svg,el('span','Hear it'));b.title='Hear "'+text+'" said by your browser\u2019s voice. A rare name can still be said wrong.';b.setAttribute('aria-label','Hear '+text+' pronounced');return b;}

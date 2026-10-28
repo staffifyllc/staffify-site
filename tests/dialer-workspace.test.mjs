@@ -412,3 +412,28 @@ test('the number itself dials: Quo on a phone, a tel: link Quo answers on a comp
 
 
 
+
+// Paul, 2026-10-28: "madisons Ai voice "hear it" is totally fucked, it sounds demonic, please fix it".
+test('Hear it speaks with a natural voice at normal speed, never a novelty voice', async () => {
+    for (const [voices, want] of [
+        [[{ name: 'Bad News', lang: 'en-US', default: true }, { name: 'Zarvox', lang: 'en-US' }, { name: 'Samantha', lang: 'en-US' }], 'Samantha'],
+        [[{ name: 'Microsoft David - English (United States)', lang: 'en-US' }, { name: 'Microsoft Aria Online (Natural) - English (United States)', lang: 'en-US' }], 'Microsoft Aria Online (Natural) - English (United States)'],
+        [[{ name: 'Whisper', lang: 'en-US' }, { name: 'Cellos', lang: 'en-US' }], null],
+    ]) {
+        const d = makeDom(); const restore = install(d);
+        const spoken = [];
+        globalThis.window.speechSynthesis = { getVoices: () => voices, cancel() {}, speak: u => spoken.push(u), addEventListener() {} };
+        globalThis.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+        const app = document.createElement('div'); app.id = 'app'; app.className = 'wrap'; document.body.append(app);
+        stubApi();
+        await import('../assets/js/dialer-workspace.js?' + Date.now() + 'voice' + voices.length + (want || 'none'));
+        await tick(60);
+        const hear = document.querySelector('.dw-hear');
+        assert.ok(hear, 'the Hear it button is on the card');
+        hear.click(); await tick(30);
+        if (want) { assert.equal(spoken.length, 1); assert.equal(spoken[0].voice.name, want); assert.equal(spoken[0].rate, 1); }
+        else { assert.equal(spoken.length, 0, 'no novelty voice is ever played'); assert.match(document.getElementById('toast').textContent, /no natural voice/); }
+        delete globalThis.SpeechSynthesisUtterance;
+        restore();
+    }
+});
