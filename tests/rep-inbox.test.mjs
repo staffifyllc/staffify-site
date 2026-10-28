@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 process.env.KV_REST_API_URL = 'https://example.invalid';
 process.env.KV_REST_API_TOKEN = 'test';
 process.env.CRON_SECRET = 'test-cron-secret';
+process.env.REP_SEND_AS = '{}';
 const I = await import('../api/rep-inbox.js');
 const { K } = await import('../api/rep-email.js');
 

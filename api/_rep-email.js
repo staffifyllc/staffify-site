@@ -47,14 +47,36 @@ export const REP_MAILBOXES = Object.freeze({
         title: 'Founder',
         phone: Object.freeze({ e164: '+13056369210', display: '(305) 636-9210' }),
     }),
+    // Their Staffify sending mailboxes (see SEND_AS below): same people, same signatures.
+    'madison@trystaffify.com': Object.freeze({
+        name: 'Madison Sterling',
+        first: 'Madison',
+        title: 'Growth Strategist',
+        phone: Object.freeze({ e164: '+15616179973', display: '(561) 617-9973' }),
+    }),
+    'paul@trystaffify.com': Object.freeze({
+        name: 'Paul Chareth',
+        first: 'Paul',
+        title: 'Founder',
+        phone: Object.freeze({ e164: '+13056369210', display: '(305) 636-9210' }),
+    }),
 });
+
+// Google refuses gostaffify.com accounts for the Hub's Gmail app: it is Internal to the Workspace that holds the
+// trystaffify.com and staffifyhq.com mailboxes (checked 2026-10-28: hello@gostaffify.com got "Access blocked ... can
+// only be used within its organization", org_internal). Paul: "make sure that all of the sales reps are able to send
+// emails out". So a gostaffify.com login sends from that rep's own Staffify sending mailbox, the way Milton does, and
+// every send still goes to hello@ (routeCopy). REP_SEND_AS (JSON) overrides it; {} sends from the login's own address.
+const sendAs = () => { try { const v = JSON.parse(process.env.REP_SEND_AS || 'null'); if (v && typeof v === 'object') return v; } catch {} return { 'madison@gostaffify.com': 'madison@trystaffify.com', 'hello@gostaffify.com': 'paul@trystaffify.com' }; };
+export const SEND_AS = Object.freeze(Object.fromEntries(Object.entries(sendAs()).map(([k, v]) => [String(k).toLowerCase(), String(v).toLowerCase()])));
 
 /** The mailbox a signed-in rep sends from. The misspelt Hub record sends from the real address. */
 export function mailboxFor(rep) {
     const email = String(rep && rep.email || '').trim().toLowerCase();
     if (!email || email === 'admin') return null;
     const fixed = emailMismatch(email);
-    const box = fixed ? fixed.onContract : email;
+    const own = fixed ? fixed.onContract : email;
+    const box = SEND_AS[own] || own;
     return REP_MAILBOXES[box] ? box : null;
 }
 export const profileFor = mailbox => REP_MAILBOXES[String(mailbox || '').toLowerCase()] || null;

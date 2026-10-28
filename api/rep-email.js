@@ -29,7 +29,7 @@ import { clientCheck } from './_client-guard.js';
 import { recordActivity, dayOf } from './_hub-activity.js';
 import { SCOPES, clientId, access, gmail, unseal } from './_outreach-gmail.js';
 import { loginAliases } from './_login-aliases.js';
-import { mailboxFor, profileFor, signatureHtml, signatureText, lineFor, templatesFor, copyProblem, LIMITS, bodyHtml, buildMime, rawOf, routeCopy, REP_MAILBOXES, ROUTE_TO } from './_rep-email.js';
+import { mailboxFor, profileFor, signatureHtml, signatureText, lineFor, templatesFor, copyProblem, LIMITS, bodyHtml, buildMime, rawOf, routeCopy, REP_MAILBOXES, ROUTE_TO, SEND_AS } from './_rep-email.js';
 import { cleanEmail } from './_email-cleanup.js';
 import { stopsFor } from './_rep-email-gates.js';
 import { contact } from './_outreach-crm.js';
@@ -332,7 +332,8 @@ export async function cleanRepEmail({ rep, input, deps, now = Date.now() }) {
  * never a token. A store that could not be read says so; it is never reported as "not connected".
  */
 export async function mailboxReport({ kv = redis, open = unseal } = {}) {
-    return Promise.all(Object.keys(REP_MAILBOXES).map(async box => {
+    // The mailboxes reps send from: a login sent elsewhere (SEND_AS) is not one of them.
+    return Promise.all(Object.keys(REP_MAILBOXES).filter(box => !SEND_AS[box]).map(async box => {
         let saved, readable = true;
         try { saved = await kv.get('outreach:oauth:' + box); } catch { readable = false; }
         let connectedAt = null;
