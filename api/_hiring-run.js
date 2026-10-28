@@ -617,7 +617,7 @@ async function settle(entry, deps, report) {
 /** The first current rule an existing card fails, or null. Reads only what is stored. */
 export async function recheck(rec, kv, now = Date.now()) {
     const name = rec.company && rec.company.name;
-    const byName = companyExcluded(name);
+    const byName = companyExcluded(name, [rec.lead && rec.lead.industry, rec.lead && rec.lead.vertical, rec.company && rec.company.identity && rec.company.identity.listingType].filter(Boolean).join(' '));
     if (byName) return byName;
     if (rec.lead) {
         const q = qualifyLead(rec.lead, Date.parse(rec.job && rec.job.postedAt) || now);

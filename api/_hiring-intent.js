@@ -215,6 +215,8 @@ export function qualifyPosting(p, now = Date.now()) {
     if (!family) return { ok: false, reason: 'role_not_fillable', detail: `"${p.title}" is not a support, admin, scheduling or account role Staffify places.` };
     const age = ageDays(p.postedAt, now);
     if (age != null && age > MAX_AGE_DAYS) return { ok: false, reason: 'stale_post', detail: `Posted ${age} days ago; older than ${MAX_AGE_DAYS} days.` };
+    const sector = sectorExcluded(p.company);
+    if (sector) return { ok: false, ...sector };
     const comp = competitorReason({ company: p.company, text: p.text });
     if (comp) return { ok: false, reason: 'competitor', detail: comp };
     const ev = postEvidence({ company: p.company, title: p.title, text: p.text, family });
@@ -298,13 +300,24 @@ const ENTERPRISE_ATS = /(myworkdayjobs\.com|wd\d+\.myworkday|oraclecloud\.com|ta
 // "Orange County Plumbing", "University Park Dental", "The Roofing Authority").
 const INSTITUTION = /^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b|\b(state'?s?|district|county|city|u\.?s\.?)\s+attorney|attorney'?s?\s+office\b|\b(circuit|superior|district|municipal|county)\s+court\b|\bpublic\s+defender\b|\bboard\s+of\s+(education|supervisors|commissioners)\b|\bisd\b|\bindependent\s+school\b|\btax\s+board\b|\bfranchise\s+tax\b/i;
 /** A staffing firm or a public body, by its name alone. The refresh pass re-applies this to cards already made. */
-export function companyExcluded(name) {
+// Paul, 2026-10-28: "exclude most of all the law firms and insurance firms" (he chose: every law firm and insurance
+// agency off the list, callbacks kept). Read from the business name, the industry a researcher wrote down, or the
+// Google listing type; from every source, Madison's lists and the hourly search alike.
+const LAW_FIRM = /\b(law|legal|attorneys?|lawyers?|esq|litigation)\b|\bcounsel\b(?!ing)/i;
+const INSURANCE_FIRM = /\b(insurance|insurers?|underwriters?|state\s+farm|allstate|ins\.?\s+agency)\b|\bfarmers\s+(insurance|agent|agency|ins)\b/i;
+export function sectorExcluded(name, context = '') {
+    const t = [name, context].filter(Boolean).join(' ');
+    if (LAW_FIRM.test(t)) return { reason: 'law_or_insurance', detail: `${name} is a law firm. Law firms and insurance agencies are left out of Hiring now (Paul, 2026-10-28).` };
+    if (INSURANCE_FIRM.test(t)) return { reason: 'law_or_insurance', detail: `${name} is an insurance agency. Law firms and insurance agencies are left out of Hiring now (Paul, 2026-10-28).` };
+    return null;
+}
+export function companyExcluded(name, context = '') {
     const comp = competitorReason({ company: name, text: '' });
     if (comp) return { reason: 'competitor', detail: comp };
     if (INSTITUTION.test(String(name || ''))) return { reason: 'institution', detail: `${name} is a public body, school or court.` };
     const big = String(name || '').match(KNOWN_LARGE);
     if (big) return { reason: 'large_employer', detail: `${name} is a large employer with its own recruiting team (${big[0]}).` };
-    return null;
+    return sectorExcluded(name, context);
 }
 // Large employers and health systems that reached the list before the size checks existed (PM review,
 // 2026-10-28: "UnityPoint, Beth Israel Deaconess, C&S, Byram and other known out-of-scope employers").
@@ -442,6 +455,7 @@ export function addressCity(address) {
  */
 export function listingEvidence({ company, website, domain, listingName, listingType, address, jobLocation, remote }) {
     if (AGENCY_TYPE.test(String(listingType || ''))) return { action: 'exclude', reason: 'competitor', detail: `Google lists them as a ${listingType}: a recruiter, not an employer hiring for its own seat.` };
+    if (/\b(law\s+firm|attorney|lawyer|insurance\s+(agency|broker|company))\b/i.test(String(listingType || ''))) return { action: 'exclude', ...sectorExcluded(company || listingName, listingType) };
     if (CARE_TYPE.test(String(listingType || ''))) return { action: 'exclude', reason: 'institutional_clinical', detail: `Google lists them as a ${listingType}, a care institution.` };
     let u = null;
     try { u = website ? new URL(/^https?:/i.test(website) ? website : 'https://' + website) : null; } catch { u = null; }
@@ -501,7 +515,7 @@ export function qualifyLead(l, now = Date.now()) {
     const text = [title, l.notes].join(' ');
     const comp = competitorReason({ company, text: l.notes || '' });
     if (comp) return { ok: false, reason: 'competitor', detail: comp };
-    const named = companyExcluded(company);
+    const named = companyExcluded(company, [l.industry, l.vertical].filter(Boolean).join(' '));
     if (named) return { ok: false, ...named };
     const ev = postEvidence({ company, title, text, family });
     if (ev) return { ok: false, ...ev };
@@ -549,6 +563,8 @@ export function qualifyJob(j, now = Date.now()) {
     if (age == null) return { ok: false, reason: 'undated_post', detail: 'Google Jobs shows no posting age, so it may be old.' };
     if (age > DISCOVERY_DAYS) return { ok: false, reason: 'stale_post', detail: `Posted ${age} days ago; we only call about the last ${DISCOVERY_DAYS} days.` };
     const company = String(j.company_name || '');
+    const sector = sectorExcluded(company);
+    if (sector) return { ok: false, ...sector };
     const comp = competitorReason({ company, text: j.description });
     if (comp) return { ok: false, reason: 'competitor', detail: comp };
     const links = (j.apply_options || []).map(a => a && a.link).filter(Boolean);

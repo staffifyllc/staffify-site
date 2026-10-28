@@ -2,7 +2,7 @@
 // nothing here calls, texts, emails or spends a credit.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
+import { sectorExcluded, postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
 import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops, saveHiringContactEmail } from '../api/_hiring-calls.js';
 import { templatesFor, HIRING_TEMPLATES } from '../api/_rep-email.js';
@@ -800,7 +800,7 @@ test('a Google listing is proof of the employer only when it is the employer: st
     assert.equal(listingEvidence({ ...base, company: 'Grand Villa of Delray Beach East', listingType: 'Assisted living facility in Palm Beach County, Florida' }).reason, 'institutional_clinical');
     assert.equal(listingEvidence({ ...base, listingType: 'Civil engineer in Tampa, Florida' }), null);
     assert.equal(listingEvidence({ ...base, company: 'Builders FirstSource', website: 'https://www.bldr.com/contact/request-quote?utm_source=yext&utm_medium=listing&utm_content=WILMNCYD', domain: 'bldr.com' }).reason, 'chain_location');
-    assert.equal(listingEvidence({ ...base, listingType: 'Health insurance agency' }), null, 'a small insurance agency is a business');
+    assert.equal(listingEvidence({ ...base, listingType: 'Health insurance agency' }).reason, 'law_or_insurance', 'an insurance agency is left out (Paul, 2026-10-28)');
 });
 
 test('the number goes in the order the employer publishes it: a site number first, the listing kept as an alternate', () => {
@@ -854,14 +854,16 @@ test('cards made before these rules are held to them: a store job is excluded, a
 });
 
 // ---- leads a person researched (Madison's list, 2026-10-28) ------------------------------------
-const LEAD = (over = {}) => ({ owner_first: 'Zachary', owner_last: 'Rogers', owner_title: 'Farmers Agent / Owner', business: 'Farmers Insurance - Zachary Rogers', industry: 'Insurance (Farmers agency)', city: 'Tucson', state: 'AZ', website: 'https://agents.farmers.com/az/tucson/zachary-rogers', owner_email: 'zrogers1@farmersagent.com', phone: '520-600-0025', role_posted: 'Customer Service Representative - $40k-$60k/yr', posting_url: 'https://app.idealtraits.com/career/Zachary-Rogers-123', posting_date: 'Active on Indeed as of 2026-10-26', email_source_url: 'https://agents.farmers.com/az/tucson/zachary-rogers', notes: 'Owner is the agent.', vertical: 'insurance (Farmers owners)', ...over });
+const LEAD = (over = {}) => ({ owner_first: 'Zachary', owner_last: 'Rogers', owner_title: 'Owner', business: 'Rogers Home Services - Zachary Rogers', industry: 'Home services', city: 'Tucson', state: 'AZ', website: 'https://agents.farmers.com/az/tucson/zachary-rogers', owner_email: 'zrogers1@farmersagent.com', phone: '520-600-0025', role_posted: 'Customer Service Representative - $40k-$60k/yr', posting_url: 'https://app.idealtraits.com/career/Zachary-Rogers-123', posting_date: 'Active on Indeed as of 2026-10-26', email_source_url: 'https://agents.farmers.com/az/tucson/zachary-rogers', notes: 'Owner is the agent.', vertical: 'small business (new)', ...over });
 
 test('the wider seats: insurance service, legal support, retention and client services; leaders, executives and licences still out', () => {
     for (const t of ['Family Law Paralegal', 'Legal Assistant', 'Legal Secretary', 'CSR 2', 'Commercial Lines Account Manager', 'Insurance Account Representative - Fully Remote', 'Customer Sales and Service Representative', 'Customer Retention Specialist', 'Client Services Coordinator - Legal/Immigration', 'Law Firm Case Manager', 'Insurance Service Associate'])
         assert.ok(roleFamily(t), t);
     for (const t of ['VP, Strategic Finance & FP&A', 'Director, M&A Value Capture', 'Account Executive - New Business', 'Customer Service Manager', 'Legal Intake Team Lead - remote', 'Business Development Manager', 'Account Manager'])
         assert.equal(roleFamily(t), null, t);
-    assert.equal(qualifyLead(LEAD({ role_posted: 'Account Manager - Fully Remote - US' }), NOW).family, 'account', 'an insurance agency\'s account manager services accounts');
+    // Paul, 2026-10-28: law firms and insurance agencies are left out, whatever the seat.
+    assert.equal(qualifyLead(LEAD({ business: 'Farmers Insurance - Zachary Rogers', industry: 'Insurance (Farmers agency)', role_posted: 'Account Manager - Fully Remote - US' }), NOW).reason, 'law_or_insurance');
+    assert.equal(qualifyLead(LEAD({ business: 'Kyle & Kyle Law', industry: 'Law firm', role_posted: 'Family Law Paralegal' }), NOW).reason, 'law_or_insurance');
     assert.equal(qualifyLead(LEAD({ role_posted: 'Licensed Insurance Account Manager', notes: 'P&C license required.' }), NOW).reason, 'hard_restriction');
     assert.equal(qualifyLead(LEAD({ role_posted: 'Licensed Farmers Administrative Assistant / Client Experience Manager', notes: '' }), NOW).reason, 'hard_restriction');
     assert.equal(qualifyLead(LEAD({ role_posted: 'Insurance Service Associate (licensed)', notes: '' }), NOW).reason, 'hard_restriction');
@@ -970,7 +972,7 @@ test('a number looked up for a research lead: dry first, blank fields only, then
 
 test('when the owner\'s looked-up number is logged wrong, the next one up says it is the company line, not theirs', async () => {
     const w = jobsWorld();
-    const lead = LEAD({ business: 'Coleman Litigation', owner_first: 'Joseph', owner_last: 'Coleman', owner_title: 'Founder', phone: '239-248-9252', website: null, city: 'Naples', state: 'FL', role_posted: 'Paralegal (remote in Florida)', phone_source: 'RocketReach', phone_type: 'mobile', phone_person: 'Joseph Coleman', phone_grade: 'A', phone_alternates: '', public_phone: '2394351052' });
+    const lead = LEAD({ business: 'Coleman Roofing', owner_first: 'Joseph', owner_last: 'Coleman', owner_title: 'Founder', phone: '239-248-9252', website: null, city: 'Naples', state: 'FL', role_posted: 'Paralegal (remote in Florida)', phone_source: 'RocketReach', phone_type: 'mobile', phone_person: 'Joseph Coleman', phone_grade: 'A', phone_alternates: '', public_phone: '2394351052' });
     w.deps.loadBad = async () => new Set(['2392489252']);
     w.deps.isBad = (bad, n) => bad.has(String(n).replace(/\D/g, '').slice(-10));
     const r = await processLead({ kind: 'lead', key: leadKey(lead), lead }, { source: 'Madison' }, w.deps);
@@ -1063,7 +1065,7 @@ test('a post that calls its employer a listed public company marks it large, in 
 });
 
 // Paul, 2026-10-28: "I just upgraded our rocketreach account to 1000 + a month". Every run finds a few owners' cells.
-const RRP = (over = {}) => ({ id: 501, name: 'Zachary Rogers', title: 'Agency Owner', employer: 'Zachary Rogers Agency - Farmers Insurance', employerDomain: null, region: 'AZ', phones: [{ number: '+15203017788', type: 'mobile', grade: 'A', valid: true, recommended: true }, { number: '+15204440000', type: 'direct dial', grade: 'A-', valid: true }, { number: '+18005551212', type: 'mobile', grade: 'A', valid: true }], ...over });
+const RRP = (over = {}) => ({ id: 501, name: 'Zachary Rogers', title: 'Owner', employer: 'Rogers Home Services', employerDomain: null, region: 'AZ', phones: [{ number: '+15203017788', type: 'mobile', grade: 'A', valid: true, recommended: true }, { number: '+15204440000', type: 'direct dial', grade: 'A-', valid: true }, { number: '+18005551212', type: 'mobile', grade: 'A', valid: true }], ...over });
 const fakeRR = (over = {}) => {
     const calls = { lookups: [], searches: 0, status: 0 };
     return { calls, rr: {
@@ -1083,7 +1085,7 @@ test('each run puts an owner\'s cell first on a card that rings a main line, onc
     const f = fakeRR();
     const out = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
     assert.equal(out.added, 1); assert.equal(out.lookups, 1); assert.equal(out.creditsLeft, 900);
-    assert.deepEqual(f.calls.lookups[0], { name: 'Zachary Rogers', employer: 'Farmers' }, 'a franchise agent is looked up at the carrier');
+    assert.deepEqual(f.calls.lookups[0], { name: 'Zachary Rogers', employer: 'Rogers Home Services - Zachary Rogers' }, 'the owner is looked up at their business');
     const after = await getRecord(w.kv, rec.id);
     assert.equal(after.phone.number, '+15203017788'); assert.equal(after.phone.lineType, 'mobile'); assert.equal(after.phone.person, 'Zachary Rogers');
     assert.deepEqual(after.phone.alternates, ['+15204440000', '+15206000025'], 'toll-free dropped; the old line kept behind');
@@ -1263,4 +1265,23 @@ test('the filled-role branch: Paul\'s pivot, then stay in touch books a callback
     assert.equal(s.tree.keepintouch.log, 'callback'); assert.equal(s.tree.keepintouch.callbackDays, 30); assert.equal(s.tree.keepintouch.email, 'hiring-stay-in-touch');
     assert.equal(s.tree.booked.email, 'hiring-thanks'); assert.equal(s.tree.sendinfo.email, 'hiring-thanks');
     assert.equal(s.objections.find(o => o.label === 'Already filled it').say, s.tree.filled.say);
+});
+
+// Paul, 2026-10-28: "exclude most of all the law firms and insurance firms" (his choice: all of them, callbacks kept).
+test('law firms and insurance agencies are left out from every source; a card someone is working stays with them', async () => {
+    for (const [n, c] of [['Farmers Insurance - Zachary Rogers', ''], ['Insuramax', 'Insurance (independent P&C agency)'], ['Coleman Litigation', ''], ['Kyle & Kyle Law', ''], ['Gabriel C Garza Ins Agency Inc (The Garza Agency - Farmers)', ''], ['Peyton Pettus - State Farm Agent', '']])
+        assert.equal(sectorExcluded(n, c).reason, 'law_or_insurance', n);
+    for (const [n, c] of [['Zoe Rose Therapy, PLLC', 'Mental health counseling'], ['Lawrence Plumbing', ''], ['Farmers Market Co-op', ''], ['NextPath Care Management & Consulting', '']])
+        assert.equal(sectorExcluded(n, c), null, n);
+    assert.equal(qualifyJob(listing({ company_name: 'Smith & Jones Law Group' }), NOW).reason, 'law_or_insurance', 'the hourly search too');
+    // Cards made before: the untouched one leaves on the next run; the one a caller booked a callback on stays.
+    const w = jobsWorld();
+    for (const [biz, key] of [['Mormile Agency Inc. (Farmers Insurance)', 'lead:a'], ['Abrolat Law', 'lead:b']]) {
+        const l = LEAD({ business: biz, industry: '', vertical: '', phone: biz === 'Abrolat Law' ? '310-999-2007' : '520-600-0025' });
+        await putRecord(w.kv, { id: 'hire:' + key.slice(-1).repeat(16), campaignId: 'staffify-hiring-intent', status: 'ready', lead: l, company: { name: biz }, job: { source: 'provided', title: 'Customer Service Representative', postedAt: new Date(NOW - 864e5).toISOString(), state: 'open' }, phone: { number: biz === 'Abrolat Law' ? '+13109992007' : '+15206000025', alternates: [] }, contact: {}, callHistory: [], ...(biz === 'Abrolat Law' ? { callOwner: 'hello@gostaffify.com', callOutcome: 'no_answer', nextCallAt: new Date(NOW + 864e5).toISOString() } : {}), createdAt: new Date(NOW).toISOString() });
+    }
+    const out = await refreshReady({ ...w.deps, now: NOW }, { limit: 0, siteChecks: 0 });
+    assert.equal(out.excluded, 1);
+    assert.equal((await getRecord(w.kv, 'hire:aaaaaaaaaaaaaaaa')).exclusion.reason, 'law_or_insurance');
+    assert.equal((await getRecord(w.kv, 'hire:bbbbbbbbbbbbbbbb')).status, 'ready', 'a callback a caller booked is left with them');
 });
