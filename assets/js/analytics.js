@@ -21,8 +21,22 @@
     var g = document.createElement('script');
     g.async = true;
     g.src = 'https://www.googletagmanager.com/gtag/js?id=' + gtagId;
-    document.head.appendChild(g);
     window.gtag('js', new Date());
+    // Keep first-party measurement active; marketing code waits for engagement
+    // on pages that explicitly opt in. Queued gtag events retain their order.
+    var adsLoaded = false;
+    var engagementEvents = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
+    function loadGoogleTag() {
+      if (adsLoaded) return;
+      adsLoaded = true;
+      engagementEvents.forEach(function (event) { window.removeEventListener(event, loadGoogleTag); });
+      document.head.appendChild(g);
+    }
+    if (document.documentElement.dataset.adsAfterInteraction === 'true') {
+      engagementEvents.forEach(function (event) { window.addEventListener(event, loadGoogleTag, { passive: true }); });
+    } else {
+      loadGoogleTag();
+    }
   }
   if (CFG.GA4_ID) window.gtag('config', CFG.GA4_ID);
   if (CFG.ADS_ID) window.gtag('config', CFG.ADS_ID);
