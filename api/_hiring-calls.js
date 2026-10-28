@@ -114,7 +114,7 @@ export async function hiringBrief(kv, { id, caller, callerEmail, shiftGate }, de
         shiftGate,
         checkedAt: j.checkedAt,
         why: j.source === 'google_jobs'
-            ? `Hiring now: ${j.title}${j.city ? ' in ' + j.city : ''}, listed on Google Jobs${j.via ? ' via ' + j.via : ''}${posted ? ' around ' + posted : ''}. A post can be filled any day; this one is under ${MAX_AGE_DAYS} days old. Nothing has been emailed; this is the first touch.`
+            ? `Hiring now: ${j.title}${j.city ? ' in ' + j.city : ''}, listed on Google Jobs${j.via ? ' via ' + j.via : ''}${posted ? ' around ' + posted : ''}. ${j.workplace === 'remote' ? 'Posted as remote.' : 'Posted as an in-office job: offer a remote person for the seat, do not call it a remote opening.'} A post can be filled any day; this one is under ${MAX_AGE_DAYS} days old. Nothing has been emailed; this is the first touch.`
             : `Hiring now: ${j.title}${posted ? ', posted ' + posted : ''}. Still open on their careers page when checked ${new Date(j.checkedAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ET. Nothing has been emailed; this is the first touch.`,
         fact: [rec.brief && rec.brief.summary, rec.brief && rec.brief.need].filter(Boolean).join(' '),
         source: { url: j.url },

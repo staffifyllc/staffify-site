@@ -646,3 +646,29 @@ test('a hospital found through its own Google listing is a large employer, not a
     const rec = (await allRecords(ok.kv))[0];
     assert.equal(rec.job.usState, 'TX'); assert.equal(rec.job.state, undefined, 'the job state is open/closed/stale, never a US state');
 });
+
+test('old cards are held to the current rules: named large employers and a hospital by its cached listing type leave the list', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const base = (await allRecords(w.kv))[0];
+    const make = async (id, name, extra = {}) => { await putRecord(w.kv, { ...base, id, company: { ...base.company, name }, ...extra }); return id; };
+    const unity = await make('hire:00000000000000a1', 'UnityPoint Health');
+    const cs = await make('hire:00000000000000a2', 'C&S Wholesale Grocers');
+    const hosp = await make('hire:00000000000000a3', 'Lakeview Care Partners', { job: { ...base.job, location: 'Dallas, TX' } });
+    await w.kv.set(HK.profile(companyKey('Lakeview Care Partners', 'Dallas, TX')), { profile: { title: 'Lakeview Care Partners', type: 'Hospital', address: 'Dallas, TX 75201' }, expiresAt: new Date(NOW + 864e5).toISOString() });
+    const out = await refreshReady(w.deps, { limit: 5 });
+    assert.equal(out.excluded, 3);
+    for (const id of [unity, cs, hosp]) { const r = await getRecord(w.kv, id); assert.equal(r.status, 'excluded'); assert.equal(r.exclusion.reason, 'large_employer'); assert.equal(r.job.title, base.job.title, 'history and metadata kept'); }
+    assert.equal((await getRecord(w.kv, base.id)).status, 'ready', 'the small business stays');
+    assert.equal(qualifyJob(listing({ company_name: 'Byram Healthcare' }), NOW).reason, 'large_employer');
+});
+
+test('an in-office ad is described as one on the card, never as a remote opening', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    assert.equal(rec.job.workplace, 'onsite');
+    assert.match(rec.brief.need, /posted it as an in-office job, not a remote opening/);
+    const b = await hiringBrief(w.kv, { id: rec.id, caller: 'Milton', callerEmail: MILTON.email, shiftGate: { allowed: true, required: true } }, { kv: w.kv, isOptedOut: async () => false, clientCheck: async () => ({ status: 'clear' }), crmContact: async () => { throw Error('CRM contact missing'); }, crmStop, loadBad, isBad, queueState: async () => ({ records: [] }) });
+    assert.match(b.body.why, /Posted as an in-office job: offer a remote person for the seat, do not call it a remote opening/);
+});

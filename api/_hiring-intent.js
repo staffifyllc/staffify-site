@@ -287,8 +287,15 @@ export function companyExcluded(name) {
     const comp = competitorReason({ company: name, text: '' });
     if (comp) return { reason: 'competitor', detail: comp };
     if (INSTITUTION.test(String(name || ''))) return { reason: 'institution', detail: `${name} is a public body, school or court.` };
+    const big = String(name || '').match(KNOWN_LARGE);
+    if (big) return { reason: 'large_employer', detail: `${name} is a large employer with its own recruiting team (${big[0]}).` };
     return null;
 }
+// Large employers and health systems that reached the list before the size checks existed (PM review,
+// 2026-10-28: "UnityPoint, Beth Israel Deaconess, C&S, Byram and other known out-of-scope employers").
+// Each is public knowledge: a health system, a teaching hospital, the largest US grocery wholesaler, an
+// Owens & Minor company, a multinational, a statewide agency of a thousand staff.
+const KNOWN_LARGE = /\b(unitypoint|beth\s+israel|deaconess|c\s*&\s*s\s+wholesale|byram\s+healthcare|altrad|one\s+hope\s+united|owens\s*&\s*minor|kaiser\s+permanente|advocate\s+aurora|atrium\s+health|banner\s+health|hca\s+healthcare|ascension|trinity\s+health|commonspirit|providence\s+health|mayo\s+clinic|cleveland\s+clinic|sutter\s+health|intermountain|baylor\s+scott|memorial\s+hermann|northwell|mass\s+general|brigham)\b/i;
 export const jobKey = j => 'gjobs:' + createHash('sha256').update([j.company_name, j.title, j.location].map(x => String(x || '').trim().toLowerCase()).join('|')).digest('hex').slice(0, 20);
 // "Royal Electric", "Royal Electric, LLC" and "Royal Electric Co." are one employer: the key drops legal suffixes.
 export const companyKey = (name, location) => 'gco:' + (nameWords(name).join('') || String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')) + ':' + String(stateOf(location) || '').toLowerCase();
@@ -322,6 +329,7 @@ export function qualifyJob(j, now = Date.now()) {
     if (comp) return { ok: false, reason: 'competitor', detail: comp };
     const links = (j.apply_options || []).map(a => a && a.link).filter(Boolean);
     const hosts = links.map(l => { try { return new URL(l).hostname.toLowerCase(); } catch { return ''; } });
+    if (KNOWN_LARGE.test(company)) return { ok: false, reason: 'large_employer', detail: `${company} is a large employer with its own recruiting team.` };
     if (INSTITUTION.test(company) || hosts.some(h => /\.(edu|gov|mil)$/.test(h))) return { ok: false, reason: 'institution', detail: `${company} is a public body, school or hospital system.` };
     const big = links.find(l => ENTERPRISE_ATS.test(l));
     if (big) return { ok: false, reason: 'large_employer', detail: 'They hire through an enterprise system (' + (big.match(ENTERPRISE_ATS) || [''])[0] + '), a sign of a large employer.' };
@@ -463,7 +471,7 @@ export function briefFor(rec) {
         summary: j.source === 'google_jobs'
             ? `${c.name} is hiring a ${j.title}${j.city ? ' in ' + j.city : ''}. The listing ${when} on Google Jobs${j.via ? ' (' + j.via + ')' : ''}.${where}${more} The seat is one a remote person can do, so offer to fill it and run their hiring for roles like it.`
             : `${c.name} is hiring a ${j.title}. The post ${when} and was still open on their careers page when we checked.${where}${more}`,
-        need: `A ${familyWords(rec.family)} hire: ${j.title}${j.location ? ' (' + j.location + ')' : ''}.${caveat}`,
+        need: `A ${familyWords(rec.family)} hire: ${j.title}${j.location ? ' (' + j.location + ')' : ''}.${caveat}${j.source === 'google_jobs' && j.workplace !== 'remote' ? ' They posted it as an in-office job, not a remote opening: offer a remote person for the seat and let them decide.' : ''}`,
         nextStep: 'Book a short call with Paul to scope the role and how we would run their remote hiring for customer service, sales and admin.',
     };
 }

@@ -8,7 +8,7 @@
 // found" (memory: an API error is not absence).
 import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
-    boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES,
+    boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
     parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey,
 } from './_hiring-intent.js';
 
@@ -370,6 +370,27 @@ async function settle(entry, deps, report) {
     return r;
 }
 
+/** The first current rule an existing card fails, or null. Reads only what is stored. */
+export async function recheck(rec, kv, now = Date.now()) {
+    const name = rec.company && rec.company.name;
+    const byName = companyExcluded(name);
+    if (byName) return byName;
+    if (rec.job && rec.job.title && !roleFamily(rec.job.title)) return { reason: 'role_not_fillable', detail: `"${rec.job.title}" is not a seat a remote person fills under the current rules.` };
+    if (rec.listing) {
+        // Age is handled by expiry; every other listing rule is applied as if the listing were new.
+        const q = qualifyJob({ ...rec.listing, posted_at: rec.job && rec.job.postedAt || rec.listing.posted_at }, now);
+        if (!q.ok && !['stale_post', 'undated_post'].includes(q.reason)) return { reason: q.reason, detail: q.detail };
+    }
+    if (rec.job && rec.job.source === 'google_jobs') {
+        const cached = parseValue(await kv.get(HK.profile(companyKey(name, rec.job.location))).catch(() => null));
+        const p = cached && cached.profile || {};
+        if (/\b(hospital|medical\s+center|health\s+system|university|school\s+district|government\s+office)\b/i.test(String(p.type || (rec.company.identity && rec.company.identity.listingType) || ''))) return { reason: 'large_employer', detail: `Google lists them as a ${p.type || rec.company.identity.listingType}, a large employer.` };
+        const sz = p.size || {};
+        if ((sz.employees && sz.employees > LARGE_EMPLOYEES) || sz.listed || sz.parent) return { reason: 'large_employer', detail: "Google's company panel shows a large employer." };
+    }
+    return null;
+}
+
 // ---- keeping ready cards honest ---------------------------------------------------------------
 // PM, 2026-10-27: "A job that closes tomorrow can therefore remain callable forever." Each run
 // re-reads the ready cards whose post was checked longest ago. Closed or past MAX_AGE_DAYS: the
@@ -383,15 +404,25 @@ export async function refreshReady(deps, { limit = 12, report = null } = {}) {
     // Every Google Jobs card (a date check, free) and the ATS cards checked longest ago (a fetch each).
     const recs = [...live.filter(r => r.job.source === 'google_jobs'), ...live.filter(r => r.job.source !== 'google_jobs').sort((a, b) => Date.parse(a.job.checkedAt || 0) - Date.parse(b.job.checkedAt || 0)).slice(0, limit)];
     const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0, excluded: 0 };
-    // The rules improve; cards made under older rules are held to the current ones. Free: a name check.
+    // The rules improve; cards made under older rules are held to the current ones, for free: the name,
+    // the role, the stored listing and the cached Google listing are all re-read, nothing is fetched.
+    // A card leaves the worklist with the reason on it and everything else kept; one a caller owns is
+    // left for a person. The brief is rebuilt so its wording matches the current rules too.
     for (const rec of live) {
-        const x = companyExcluded(rec.company && rec.company.name);
-        if (!x) continue;
+        const x = await recheck(rec, kv, now);
+        const brief = briefFor(rec);
+        if (!x && JSON.stringify(brief) === JSON.stringify(rec.brief)) continue;
         const lock = HK.recLock(rec.id);
         if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
         try {
             const fresh = await getRecord(kv, rec.id);
-            if (fresh && fresh.status === 'ready' && !fresh.callOwner) { await putRecord(kv, { ...fresh, status: 'excluded', exclusion: { reason: x.reason, detail: x.detail, at: new Date(now).toISOString(), by: 'rules re-check' } }); out.excluded++; }
+            if (!fresh || fresh.status !== 'ready') continue;
+            if (x && !fresh.callOwner) {
+                await putRecord(kv, { ...fresh, brief, status: 'excluded', exclusion: { reason: x.reason, detail: x.detail, at: new Date(now).toISOString(), by: 'rules re-check' } });
+                const keys = { [fresh.company && fresh.company.board || companyKey(fresh.company && fresh.company.name, fresh.job && fresh.job.location)]: JSON.stringify({ id: fresh.id, verdict: x.reason === 'large_employer' ? 'large' : 'excluded', at: new Date(now).toISOString() }) };
+                await kv.hset(HK.companies, keys);
+                out.excluded++;
+            } else if (JSON.stringify(brief) !== JSON.stringify(fresh.brief)) await putRecord(kv, { ...fresh, brief: briefFor(fresh) });
         } finally { await kv.del(lock).catch(() => {}); }
     }
     for (const rec of recs) {
