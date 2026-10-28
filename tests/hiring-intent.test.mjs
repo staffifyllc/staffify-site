@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing } from '../api/_hiring-run.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript } from '../api/_call-scripts.js';
@@ -671,4 +671,28 @@ test('an in-office ad is described as one on the card, never as a remote opening
     assert.match(rec.brief.need, /posted it as an in-office job, not a remote opening/);
     const b = await hiringBrief(w.kv, { id: rec.id, caller: 'Milton', callerEmail: MILTON.email, shiftGate: { allowed: true, required: true } }, { kv: w.kv, isOptedOut: async () => false, clientCheck: async () => ({ status: 'clear' }), crmContact: async () => { throw Error('CRM contact missing'); }, crmStop, loadBad, isBad, queueState: async () => ({ records: [] }) });
     assert.match(b.body.why, /Posted as an in-office job: offer a remote person for the seat, do not call it a remote opening/);
+});
+
+test('the number the employer lists next to the job\'s city goes first; the Google number stays as an alternate', async () => {
+    const pages = {
+        'https://www.damotech.com/': { url: 'https://www.damotech.com/', html: '<a href="/contact-us">Contact</a> 1 (877) 990-3266', text: 'Damotech 1 (877) 990-3266' },
+        'https://www.damotech.com/contact-us': { url: 'https://www.damotech.com/contact-us', html: '', text: 'TOLL FREE Number: 1 (877) 990-3266 Lockport, IL, Sales (Mac Rak): 815-723-7400 Moberly, MO, Manufacturing: 660-372-1885' },
+    };
+    const getPage = async u => { const p = pages[u]; if (!p) throw Error('no'); return p; };
+    const loc = await localNumber({ website: 'https://www.damotech.com/', city: 'Lockport', getPage });
+    assert.equal(loc.phone, '+18157237400'); assert.equal(loc.sourceUrl, 'https://www.damotech.com/contact-us'); assert.match(loc.context, /Lockport/);
+    assert.equal(await localNumber({ website: 'https://www.damotech.com/', city: 'Tampa', getPage }), null, 'no number next to the city: nothing changes');
+    const p = preferLocal({ number: '+18553997225', alternates: [], source: 'Google business listing' }, loc);
+    assert.equal(p.number, '+18157237400'); assert.deepEqual(p.alternates, ['+18553997225']); assert.equal(p.previous.number, '+18553997225');
+    // An existing card is updated once by the refresh pass, keeping the old number as an alternate.
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    await putRecord(w.kv, { ...rec, company: { ...rec.company, website: 'https://www.damotech.com/' }, job: { ...rec.job, city: 'Lockport' }, phone: { ...rec.phone, localCheckedAt: undefined } });
+    const out = await refreshReady({ ...w.deps, getPage }, { limit: 5 });
+    assert.equal(out.localNumbers, 1);
+    const after = await getRecord(w.kv, rec.id);
+    assert.equal(after.phone.number, '+18157237400'); assert.ok(after.phone.alternates.includes('+19452184003'));
+    const again = await refreshReady({ ...w.deps, getPage }, { limit: 5 });
+    assert.equal(again.localNumbers || 0, 0, 'looked for once, not every run');
 });

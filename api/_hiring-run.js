@@ -6,6 +6,7 @@
 // ones live in api/hiring-intent.js. Paid calls (SerpApi, Findymail) are counted, capped and
 // guarded; a vendor error is recorded as an error and the row stays retryable, never as "none
 // found" (memory: an API error is not absence).
+import { contactLinks } from './_site-phone.js';
 import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
@@ -114,6 +115,39 @@ export async function resolveIdentity(posting, { getPage }) {
         }
     }
     return { unresolved: 'No website could be tied to this job board: the board names no homepage and no candidate site links back to it.', tried };
+}
+
+// ---- the local number -----------------------------------------------------------------------
+// PM, 2026-10-28, on Damotech: their contact page lists "Lockport, IL, Sales: 815-723-7400" next to a
+// toll-free line, while Google's listing gave an 855 number. A number the employer publishes next to
+// the job's own city is the one to ring first; the listing's number stays as an alternate. Free: the
+// homepage and up to three contact or location pages. Null when no number sits next to the city.
+const TOLL_FREE = /^(800|833|844|855|866|877|888)/;
+const PHONE_RUN = /(?:\+?1[\s.-]?)?\(?([2-9]\d{2})\)?[\s.-]?([2-9]\d{2})[\s.-]?(\d{4})(?!\d)/g;
+export async function localNumber({ website, city, getPage }) {
+    if (!website || !city) return null;
+    let home;
+    try { home = await getPage(website); } catch { return null; }
+    if (!home) return null;
+    const pages = [home];
+    for (const u of contactLinks(home, 3)) { try { const p = await getPage(u); if (p) pages.push(p); } catch { /* skip */ } }
+    const cityRe = new RegExp('\\b' + String(city).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    for (const p of pages) {
+        const text = String(p.text || '') || String(p.html || '').replace(/<[^>]+>/g, ' ');
+        for (const m of text.matchAll(PHONE_RUN)) {
+            const d = m[1] + m[2] + m[3];
+            if (TOLL_FREE.test(d)) continue;
+            const before = text.slice(Math.max(0, m.index - 80), m.index);
+            if (cityRe.test(before)) return { phone: '+1' + d, sourceUrl: p.url, context: before.replace(/\s+/g, ' ').trim().split(' ').slice(-8).join(' ') + ' ' + m[0].trim(), checkedAt: new Date().toISOString() };
+        }
+    }
+    return null;
+}
+/** The card's numbers with a city-tied site number first; the old first number kept as an alternate. */
+export function preferLocal(phone, local) {
+    if (!local || !phone || local.phone === phone.number) return null;
+    const alternates = [phone.number, ...(phone.alternates || [])].filter((n, i, a) => n && n !== local.phone && a.indexOf(n) === i);
+    return { ...phone, number: local.phone, alternates, source: 'business website', sourceUrl: local.sourceUrl, context: local.context, checkedAt: local.checkedAt, type: 'company line for this location, from their own website', previous: { number: phone.number, source: phone.source }, localCheckedAt: local.checkedAt };
 }
 
 // ---- Google Jobs listings ---------------------------------------------------------------------
@@ -256,7 +290,11 @@ export async function processPosting(p, provenance, deps, report) {
     if (byCompany.status !== 'clear') return toBacklog('client_check_unavailable', byCompany.why || 'The client list could not be read, so this is not called yet.', { missing: ['client check'] });
 
     // The number: from their Google business listing, else published on their own site.
-    const listed = gj && ident.phone ? { phone: ident.phone, alternates: [], sourceUrl: ident.evidenceUrl, context: 'Google business listing for ' + (ident.listingName || posting.company), checkedAt, source: 'Google business listing' } : null;
+    let listed = gj && ident.phone ? { phone: ident.phone, alternates: [], sourceUrl: ident.evidenceUrl, context: 'Google business listing for ' + (ident.listingName || posting.company), checkedAt, source: 'Google business listing' } : null;
+    if (listed && ident.website && job.city) {
+        const loc = await localNumber({ website: ident.website, city: job.city, getPage: deps.getPage }).catch(() => null);
+        if (loc && loc.phone !== listed.phone) listed = { phone: loc.phone, alternates: [listed.phone], sourceUrl: loc.sourceUrl, context: loc.context, checkedAt: loc.checkedAt, source: 'business website', local: true };
+    }
     let phone = listed || (ident.website ? await deps.findSitePhone({ website: ident.website, fetchSite: deps.getPage, maxPages: 4 }).catch(() => null) : null);
     // The contact: Findymail's domain search, then its verifier. Optional; recorded either way.
     let contact = null;
@@ -307,7 +345,7 @@ export async function processPosting(p, provenance, deps, report) {
 
     const rec = {
         ...base, company, contact,
-        phone: { number: usable[0], alternates: usable.slice(1), source: phone.source || 'business website', sourceUrl: phone.sourceUrl, context: phone.context || null, checkedAt: phone.checkedAt || checkedAt, type: phone.source === 'Google business listing' ? 'main line on their Google business listing' : 'company line listed on their website', owner: 'the company, not a named person' },
+        phone: { number: usable[0], alternates: usable.slice(1), source: phone.source || 'business website', sourceUrl: phone.sourceUrl, context: phone.context || null, checkedAt: phone.checkedAt || checkedAt, type: phone.source === 'Google business listing' ? 'main line on their Google business listing' : phone.local ? 'company line for this location, from their own website' : 'company line listed on their website', owner: 'the company, not a named person', ...(gj ? { localCheckedAt: checkedAt } : {}) },
         status: 'ready', callOutcome: null, nextCallAt: null, callOwner: null, callHistory: [],
     };
     // A wrong number re-researched: same card, same history and owner; the new number is a new lead to ring.
@@ -423,6 +461,19 @@ export async function refreshReady(deps, { limit = 12, report = null } = {}) {
                 await kv.hset(HK.companies, keys);
                 out.excluded++;
             } else if (JSON.stringify(brief) !== JSON.stringify(fresh.brief)) await putRecord(kv, { ...fresh, brief: briefFor(fresh) });
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
+    // Google Jobs cards made before the local-number rule: look once for a number next to the job's city.
+    for (const rec of live.filter(r => r.job.source === 'google_jobs' && r.phone && !r.phone.localCheckedAt && r.company && r.company.website && r.job.city)) {
+        const loc = await localNumber({ website: rec.company.website, city: rec.job.city, getPage: deps.getPage }).catch(() => null);
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (!fresh || fresh.status !== 'ready') continue;
+            const better = preferLocal(fresh.phone, loc);
+            await putRecord(kv, { ...fresh, phone: better || { ...fresh.phone, localCheckedAt: new Date(now).toISOString() } });
+            if (better) { out.localNumbers = (out.localNumbers || 0) + 1; await kv.hset(HK.companies, { [phoneKey(better.number)]: JSON.stringify({ id: fresh.id, verdict: 'ready', at: new Date(now).toISOString() }) }); }
         } finally { await kv.del(lock).catch(() => {}); }
     }
     for (const rec of recs) {

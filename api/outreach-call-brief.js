@@ -27,7 +27,8 @@ export default async function handler(req,res){
   // reason is on it. Owners are never gated. Outcomes save regardless: that endpoint is not this one.
   const shiftGate=shiftGateOf(await currentShift(redis,rep.email),Date.now(),{required:shiftRequired(rep,ownerFor)});mark('shift');
   // A Hiring now card lives in its own store and has no mail trail to check (api/_hiring-calls.js).
-  if(isHiringId(req.query.id)){const h=await hiringBrief(redis,{id:String(req.query.id),caller,callerEmail:rep.email,shiftGate});return res.status(h.status).json(h.body);}
+  // An owner opening a hiring card is the caller: their own first name, as on every other campaign's card.
+  if(isHiringId(req.query.id)){const hc=rep?.role==='admin'?(cardCallerName({campaignId:'staffify-hiring-intent'},rep.name)||caller):caller;const h=await hiringBrief(redis,{id:String(req.query.id),caller:hc,callerEmail:rep.email,shiftGate});return res.status(h.status).json(h.body);}
   state=await redis.get(KEY);row=visibleState(state,owner).records.find(r=>r.id===req.query.id);mark('state');
   // An owner reading a card: the campaign's assigned caller where there is one, else their own name
   // (api/_caller-plan.js cardCallerName). "[your name]" only when neither is known.
