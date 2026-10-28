@@ -513,6 +513,34 @@ export async function refreshReady(deps, { limit = 12, report = null } = {}) {
     return out;
 }
 
+// ---- a person's hold ----------------------------------------------------------------------------
+// PM, 2026-10-28, while Milton was calling: take named cards off the worklist now, each with its reason,
+// before the rule change that makes it durable ships. Only the named cards, only while still ready (a
+// card someone is in a conversation with is left for a person), dry unless `write`. Owner, history, job
+// and evidence stay exactly as they are; status, the note and updatedAt are all that change.
+export async function holdCards(kv, { holds, write = false, by, now = Date.now() }) {
+    const at = new Date(now).toISOString(), out = [];
+    for (const h of holds) {
+        const lock = HK.recLock(h.id);
+        if (write && !await kv.set(lock, '1', { nx: true, ex: 10 })) { out.push({ id: h.id, done: false, why: 'a caller is saving it; try again' }); continue; }
+        try {
+            const rec = await getRecord(kv, h.id);
+            if (!rec) { out.push({ id: h.id, done: false, why: 'not found' }); continue; }
+            const base = { id: h.id, company: rec.company && rec.company.name || null, owner: rec.callOwner || null, calls: (rec.callHistory || []).length };
+            if (rec.status !== 'ready') { out.push({ ...base, done: false, why: 'already ' + rec.status }); continue; }
+            const status = h.action === 'hold' ? 'research' : 'excluded';
+            const note = { reason: h.reason, detail: h.detail, at, by };
+            if (write) {
+                await putRecord(kv, { ...rec, status, ...(status === 'excluded' ? { exclusion: note } : { hold: note }), updatedAt: at });
+                // A chain, a health plan or a hospital: a later post from the same employer is not a new card.
+                if (h.company === 'large') await kv.hset(HK.companies, { [rec.company && rec.company.board || companyKey(rec.company && rec.company.name, rec.job && rec.job.location)]: JSON.stringify({ id: rec.id, verdict: 'large', at }) });
+            }
+            out.push({ ...base, from: rec.status, to: status, reason: h.reason, done: write });
+        } finally { if (write) await kv.del(lock).catch(() => {}); }
+    }
+    return out;
+}
+
 // ---- a whole run ------------------------------------------------------------------------------
 /**
  * deps additionally: serpSearch(q) -> { links:[...] }, serpAccount() -> { left }, findymailCredits() -> { credits }

@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal } from '../api/_hiring-run.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript } from '../api/_call-scripts.js';
@@ -695,4 +695,31 @@ test('the number the employer lists next to the job\'s city goes first; the Goog
     assert.equal(after.phone.number, '+18157237400'); assert.ok(after.phone.alternates.includes('+19452184003'));
     const again = await refreshReady({ ...w.deps, getPage }, { limit: 5 });
     assert.equal(again.localNumbers || 0, 0, 'looked for once, not every run');
+});
+
+test('a person\'s hold takes only the named ready cards off the list, keeps owner and history, and is dry unless written', async () => {
+    const kv = fakeKv();
+    const card = (id, extra = {}) => ({ id, campaignId: HIRING_ID, status: 'ready', company: { name: 'Co ' + id, board: 'gco:co' + id.slice(-2) + ':fl' }, job: { title: 'CSR', location: 'Tampa, FL' }, phone: { number: '+18135550100' }, callOwner: null, callHistory: [], ...extra });
+    await putRecord(kv, card('hire:00000000000000a1'));
+    await putRecord(kv, card('hire:00000000000000a2', { callOwner: 'milton@trystaffify.com', callHistory: [{ outcome: 'no_answer' }] }));
+    await putRecord(kv, card('hire:00000000000000a3', { status: 'conversation' }));
+    await putRecord(kv, card('hire:00000000000000a4'));
+    const holds = [
+        { id: 'hire:00000000000000a1', action: 'exclude', reason: 'store_floor_role', detail: 'register work', company: 'large' },
+        { id: 'hire:00000000000000a2', action: 'hold', reason: 'branch_listing', detail: 'a store number' },
+        { id: 'hire:00000000000000a3', action: 'exclude', reason: 'large_employer', detail: 'x' },
+    ];
+    const dry = await holdCards(kv, { holds, by: 'test', now: NOW });
+    assert.equal((await getRecord(kv, 'hire:00000000000000a1')).status, 'ready', 'a dry run changes nothing');
+    assert.deepEqual(dry.map(r => r.to || r.why), ['excluded', 'research', 'already conversation']);
+    const out = await holdCards(kv, { holds, write: true, by: 'test', now: NOW });
+    const a1 = await getRecord(kv, 'hire:00000000000000a1'), a2 = await getRecord(kv, 'hire:00000000000000a2');
+    assert.equal(a1.status, 'excluded'); assert.equal(a1.exclusion.reason, 'store_floor_role'); assert.equal(a1.exclusion.by, 'test');
+    assert.equal(a2.status, 'research'); assert.equal(a2.hold.reason, 'branch_listing');
+    assert.equal(a2.callOwner, 'milton@trystaffify.com', 'the owner stays'); assert.equal(a2.callHistory.length, 1, 'the history stays');
+    assert.equal((await getRecord(kv, 'hire:00000000000000a3')).status, 'conversation', 'a conversation is left for a person');
+    assert.equal((await getRecord(kv, 'hire:00000000000000a4')).status, 'ready', 'an unnamed card is untouched');
+    assert.equal(JSON.parse(await kv.hget(HK.companies, 'gco:coa1:fl')).verdict, 'large');
+    assert.equal(hiringCallReady(a1, NOW) || hiringCallReady(a2, NOW), false, 'neither is offered');
+    assert.deepEqual(out.map(r => r.done), [true, true, false]);
 });

@@ -6,6 +6,7 @@
 //   GET  ?view=status (owner)                counts, the research backlog, the last runs, credits
 //   GET  ?view=records (owner)               every card with its evidence, for read-back
 //   POST {action:'seed', urls:[...]}         owner or machine: official job URLs to qualify next run
+//   POST {action:'hold-cards', holds:[...]}  machine only: named cards off the worklist, with the reason
 // Logic lives in api/_hiring-intent.js and api/_hiring-run.js; this file only wires the real
 // services in. Nothing here dials, texts or emails anyone.
 import { randomUUID } from 'node:crypto';
@@ -20,7 +21,7 @@ import { contact as crmContact } from './_outreach-crm.js';
 import { crmStop } from './_rep-email-gates.js';
 import { loadBad, isBad } from './_bad-numbers.js';
 import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf } from './_hiring-intent.js';
-import { runHiring, addPending } from './_hiring-run.js';
+import { runHiring, addPending, holdCards } from './_hiring-run.js';
 
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail)\./i;
 async function getJson(url) {
@@ -156,6 +157,19 @@ export default async function handler(req, res) {
         if (req.method === 'POST') {
             if (!machine && req.headers.origin !== SITE) return res.status(403).json({ error: 'Invalid origin' });
             const body = readBody(req);
+            // Machine only: named cards off the worklist with an audit note (api/_hiring-run.js holdCards).
+            // Dry unless write is true, and a write must name how many cards it expects to change.
+            if (body.action === 'hold-cards') {
+                if (!machine) return res.status(403).json({ error: 'Machine only' });
+                const holds = (Array.isArray(body.holds) ? body.holds : []).slice(0, 20)
+                    .filter(h => h && /^hire:[0-9a-f]{16}$/.test(String(h.id)) && ['hold', 'exclude'].includes(h.action) && h.reason && h.detail)
+                    .map(h => ({ id: String(h.id), action: h.action, reason: String(h.reason).slice(0, 40), detail: String(h.detail).slice(0, 500), company: h.company === 'large' ? 'large' : null }));
+                if (!holds.length) return res.status(400).json({ error: 'No valid holds' });
+                const write = body.write === true;
+                if (write && Number(body.expected) !== holds.length) return res.status(400).json({ error: 'expected must equal the number of holds' });
+                const results = await holdCards(redis, { holds, write, by: String(body.by || 'machine').slice(0, 120) });
+                return res.status(200).json({ ok: true, write, results });
+            }
             if (body.action !== 'seed') return res.status(400).json({ error: 'Unknown action' });
             const urls = (Array.isArray(body.urls) ? body.urls : []).slice(0, 20);
             const accepted = [], refused = [];
