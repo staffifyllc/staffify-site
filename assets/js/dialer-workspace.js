@@ -825,6 +825,14 @@ app.classList.add('dw-wrap');
 app.textContent='';app.append(el('div','Loading your call queue…','dw-pane dw-loading'));
 refresh().then(loadNames).catch(fail);
 loadQuo();setInterval(loadQuo,120000);
+// A release while this tab is open: say so, so nobody works from the old page (Paul, 2026-10-28: "the texting
+// feature is gone" was a dialer tab opened before the release that brought it back). Never reloads on its own.
+let releaseTag=null;
+async function checkRelease(){try{const r=await fetch('/assets/js/dialer-workspace.js',{method:'HEAD',cache:'no-store',credentials:'same-origin'});const t=r&&r.headers&&typeof r.headers.get==='function'?r.headers.get('etag'):null;if(!t)return;if(releaseTag===null){releaseTag=t;return;}if(t===releaseTag||document.getElementById('dw-new-version'))return;
+ const bar=el('div',null,'dw-new-version');bar.id='dw-new-version';bar.setAttribute('role','status');if(bar.style)bar.style.cssText='position:sticky;top:0;z-index:60;background:#fff4dc;color:#5c3d00;padding:10px 16px;text-align:center;font-size:14px;border-bottom:1px solid #f0d9a6';
+ bar.append(document.createTextNode('A new version of the dialer is ready. Save the call you are on, then '),button('Reload',()=>location.reload(),'btn'));document.body.prepend(bar);}catch{}}
+checkRelease();setInterval(()=>{if(document.visibilityState!=='hidden')checkRelease();},300000);
+if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkRelease();});
 // Holds: read every 30 seconds so counts drop as teammates work; this rep's own hold renewed every 2 minutes.
 setInterval(async()=>{if(document.visibilityState==='hidden'||!state)return;await loadHolds();refreshBar();},30000);
 setInterval(()=>{if(document.visibilityState!=='hidden'&&holdId&&current&&current.id===holdId)holdCard(holdId,holdKind);},120000);

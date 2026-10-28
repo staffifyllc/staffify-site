@@ -333,7 +333,11 @@ test('the call-first script never claims an email was sent', () => {
         assert.doesNotMatch(spoken, /—/);
         for (const n of Object.values(s.tree)) if (n.log) assert.ok(['connected', 'callback', 'gatekeeper', 'timing', 'suppress'].includes(n.log));
     }
-    assert.match(named.opener, /Hi Dana/); assert.match(anon.opener, /Who would be the right person/);
+    // Paul, 2026-10-28: ask for the person first, by name when we have one.
+    assert.match(named.opener, /I'm looking to speak with Dana, or the person in charge of hiring\. Is that you\?/);
+    assert.match(anon.opener, /I'm looking to speak with the person in charge of hiring for the Customer Support Specialist role/);
+    assert.match(named.tree.intro.say, /this is a cold call\. I saw Acme is hiring a Customer Support Specialist/);
+    assert.equal(named.tree.open.choices[0][1], 'intro');
     assert.match(named.reason, /Latin America/);
 });
 
