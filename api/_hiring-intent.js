@@ -111,6 +111,11 @@ export function salesSeatOk(title, text) {
     return PHONE_SALES.test(t) && !FIELD_SALES.test(t);
 }
 const ROLE_FIT = [
+    // Widened 2026-10-28 from Madison's researched list: insurance service seats, legal support, retention and
+    // client services are remote-doable desk work Staffify places. Licensed seats still fail the licence rule.
+    ['admin', /\blegal\s+(assistant|secretary)\b|\bparalegal\b|\b(law\s+firm|legal)\s+case\s+manager\b|\bbilling\s+specialist\b|\bproject\s+assistant\b|\badministrative\s+(&|and)\s+operations\s+coordinator\b/i],
+    ['account', /\b(insurance|commercial|personal|farm|private\s+client|casualty|lines)\b[\w\s/&-]{0,30}\baccount\s+(manager|representative|rep)\b|\b(customer|client)\s+account\s+manager\b|\binsurance\s+service\s+(associate|representative)\b/i],
+    ['support', /\bcsr\b|\bcustomer\s+(sales\s+and\s+service|retention|relations)\s+(representative|specialist|rep|associate)\b|\bclient\s+services?\s+(coordinator|representative|specialist)\b/i],
     ['support', /\b(customer|client|member|guest|player|patient|user)\s+(support|service|care|experience|happiness|success)\b|\bsupport\s+(agent|specialist|representative|rep|associate|advocate)\b|\b(technical|tech|it|product|l1|tier\s*1|level\s*1)\s+support\b|\bhelp\s*desk\b|\bcall\s+cent(er|re)\b/i],
     ['admin', /\b(administrative|admin|executive|personal|virtual|operations|office|team)\s+assistant\b|\badministrative\s+(coordinator|specialist|associate)\b|\boffice\s+admin(istrator)?\b|\bdata\s+entry\b|\bback\s+office\b/i],
     ['scheduling', /\bschedul(er|ing)\b|\bdispatch(er)?\b|\b(patient|intake|appointment|care)\s+(coordinator|specialist)\b|\breceptionist\b|\bfront\s+desk\b/i],
@@ -139,7 +144,8 @@ export function roleFamily(title) {
     if (PHYSICAL_SEAT.test(t) && !REMOTE_SEAT.test(t)) return null;
     // "Customer Support Manager" is a leader; "Customer Support Specialist (Senior)" is still a seat we
     // could fill, but a manager or team lead is not.
-    if (/\b(manager|lead(?!\s+gen)|supervisor)\b/i.test(t) && !/\bassistant\b/i.test(t)) return null;
+    // An account manager at an insurance agency services accounts; a legal case manager runs files. Neither manages people.
+    if (/\b(manager|lead(?!\s+gen)|supervisor)\b/i.test(t) && !/\bassistant\b|\baccount\s+manager\b|\bcase\s+manager\b/i.test(t)) return null;
     for (const [family, re] of ROLE_FIT) if (re.test(t)) return family;
     return null;
 }
@@ -413,6 +419,53 @@ export function listingEvidence({ company, website, domain, listingName, listing
     if (remote && jc && lc && jc.toLowerCase() !== lc.toLowerCase()) return { action: 'hold', reason: 'location_unconfirmed', detail: `A remote post listed in ${jc} was matched to an office in ${lc}; the listing may not be the employer that posted it.` };
     return null;
 }
+// A Google Jobs listing and a lead someone researched have no posting API to re-read: they age out by date.
+export const ageBased = source => source === 'google_jobs' || source === 'provided';
+
+// ---- leads a person researched (Madison, 2026-10-28) -------------------------------------------
+// Paul: "we just want to be able to give you data on top of what you find on your own". A provided lead
+// already names the business, its website, the owner and a number, so it needs no search credit: it goes
+// through the same role, employer, opt-out, client, booking and duplicate checks, and the owner's name and
+// email ride on the card. The person who found it is credited on the card.
+export const leadKey = l => 'lead:' + createHash('sha256').update([l.business, l.role_posted, l.state || l.city].map(x => String(x || '').trim().toLowerCase()).join('|')).digest('hex').slice(0, 20);
+const SHARED_HOSTS = /(^|\.)(farmers\.com|farmersagent\.com|statefarm\.com|allstate\.com|nationwide\.com|libertymutual\.com|indeed\.com|linkedin\.com|ziprecruiter\.com|glassdoor\.com|simplyhired\.com|facebook\.com|google\.com|yelp\.com|idealtraits\.com|careerplug\.com|wizehire\.com|gusto\.com)$/i;
+/** A lead's own website domain, or null when the link is a franchise, job-board or social host shared by many businesses. */
+export function leadDomain(url) {
+    let h; try { h = new URL(/^https?:/i.test(url) ? url : 'https://' + url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return null; }
+    return SHARED_HOSTS.test(h) ? null : h;
+}
+/** The date a provided post was seen live: an ISO date in its note, else the import time. */
+export function leadPostedAt(l, now = Date.now()) {
+    const m = String(l.posting_date || '').match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+    const t = m ? Date.parse(m[1] + 'T12:00:00Z') : NaN;
+    return Number.isFinite(t) && t <= now ? new Date(t).toISOString() : new Date(now).toISOString();
+}
+/** The verdict on one provided lead, before anything is spent. { ok:true, family, ... } or { ok:false, reason, detail }. */
+export function qualifyLead(l, now = Date.now()) {
+    const title = String(l.role_posted || '').trim(), company = String(l.business || '').trim();
+    if (!company || !title) return { ok: false, reason: 'incomplete_lead', detail: 'The lead has no business name or no role.' };
+    const ctx = String(l.industry || l.vertical || '');
+    const family = roleFamily(title) || (/insurance|agency|lines/i.test(ctx) && roleFamily('Insurance ' + title)) || (/\blaw|legal/i.test(ctx) && roleFamily('Legal ' + title)) || null;
+    if (!family) return { ok: false, reason: 'role_not_fillable', detail: `"${title}" is not a customer service, sales, admin or account seat a remote person fills.` };
+    const text = [title, l.notes].join(' ');
+    const comp = competitorReason({ company, text: l.notes || '' });
+    if (comp) return { ok: false, reason: 'competitor', detail: comp };
+    const named = companyExcluded(company);
+    if (named) return { ok: false, ...named };
+    const ev = postEvidence({ company, title, text, family });
+    if (ev) return { ok: false, ...ev };
+    const r = restrictions(text);
+    const hard = r.hard.filter(x => !/onsite/.test(x));
+    if (hard.length) return { ok: false, reason: 'hard_restriction', detail: 'The post ' + hard.join(' and ') + '.' };
+    const st = /^[A-Z]{2}$/.test(String(l.state || '').trim().toUpperCase()) ? String(l.state).trim().toUpperCase() : stateOf(l.city || '');
+    const remote = /\b(remote|work\s+from\s+home|wfh|telecommute|virtual)\b/i.test(text);
+    const postedAt = leadPostedAt(l, now);
+    const age = ageDays(postedAt, now);
+    if (age > MAX_AGE_DAYS) return { ok: false, reason: 'stale_post', detail: `Seen live ${age} days ago; we only call about the last ${MAX_AGE_DAYS} days.` };
+    const city = String(l.city || '').trim() || null;
+    return { ok: true, family, age, postedAt, workplace: remote ? 'remote' : 'onsite', restrictions: { ...r, hard }, usState: st || null, city, location: st ? (city ? city + ', ' + st : st) : (remote ? 'Remote (US)' : null) };
+}
+
 export const jobKey = j => 'gjobs:' + createHash('sha256').update([j.company_name, j.title, j.location].map(x => String(x || '').trim().toLowerCase()).join('|')).digest('hex').slice(0, 20);
 // "Royal Electric", "Royal Electric, LLC" and "Royal Electric Co." are one employer: the key drops legal suffixes.
 export const companyKey = (name, location) => 'gco:' + (nameWords(name).join('') || String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')) + ':' + String(stateOf(location) || '').toLowerCase();
@@ -587,10 +640,12 @@ export function briefFor(rec) {
     const caveat = (r.soft || []).length ? ` Note: the post ${r.soft.join(' and ')}. That is about who they hire directly; a managed placement is a different arrangement, so ask rather than assume.` : '';
     const more = (rec.jobs || []).length > 1 ? ` They have ${rec.jobs.length} matching roles open.` : '';
     return {
-        summary: j.source === 'google_jobs'
+        summary: j.source === 'provided'
+            ? `${c.name} is hiring a ${j.title}${j.city ? ' in ' + j.city : ''}. ${j.postedLabel ? 'Post: ' + j.postedLabel.replace(/\.$/, '') + '.' : 'The post ' + when + '.'}${j.via ? ' Listed on ' + j.via + '.' : ''} Found by ${j.foundBy || 'our team'}.${where}${more} The seat is one a remote person can do, so offer to fill it and run their hiring for roles like it.`
+            : j.source === 'google_jobs'
             ? `${c.name} is hiring a ${j.title}${j.city ? ' in ' + j.city : ''}. The listing ${when} on Google Jobs${j.via ? ' (' + j.via + ')' : ''}.${where}${more} The seat is one a remote person can do, so offer to fill it and run their hiring for roles like it.`
             : `${c.name} is hiring a ${j.title}. The post ${when} and was still open on their careers page when we checked.${where}${more}`,
-        need: `A ${familyWords(rec.family)} hire: ${j.title}${j.location ? ' (' + j.location + ')' : ''}.${caveat}${j.source === 'google_jobs' && j.workplace !== 'remote' ? ' They posted it as an in-office job, not a remote opening: offer a remote person for the seat and let them decide.' : ''}`,
+        need: `A ${familyWords(rec.family)} hire: ${j.title}${j.location ? ' (' + j.location + ')' : ''}.${caveat}${ageBased(j.source) && j.workplace !== 'remote' ? ' They posted it as an in-office job, not a remote opening: offer a remote person for the seat and let them decide.' : ''}`,
         nextStep: 'Book a short call with Paul to scope the role and how we would run their remote hiring for customer service, sales and admin.',
     };
 }
@@ -613,7 +668,9 @@ export function callRow(rec, viewer, now = Date.now()) {
         callOwner: owner, callOwnerAt: rec.callOwnerAt || null, callHistory: rec.callHistory || [],
         claimed: !!owner, mine, unclaimed: ready && !owner, dueForMe: ready && mine, pausedFollowUp: false,
         phone: p.number || null,
-        callContact: p.source === 'Google business listing'
+        callContact: p.source === 'provided'
+            ? { phone: p.number || null, phoneStatus: p.number ? 'provided' : 'missing', phoneSource: 'Found by ' + (p.foundBy || 'our team'), phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: 'The number from ' + (p.foundBy || 'our team') + '\'s research' + (p.siteCheck && p.siteCheck.result === 'confirmed' ? ', also on their website.' : ', not yet seen on their own website.') }
+            : p.source === 'Google business listing'
             ? { phone: p.number || null, phoneStatus: p.number ? 'listing_main' : 'missing', phoneSource: 'Google business listing', phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: 'The main line on their Google business listing, not a direct line.' }
             : { phone: p.number || null, phoneStatus: p.number ? 'site_main' : 'missing', phoneSource: 'Published on their website', phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: 'The company line from their own website, not a direct line.' },
         industry: { key: 'hiring', label: 'Hiring now', source: 'job post' },
@@ -628,7 +685,7 @@ export function jobCurrent(rec, now = Date.now()) {
     const j = rec && rec.job;
     if (!j || j.state === 'closed' || j.state === 'stale') return false;
     // A Google Jobs card has no posting API to re-read: it is current until MAX_AGE_DAYS after it went up.
-    if (j.source === 'google_jobs') return Date.parse(j.postedAt) > now - MAX_AGE_DAYS * 864e5;
+    if (ageBased(j.source)) return Date.parse(j.postedAt) > now - MAX_AGE_DAYS * 864e5;
     return Date.parse(j.checkedAt) > now - FRESH_MS;
 }
 /**

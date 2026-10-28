@@ -2,8 +2,8 @@
 // nothing here calls, texts, emails or spends a credit.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { postEvidence, listingEvidence, addressCity, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck } from '../api/_hiring-run.js';
+import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript } from '../api/_call-scripts.js';
@@ -846,4 +846,63 @@ test('cards made before these rules are held to them: a store job is excluded, a
     assert.equal(a.status, 'excluded'); assert.equal(a.exclusion.reason, 'store_floor_role'); assert.equal(a.exclusion.by, 'rules re-check');
     assert.equal(b.status, 'research'); assert.equal(b.hold.reason, 'no_employer_website'); assert.equal(b.callHistory.length, 1, 'history kept');
     assert.equal(out.excluded, 1); assert.equal(out.held, 1);
+});
+
+// ---- leads a person researched (Madison's list, 2026-10-28) ------------------------------------
+const LEAD = (over = {}) => ({ owner_first: 'Zachary', owner_last: 'Rogers', owner_title: 'Farmers Agent / Owner', business: 'Farmers Insurance - Zachary Rogers', industry: 'Insurance (Farmers agency)', city: 'Tucson', state: 'AZ', website: 'https://agents.farmers.com/az/tucson/zachary-rogers', owner_email: 'zrogers1@farmersagent.com', phone: '520-600-0025', role_posted: 'Customer Service Representative - $40k-$60k/yr', posting_url: 'https://app.idealtraits.com/career/Zachary-Rogers-123', posting_date: 'Active on Indeed as of 2026-10-26', email_source_url: 'https://agents.farmers.com/az/tucson/zachary-rogers', notes: 'Owner is the agent.', vertical: 'insurance (Farmers owners)', ...over });
+
+test('the wider seats: insurance service, legal support, retention and client services; leaders, executives and licences still out', () => {
+    for (const t of ['Family Law Paralegal', 'Legal Assistant', 'Legal Secretary', 'CSR 2', 'Commercial Lines Account Manager', 'Insurance Account Representative - Fully Remote', 'Customer Sales and Service Representative', 'Customer Retention Specialist', 'Client Services Coordinator - Legal/Immigration', 'Law Firm Case Manager', 'Insurance Service Associate'])
+        assert.ok(roleFamily(t), t);
+    for (const t of ['VP, Strategic Finance & FP&A', 'Director, M&A Value Capture', 'Account Executive - New Business', 'Customer Service Manager', 'Legal Intake Team Lead - remote', 'Business Development Manager', 'Account Manager'])
+        assert.equal(roleFamily(t), null, t);
+    assert.equal(qualifyLead(LEAD({ role_posted: 'Account Manager - Fully Remote - US' }), NOW).family, 'account', 'an insurance agency\'s account manager services accounts');
+    assert.equal(qualifyLead(LEAD({ role_posted: 'Licensed Insurance Account Manager', notes: 'P&C license required.' }), NOW).reason, 'hard_restriction');
+});
+
+test('a provided lead is qualified on its own facts: role, place, freshness, the shared franchise host is not its website', () => {
+    const q = qualifyLead(LEAD(), NOW);
+    assert.equal(q.ok, true); assert.equal(q.family, 'support'); assert.equal(q.usState, 'AZ'); assert.equal(q.location, 'Tucson, AZ'); assert.equal(q.workplace, 'onsite');
+    assert.equal(leadPostedAt(LEAD(), NOW), '2026-10-26T12:00:00.000Z');
+    assert.equal(qualifyLead(LEAD({ role_posted: 'VP, Strategic Finance & FP&A' }), NOW).reason, 'role_not_fillable');
+    assert.equal(qualifyLead(LEAD({ posting_date: 'Seen 2026-09-01' }), NOW).reason, 'stale_post');
+    assert.equal(qualifyLead(LEAD({ state: null, city: null, role_posted: 'Customer Service Representative (remote)' }), NOW).location, 'Remote (US)');
+    assert.equal(leadDomain('https://agents.farmers.com/az/tucson/x'), null);
+    assert.equal(leadDomain('https://www.ransonlaw.com/'), 'ransonlaw.com');
+    assert.equal(leadKey(LEAD()), leadKey(LEAD({ notes: 'other' })), 'one key per business, role and state');
+});
+
+test('an imported lead becomes a card with the owner as the contact and its own number, and spends no search', async () => {
+    const w = jobsWorld();
+    let searches = 0; w.deps.serpJobs = async () => { searches++; return { jobs: [] }; };
+    w.deps.businessProfile = async () => { searches++; return null; };
+    await addPending(w.kv, { kind: 'lead', key: leadKey(LEAD()), lead: LEAD() }, { seed: true, discoveredBy: 'provided', source: 'Madison' }, NOW);
+    const r = await runHiring(w.deps, { leadsOnly: true, maxCandidates: 10, refresh: 0 });
+    assert.equal(searches, 0, 'a lead run never searches'); assert.equal(r.searchBudget.allowedThisRun, 0);
+    assert.equal(r.verdicts.ready, 1, JSON.stringify(r.reasons));
+    const rec = (await allRecords(w.kv))[0];
+    assert.equal(rec.job.source, 'provided'); assert.equal(rec.job.foundBy, 'Madison'); assert.equal(rec.company.domain, null, 'a Farmers page is not their own domain');
+    assert.equal(rec.contact.name, 'Zachary Rogers'); assert.equal(rec.contact.firstName, 'Zachary'); assert.equal(rec.contact.email, 'zrogers1@farmersagent.com'); assert.equal(rec.contact.status, 'verified');
+    assert.equal(rec.phone.number, '+15206000025'); assert.equal(rec.phone.source, 'provided');
+    assert.equal(hiringCallReady(rec, NOW), true);
+    const row = callRow(rec, 'milton@trystaffify.com', NOW);
+    assert.equal(row.callContact.phoneStatus, 'provided'); assert.match(row.callContact.phoneSource, /Madison/);
+    assert.match(rec.brief.summary, /Found by Madison/);
+    assert.equal((await w.kv.hgetall(HK.pending)) || null, null, 'the pending entry is cleared on a saved verdict');
+});
+
+test('a lead meets every stop a found posting meets: booked, a number already on a card, opted out, no number', async () => {
+    let w = jobsWorld();
+    w.deps.bookedIdentity = async q => (q.email === 'zrogers1@farmersagent.com' ? { at: 'x' } : null);
+    assert.equal((await processLead({ kind: 'lead', lead: LEAD() }, { source: 'Madison' }, w.deps)).reason, 'booked_call');
+    w = jobsWorld();
+    w.deps.isOptedOut = async q => q.phone === '+15206000025';
+    assert.equal((await processLead({ kind: 'lead', lead: LEAD() }, { source: 'Madison' }, w.deps)).reason, 'opted_out');
+    w = jobsWorld();
+    assert.equal((await processLead({ kind: 'lead', lead: LEAD({ phone: null, website: null }) }, { source: 'Madison' }, w.deps)).reason, 'no_listed_phone');
+    w = jobsWorld();
+    await processLead({ kind: 'lead', lead: LEAD() }, { source: 'Madison' }, w.deps);
+    const again = await processLead({ kind: 'lead', key: 'lead:other', lead: LEAD({ business: 'Zachary Rogers Agency', role_posted: 'Receptionist' }) }, { source: 'Madison' }, w.deps);
+    assert.equal(again.verdict, 'merged'); assert.equal(again.reason, 'same_number');
+    assert.equal((await allRecords(w.kv)).length, 1);
 });

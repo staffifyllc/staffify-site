@@ -11,6 +11,7 @@ import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
     parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey, listingEvidence, remotePost,
+    ageBased, leadKey, leadDomain, qualifyLead,
 } from './_hiring-intent.js';
 
 export const SERP_RESERVE = 300;      // searches left in the month that this campaign never touches
@@ -232,6 +233,7 @@ export async function profileIdentity(posting, deps) {
  * Returns { verdict: 'ready'|'backlog'|'excluded'|'merged'|'seen'|'error', reason?, id?, record? }
  */
 export async function processPosting(p, provenance, deps, report) {
+    if (p.kind === 'lead') return processLead(p, provenance, deps, report);
     const { kv } = deps;
     const now = deps.now || Date.now();
     // Two sources. An ATS posting is read back from the hiring system's API; a Google Jobs listing
@@ -424,6 +426,121 @@ export async function processPosting(p, provenance, deps, report) {
     return { verdict: 'ready', id, record: rec };
 }
 
+// ---- a lead a person researched ------------------------------------------------------------------
+/**
+ * Madison's list and anything like it (api/_hiring-intent.js qualifyLead). No search credit: the lead
+ * names the business, its website and a number. Every stop a found posting meets still applies: a known
+ * company verdict, the domain and the number already on a card, Staffify outreach, a booked call, a
+ * client, the opt-out list, the CRM, bad numbers. The owner's name and email go on the card as the contact.
+ */
+export async function processLead(p, provenance, deps, report) {
+    const { kv } = deps;
+    const now = deps.now || Date.now();
+    const l = p.lead || {};
+    const key = p.key || leadKey(l);
+    const checkedAt = new Date(now).toISOString();
+    const source = String(provenance.source || 'our team');
+    const seen = parseValue(await kv.hget(HK.seen, key));
+    if (seen && !provenance.retry) return { verdict: 'seen', reason: seen.verdict };
+    const mark = async (verdict, reason, extra = {}) => { await kv.hset(HK.seen, { [key]: JSON.stringify({ at: checkedAt, verdict, reason, company: l.business || null, title: l.role_posted || null, url: l.posting_url || null, source, ...extra }) }); };
+    const q = qualifyLead(l, now);
+    if (!q.ok) { await mark('excluded', q.reason, { detail: q.detail }); return { verdict: 'excluded', reason: q.reason, detail: q.detail }; }
+    const bk = companyKey(l.business, q.usState ? ', ' + q.usState : '');
+    const id = idFor(bk);
+    const via = (() => { try { return new URL(l.posting_url).hostname.replace(/^(www|app|jobs)\./, ''); } catch { return null; } })();
+    const job = { source: 'provided', title: String(l.role_posted).trim(), url: l.posting_url || null, applyUrl: l.posting_url || null, via, postedAt: q.postedAt, postedLabel: String(l.posting_date || '').trim().slice(0, 160) || null, ageDays: q.age, checkedAt, location: q.location, city: q.city, usState: q.usState, workplace: q.workplace, restrictions: q.restrictions, foundBy: source };
+    const known = parseValue(await kv.hget(HK.companies, bk));
+    if (known && ['client', 'in_outreach', 'suppressed', 'large'].includes(known.verdict)) { await mark('excluded', 'company_' + known.verdict); return { verdict: 'excluded', reason: 'company_' + known.verdict }; }
+    const existing = await getRecord(kv, id);
+    if (existing && !(existing.status === 'number_research' && provenance.retry)) {
+        if (!(existing.jobs || []).some(x => x.url === job.url && x.title === job.title)) { existing.jobs = [...(existing.jobs || []), job]; existing.brief = briefFor(existing); await putRecord(kv, existing); }
+        await mark('merged', 'same_company', { id });
+        return { verdict: 'merged', id };
+    }
+    const domain = l.website ? leadDomain(l.website) : null;
+    const website = l.website ? String(l.website).trim() : null;
+    const company = { name: String(l.business).trim(), board: bk, openRoles: null, website, domain, address: null, identity: { how: 'provided', source, evidenceUrl: l.email_source_url || website || l.posting_url || null, checkedAt } };
+    const base = { id, campaignId: HIRING_ID, family: q.family, lead: l, company, job, jobs: [job], provenance: { ...provenance, postingKey: key, verifiedVia: `${source}'s research${via ? ', post on ' + via : ''}`, firstCheckedAt: checkedAt }, createdAt: checkedAt, updatedAt: checkedAt };
+    const toBacklog = async (reason, detail, extra = {}) => {
+        const prev = parseValue(await kv.hget(HK.backlog, id));
+        const attempts = (prev && prev.attempts || 0) + 1;
+        await putBacklog(kv, { ...(prev || {}), ...base, ...extra, reason, detail, missing: extra.missing || ['phone'], attempts, state: nextTry(attempts, now) ? 'open' : 'exhausted', firstSeenAt: prev && prev.firstSeenAt || checkedAt, lastTriedAt: checkedAt, nextTryAt: nextTry(attempts, now) });
+        await kv.hset(HK.companies, { [bk]: JSON.stringify({ id, verdict: 'backlog', at: checkedAt }) });
+        await mark('backlog', reason, { id });
+        return { verdict: 'backlog', reason, id, detail };
+    };
+    if (domain) {
+        const byDomain = parseValue(await kv.hget(HK.companies, domainKey(domain)));
+        if (byDomain && ['client', 'in_outreach', 'suppressed', 'large'].includes(byDomain.verdict)) { await mark('excluded', 'company_' + byDomain.verdict); return { verdict: 'excluded', reason: 'company_' + byDomain.verdict }; }
+        if (byDomain && byDomain.id && byDomain.id !== id) { const other = await getRecord(kv, byDomain.id); if (other) { if (!(other.jobs || []).some(x => x.url === job.url)) { other.jobs = [...(other.jobs || []), job]; other.brief = briefFor(other); await putRecord(kv, other); } await mark('merged', 'same_domain', { id: other.id }); return { verdict: 'merged', reason: 'same_domain', id: other.id }; } }
+        if (deps.outreachDomains && deps.outreachDomains.has(domain)) { await mark('excluded', 'already_in_outreach'); return { verdict: 'excluded', reason: 'already_in_outreach' }; }
+    }
+    const email = String(l.owner_email || '').trim().toLowerCase() || null;
+    if (deps.bookedIdentity) {
+        let hit; try { hit = await deps.bookedIdentity({ email, domain }); } catch { return { verdict: 'error', reason: 'lookup_unavailable', detail: 'The booked-call list could not be read.' }; }
+        if (hit) { await mark('excluded', 'booked_call'); return { verdict: 'excluded', reason: 'booked_call' }; }
+    }
+    const byCompany = await deps.clientCheck({ email, company: company.name }).catch(() => ({ status: 'unknown' }));
+    if (byCompany.status === 'client') { await kv.hset(HK.companies, { [bk]: JSON.stringify({ verdict: 'client', at: checkedAt }) }); await mark('excluded', 'client'); return { verdict: 'excluded', reason: 'client' }; }
+    if (byCompany.status === 'possible') return toBacklog('possible_client', byCompany.reason || 'The company matches an existing client. A person checks before it is called.', { missing: ['client check'] });
+    if (byCompany.status !== 'clear') return toBacklog('client_check_unavailable', byCompany.why || 'The client list could not be read, so this is not called yet.', { missing: ['client check'] });
+    if (email) {
+        if (await deps.isOptedOut({ email })) { await mark('excluded', 'opted_out'); return { verdict: 'excluded', reason: 'opted_out' }; }
+        let props = null, crmError = null;
+        try { const c = await deps.crmContact(email); props = c && c.properties || null; } catch (e) { if (!/CRM contact missing/.test(String(e && e.message))) crmError = String(e.message || e).slice(0, 80); }
+        if (crmError) return toBacklog('crm_unavailable', 'HubSpot could not be checked: ' + crmError, { missing: ['CRM check'] });
+        const stop = deps.crmStop(props);
+        if (stop) { await mark('excluded', 'crm_stop', { detail: stop }); return { verdict: 'excluded', reason: 'crm_stop', detail: stop }; }
+    }
+    // The number: the one in the lead, checked against their own website when they have one (free).
+    const d = String(l.phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+    let phone = d.length === 10 ? { phone: '+1' + d, alternates: [], source: 'provided', sourceUrl: l.email_source_url || website || null, context: `From ${source}'s research`, checkedAt } : null;
+    if (domain && website) {
+        const chk = await siteCheck({ website, domain, getPage: deps.getPage, findSitePhone: deps.findSitePhone });
+        if (chk.moved) return toBacklog('website_unconfirmed', `Their website now goes to ${chk.moved}, not ${domain}, so the business cannot be confirmed.`, { missing: ['website'] });
+        if (phone) {
+            const a = alignNumbers(phone.phone, [], chk);
+            phone = a.result === 'replaced' || a.result === 'alternate_on_site'
+                ? { phone: a.primary, alternates: a.alternates, source: 'business website', sourceUrl: a.site && a.site.sourceUrl || website, context: a.site && a.site.context || null, checkedAt, previous: { number: '+1' + d, source: 'provided' }, siteCheck: { at: checkedAt, result: a.result } }
+                : { ...phone, ...(a.result === 'unreadable' ? {} : { siteCheck: { at: checkedAt, result: a.result } }) };
+        } else if (chk.site && chk.site.phone) phone = { phone: chk.site.phone, alternates: (chk.numbers || []).filter(n => n !== chk.site.phone).slice(0, 3), source: 'business website', sourceUrl: chk.site.sourceUrl || website, context: chk.site.context || null, checkedAt, siteCheck: { at: checkedAt, result: 'site_only' } };
+    }
+    if (!phone) return toBacklog('no_listed_phone', `No number in the lead${domain ? ' and none published on ' + domain : ''}.`);
+    const bad = await deps.loadBad(kv, id).catch(() => new Set());
+    const usable = [phone.phone, ...(phone.alternates || [])].filter(n => !deps.isBad(bad, n));
+    if (!usable.length) return toBacklog('no_listed_phone', 'Every number on file was logged as wrong.');
+    for (const n of usable) if (await deps.isOptedOut({ phone: n })) { await mark('excluded', 'opted_out'); return { verdict: 'excluded', reason: 'opted_out' }; }
+    const byPhone = parseValue(await kv.hget(HK.companies, phoneKey(usable[0])));
+    if (byPhone && byPhone.id && byPhone.id !== id) {
+        if (['client', 'in_outreach', 'suppressed'].includes(byPhone.verdict)) { await mark('excluded', 'company_' + byPhone.verdict); return { verdict: 'excluded', reason: 'company_' + byPhone.verdict }; }
+        const other = await getRecord(kv, byPhone.id);
+        if (other) { if (!(other.jobs || []).some(x => x.url === job.url)) { other.jobs = [...(other.jobs || []), job]; other.brief = briefFor(other); await putRecord(kv, other); } await mark('merged', 'same_number', { id: other.id }); return { verdict: 'merged', reason: 'same_number', id: other.id }; }
+    }
+    // The owner as the contact. A provided email is verified before it is shown as one to write to.
+    const first = String(l.owner_first || '').trim(), last = String(l.owner_last || '').trim();
+    let contact = { status: 'not_found', reason: 'The lead names no owner.', checkedAt };
+    if (first || email) {
+        let v = { status: 'unverified' };
+        if (email && !FREE_MAIL.test(email) && deps.verifyEmail) v = await deps.verifyEmail(email).catch(() => ({ status: 'unavailable' }));
+        contact = { name: [first, last].filter(Boolean).join(' ') || null, firstName: firstNameOf(first), role: String(l.owner_title || '').trim() || null, email: v.status === 'verified' ? email : null, candidateEmail: email, status: email ? v.status : 'named', provider: v.provider || null, source: `${source}'s research`, sourceUrl: l.email_source_url || null, verifiedBy: email ? 'Findymail verifier' : null, checkedAt: v.checkedAt || checkedAt };
+    }
+    const rec = {
+        ...base, contact,
+        phone: { number: usable[0], alternates: usable.slice(1), source: phone.source, foundBy: source, sourceUrl: phone.sourceUrl, context: phone.context || null, checkedAt: phone.checkedAt || checkedAt, type: phone.source === 'provided' ? `number from ${source}'s research` : 'company line listed on their website', owner: 'the company, not a named person', localCheckedAt: checkedAt, ...(phone.siteCheck ? { siteCheck: phone.siteCheck } : {}), ...(phone.previous ? { previous: phone.previous } : {}) },
+        status: 'ready', callOutcome: null, nextCallAt: null, callOwner: null, callHistory: [],
+    };
+    if (existing) Object.assign(rec, { createdAt: existing.createdAt, callHistory: existing.callHistory || [], callOwner: existing.callOwner || null, callOwnerAt: existing.callOwnerAt || null, jobs: existing.jobs && existing.jobs.length ? existing.jobs : rec.jobs, provenance: existing.provenance || rec.provenance });
+    rec.priority = priorityOf({ age: q.age, restrictions: q.restrictions, openRoles: null, contact });
+    rec.brief = briefFor(rec);
+    if (existing) { const now2 = await getRecord(kv, id); if (now2 && (now2.booking || now2.status !== existing.status)) { await mark('merged', 'changed_meanwhile', { id }); return { verdict: 'merged', reason: 'changed_meanwhile', id }; } }
+    await putRecord(kv, rec);
+    await kv.hdel(HK.backlog, id).catch(() => {});
+    await kv.hset(HK.companies, { [bk]: JSON.stringify({ id, verdict: 'ready', at: checkedAt }), [phoneKey(rec.phone.number)]: JSON.stringify({ id, verdict: 'ready', at: checkedAt }), ...(domain ? { [domainKey(domain)]: JSON.stringify({ id, verdict: 'ready', at: checkedAt }) } : {}) });
+    await mark('ready', 'ready', { id });
+    if (report && report.samples.length < 3) report.samples.push({ id, company: company.name, job: job.title, jobUrl: job.url, source, phoneSource: rec.phone.source, contact: contact.name ? contact.name + (contact.role ? ', ' + contact.role : '') + ' (' + contact.status + ')' : contact.status });
+    return { verdict: 'ready', id, record: rec };
+}
+
 // ---- the pending queue ------------------------------------------------------------------------
 // PM, 2026-10-27: paid search results beyond the run's cap "are counted deferred then discarded,
 // and seeds are LREM'd before processing, so a fetch error/crash can lose work." Every posting a
@@ -432,8 +549,10 @@ export async function processPosting(p, provenance, deps, report) {
 // next run; a transient error keeps it here with a count; repeated errors become a research entry.
 export const PENDING_MAX_ATTEMPTS = 4;
 export async function addPending(kv, p, provenance, now = Date.now()) {
-    const key = p.kind === 'gjob' ? p.key : postingKey(p);
-    const entry = p.kind === 'gjob'
+    const key = p.kind === 'gjob' || p.kind === 'lead' ? p.key : postingKey(p);
+    const entry = p.kind === 'lead'
+        ? { key, kind: 'lead', lead: p.lead, url: p.lead.posting_url || null, provenance, attempts: 0, addedAt: new Date(now).toISOString(), nextTryAt: new Date(now).toISOString() }
+        : p.kind === 'gjob'
         ? { key, kind: 'gjob', listing: p.listing, url: p.listing.share_link || null, provenance, attempts: 0, addedAt: new Date(now).toISOString(), nextTryAt: new Date(now).toISOString() }
         : { key, url: p.url || null, ats: p.ats, board: p.board, id: p.id, provenance, attempts: 0, addedAt: new Date(now).toISOString(), nextTryAt: new Date(now).toISOString() };
     // HSETNX: a posting already waiting keeps its own history and provenance.
@@ -453,7 +572,7 @@ async function settle(entry, deps, report) {
     const { kv } = deps;
     const now = deps.now || Date.now();
     let r;
-    const ref = entry.kind === 'gjob' ? { kind: 'gjob', key: entry.key, listing: entry.listing } : { ats: entry.ats, board: entry.board, id: entry.id };
+    const ref = entry.kind === 'lead' ? { kind: 'lead', key: entry.key, lead: entry.lead } : entry.kind === 'gjob' ? { kind: 'gjob', key: entry.key, listing: entry.listing } : { ats: entry.ats, board: entry.board, id: entry.id };
     try { r = await processPosting(ref, entry.provenance || {}, deps, report); }
     catch (e) { r = { verdict: 'error', reason: 'run_error', detail: String((e && e.message) || e).slice(0, 120) }; }
     if (DURABLE.has(r.verdict)) { await kv.hdel(HK.pending, entry.key); return r; }
@@ -462,7 +581,7 @@ async function settle(entry, deps, report) {
     const attempts = (entry.attempts || 0) + 1;
     if (attempts >= PENDING_MAX_ATTEMPTS) {
         // Not lost and not retried forever: a visible research entry a person can look at.
-        const bk = entry.kind === 'gjob' ? companyKey(entry.listing.company_name, entry.listing.location) : boardKey(entry);
+        const bk = entry.kind === 'lead' ? companyKey(entry.lead.business, entry.lead.state || entry.lead.city) : entry.kind === 'gjob' ? companyKey(entry.listing.company_name, entry.listing.location) : boardKey(entry);
         const id = idFor(bk);
         await putBacklog(kv, { id, campaignId: HIRING_ID, company: { name: entry.kind === 'gjob' ? entry.listing.company_name : entry.board, board: bk }, job: entry.kind === 'gjob' ? { source: 'google_jobs', title: entry.listing.title, url: entry.url || null } : { url: entry.url || null, ats: entry.ats, board: entry.board, postingId: entry.id }, ...(entry.kind === 'gjob' ? { listing: entry.listing } : {}), provenance: { ...(entry.provenance || {}), postingKey: entry.key }, reason: entry.kind === 'gjob' ? 'lookup_unavailable' : 'posting_unreadable', detail: entry.kind === 'gjob' ? `The Google business listing lookup failed after ${attempts} tries: ${r.detail || r.reason}.` : `The posting could not be read after ${attempts} tries: ${r.detail || r.reason}.`, missing: ['posting'], attempts, state: 'exhausted', firstSeenAt: entry.addedAt, lastTriedAt: new Date(now).toISOString(), nextTryAt: null });
         await kv.hdel(HK.pending, entry.key);
@@ -477,6 +596,11 @@ export async function recheck(rec, kv, now = Date.now()) {
     const name = rec.company && rec.company.name;
     const byName = companyExcluded(name);
     if (byName) return byName;
+    if (rec.lead) {
+        const q = qualifyLead(rec.lead, Date.parse(rec.job && rec.job.postedAt) || now);
+        if (!q.ok && q.reason !== 'stale_post') return { reason: q.reason, detail: q.detail, from: 'post' };
+        return null;
+    }
     if (rec.job && rec.job.title && !roleFamily(rec.job.title)) return { reason: 'role_not_fillable', detail: `"${rec.job.title}" is not a seat a remote person fills under the current rules.` };
     if (rec.listing) {
         // Age is handled by expiry; every other listing rule is applied as if the listing were new.
@@ -507,7 +631,7 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
     const now = deps.now || Date.now();
     const live = (await allRecords(kv)).filter(r => r.status === 'ready' && r.job && r.job.state !== 'closed' && r.job.state !== 'stale');
     // Every Google Jobs card (a date check, free) and the ATS cards checked longest ago (a fetch each).
-    const recs = [...live.filter(r => r.job.source === 'google_jobs'), ...live.filter(r => r.job.source !== 'google_jobs').sort((a, b) => Date.parse(a.job.checkedAt || 0) - Date.parse(b.job.checkedAt || 0)).slice(0, limit)];
+    const recs = [...live.filter(r => ageBased(r.job.source)), ...live.filter(r => !ageBased(r.job.source)).sort((a, b) => Date.parse(a.job.checkedAt || 0) - Date.parse(b.job.checkedAt || 0)).slice(0, limit)];
     const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0, excluded: 0 };
     // The rules improve; cards made under older rules are held to the current ones, for free: the name,
     // the role, the stored listing and the cached Google listing are all re-read, nothing is fetched.
@@ -578,8 +702,8 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
         } finally { await kv.del(lock).catch(() => {}); }
     }
     for (const rec of recs) {
-        // A Google Jobs card has no posting API: it goes stale MAX_AGE_DAYS after it was posted.
-        if (rec.job.source === 'google_jobs') {
+        // A Google Jobs or provided card has no posting API: it goes stale MAX_AGE_DAYS after it was posted.
+        if (ageBased(rec.job.source)) {
             const age = ageDays(rec.job.postedAt, now);
             if (age != null && age > MAX_AGE_DAYS) {
                 const lock = HK.recLock(rec.id);
@@ -649,7 +773,7 @@ export async function holdCards(kv, { holds, write = false, by, now = Date.now()
  * Order: keep ready cards honest, then work what is already waiting (pending, then due research),
  * and only then pay for new searches, and only when the pending queue has room.
  */
-export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, deadlineMs = 230000, discover = true, refresh = 12 } = {}) {
+export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, deadlineMs = 230000, discover = true, refresh = 12, leadsOnly = false } = {}) {
     const { kv } = deps;
     const t0 = Date.now(), now = deps.now || Date.now();
     const day = new Date(now).toISOString().slice(0, 10);
@@ -668,7 +792,8 @@ export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, dea
     // An unreadable day counter is not zero searches used: it is unknown, so nothing is spent this run.
     let usedToday = null;
     try { usedToday = Number(await kv.get(HK.serpDay(day)) || 0); } catch (e) { report.searchBudgetError = 'The daily search counter could not be read; no searches this run.'; }
-    const allowed = usedToday == null || left == null || !Number.isFinite(left) ? 0 : Math.max(0, Math.min(SERP_DAILY_CAP - usedToday, left - SERP_RESERVE, maxSearches + maxCandidates));
+    // leadsOnly: work provided leads only; a lead needs no search credit, so the run is allowed none.
+    const allowed = leadsOnly || usedToday == null || left == null || !Number.isFinite(left) ? 0 : Math.max(0, Math.min(SERP_DAILY_CAP - usedToday, left - SERP_RESERVE, maxSearches + maxCandidates));
     const budget = { allowed, used: 0, remaining() { return this.allowed - this.used; },
         async take() { if (this.used >= this.allowed) return false; this.used++; await kv.incr(HK.serpDay(day)); await kv.expire(HK.serpDay(day), 3 * 86400).catch(() => {}); return true; } };
     report.searchBudget = { left, reserve: SERP_RESERVE, usedToday, dailyCap: SERP_DAILY_CAP, allowedThisRun: allowed };
@@ -680,7 +805,7 @@ export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, dea
     // 2. What is already waiting: seeds and earlier search results.
     let worked = 0;
     const work = async () => {
-        for (const e of await pendingDue(kv, now)) {
+        for (const e of (await pendingDue(kv, now)).filter(e => !leadsOnly || e.kind === 'lead')) {
             if (!timeLeft() || worked >= maxCandidates) break;
             const r = await settle(e, d, report);
             if (r.reason === 'no_budget') { report.waitingForBudget = (report.waitingForBudget || 0) + 1; break; }
@@ -691,11 +816,11 @@ export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, dea
     await work();
 
     // 3. The research backlog whose time has come. A retry that is now excluded (too old, a client) closes.
-    const refOf = b => (b.listing ? { kind: 'gjob', key: (b.provenance && b.provenance.postingKey) || jobKey(b.listing), listing: b.listing } : parseAts(b.job && b.job.url));
+    const refOf = b => (b.lead ? { kind: 'lead', key: (b.provenance && b.provenance.postingKey) || leadKey(b.lead), lead: b.lead } : b.listing ? { kind: 'gjob', key: (b.provenance && b.provenance.postingKey) || jobKey(b.listing), listing: b.listing } : parseAts(b.job && b.job.url));
     const dueAll = (await allBacklog(kv).catch(() => [])).filter(b => b.state === 'open' && Date.parse(b.nextTryAt) <= now);
     // An entry the run has no way to retry is closed with the reason, never left to hold a slot for ever.
     for (const b of dueAll.filter(b => !refOf(b))) await putBacklog(kv, { ...b, state: 'closed', closedReason: 'cannot_retry', closedAt: new Date(now).toISOString() });
-    const due = dueAll.filter(refOf).sort((a, b) => Date.parse(a.nextTryAt) - Date.parse(b.nextTryAt)).slice(0, 4);
+    const due = leadsOnly ? [] : dueAll.filter(refOf).sort((a, b) => Date.parse(a.nextTryAt) - Date.parse(b.nextTryAt)).slice(0, 4);
     for (const b of due) {
         if (!timeLeft()) break;
         const ref = refOf(b);

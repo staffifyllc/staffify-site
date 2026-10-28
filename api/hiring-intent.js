@@ -7,6 +7,8 @@
 //   GET  ?view=records (owner)               every card with its evidence, for read-back
 //   POST {action:'seed', urls:[...]}         owner or machine: official job URLs to qualify next run
 //   POST {action:'hold-cards', holds:[...]}  machine only: named cards off the worklist, with the reason
+//   POST {action:'import-leads', source, leads:[...]}  owner or machine: researched leads into the pending
+//                                            queue; worked by the next run (?leads=only works them alone)
 // Logic lives in api/_hiring-intent.js and api/_hiring-run.js; this file only wires the real
 // services in. Nothing here dials, texts or emails anyone.
 import { randomUUID } from 'node:crypto';
@@ -21,7 +23,7 @@ import { clientCheck } from './_client-guard.js';
 import { contact as crmContact } from './_outreach-crm.js';
 import { crmStop } from './_rep-email-gates.js';
 import { loadBad, isBad } from './_bad-numbers.js';
-import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf } from './_hiring-intent.js';
+import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf, leadKey } from './_hiring-intent.js';
 import { runHiring, addPending, holdCards } from './_hiring-run.js';
 
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail)\./i;
@@ -131,7 +133,8 @@ export default async function handler(req, res) {
             try {
                 const d = { ...deps(), outreachDomains: await outreachDomains() };
                 const cap = (v, max, dflt) => Math.max(0, Math.min(max, Number.isFinite(Number(v)) && v !== undefined && v !== '' ? Number(v) : dflt));
-                const report = await runHiring(d, { maxSearches: cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 30, 25), discover: req.query?.discover !== '0' });
+                const leadsOnly = req.query?.leads === 'only';
+                const report = await runHiring(d, { maxSearches: leadsOnly ? 0 : cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 40, 25), discover: !leadsOnly && req.query?.discover !== '0', leadsOnly });
                 return res.status(200).json({ status: 'complete', report });
             } finally { if (await redis.get(HK.lock) === nonce) await redis.del(HK.lock); }
         }
@@ -172,6 +175,23 @@ export default async function handler(req, res) {
                 if (write && Number(body.expected) !== holds.length) return res.status(400).json({ error: 'expected must equal the number of holds' });
                 const results = await holdCards(redis, { holds, write, by: String(body.by || 'machine').slice(0, 120) });
                 return res.status(200).json({ ok: true, write, results });
+            }
+            // Leads a person researched (Madison's list, 2026-10-28). Into the pending queue first, so none is lost;
+            // each one meets every check a found posting meets when a run works it (api/_hiring-run.js processLead).
+            if (body.action === 'import-leads') {
+                const FIELDS = ['owner_first', 'owner_last', 'owner_title', 'business', 'industry', 'city', 'state', 'website', 'owner_email', 'phone', 'role_posted', 'posting_url', 'posting_date', 'email_source_url', 'notes', 'vertical'];
+                const source = String(body.source || (rep && rep.name) || 'our team').trim().slice(0, 40);
+                const leads = (Array.isArray(body.leads) ? body.leads : []).slice(0, 500).map(x => Object.fromEntries(FIELDS.map(f => [f, x && x[f] != null ? String(x[f]).trim().slice(0, f === 'notes' ? 600 : 300) : null])));
+                const at = new Date().toISOString();
+                let added = 0, waiting = 0, refused = 0;
+                for (const l of leads) {
+                    if (!l.business || !l.role_posted) { refused++; continue; }
+                    const key = leadKey(l);
+                    if (await redis.hget(HK.pending, key)) { waiting++; continue; }
+                    await addPending(redis, { kind: 'lead', key, lead: l }, { seed: true, discoveredBy: 'provided', source, addedBy: rep ? rep.email : 'machine', discoveredAt: at, file: String(body.file || '').slice(0, 120) || null });
+                    added++;
+                }
+                return res.status(200).json({ ok: true, source, received: leads.length, added, alreadyWaiting: waiting, refused });
             }
             if (body.action !== 'seed') return res.status(400).json({ error: 'Unknown action' });
             const urls = (Array.isArray(body.urls) ? body.urls : []).slice(0, 20);
