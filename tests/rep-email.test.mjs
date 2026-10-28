@@ -85,6 +85,23 @@ test('template 1 is thanks for your time, then book a meeting, on the link his a
     assert.match(R.fillTemplate(second, {}).body, /your business/);
 });
 
+test('quick-send follow-ups: the info they asked for and a second touch, in both sets, in Paul\'s rules', () => {
+    const ids = R.templatesFor('milton@trystaffify.com').map(t => t.id);
+    assert.deepEqual(ids, ['thanks-book', 'missed-book', 'info-requested', 'follow-up']);
+    const hiring = R.templatesFor('milton@trystaffify.com', { kind: 'hiring', hiring: { title: 'Executive Assistant' } });
+    assert.deepEqual(hiring.map(t => t.id), ['hiring-stay-in-touch', 'hiring-thanks', 'hiring-missed', 'hiring-info', 'hiring-follow-up']);
+    const info = hiring.find(t => t.id === 'hiring-info');
+    assert.match(info.body, /dedicated EAs from Latin America and the Philippines/); assert.match(info.body, /the executive assistant role/i);
+    for (const t of [...R.TEMPLATES, ...R.HIRING_TEMPLATES]) {
+        assert.ok(!/[\u2014\u2013]/.test(t.subject + t.body), t.id + ': no dashes');
+        assert.match(t.subject, /\{first\}/, t.id + ': their first name is in the subject');
+        assert.ok(!/\b\d+\s+(clients|companies|businesses)\b/i.test(t.body), t.id + ': never a client count');
+        if (/guarantee/i.test(t.body)) assert.match(t.body, /lifetime replacement guarantee/, t.id);
+        assert.ok(!/(^|[.!?]\s+)[a-z]/.test(t.body.replace(/https?:\S+/g, '')), t.id + ': every sentence starts with a capital');
+        assert.equal(R.copyProblem({ subject: R.fillTemplate(t, { first: 'Nick', company: 'Realkit', me: 'Milton', link: 'https://calendly.com/x' }).subject, body: R.fillTemplate(t, { first: 'Nick', company: 'Realkit', me: 'Milton', link: 'https://calendly.com/x' }).body.replace(/\{role\}|\{roles\}/g, 'EA') }), null, t.id + ': passes the copy rules filled in');
+    }
+});
+
 test('copy rules: placeholders, a client count, an empty or broken subject are refused', () => {
     assert.match(R.copyProblem({ subject: 'Hi', body: 'Hi {first}, thanks' }), /Replace \{first\}/);
     assert.match(R.copyProblem({ subject: 'Hi', body: 'Could you pass this to [their name]?' }), /\[their name\]/);
@@ -441,6 +458,7 @@ test('connect: Google consent for HIS mailbox only, and the callback brings him 
     assert.equal(start.code, 302);
     const g = new URL(start.location);
     assert.equal(g.host, 'accounts.google.com'); assert.equal(g.searchParams.get('login_hint'), 'milton@trystaffify.com');
+    assert.equal(g.searchParams.get('prompt'), 'select_account consent', 'Google shows the chooser instead of the browser\'s default account');
     assert.equal(g.searchParams.get('hd'), 'trystaffify.com', 'Google lists only that domain\'s accounts, so a Flylisted login is never offered');
     assert.equal(g.searchParams.get('redirect_uri'), 'https://www.gostaffify.com/api/outreach-connect/?action=callback');
     const state = g.searchParams.get('state');

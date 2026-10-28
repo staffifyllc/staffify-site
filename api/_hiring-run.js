@@ -925,14 +925,15 @@ export async function ownerLines(kv, { source, lines, write = false, by, now = D
                 localCheckedAt: old.localCheckedAt || at, previous: { number: old.number || null, source: old.source || null, type: old.type || null },
             };
             // A card with no named contact takes the person whose line this is.
-            const contact = rec.contact && rec.contact.name ? rec.contact : { ...(rec.contact || {}), name: person, firstName: firstNameOf(person.split(/\s+/)[0]), role: String(f.owner_title || '').trim() || null, status: 'named', source: `${source} lookup`, checkedAt: at };
+            const named = rec.contact && rec.contact.name ? rec.contact : { ...(rec.contact || {}), name: person, firstName: firstNameOf(person.split(/\s+/)[0]), role: String(f.owner_title || '').trim() || null, status: 'named', source: `${source} lookup`, checkedAt: at };
+            const contact = contactWithEmail({ contact: named }, f.owner_email ? { email: String(f.owner_email).trim().toLowerCase(), type: f.owner_email_type || null, grade: f.owner_email_grade || null } : null, person, at) || named;
             const next = { ...rec, phone, contact, updatedAt: at, ownerLine: { by: source, at, addedBy: by }, ...(f.ownerCell ? { ownerCell: f.ownerCell } : {}), ...(held ? { status: 'ready', hold: null, released: { from: rec.hold.reason, at, by } } : {}) };
             next.brief = briefFor(next);
             if (write) {
                 await putRecord(kv, next);
                 await kv.hset(HK.companies, { [phoneKey(primary)]: JSON.stringify({ id, verdict: 'ready', at }) });
             }
-            out.push({ ...base, from: old.number || null, to: primary, lineType, done: write });
+            out.push({ ...base, from: old.number || null, to: primary, lineType, email: contact.email && contact.email !== (rec.contact && rec.contact.email) ? contact.email : null, done: write });
         } finally { if (write) await kv.del(lock).catch(() => {}); }
     }
     return out;
@@ -946,6 +947,8 @@ export async function ownerLines(kv, { source, lines, write = false, by, now = D
 // one; only a mobile is put first (ownerLines keeps the old number behind it). Every attempt is noted on the card, so
 // each card is tried once, and a "still searching" answer, already paid for, is collected free on a later run.
 export const RR_DAILY_CAP = 40, RR_RESERVE = 100, RR_PER_RUN = 6;
+// A catch-up night (a big researched list waiting on cells) may raise the day's cap from a machine-only run, never past this.
+export const RR_DAILY_MAX = 150;
 const CARRIER = /\b(state\s+farm|allstate|farmers|nationwide|american\s+family|amfam|liberty\s+mutual|country\s+financial)\b/i;
 const RR_STOP = new Set(['inc', 'llc', 'pllc', 'pc', 'pa', 'llp', 'ltd', 'co', 'corp', 'the', 'and', 'of', 'group', 'law', 'firm', 'office', 'offices', 'agency', 'insurance', 'services', 'agent', 'associates', 'company', 'state', 'farm', 'farmers', 'allstate']);
 const rrWords = v => String(v || '').toLowerCase().replace(/&/g, ' ').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(w => w.length > 2 && !RR_STOP.has(w));
@@ -999,6 +1002,43 @@ export function cellMatch(rec, p, { strictState = false, ignoreState = false } =
 }
 const GRADE = { A: 0, 'A-': 1, B: 2 };
 const TOLL = /^\+?1?(800|888|877|866|855|844|833)/;
+// Paul, 2026-10-28: "making sure we're also getting their email addresses to follow up via email". The owner's address
+// from the same lookup that found their line: one RocketReach's own mail check accepted and graded A or A-, at the
+// business's domain first, then another work address, then a personal one. Nothing RocketReach could not confirm.
+export function ownerEmail(profile, domain) {
+    const ok = ((profile && profile.emails) || []).filter(e => e && e.smtp === 'valid' && /^A-?$/.test(String(e.grade || '')));
+    const host = e => e.email.split('@')[1] || '';
+    const dom = String(domain || '').toLowerCase().replace(/^www\./, '');
+    const now = String(profile && profile.employerDomain || '').toLowerCase().replace(/^www\./, '');
+    const at = (e, d) => !!d && (host(e) === d || host(e).endsWith('.' + d));
+    // A work address off the card's domain only at their current employer: an old job's mailbox may be someone else's now.
+    const pick = (dom && ok.find(e => at(e, dom))) || (now && ok.find(e => at(e, now) && !FREE_MAIL.test(e.email))) || ok.find(e => e.type === 'personal' || FREE_MAIL.test(e.email));
+    return pick ? { email: pick.email, type: at(pick, dom) ? 'work' : FREE_MAIL.test(pick.email) || pick.type === 'personal' ? 'personal' : 'work (their current employer)', grade: pick.grade } : null;
+}
+// The same person: same surname and the same first name, a common nickname, or a first name that shares its first four
+// letters (Mario, Marius). Never just an initial: Michael and Mary Smith are two people.
+const NICK = [['michael', 'mike', 'mick'], ['robert', 'rob', 'bob', 'bobby'], ['william', 'will', 'bill', 'billy'], ['james', 'jim', 'jimmy'], ['thomas', 'tom', 'tommy'], ['daniel', 'dan', 'danny'], ['joseph', 'joe', 'joey'], ['anthony', 'tony'], ['richard', 'rick', 'rich', 'dick'], ['charles', 'chuck', 'charlie'], ['edward', 'ed', 'eddie', 'ted'], ['elizabeth', 'liz', 'beth', 'betsy'], ['katherine', 'kathy', 'kate', 'katie'], ['jennifer', 'jen', 'jenny'], ['margaret', 'maggie', 'peggy'], ['jonathan', 'jonathon', 'jon'], ['stephen', 'steven', 'steve'], ['nicholas', 'nick'], ['matthew', 'matt'], ['christopher', 'chris'], ['alexander', 'alex'], ['benjamin', 'ben'], ['samuel', 'sam'], ['patricia', 'pat', 'patty'], ['rebecca', 'becky'], ['gregory', 'greg'], ['jeffrey', 'jeff'], ['timothy', 'tim'], ['kenneth', 'ken'], ['ronald', 'ron'], ['donald', 'don'], ['lawrence', 'larry'], ['frederick', 'fred'], ['douglas', 'doug']];
+const nickOf = n => { const g = NICK.find(x => x.includes(n)); return g ? g[0] : n; };
+export const samePerson = (a, b) => {
+    const x = nameKey(a), y = nameKey(b);
+    if (!(x && y && x.last === y.last)) return false;
+    const f = x.first, g = y.first;
+    return f === g || nickOf(f) === nickOf(g) || (f.length >= 4 && g.length >= 4 && f.slice(0, 4) === g.slice(0, 4));
+};
+/** The card's contact with the looked-up owner's address, when the card has none and it is that contact's own; else null. */
+export function contactWithEmail(rec, mail, person, at, title = null) {
+    const c = rec && rec.contact || {};
+    if (!mail || !mail.email || c.email) return null;   // an address given on the call, or verified, is never replaced
+    // A closed or booked card takes no new address; one with an unconfirmed address of its own keeps it, so the stop
+    // lists that were checked against that address are not quietly swapped for another.
+    if (rec.booking || ['excluded', 'suppressed'].includes(rec.status)) return null;
+    if (c.candidateEmail && c.candidateEmail !== mail.email) return null;
+    if (c.name && person && !samePerson(c.name, person)) return null;   // another person's address would greet them by the wrong name
+    if (!c.name && !person) return null;                                 // an address has to say whose it is
+    const named = c.name ? {} : { name: person, firstName: firstNameOf(String(person).split(/\s+/)[0]), role: title || c.role || null, status: 'named', source: 'RocketReach lookup', checkedAt: at };
+    return { ...c, ...named, email: mail.email, candidateEmail: mail.email, emailSource: 'RocketReach', emailPerson: person || c.name, emailType: mail.type, emailGrade: mail.grade, emailCheckedAt: at };
+}
+
 /** The numbers to try, a mobile first: valid ones, best grade first, toll-free dropped. */
 export function cellsOf(profile, current) {
     const ok = (profile.phones || []).filter(x => x.valid !== false && !TOLL.test(x.number.replace(/\D/g, '').slice(-10)));
@@ -1010,10 +1050,11 @@ export function cellsOf(profile, current) {
 // The attempts live in their own hash, written BEFORE any credit is spent, so a card is looked up once whatever
 // happens to the card's own lock; the card carries a copy (ownerCell) for people to read.
 export const RR_TRIED = 'staffify:hiring:rr:tried';
-export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity } = {}) {
+export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity, dailyCap = RR_DAILY_CAP } = {}) {
+    const dayCap = Math.max(0, Math.min(RR_DAILY_MAX, Number(dailyCap) || RR_DAILY_CAP));
     const { kv, rr } = deps;
     const now = deps.now || Date.now();
-    const out = { tried: 0, lookups: 0, added: 0, noMobile: 0, notFound: 0, mismatch: 0, pending: 0, collected: 0, reapplied: 0, errors: 0, skipped: null };
+    const out = { tried: 0, lookups: 0, added: 0, noMobile: 0, notFound: 0, mismatch: 0, pending: 0, collected: 0, reapplied: 0, errors: 0, emails: 0, skipped: null };
     if (!rr) { out.skipped = 'RocketReach is not configured'; return out; }
     const at = new Date(now).toISOString(), dayKey = HK.rrDay(at.slice(0, 10));
     const room = () => Date.now() < deadline - 20000;
@@ -1024,9 +1065,16 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
         try { const fresh = await getRecord(kv, id); if (fresh) await putRecord(kv, { ...fresh, ownerCell }); } finally { await kv.del(lock).catch(() => {}); }
     };
     const record = async (id, v) => { await mark(id, v); await note(id, v); };
+    // No cell, but the owner's address: it goes on the card (best effort; the backfill action can add it later).
+    const noteEmail = async (id, mail, person, title) => {
+        const lock = HK.recLock(id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) return false;
+        try { const fresh = await getRecord(kv, id); const contact = fresh && contactWithEmail(fresh, mail, person, at, title); if (!contact) return false; await putRecord(kv, { ...fresh, contact, updatedAt: at }); return true; }
+        finally { await kv.del(lock).catch(() => {}); }
+    };
     const apply = async (id, line, base) => {
         const [r] = await ownerLines(kv, { source: 'RocketReach', lines: [{ ...line, ownerCell: { ...base, result: 'added', person: line.phone_person } }], write: true, by: 'hourly owner-cell lookup', now, isOptedOut: deps.isOptedOut, loadBad: deps.loadBad, isBad: deps.isBad });
-        if (r && r.done) { out.added++; return mark(id, { ...base, result: 'added', person: line.phone_person }); }
+        if (r && r.done) { out.added++; if (r.email) out.emails++; return mark(id, { ...base, result: 'added', person: line.phone_person }); }
         // A caller saving the card, or a stop list that could not be read: the paid answer is kept and applied next run.
         if (r && /saving it|could not be read/.test(r.why || '')) { out.errors++; return mark(id, { ...base, result: 'apply_later', line }); }
         out.errors++; return record(id, { ...base, result: 'not_applied', why: r && r.why || 'unknown' });
@@ -1035,8 +1083,9 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
         const m = cellMatch(rec, profile, { strictState });
         if (!m.ok) { out.mismatch++; return record(rec.id, { ...base, result: 'mismatch', why: m.why }); }
         const c = cellsOf(profile, rec.phone && rec.phone.number);
-        if (!c.mobile) { out.noMobile++; return record(rec.id, { ...base, result: 'no_mobile', person: profile.name }); }
-        return apply(rec.id, { id: rec.id, phone: c.mobile.number, phone_type: 'mobile', phone_grade: c.mobile.grade, phone_person: profile.name, phone_alternates: c.others, checked_at: at, owner_title: profile.title }, base);
+        const mail = ownerEmail(profile, rec.company && rec.company.domain);
+        if (!c.mobile) { out.noMobile++; if (mail && await noteEmail(rec.id, mail, profile.name, profile.title)) out.emails++; return record(rec.id, { ...base, result: 'no_mobile', person: profile.name }); }
+        return apply(rec.id, { id: rec.id, phone: c.mobile.number, phone_type: 'mobile', phone_grade: c.mobile.grade, phone_person: profile.name, phone_alternates: c.others, checked_at: at, owner_title: profile.title, ...(mail ? { owner_email: mail.email, owner_email_type: mail.type, owner_email_grade: mail.grade } : {}) }, base);
     };
     let tried;
     try { tried = Object.fromEntries(Object.entries((await kv.hgetall(RR_TRIED)) || {}).map(([k, v]) => [k, parseValue(v) || {}])); }
@@ -1064,7 +1113,7 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
     if (left <= RR_RESERVE) { out.skipped = `${left} lookups left this month; ${RR_RESERVE} are kept in reserve`; return out; }
     const cap = Math.min(limit, left - RR_RESERVE);
     // The day counter is the authority: taken before each lookup, so two runs together never pass the cap.
-    const take = async () => { const n = Number(await kv.incr(dayKey)); await kv.expire(dayKey, 3 * 86400).catch(() => {}); if (n > RR_DAILY_CAP) { out.skipped = `daily cap of ${RR_DAILY_CAP} reached`; return false; } out.lookups++; return true; };
+    const take = async () => { const n = Number(await kv.incr(dayKey)); await kv.expire(dayKey, 3 * 86400).catch(() => {}); if (n > dayCap) { out.skipped = `daily cap of ${dayCap} reached`; return false; } out.lookups++; return true; };
     const cand = all.filter(r => open(r) && !tried[r.id] && !ownsCell(r))
         .sort((a, b) => (held(b) - held(a)) || (Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0)));
     for (const rec of cand) {
@@ -1096,6 +1145,38 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
             // A person found from a company search, not by the card's own owner name, must also be shown to be in its state.
             await settle(rec, res.profile, base, { strictState: how === 'search' });
         } catch (e) { out.errors++; await kv.hdel(RR_TRIED, rec.id).catch(() => {}); break; }
+    }
+    return out;
+}
+
+// ---- owners' addresses for lookups already paid for ----------------------------------------------
+// Every owner found before 2026-10-28 night was looked up with their address too, and it was not kept. checkStatus
+// reads a looked-up profile back for free; the address goes on the card under the same rules as ownerCells. Dry
+// unless `write`; a card someone is saving is left for the next run.
+export async function ownerEmails(kv, { rr, write = false, now = Date.now(), limit = 300 }) {
+    const at = new Date(now).toISOString(), out = { candidates: 0, read: 0, found: 0, saved: 0, noEmail: 0, otherPerson: 0, busy: 0, planned: [] };
+    const tried = Object.entries((await kv.hgetall(RR_TRIED)) || {}).map(([id, v]) => [id, parseValue(v) || {}]).filter(([, t]) => t.profileId && ['added', 'no_mobile'].includes(t.result));
+    const byId = new Map((await allRecords(kv)).map(r => [r.id, r]));
+    const todo = tried.filter(([id]) => { const r = byId.get(id); return r && !r.booking && !(r.contact && r.contact.email) && !['excluded', 'suppressed'].includes(r.status); }).slice(0, limit);
+    out.candidates = todo.length;
+    for (let i = 0; i < todo.length; i += 100) {
+        const chunk = todo.slice(i, i + 100);
+        let st = {}; try { st = await rr.checkStatus(chunk.map(([, t]) => t.profileId)); } catch { st = {}; }
+        for (const [id, t] of chunk) {
+            const s2 = st[String(t.profileId)];
+            if (!s2 || !s2.profile) continue;
+            out.read++;
+            const rec = byId.get(id), mail = ownerEmail(s2.profile, rec.company && rec.company.domain);
+            if (!mail) { out.noEmail++; continue; }
+            if (!contactWithEmail(rec, mail, s2.profile.name, at, s2.profile.title)) { out.otherPerson++; continue; }
+            out.found++;
+            out.planned.push({ id, company: rec.company && rec.company.name, person: s2.profile.name, email: mail.email, type: mail.type });
+            if (!write) continue;
+            const lock = HK.recLock(id);
+            if (!await kv.set(lock, '1', { nx: true, ex: 10 })) { out.busy++; continue; }
+            try { const fresh = await getRecord(kv, id); const contact = fresh && contactWithEmail(fresh, mail, s2.profile.name, at, s2.profile.title); if (contact) { await putRecord(kv, { ...fresh, contact, updatedAt: at }); out.saved++; } }
+            finally { await kv.del(lock).catch(() => {}); }
+        }
     }
     return out;
 }
@@ -1137,7 +1218,7 @@ export async function fillResearch(kv, { source, fills, write = false, by, now =
  * Order: keep ready cards honest, then work what is already waiting (pending, then due research),
  * and only then pay for new searches, and only when the pending queue has room.
  */
-export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, deadlineMs = 230000, discover = true, refresh = 12, leadsOnly = false, cells = RR_PER_RUN } = {}) {
+export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, deadlineMs = 230000, discover = true, refresh = 12, leadsOnly = false, cells = RR_PER_RUN, rrDailyCap = RR_DAILY_CAP } = {}) {
     const { kv } = deps;
     const t0 = Date.now(), now = deps.now || Date.now();
     const day = new Date(now).toISOString().slice(0, 10);
@@ -1197,7 +1278,7 @@ export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, dea
     }
 
     // 3b. The owner's cell for ready cards that still ring a main line (RocketReach, capped per day and month).
-    if (cells && timeLeft()) { try { report.ownerCells = await ownerCells(d, { limit: cells, deadline: t0 + deadlineMs }); } catch (e) { report.ownerCells = { error: String((e && e.message) || e).slice(0, 120) }; } }
+    if (cells && timeLeft()) { try { report.ownerCells = await ownerCells(d, { limit: cells, deadline: t0 + deadlineMs, dailyCap: rrDailyCap }); } catch (e) { report.ownerCells = { error: String((e && e.message) || e).slice(0, 120) }; } }
     // 3c. A Quo contact for each card, so a callback shows who it is (api/_quo-contacts.js).
     if (deps.quoContacts && timeLeft()) { try { const q = await syncQuoContacts({ kv, api: deps.quoContacts, now }, { limit: 40, write: true }); delete q.planned; report.quoContacts = q; } catch (e) { report.quoContacts = { error: String((e && e.message) || e).slice(0, 120) }; } }
 

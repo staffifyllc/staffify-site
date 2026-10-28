@@ -3,7 +3,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sectorOf, laneFor, SECTOR_CALLER, postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED, MAIN_LINE } from '../api/_hiring-run.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED, MAIN_LINE, ownerEmail, contactWithEmail, ownerEmails } from '../api/_hiring-run.js';
+import { profileOf } from '../api/_rocketreach.js';
 import { mainLabel, mainNumbers, callerNumbers } from '../api/_hiring-intent.js';
 import { contactOf } from '../api/_quo-contacts.js';
 import { saveHiringOutcome, hiringBrief, liveStops, saveHiringContactEmail } from '../api/_hiring-calls.js';
@@ -1276,6 +1277,70 @@ test('titles from Paul\'s remote list that are seats we fill, and the ones that 
     for (const [t, f] of [['Medical Cold Caller', 'sales'], ['Marketing / Appointment Setting', 'sales'], ['Remote lead-gen specialist', 'sales'], ['Part-time remote CEO guest booking coordinator', 'scheduling'], ['Membership Coordinator', 'account'], ['Firm Operations & Tax Administration', 'admin']]) assert.equal(roleFamily(t), f, t);
     for (const t of ['Content Coordinator (remote contractor)', 'Digital Marketing / Google Ads Specialist', 'High-Ticket Sales & Business Development', 'Lead Generation Manager', 'Cold Calling Manager', 'Tax Preparer', 'Team Lead, Customer Support']) assert.equal(roleFamily(t), null, t);
 });
+// Paul, 2026-10-28: "making sure we're also getting their email addresses to follow up via email as well".
+test('the owner\'s email comes with the lookup that found their cell, only one RocketReach confirmed, and only for that person', async () => {
+    const p = profileOf({ id: 9, name: 'Zachary Rogers', current_employer_domain: 'rogershome.com', emails: [
+        { email: 'zach@gmail.com', smtp_valid: 'valid', type: 'personal', grade: 'A' },
+        { email: 'Zach@RogersHome.com', smtp_valid: 'valid', type: 'professional', grade: 'A-' },
+        { email: 'z@oldjob.com', smtp_valid: 'invalid', type: 'professional', grade: 'F' },
+        { email: 'zr@rogershome.com', smtp_valid: 'accept-all', type: 'professional', grade: 'A' }] });
+    assert.equal(p.emails.length, 4);
+    assert.deepEqual(ownerEmail(p, 'rogershome.com'), { email: 'zach@rogershome.com', type: 'work', grade: 'A-' }, 'their own domain first, lower-cased');
+    assert.equal(ownerEmail(p, 'other.com').email, 'zach@rogershome.com', 'then a confirmed address at their current employer');
+    const moved = profileOf({ name: 'Zachary Rogers', current_employer_domain: 'newco.com', emails: [{ email: 'zach@priorco.com', smtp_valid: 'valid', type: 'professional', grade: 'A' }, { email: 'zach@gmail.com', smtp_valid: 'valid', type: 'personal', grade: 'A' }] });
+    assert.equal(ownerEmail(moved, 'acmeroofing.com').email, 'zach@gmail.com', 'never a past employer\'s mailbox');
+    assert.ok(!contactWithEmail({ contact: { name: 'Michael Smith' } }, { email: 'm@x.com' }, 'Mary Smith', 'now'), 'an initial is not a person');
+    assert.ok(contactWithEmail({ contact: { name: 'Mike Smith' } }, { email: 'm@x.com' }, 'Michael Smith', 'now'), 'a nickname is');
+    const unnamed = contactWithEmail({ contact: { status: 'not_found' } }, { email: 'larry@acme.com', type: 'work', grade: 'A' }, 'Larry Rogers', 'now', 'General Manager');
+    assert.equal(unnamed.name, 'Larry Rogers'); assert.equal(unnamed.role, 'General Manager', 'an address always says whose it is');
+    assert.equal(contactWithEmail({ contact: { name: 'Zachary Rogers', candidateEmail: 'owner@acme.com' } }, { email: 'z@acme.com' }, 'Zachary Rogers', 'now'), null, 'an unconfirmed address already checked against the stop lists is not swapped');
+    assert.equal(contactWithEmail({ status: 'excluded', contact: { name: 'Zachary Rogers' } }, { email: 'z@acme.com' }, 'Zachary Rogers', 'now'), null, 'a closed card takes no address');
+    assert.equal(ownerEmail(profileOf({ emails: [{ email: 'zach@gmail.com', smtp_valid: 'valid', type: 'personal', grade: 'A' }] }), 'rogershome.com').type, 'personal');
+    assert.equal(ownerEmail(profileOf({ emails: [{ email: 'zr@rogershome.com', smtp_valid: 'accept-all', grade: 'A' }, { email: 'x@rogershome.com', smtp_valid: 'valid', grade: 'B' }] }), 'rogershome.com'), null, 'nothing RocketReach could not confirm');
+    const mail = { email: 'zach@rogershome.com', type: 'work', grade: 'A' };
+    assert.equal(contactWithEmail({ contact: { name: 'Zachary Rogers', email: 'given@x.com' } }, mail, 'Zachary Rogers', 'now'), null, 'an address given on the call is never replaced');
+    assert.equal(contactWithEmail({ contact: { name: 'John Temple' } }, mail, 'Mitch Temple', 'now'), null, 'another person\'s address would greet them by the wrong name');
+    assert.equal(contactWithEmail({ contact: { name: 'Mario Morariu' } }, mail, 'Marius Morariu', 'now').email, 'zach@rogershome.com', 'a nickname is the same person');
+    // The hourly lookup: with a cell, the address rides along; without one, it still goes on the card.
+    const w = jobsWorld();
+    const r = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: 'main', owner_email: null }) }, { source: 'Paul' }, w.deps);
+    const rawMail = { emails: [{ email: 'zrogers@rogershome.com', smtp_valid: 'valid', type: 'professional', grade: 'A' }] };
+    const withMail = { employerDomain: 'rogershome.com', emails: profileOf(rawMail).emails };   // the fake lookup hands back a profile already read
+    const out = await ownerCells({ ...w.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: RRP(withMail) }) }).rr, now: NOW });
+    assert.equal(out.added, 1); assert.equal(out.emails, 1);
+    const card = await getRecord(w.kv, r.id);
+    assert.equal(card.contact.email, 'zrogers@rogershome.com'); assert.equal(card.contact.emailSource, 'RocketReach');
+    assert.equal(callRow(card, MILTON.email, NOW).recipient, 'zrogers@rogershome.com', 'so Email them and the quick sends appear on the card');
+    const w2 = jobsWorld();
+    const r2 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: 'main', owner_email: null }) }, { source: 'Paul' }, w2.deps);
+    const none = await ownerCells({ ...w2.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: RRP({ ...withMail, phones: [{ number: '+15204440000', type: 'direct dial', grade: 'A', valid: true }] }) }) }).rr, now: NOW });
+    assert.equal(none.noMobile, 1); assert.equal(none.emails, 1);
+    const held = await getRecord(w2.kv, r2.id);
+    assert.equal(held.status, 'research', 'still held: an address is not a reason to call a main line'); assert.equal(held.contact.email, 'zrogers@rogershome.com');
+    // Owners looked up before tonight: read back free and filled in; dry first.
+    const w3 = jobsWorld();
+    const r3 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Paul' }, w3.deps);
+    await w3.kv.hset(RR_TRIED, { [r3.id]: JSON.stringify({ result: 'added', profileId: 501 }) });
+    const rr = { checkStatus: async ids => ({ [String(ids[0])]: { done: true, profile: profileOf({ id: 501, name: 'Zachary Rogers', current_employer_domain: 'rogershome.com', ...rawMail }) } }) };
+    const dry = await ownerEmails(w3.kv, { rr, write: false, now: NOW });
+    assert.equal(dry.found, 1); assert.equal(dry.saved, 0); assert.equal((await getRecord(w3.kv, r3.id)).contact.email, null);
+    const wet = await ownerEmails(w3.kv, { rr, write: true, now: NOW });
+    assert.equal(wet.saved, 1); assert.equal((await getRecord(w3.kv, r3.id)).contact.email, 'zrogers@rogershome.com');
+    assert.equal((await ownerEmails(w3.kv, { rr, write: true, now: NOW })).candidates, 0, 'a card with an address is not read again');
+});
+test('a catch-up run may raise the day\'s lookup cap, never past the ceiling', async () => {
+    let { w } = await cardWorld();
+    await w.kv.set('staffify:hiring:rr:' + new Date(NOW).toISOString().slice(0, 10), String(RR_DAILY_CAP));
+    let f = fakeRR();
+    assert.match((await ownerCells({ ...w.deps, rr: f.rr, now: NOW })).skipped, /daily cap of 40/);
+    f = fakeRR();
+    const raised = await ownerCells({ ...w.deps, rr: f.rr, now: NOW, }, { dailyCap: 120 });
+    assert.equal(raised.skipped, null); assert.equal(f.calls.lookups.length, 1, 'the raised cap lets tonight\'s run look up');
+    ({ w } = await cardWorld());
+    await w.kv.set('staffify:hiring:rr:' + new Date(NOW).toISOString().slice(0, 10), '150');
+    f = fakeRR();
+    assert.match((await ownerCells({ ...w.deps, rr: f.rr, now: NOW }, { dailyCap: 5000 })).skipped, /daily cap of 150/, 'never past the ceiling');
+});
 test('the website check never moves a card off the owner\'s cell', async () => {
     const w = jobsWorld();
     await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0, cells: 0 });
@@ -1361,7 +1426,7 @@ test('an email given on the call goes on the card for the rep who called; the Hi
     assert.deepEqual(hiring.map(t => t.id), HIRING_TEMPLATES.map(t => t.id));
     for (const t of hiring) { assert.ok(!/\{role\}|\{roles\}/.test(t.body)); assert.doesNotMatch(t.body, /we sent|sent you|our (e-?mails?|notes)|—/i); }
     assert.match(hiring[0].body, /filling the Customer Service Representative role/); assert.match(hiring[0].body, /dedicated Customer Service Representatives/);
-    assert.deepEqual(templatesFor('milton@trystaffify.com', { kind: 'rep' }).map(t => t.id), ['thanks-book', 'missed-book']);
+    assert.deepEqual(templatesFor('milton@trystaffify.com', { kind: 'rep' }).map(t => t.id), ['thanks-book', 'missed-book', 'info-requested', 'follow-up']);
 });
 test('the filled-role branch: Paul\'s pivot, then stay in touch books a callback a month out with the summary email', () => {
     const s = hiringCallScript({ caller: 'Paul', company: 'Acme', firstName: 'Shirley', jobTitle: 'Executive Assistant', family: 'admin', direct: true });

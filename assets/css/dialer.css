@@ -208,6 +208,10 @@ body .dw-mail-meta dd{margin:0;overflow-wrap:anywhere}
 body .dw-mail-label{display:block;font-size:11.5px;font-weight:650;letter-spacing:1.1px;text-transform:uppercase;color:#6e6e73;margin-top:6px}
 body .dw-mail-tpls{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 body .dw-mail .dw-tpl{min-height:34px;padding:6px 13px;font-size:13px;border-radius:999px}
+/* Quick send: the follow-ups a rep fires off, one press from the card */
+body .dw-quick{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0 12px}
+body .dw-quick .dw-mail-label{width:100%}
+body .dw-quick .dw-quick-btn{min-height:34px;padding:6px 13px;font-size:13px;border-radius:999px}
 body .dw-mail input#mail-subject,body .dw-mail textarea#mail-body{width:100%;font:inherit;font-size:14.5px;line-height:1.5;border:1px solid #d2d2d7;border-radius:10px;padding:10px 12px;background:#fff;color:#1d1d1f}
 body .dw-mail textarea#mail-body{min-height:220px;resize:vertical}
 body .dw-mail input#mail-subject:focus-visible,body .dw-mail textarea#mail-body:focus-visible{outline:2px solid #0071e3;outline-offset:1px}

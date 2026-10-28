@@ -32,7 +32,7 @@ import { rrConfigured, account as rrAccount, lookupPerson, checkStatus as rrChec
 import { quoConfigured } from './_quo.js';
 import { syncQuoContacts, quoContactsApi } from './_quo-contacts.js';
 import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf, leadKey } from './_hiring-intent.js';
-import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines, RR_TRIED } from './_hiring-run.js';
+import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines, ownerEmails, RR_TRIED, RR_DAILY_CAP, RR_DAILY_MAX } from './_hiring-run.js';
 
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail)\./i;
 async function getJson(url) {
@@ -142,7 +142,7 @@ export default async function handler(req, res) {
                 const d = { ...deps(), outreachDomains: await outreachDomains() };
                 const cap = (v, max, dflt) => Math.max(0, Math.min(max, Number.isFinite(Number(v)) && v !== undefined && v !== '' ? Number(v) : dflt));
                 const leadsOnly = req.query?.leads === 'only';
-                const report = await runHiring(d, { maxSearches: leadsOnly ? 0 : cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 40, 25), discover: !leadsOnly && req.query?.discover !== '0', leadsOnly, cells: leadsOnly && req.query?.cells == null ? 0 : cap(req.query?.cells, 20, 6) });
+                const report = await runHiring(d, { maxSearches: leadsOnly ? 0 : cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 40, 25), discover: !leadsOnly && req.query?.discover !== '0', leadsOnly, cells: leadsOnly && req.query?.cells == null ? 0 : cap(req.query?.cells, 20, 6), rrDailyCap: cap(req.query?.rrcap, RR_DAILY_MAX, RR_DAILY_CAP) });
                 return res.status(200).json({ status: 'complete', report });
             } finally { if (await redis.get(HK.lock) === nonce) await redis.del(HK.lock); }
         }
@@ -203,7 +203,7 @@ export default async function handler(req, res) {
                 const source = String(body.source || '').trim().slice(0, 40);
                 if (!source) return res.status(400).json({ error: 'Name where the numbers came from' });
                 const lines = (Array.isArray(body.lines) ? body.lines : []).slice(0, 150).filter(f => f && /^hire:[0-9a-f]{16}$/.test(String(f.id)))
-                    .map(f => ({ id: String(f.id), phone: String(f.phone || ''), phone_type: String(f.phone_type || '').slice(0, 30) || null, phone_person: String(f.phone_person || '').slice(0, 80) || null, phone_grade: String(f.phone_grade || '').slice(0, 4) || null, phone_alternates: (Array.isArray(f.phone_alternates) ? f.phone_alternates : []).map(String).slice(0, 3), checked_at: String(f.checked_at || '').slice(0, 30) || null, owner_title: String(f.owner_title || '').slice(0, 120) || null }));
+                    .map(f => ({ id: String(f.id), phone: String(f.phone || ''), phone_type: String(f.phone_type || '').slice(0, 30) || null, phone_person: String(f.phone_person || '').slice(0, 80) || null, phone_grade: String(f.phone_grade || '').slice(0, 4) || null, phone_alternates: (Array.isArray(f.phone_alternates) ? f.phone_alternates : []).map(String).slice(0, 3), checked_at: String(f.checked_at || '').slice(0, 30) || null, owner_title: String(f.owner_title || '').slice(0, 120) || null, ...(/^[^\s@<>()",;:]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(String(f.owner_email || '').trim()) && f.owner_email_smtp === 'valid' && /^A-?$/.test(String(f.owner_email_grade || '')) ? { owner_email: String(f.owner_email).trim().toLowerCase(), owner_email_type: String(f.owner_email_type || '').slice(0, 30) || null, owner_email_grade: String(f.owner_email_grade || '').slice(0, 4) || null } : {}) }));
                 if (!lines.length) return res.status(400).json({ error: 'No valid lines' });
                 const write = body.write === true;
                 if (write && Number(body.expected) !== lines.length) return res.status(400).json({ error: 'expected must equal the number of lines' });
@@ -220,6 +220,14 @@ export default async function handler(req, res) {
                 return res.status(200).json({ ok: true, write: body.write === true, ...out });
             }
             // Machine only: cards already looked up by hand, so the hourly owner-cell step does not pay for them again.
+            // Owners already looked up: their addresses, read back free from RocketReach, onto the cards. Dry unless write.
+            if (body.action === 'owner-emails') {
+                if (!machine) return res.status(403).json({ error: 'Machine only' });
+                if (!rrConfigured()) return res.status(503).json({ error: 'RocketReach is not configured' });
+                const write = body.write === true;
+                const result = await ownerEmails(redis, { rr: { checkStatus: rrCheckStatus }, write, limit: Math.max(1, Math.min(300, Number(body.limit) || 300)) });
+                return res.status(200).json({ ok: true, write, ...result });
+            }
             if (body.action === 'cells-tried') {
                 if (!machine) return res.status(403).json({ error: 'Machine only' });
                 const rows = (Array.isArray(body.tried) ? body.tried : []).slice(0, 300).filter(t => t && /^hire:[0-9a-f]{16}$/.test(String(t.id)) && ['added', 'no_mobile', 'not_found', 'mismatch'].includes(t.result));

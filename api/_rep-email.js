@@ -189,6 +189,22 @@ export const TEMPLATES = Object.freeze([
         subjectNoName: 'Sorry I missed you',
         body: 'Hi {first},\n\nI tried calling today and missed you. I am with Staffify, and we have sent you a few notes about handing off recurring work at {company}.\n\nIf a short call makes sense, you can book a time here:\n\n{link}\n\nThanks,\n{me}',
     }),
+    // Paul, 2026-10-28: "a few hot buttons that allows them to send follow-ups that we would typically send". The two a
+    // call most often ends on after these: "send me some information" and a second touch when nothing came back.
+    Object.freeze({
+        id: 'info-requested',
+        label: 'The info you asked for',
+        subject: '{first}, the info you asked for',
+        subjectNoName: 'The info you asked for',
+        body: 'Hi {first},\n\nAs promised, here is a quick look at Staffify.\n\nWe help businesses hire dedicated team members from Latin America and the Philippines. We handle the recruiting, vetting, and ongoing management, and every placement comes with our lifetime replacement guarantee.\n\nYou can see how it works at https://www.gostaffify.com/. If you would like to talk it through, you can book a time with our team here:\n\n{link}\n\nThanks,\n{me}',
+    }),
+    Object.freeze({
+        id: 'follow-up',
+        label: 'Following up',
+        subject: 'Following up, {first}',
+        subjectNoName: 'Following up',
+        body: 'Hi {first},\n\nFollowing up on my call. If handing off some of the recurring work at {company} is still on your mind, we would be glad to walk you through how it works.\n\nYou can grab a time here:\n\n{link}\n\nThanks,\n{me}',
+    }),
 ]);
 // Hiring now is call first: nothing was emailed before the call, so these never say it was. Paul, 2026-10-28: "make sure
 // that button signifies the rep sending over an email summarizing us and sharing what we do too ... it's not leaving a
@@ -214,6 +230,20 @@ export const HIRING_TEMPLATES = Object.freeze([
         subject: 'Sorry I missed you, {first}',
         subjectNoName: 'Sorry I missed you',
         body: 'Hi {first},\n\nI just tried calling about the {role} role you posted.\n\nStaffify helps companies hire dedicated {roles} from Latin America and the Philippines, and we handle the recruiting, vetting, and ongoing management. If it would help to see a few vetted candidates, you can book a time with our team here:\n\n{link}\n\nThanks,\n{me}',
+    }),
+    Object.freeze({
+        id: 'hiring-info',
+        label: 'The info you asked for',
+        subject: '{first}, the info you asked for',
+        subjectNoName: 'The info you asked for',
+        body: 'Hi {first},\n\nAs promised, here is a quick look at Staffify.\n\nWe help companies hire dedicated {roles} from Latin America and the Philippines. We handle the recruiting, vetting, and ongoing management, and every placement comes with our lifetime replacement guarantee.\n\nYou can see how it works at https://www.gostaffify.com/. If it makes sense to talk about the {role} role, you can book a time with our team here:\n\n{link}\n\nThanks,\n{me}',
+    }),
+    Object.freeze({
+        id: 'hiring-follow-up',
+        label: 'Following up',
+        subject: 'Following up, {first}',
+        subjectNoName: 'Following up',
+        body: 'Hi {first},\n\nFollowing up on my call about the {role} role at {company}.\n\nIf you are still looking, we can put a few vetted {roles} in front of you, and we handle the recruiting and management from there. Worth a quick call?\n\n{link}\n\nThanks,\n{me}',
     }),
 ]);
 /** The templates for this prospect: the email campaigns' pair, or for a Hiring now card the call-first set with its role in. */

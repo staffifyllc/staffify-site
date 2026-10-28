@@ -19,6 +19,7 @@ export const EXCLUDED_NAMES = ['trey tatro', 'mike haymes', 'michael haymes', 'b
 export function rowStop(row) {
     if (row && row.status === 'suppressed') return 'This person is excluded from all outreach (Not interested / stop).';
     if (row && row.status === 'bounce_hold') return 'Email to this address bounced.';
+    if (row && row.kind === 'hiring' && (row.status === 'excluded' || row.status === 'booked' || row.booking)) return 'This card is closed, so no email goes to it.';
     return null;
 }
 

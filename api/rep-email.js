@@ -394,7 +394,9 @@ export default async function handler(req, res) {
             const state = newToken();
             await redis.set('outreach:oauth-state:' + state, { email: box, rep: rep.email, returnTo: safeBack(req.query.back) }, { ex: 600 });
             const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-            Object.entries({ client_id: clientId(), redirect_uri: CALLBACK, response_type: 'code', scope: SCOPES.join(' '), access_type: 'offline', prompt: 'consent', login_hint: box, hd: box.split('@')[1], state }).forEach(([k, v]) => url.searchParams.set(k, v));
+            // select_account: Google otherwise signs in as the browser's default account (Paul's was paul@flylisted.com, 2026-10-28)
+            // and the app refuses it; the chooser, limited by hd to the mailbox's domain, lets them pick the right one.
+            Object.entries({ client_id: clientId(), redirect_uri: CALLBACK, response_type: 'code', scope: SCOPES.join(' '), access_type: 'offline', prompt: 'select_account consent', login_hint: box, hd: box.split('@')[1], state }).forEach(([k, v]) => url.searchParams.set(k, v));
             res.writeHead(302, { Location: url.toString() });
             return res.end();
         }

@@ -123,10 +123,16 @@ export function profileOf(b) {
         .map(p => (typeof p === 'string' ? { number: p } : p))
         .map(p => ({ number: digits(p.e164 || p.number || p.phone), type: p.type || p.phone_type || null, grade: p.grade || null, valid: p.validity ? p.validity === 'valid' : null, recommended: !!p.recommended }))
         .filter(p => p.number.replace(/\D/g, '').length >= 10);
+    // The person's addresses with RocketReach's own mail check ('valid': their server accepted it; 'accept-all': the
+    // domain takes any address) and its grade. Only a valid, A-graded one is ever put on a card (_hiring-run.js ownerEmail).
+    const emails = (Array.isArray(b && b.emails) ? b.emails : [])
+        .map(e => (typeof e === 'string' ? { email: e } : e || {}))
+        .map(e => ({ email: String(e.email || '').trim().toLowerCase(), type: e.type || null, grade: e.grade || null, smtp: e.smtp_valid || null }))
+        .filter(e => /^[^\s@<>()",;:]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e.email));
     return {
         id: b && b.id || null, name: b && (b.name || [b.first_name, b.last_name].filter(Boolean).join(' ')) || null, title: b && (b.current_title || b.title) || null,
         employer: b && b.current_employer || null, employerDomain: b && b.current_employer_domain || null,
-        location: b && b.location || null, region: String(b && b.region || '').trim() || null, linkedin: b && b.linkedin_url || null, phones,
+        location: b && b.location || null, region: String(b && b.region || '').trim() || null, linkedin: b && b.linkedin_url || null, phones, emails,
     };
 }
 

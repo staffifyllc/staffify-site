@@ -246,6 +246,25 @@ test('email them: the composer sends from his own mailbox with a template, and k
     assert.match(document.getElementById('call-notes').value, /Emailed them: Thanks for your time today/);
 });
 
+test('quick send: one press writes the follow-up in and checks it, the next press sends it', async () => {
+    const quick = byText('.dw-quick-btn', 'Thanks + book a call');
+    assert.ok(quick, 'the follow-ups sit on the card, under Email them');
+    assert.ok(byText('.dw-quick-btn', 'Following up') && byText('.dw-quick-btn', 'The info you asked for'));
+    const before = api.calls.length;
+    quick.click();
+    await tick(); await tick();
+    assert.equal(document.getElementById('mail-subject').value, 'Thanks for your time today', 'the template is written in, replacing any draft');
+    assert.ok(api.calls.slice(before).some(c => c.url === '/api/rep-email/' && c.body && c.body.action === 'clean'), 'and the cleanup has already run');
+    assert.equal(api.calls.slice(before).filter(c => c.url === '/api/rep-email/' && c.body && !c.body.action).length, 0, 'nothing is sent by the quick button itself');
+    assert.match(dom.text(document.querySelector('.dw-mail-review')), /Ready\. Press Send to email tom@rileyjonesrem\.com\./);
+    document.getElementById('mail-send').click();
+    await tick();
+    const post = api.calls.filter(c => c.url === '/api/rep-email/' && c.body).pop();
+    assert.ok(!post.body.action, 'one more press sends'); assert.equal(post.body.subject, 'Thanks for your time today');
+    assert.equal(api.calls.filter(c => c.url === '/api/rep-email/' && c.body && c.body.action === 'clean').length, api.calls.slice(0, before).filter(c => c.url === '/api/rep-email/' && c.body && c.body.action === 'clean').length + 1, 'the text it checked is what went, without a second check');
+    assert.equal(document.querySelector('.dw-mail'), null);
+});
+
 test('the search bar finds any prospect by name, number or note, and opens the card', async () => {
     const q = document.getElementById('dw-search');
     assert.ok(q, 'search is on the bar, not behind the options');

@@ -47,7 +47,7 @@ export async function saveHiringContactEmail(kv, { rep, body }, deps = {}) {
         try { stop = await (deps.isOptedOut || isOptedOut)({ email }); } catch { return { ok: false, status: 503, error: 'The do-not-contact list could not be read, so nothing was saved. Try again in a minute.' }; }
         if (stop) return { ok: false, status: 409, error: 'That address is on the do-not-contact list.' };
         const at = new Date().toISOString();
-        const c = rec.contact || {};
+        const { emailSource, emailPerson, emailType, emailGrade, emailCheckedAt, ...c } = rec.contact || {};
         const contact = { ...c, email, candidateEmail: email, status: 'given_on_call', source: 'Given on the call to ' + (rep.name || me), checkedAt: at };
         await putRecord(kv, { ...rec, contact, updatedAt: at });
         await (deps.recordActivity || recordActivity)(kv, { email: me, kind: 'contact_email', page: '/dialer/', detail: rec.company && rec.company.name || id }).catch(() => {});

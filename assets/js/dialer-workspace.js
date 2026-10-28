@@ -321,7 +321,7 @@ async function show(row,{auto=false,held=false}={}){
 
 // The left pane: who, where, when (their clock), the number and how far to trust it, the links,
 // the research. With no brief yet it shows what the queue record knows.
-function renderWho(pane,row,b){
+function renderWho(pane,row,b){quickRow=null;
  pane.replaceChildren();
  const p=b||{};
  const head=el('div');
@@ -353,7 +353,7 @@ function renderWho(pane,row,b){
  else if(p.phone&&shiftBlocked(b)){cardGated=true;num.append(shiftGateBlock(row,b));}                                  // the shift paused or ended after this card loaded
  else if(p.phone){cardGated=false;
   const trust=numberTrust(p.dial);
-  const dialing=()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');refreshBar();};
+  const dialing=()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');refreshBar();if(quickRow)quickRow.hidden=false;};
   const big=link(p.phone,dialHref(p.phone),'dw-num');big.addEventListener('click',dialing);num.append(big);
   num.append(el('span',trust.word,'dw-trust '+trust.tone));
   if(trust.detail)num.append(el('p',trust.detail,'dw-numdetail'));
@@ -387,6 +387,8 @@ function renderWho(pane,row,b){
   const email=button('Email them',()=>openMail(row,b||{}),'btn');
   email.id='email-them';email.setAttribute('aria-label','Email '+row.recipient);
   pane.append(email,el('p','To '+row.recipient+' · sent from your own Gmail with your signature','dw-small'));
+  // Not on a card that cannot be worked (blocked, paused). A Hiring now card shows them once it has been called.
+  if(!(b&&b.callable===false)&&!row.pausedFollowUp&&!row.pausedFromPool){quickRow=quickSend(row,b);pane.append(quickRow);}
  }
  pane.append(links);
  if(!b)return;
@@ -468,7 +470,17 @@ function newNonce(){try{return crypto.randomUUID();}catch{return Date.now().toSt
 /** A chosen picture, centre-cropped to a 240px square JPEG data URL. */
 function squarePhoto(f){return new Promise((ok,bad)=>{const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{try{const s=Math.min(img.naturalWidth,img.naturalHeight),c=document.createElement('canvas');c.width=c.height=240;c.getContext('2d').drawImage(img,(img.naturalWidth-s)/2,(img.naturalHeight-s)/2,s,s,0,0,240,240);URL.revokeObjectURL(url);ok(c.toDataURL('image/jpeg',0.86));}catch(e){bad(e);}};img.onerror=()=>{URL.revokeObjectURL(url);bad(Error('That file could not be read as a picture.'));};img.src=url;});}
 function closeMail(){if(mailBox){mailBox.remove();mailBox=null;}}
-async function openMail(row,p,{reconnect=false,template=null}={}){
+// Paul, 2026-10-28: "a few hot buttons that allows them to send follow-ups that we would typically send ... quick
+// responses that we would usually just fire off". One press writes the follow-up in and runs the cleanup; the next sends.
+let quickRow=null;
+const QUICK={hiring:[['hiring-thanks','Thanks + book a call'],['hiring-missed','Sorry I missed you'],['hiring-info','The info you asked for'],['hiring-follow-up','Following up']],
+ other:[['thanks-book','Thanks + book a call'],['missed-book','Sorry I missed you'],['info-requested','The info you asked for'],['follow-up','Following up']]};
+function quickSend(row,b){const w=el('div',null,'dw-quick');w.append(el('span','Quick send','dw-mail-label'));
+ // Hiring now is call first (the server refuses before a call): the row appears once the card has been called.
+ if(row.kind==='hiring'&&!((row.callHistory||[]).length||dialled.has(row.id)))w.hidden=true;
+ for(const [id,label] of QUICK[row.kind==='hiring'?'hiring':'other'])w.append(button(label,()=>openMail(row,b||{},{template:id,quick:true}),'btn btn-ghost dw-quick-btn'));
+ return w;}
+async function openMail(row,p,{reconnect=false,template=null,quick=false}={}){
  closeMail();
  const box=el('div',null,'dw-mail');box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-labelledby','mail-title');
  const card=el('div',null,'dw-mail-card');box.append(card);
@@ -515,7 +527,12 @@ async function openMail(row,p,{reconnect=false,template=null}={}){
  if(draft&&(draft.subject||draft.body)){subject.value=draft.subject||'';body.value=draft.body||'';}
  else body.value='Hi '+(who||'there')+',\n\n';
  // Opened from a step that names its email (the summary after a filled role, the thanks after a good call): it is written in.
- if(template&&!(draft&&(draft.subject||draft.body))){const t=(info.templates||[]).find(x=>x.id===template);if(t)fill(t);}
+ let quickOk=false;
+ if(template&&quick){const t=(info.templates||[]).find(x=>x.id===template);
+  if(!t)toast('That follow-up is not available for this card. Write your own or pick a template.',true);
+  else if(draft&&(draft.subject||draft.body)&&!window.confirm('Replace what you have written with this follow-up?')){}
+  else{fill(t);quickOk=true;}}
+ else if(template&&!(draft&&(draft.subject||draft.body))){const t=(info.templates||[]).find(x=>x.id===template);if(t)fill(t);}
  // The signature exactly as it is added: the server's HTML, in a sandbox, nothing able to run.
  const sig=el('div',null,'dw-mail-sig');sig.append(el('span','Your signature goes under the message','dw-mail-label'));
  const frame=document.createElement('iframe');frame.title='Your email signature';frame.setAttribute('sandbox','');frame.srcdoc='<!doctype html><meta charset="utf-8"><body style="margin:10px;background:#fff">'+(info.signatureHtml||'')+'</body>';
@@ -539,27 +556,33 @@ async function openMail(row,p,{reconnect=false,template=null}={}){
   acts.append(c);
   card.append(el('p','One time only. Google asks you to let the Hub send as '+info.mailbox+'. What you have written here is kept while you connect.','dw-small'));
  }else{
-  let nonce=newNonce(),reviewed=null;
+  let nonce=newNonce(),reviewed=null,send=null;
   // Paul, 2026-10-27: "it should always take an ai pass at it and clean up any issues". Send runs
   // the cleanup first. If it changed anything, the cleaned text replaces the draft with a list of
   // what changed, and the next press sends it. If nothing needed changing, it sends straight away.
-  const send=button('Send email',async()=>{
-   if(send.disabled)return;
+  // The cleanup on what is on screen. True when it can go exactly as it stands; false when the rep has something to
+  // read (a change, a problem) or the check could not run. Send runs it first; a quick send runs it as it opens.
+  const prep=async()=>{
    const s=subject.value.trim(),m=body.value.replace(/\r\n/g,'\n').trim();
-   if(!s){toast('Add a subject.',true);subject.focus();return;}
-   if(m.replace(/^hi\b[^,\n]*,?/i,'').trim().length<2){toast('Write the message first.',true);body.focus();return;}
+   if(!s){toast('Add a subject.',true);subject.focus();return false;}
+   if(m.replace(/^hi\b[^,\n]*,?/i,'').trim().length<2){toast('Write the message first.',true);body.focus();return false;}
+   if(reviewed&&reviewed.subject===s&&reviewed.body===m)return true;
+   send.textContent='Checking…';
+   let c;try{c=await api('/api/rep-email/',{action:'clean',email:row.recipient,to:toIn.value.trim(),subject:s,body:m,first:firstIn.value.trim()});}catch(e){c=e.payload||{reason:'Could not reach the server. Nothing was sent.'};}
+   send.textContent='Send email';
+   if(!c||!c.body){toast((c&&c.reason)||'The cleanup could not run. Nothing was sent.',true);return false;}
+   subject.value=c.subject;body.value=c.body;save();reviewed={subject:c.subject,body:c.body};
+   review.replaceChildren();review.hidden=!(c.changed||c.note||c.problem);
+   if(c.changed){review.append(el('b','Cleaned up before sending')); const ul=el('ul');for(const x of c.changes||[])ul.append(el('li',x));review.append(ul);}
+   if(c.note)review.append(el('p',c.note,'dw-small'));
+   if(c.problem){review.append(el('p',c.problem,'dw-mail-problem'));return false;}
+   if(c.changed){review.append(el('p','Read it over, then press Send.','dw-small'));body.focus();return false;}
+   return true;
+  };
+  send=button('Send email',async()=>{
+   if(send.disabled)return;
    send.disabled=true;
-   if(!reviewed||reviewed.subject!==s||reviewed.body!==m){
-    send.textContent='Checking…';
-    let c;try{c=await api('/api/rep-email/',{action:'clean',email:row.recipient,to:toIn.value.trim(),subject:s,body:m,first:firstIn.value.trim()});}catch(e){c=e.payload||{reason:'Could not reach the server. Nothing was sent.'};}
-    if(!c||!c.body){toast((c&&c.reason)||'The cleanup could not run. Nothing was sent.',true);send.disabled=false;send.textContent='Send email';return;}
-    subject.value=c.subject;body.value=c.body;save();reviewed={subject:c.subject,body:c.body};
-    review.replaceChildren();review.hidden=!(c.changed||c.note||c.problem);
-    if(c.changed){review.append(el('b','Cleaned up before sending')); const ul=el('ul');for(const x of c.changes||[])ul.append(el('li',x));review.append(ul);}
-    if(c.note)review.append(el('p',c.note,'dw-small'));
-    if(c.problem){review.append(el('p',c.problem,'dw-mail-problem'));send.disabled=false;send.textContent='Send email';return;}
-    if(c.changed){review.append(el('p','Read it over, then press Send.','dw-small'));send.disabled=false;send.textContent='Send email';body.focus();return;}
-   }
+   if(!await prep()){send.disabled=false;return;}
    send.textContent='Sending…';
    // No answer at all (a dropped connection, a timeout page) is not "nothing was sent": Gmail may have
    // sent it. Held like any unconfirmed send, so it is checked before anything goes again.
@@ -574,6 +597,9 @@ async function openMail(row,p,{reconnect=false,template=null}={}){
    send.disabled=false;send.textContent='Send email';
   },'btn dw-primary');
   send.id='mail-send';acts.append(send);
+  // A quick send arrives written and checked: one more press and it goes.
+  if(quick&&quickOk){const fields=[toIn,firstIn,subject,body];send.disabled=true;fields.forEach(f=>{f.readOnly=true;});
+   prep().then(ok=>{send.disabled=false;fields.forEach(f=>{f.readOnly=false;});if(mailBox!==box||!ok)return;review.hidden=false;review.append(el('p','Ready. Press Send to email '+toIn.value.trim()+'.','dw-small'));send.focus();});}
  }
  acts.append(button('Cancel',closeMail,'btn btn-ghost'));const g=gmailLink();if(g)acts.append(g);
  card.append(review);
