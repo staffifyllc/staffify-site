@@ -41,6 +41,27 @@ export function contactOf(rec) {
 }
 export const fingerprint = c => createHash('sha256').update(JSON.stringify(c)).digest('hex').slice(0, 16);
 
+// The email campaigns' prospects (real estate media, Tobit), from the dialer's call view: their numbers are decorated
+// there, not stored on the records. Paul: "there is no context for any of these call backs which we see a lot of".
+export const CAMPAIGN_ROLE = { 'staffify-agency-outreach': 'Real estate media outreach', 'staffify-tobit-outreach': 'CEO outreach' };
+/** A Quo contact for a queue prospect ({ id, company, first, email, phones, campaignId }), or null with no number. */
+export function contactOfProspect(p) {
+    const numbers = (p.phones || []).map(n => String(n || '').replace(/[^+\d]/g, '')).map(n => (/^\d{10}$/.test(n) ? '+1' + n : /^1\d{10}$/.test(n) ? '+' + n : n)).filter((n, i, a) => /^\+1\d{10}$/.test(n) && !tollFree(n) && a.indexOf(n) === i).slice(0, 6);
+    if (!p || !p.id || !numbers.length) return null;
+    const company = String(p.company || '').trim().slice(0, 120);
+    const first = String(p.first || '').trim().split(/\s+/)[0] || '';
+    return {
+        externalId: String(p.id).slice(0, 75), source: SOURCE, sourceUrl: 'https://www.gostaffify.com/dialer/?open=' + encodeURIComponent(p.id),
+        defaultFields: {
+            firstName: (first || company || 'Staffify prospect').slice(0, 60), lastName: '', company,
+            role: (CAMPAIGN_ROLE[p.campaignId] || 'Staffify prospect') + ' · emailed by Staffify',
+            phoneNumbers: numbers.map((n, i) => ({ name: i ? 'Other' : 'Main line', value: n })),
+            emails: p.email && /@/.test(p.email) ? [{ name: 'Work', value: String(p.email).toLowerCase() }] : [],
+        },
+    };
+}
+
+
 async function quo(method, path, body) {
     const key = quoKey();
     if (!key) { const e = new Error('No Quo API key is set'); e.status = 0; throw e; }
@@ -60,17 +81,18 @@ export const quoContactsApi = {
  * Create or update the Quo contact of every card that can be called or has been, a bounded number a run.
  * deps: { kv, api (quoContactsApi), now }. Dry unless `write`. Returns what it did, card by card.
  */
-export async function syncQuoContacts(deps, { limit = 40, write = false } = {}) {
+export async function syncQuoContacts(deps, { limit = 40, write = false, prospects = null } = {}) {
     const { kv } = deps, api = deps.api || quoContactsApi;
     const at = new Date(deps.now || Date.now()).toISOString();
     const out = { created: 0, updated: 0, unchanged: 0, skipped: 0, errors: [], planned: [] };
     let synced;
     try { synced = (await kv.hgetall(QK.synced)) || {}; } catch (e) { out.errors.push('the sync record could not be read'); return out; }
     const parse = v => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return null; } };
-    const cards = (await allRecords(kv)).filter(r => ['ready', 'conversation'].includes(r.status) || (r.callHistory || []).length);
+    const items = prospects
+        ? prospects.map(p => ({ rec: { id: p.id }, c: contactOfProspect(p) }))
+        : (await allRecords(kv)).filter(r => ['ready', 'conversation'].includes(r.status) || (r.callHistory || []).length).map(rec => ({ rec, c: contactOf(rec) }));
     let done = 0;
-    for (const rec of cards) {
-        const c = contactOf(rec);
+    for (const { rec, c } of items) {
         if (!c) { out.skipped++; continue; }
         const fp = fingerprint(c), prev = parse(synced[rec.id]);
         if (prev && prev.fp === fp) { out.unchanged++; continue; }

@@ -1,7 +1,7 @@
 // Paul, 2026-10-28: "create a contact card or something so that if these numbers call back we know whos who".
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { contactOf, syncQuoContacts, QK } from '../api/_quo-contacts.js';
+import { contactOf, contactOfProspect, syncQuoContacts, QK } from '../api/_quo-contacts.js';
 import { HK } from '../api/_hiring-intent.js';
 
 const kvOf = () => { const h = new Map(); return {
@@ -50,4 +50,19 @@ test('a rejected key stops the run instead of failing card after card', async ()
     const api = { byExternalId: async () => null, create: async () => { tries++; const e = Error('Quo 401: unauthorized'); e.status = 401; throw e; }, update: async () => {} };
     const out = await syncQuoContacts({ kv, api }, { write: true });
     assert.equal(tries, 1); assert.equal(out.errors.length, 1);
+});
+
+test('the email campaigns\' prospects get contacts too, from the numbers the dialer shows', async () => {
+    const p = { id: 'staffify-20260922-248485814632', company: 'Eastside Pics', first: 'Nolan', email: 'Nolan@EastsidePics.com', campaignId: 'staffify-agency-outreach', phones: ['+17408779902', '(800) 555-1212', '740-877-9902', '7408770000'] };
+    const c = contactOfProspect(p);
+    assert.equal(c.externalId, p.id); assert.equal(c.defaultFields.firstName, 'Nolan'); assert.equal(c.defaultFields.company, 'Eastside Pics');
+    assert.equal(c.defaultFields.role, 'Real estate media outreach · emailed by Staffify');
+    assert.deepEqual(c.defaultFields.phoneNumbers.map(x => x.value), ['+17408779902', '+17408770000'], 'toll-free dropped, duplicates merged');
+    assert.deepEqual(c.defaultFields.emails, [{ name: 'Work', value: 'nolan@eastsidepics.com' }]);
+    assert.equal(contactOfProspect({ id: 'x-1', phones: [] }), null);
+    const kv = kvOf(); const made = [];
+    const api = { byExternalId: async () => null, create: async c2 => { made.push(c2.externalId); return { id: 'CT' + made.length }; }, update: async () => {} };
+    const out = await syncQuoContacts({ kv, api }, { write: true, prospects: [p, { id: 'x-2', company: 'No Number Co', phones: [] }] });
+    assert.equal(out.created, 1); assert.equal(out.skipped, 1); assert.deepEqual(made, [p.id]);
+    assert.equal((await syncQuoContacts({ kv, api }, { write: true, prospects: [p] })).unchanged, 1, 'a second send changes nothing');
 });

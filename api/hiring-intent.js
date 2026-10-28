@@ -214,7 +214,9 @@ export default async function handler(req, res) {
             if (body.action === 'sync-quo-contacts') {
                 if (!machine) return res.status(403).json({ error: 'Machine only' });
                 if (!quoConfigured()) return res.status(503).json({ error: 'No Quo API key is set' });
-                const out = await syncQuoContacts({ kv: redis, api: quoContactsApi }, { limit: Math.max(1, Math.min(120, Number(body.limit) || 40)), write: body.write === true });
+                // prospects: the email campaigns' prospects from the dialer's call view, where their numbers are decorated.
+                const prospects = Array.isArray(body.prospects) ? body.prospects.slice(0, 150).filter(p => p && /^[\w:.-]{3,75}$/.test(String(p.id))).map(p => ({ id: String(p.id), company: String(p.company || '').slice(0, 120), first: String(p.first || '').slice(0, 40), email: String(p.email || '').slice(0, 120), campaignId: String(p.campaignId || '').slice(0, 60), phones: (Array.isArray(p.phones) ? p.phones : []).map(String).slice(0, 6) })) : null;
+                const out = await syncQuoContacts({ kv: redis, api: quoContactsApi }, { limit: Math.max(1, Math.min(150, Number(body.limit) || 40)), write: body.write === true, prospects });
                 return res.status(200).json({ ok: true, write: body.write === true, ...out });
             }
             // Machine only: cards already looked up by hand, so the hourly owner-cell step does not pay for them again.
