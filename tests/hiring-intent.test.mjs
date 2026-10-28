@@ -754,6 +754,8 @@ test('the duties and the employer in the post decide, not the title: the morning
     assert.equal(q('Call Center Customer Service Representative', POSTS.att, 'AT&T').ok, true);
     assert.equal(q('Call Center Representative', 'Join us at Molina Healthcare (NYSE: MOH).', 'Molina').reason, 'large_employer', 'a stock ticker is the employer describing itself');
     assert.equal(q('Account Coordinator', 'Our clients range from local shops to Fortune 500 brands, and we ship to all 50 states.', 'Small Agency').ok, true, 'big clients do not make a big employer');
+    assert.equal(q('Inside Sales Representative', 'Ignite your career at Builders FirstSource, America\u2019s largest supplier of building materials. The #1 name in our industry.', 'Builders FirstSource').reason, 'large_employer', 'the first post-release leak');
+    assert.equal(q('Account Coordinator', 'We supply the nation\'s largest retailers from our 12-person office.', 'Small Supply').ok, true, 'their customers being the largest is not them');
     assert.equal(q('Customer Support Specialist', 'Help our merchants by phone and chat with point of sale setup, cash register hardware and in-store printers.', 'POS Soft').ok, true, 'supporting a store product by phone is not store work');
     assert.equal(q('Sales Assistant', 'Support our outside sales representatives: enter orders, track merchandise shipments and answer customer calls from the office.', 'Supply Co').ok, true, 'supporting a field team from the office is not field work');
     assert.equal(q('Front Desk Coordinator', 'Greet patients and schedule visits.', 'Core Health & Rehab').ok, true, 'a Health & Rehab clinic is a small business');
@@ -788,6 +790,7 @@ test('a Google listing is proof of the employer only when it is the employer: st
     assert.equal(listingEvidence({ ...base, company: 'The Nagler Group', listingType: 'Employment agency in Boston, Massachusetts' }).reason, 'competitor');
     assert.equal(listingEvidence({ ...base, company: 'Grand Villa of Delray Beach East', listingType: 'Assisted living facility in Palm Beach County, Florida' }).reason, 'institutional_clinical');
     assert.equal(listingEvidence({ ...base, listingType: 'Civil engineer in Tampa, Florida' }), null);
+    assert.equal(listingEvidence({ ...base, company: 'Builders FirstSource', website: 'https://www.bldr.com/contact/request-quote?utm_source=yext&utm_medium=listing&utm_content=WILMNCYD', domain: 'bldr.com' }).reason, 'chain_location');
     assert.equal(listingEvidence({ ...base, listingType: 'Health insurance agency' }), null, 'a small insurance agency is a business');
 });
 

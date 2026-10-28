@@ -356,6 +356,9 @@ const ENTERPRISE_TEXT = [
     /\b(we\s+are|we're|is)\s+(a\s+|an\s+)?(publicly\s+traded|fortune\s+(50|100|500|1000))\b/i,
     /\b(our|we\s+have|with)\s+(over\s+|more\s+than\s+)?\d{1,3}(,\d{3})+\+?\s+(employees|team\s+members|associates|colleagues)\b/i,
     /\blarge,?\s+stable\s+employer\b/i,
+    // "Builders FirstSource, America's largest supplier", "we are the nation's largest": the employer about itself.
+    /(,|\bwe\s+are|\bwe're|\bis)\s+(america|the\s+nation|the\s+country|north\s+america|the\s+world|the\s+u\.?s\.?)['’]?s\s+largest\b/i,
+    /\bthe\s+#\s?1\s+name\s+in\s+(our|the)\s+industry\b/i,
     /\bcurrent\s+(associate|employee|team\s+member)s?\b.{0,120}\b(internal|career\s+portal|jobs\s+hub|apply\s+internally)\b/i,
 ];
 /**
@@ -378,6 +381,8 @@ export function postEvidence({ company, title, text, family }) {
 // A store-locator system is a chain's; a /locations/<place> page is one branch of someone.
 const LOCATOR_HOST = /^(locations?|stores?|local|branch(es)?|find|directory)\./i;
 const LOCATOR_PATH = /\/(store-?locator|storelocator|locator|find-a-(store|location|branch)|store-?finder)(\/|$|\?)/i;
+// Yext manages location listings for multi-location brands: its tag on the listing's link is a branch of a chain.
+const LOCATOR_TAG = /[?&](utm_source|y_source)=yext\b/i;
 const BRANCH_PATH = /\/(stores?|locations?|branch(es)?|offices?)\/[^/?#]+/i;
 const BRANCH_NAME = /\b(store|shop|outlet|branch|location)\b/i;
 // What Google says the business is, when that alone settles it: a recruiter is a competitor, a care home an institution.
@@ -399,7 +404,7 @@ export function listingEvidence({ company, website, domain, listingName, listing
     if (CARE_TYPE.test(String(listingType || ''))) return { action: 'exclude', reason: 'institutional_clinical', detail: `Google lists them as a ${listingType}, a care institution.` };
     let u = null;
     try { u = website ? new URL(/^https?:/i.test(website) ? website : 'https://' + website) : null; } catch { u = null; }
-    if (u && (LOCATOR_HOST.test(u.hostname.replace(/^www\./i, '')) || LOCATOR_PATH.test(u.pathname)))
+    if (u && (LOCATOR_HOST.test(u.hostname.replace(/^www\./i, '')) || LOCATOR_PATH.test(u.pathname) || LOCATOR_TAG.test(u.search)))
         return { action: 'exclude', reason: 'chain_location', detail: `The Google listing is one store of a chain: its website is a store-locator page (${u.hostname}${u.pathname.slice(0, 40)}), not the employer's office.` };
     if (u && BRANCH_PATH.test(u.pathname)) return { action: 'hold', reason: 'branch_listing', detail: `The Google listing's website is a branch page (${u.hostname}${u.pathname.slice(0, 40)}), so its number is one location, not proof of who hires.` };
     if (listingName && BRANCH_NAME.test(listingName) && !BRANCH_NAME.test(String(company || ''))) return { action: 'hold', reason: 'branch_listing', detail: `Google's listing is "${listingName}", a store or branch, not "${company}" itself.` };
