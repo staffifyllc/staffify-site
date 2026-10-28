@@ -1272,6 +1272,10 @@ test('second review of the main-line rule: no main line rides back in, merges, n
     assert.equal(brief.body.phone, null); assert.equal(brief.body.callable, false);
     assert.ok(!JSON.stringify(brief.body).includes('5206000025'), 'the call card never shows its main line');
 });
+test('titles from Paul\'s remote list that are seats we fill, and the ones that are not', () => {
+    for (const [t, f] of [['Medical Cold Caller', 'sales'], ['Marketing / Appointment Setting', 'sales'], ['Remote lead-gen specialist', 'sales'], ['Part-time remote CEO guest booking coordinator', 'scheduling'], ['Membership Coordinator', 'account'], ['Firm Operations & Tax Administration', 'admin']]) assert.equal(roleFamily(t), f, t);
+    for (const t of ['Content Coordinator (remote contractor)', 'Digital Marketing / Google Ads Specialist', 'High-Ticket Sales & Business Development', 'Lead Generation Manager', 'Cold Calling Manager', 'Tax Preparer', 'Team Lead, Customer Support']) assert.equal(roleFamily(t), null, t);
+});
 test('the website check never moves a card off the owner\'s cell', async () => {
     const w = jobsWorld();
     await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0, cells: 0 });
