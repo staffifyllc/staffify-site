@@ -98,7 +98,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--cyan);outline-offse
 .chip i{width:.6em;height:.6em;border-radius:50%;display:inline-block}
 .panes{display:grid;grid-template-columns:1fr 1.45fr 1fr;gap:1.1em;padding:1.3em 1.6em 1.6em}
 .pane{background:#fff;border:1px solid #e3e8ec;border-radius:1em;padding:1.2em 1.3em;min-width:0}
-.pane h4{margin:0 0 .2em;font-size:1.55em;font-family:var(--display);letter-spacing:-.01em}
+.pane h3{margin:0 0 .2em;font-size:1.55em;font-family:var(--display);letter-spacing:-.01em}
 .muted{color:#6b7480}
 .tag{display:inline-block;background:#eaf6ef;color:#1d6f4c;border-radius:1em;padding:.15em .7em;font-weight:600;margin:.4em 0}
 .num{font-size:1.4em;font-weight:700;color:#0a66b8;letter-spacing:.01em;margin:.5em 0 .2em}
@@ -210,7 +210,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--cyan);outline-offse
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:0}
 .cols > div{padding:22px 26px;min-width:0}
 .cols > div + div{border-left:1px solid var(--line)}
-.cols h4{margin:0 0 14px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-soft)}
+.cols h3{margin:0 0 14px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-soft)}
 .line{height:12px;border-radius:6px;background:#e6ecf0;margin:0 0 12px}
 .line.c{background:#bfeaf5}.line.m{background:#ffd9a8}
 .report .foot{padding:16px 26px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600}
@@ -251,7 +251,7 @@ footer p{margin:0}
 
 @media (prefers-reduced-motion:reduce){.mover,.mover .t1,.mover .t2{animation:none}.key{transition:none}}
 </style>
-<style data-site-speed="20261028">.hero-media,.hero-badge,.hero-sub-new,.hero-ctas-new,.hero .text-inner,.hero-rule-new,.hero-grid{opacity:1;animation:none;transform:none;filter:none;}.hero-rule-new{width:120px;}footer .f-copy{color:#b5b5bf;}@media(max-width:899px){.hero .orb-1,.hero .orb-2,.hero .orb-3,.hero .aurora{display:none;}}</style><style>:root{--subtle:#a1a1ad;}.nav-cta{color:#05151c;}.footer-brand p,.footer-col a,.footer-col h4,.footer-bottom{color:#b5b5bf;}.apply-hint{color:#58d2eb;opacity:1;}@media(max-width:900px){.nav-apply{display:none;}}</style></head>
+<style data-site-speed="20261028">.hero-media,.hero-badge,.hero-sub-new,.hero-ctas-new,.hero .text-inner,.hero-rule-new,.hero-grid{opacity:1;animation:none;transform:none;filter:none;}.hero-rule-new{width:120px;}footer .f-copy{color:#b5b5bf;}@media(max-width:899px){.hero .orb-1,.hero .orb-2,.hero .orb-3,.hero .aurora{display:none;}}</style><style>:root{--subtle:#a1a1ad;}.nav-cta{color:#05151c;}.footer-brand p,.footer-col a,.footer-col h4,.footer-bottom{color:#b5b5bf;}.apply-hint{color:#58d2eb;opacity:1;}@media(max-width:900px){.nav-apply{display:none;}}</style><style>.paper .eyebrow{color:#086b8a;}.st.off{color:#515b67;}.truth .big li{color:#8b99a6;}</style></head>
 <body>
 
 <nav class="lnav band" aria-label="Sales Hub">
@@ -279,7 +279,7 @@ footer p{margin:0}
           <div class="qbar"><span class="pos">Next up</span><span class="chip"><i style="background:#e0533d"></i>Callbacks due</span><span class="chip"><i style="background:#0bbcdf"></i>New</span><span class="chip"><i style="background:#9aa5b0"></i>To try again</span></div>
           <div class="panes">
             <div class="pane">
-              <h4>Avery Lane</h4><div class="muted">Harbor &amp; Pine Studio</div>
+              <h3>Avery Lane</h3><div class="muted">Harbor &amp; Pine Studio</div>
               <div class="tag">11:42 AM their time · Business hours</div>
               <div class="num">(555) 010-2048</div><div class="muted">Listed on their own website</div>
               <div style="display:flex;gap:.5em;margin-top:.9em"><span class="btn primary">Call</span><span class="btn">Text</span><span class="btn">Copy</span></div>
@@ -317,16 +317,16 @@ footer p{margin:0}
     </div>
     <div class="queue" role="img" aria-label="Sample queue: a callback that is due, a not-now lead whose time has come, two new leads, and the back of the line where anyone who did not pick up waits.">
       <div class="lane-k">Callback due</div>
-      <div class="qrow"><span class="av" style="background:#e0533d">JM</span><span class="who">Asked for 3 PM</span><span class="why">First</span></div>
+      <div class="qrow"><span class="av" style="background:#e0533d;color:#000">JM</span><span class="who">Asked for 3 PM</span><span class="why">First</span></div>
       <div class="lane-k">Not now, time's up</div>
-      <div class="qrow"><span class="av" style="background:#b7790a">RC</span><span class="who">Said try in the spring</span><span class="why">Next</span></div>
+      <div class="qrow"><span class="av" style="background:#b7790a;color:#000">RC</span><span class="who">Said try in the spring</span><span class="why">Next</span></div>
       <div class="lane-k">Never called</div>
       <div class="qrow slot"><span class="av">AL</span><span class="who">.</span></div>
-      <div class="qrow"><span class="av" style="background:#0a7fa8">TB</span><span class="who">Number on their website</span><span class="why">Best number first</span></div>
+      <div class="qrow"><span class="av" style="background:#0a7fa8;color:#000">TB</span><span class="who">Number on their website</span><span class="why">Best number first</span></div>
       <div class="lane-k">Didn't pick up</div>
-      <div class="qrow"><span class="av" style="background:#8b96a1">KD</span><span class="who">Tried once</span><span class="why">Back of the line</span></div>
+      <div class="qrow"><span class="av" style="background:#8b96a1;color:#000">KD</span><span class="who">Tried once</span><span class="why">Back of the line</span></div>
       <div class="qrow end" aria-hidden="true"></div>
-      <div class="mover" aria-hidden="true"><span class="av" style="background:#0bbcdf">AL</span><span class="who">Avery Lane</span><span class="tagline"><span class="t1">Calling now</span><span class="t2">No answer. Back of the line.</span></span></div>
+      <div class="mover" aria-hidden="true"><span class="av" style="background:#0bbcdf;color:#000">AL</span><span class="who">Avery Lane</span><span class="tagline"><span class="t1">Calling now</span><span class="t2">No answer. Back of the line.</span></span></div>
     </div>
   </div>
 </section>
@@ -402,11 +402,11 @@ footer p{margin:0}
       <p class="lede">Owners see every caller, live. Working, on a call, quiet and for how long, on break or off shift. Last activity, last call and today's quiet stretches sit beside each name.</p>
     </div>
     <div class="live" role="img" aria-label="Sample Right now view with five callers in different states.">
-      <div class="lrow"><span class="av" style="background:#1f9d6b">JR</span><b>Jordan</b><span class="st ok">Working</span><span class="f">Last activity 2 min ago</span></div>
-      <div class="lrow"><span class="av" style="background:#2f7fe0">AM</span><b>Alex</b><span class="st call">On a call</span><span class="f">Since 2:41 PM</span></div>
-      <div class="lrow"><span class="av" style="background:#d9472f">KT</span><b>Kai</b><span class="st quiet">Quiet for 14 min</span><span class="f">Check-in on screen, not answered</span></div>
-      <div class="lrow"><span class="av" style="background:#b7790a">SP</span><b>Sam</b><span class="st brk">On break</span><span class="f">Since 2:30 PM</span></div>
-      <div class="lrow"><span class="av" style="background:#8b96a1">RD</span><b>Riley</b><span class="st off">Off shift</span><span class="f">Back tomorrow</span></div>
+      <div class="lrow"><span class="av" style="background:#1f9d6b;color:#000">JR</span><b>Jordan</b><span class="st ok">Working</span><span class="f">Last activity 2 min ago</span></div>
+      <div class="lrow"><span class="av" style="background:#2f7fe0;color:#000">AM</span><b>Alex</b><span class="st call">On a call</span><span class="f">Since 2:41 PM</span></div>
+      <div class="lrow"><span class="av" style="background:#d9472f;color:#000">KT</span><b>Kai</b><span class="st quiet">Quiet for 14 min</span><span class="f">Check-in on screen, not answered</span></div>
+      <div class="lrow"><span class="av" style="background:#b7790a;color:#000">SP</span><b>Sam</b><span class="st brk">On break</span><span class="f">Since 2:30 PM</span></div>
+      <div class="lrow"><span class="av" style="background:#8b96a1;color:#000">RD</span><b>Riley</b><span class="st off">Off shift</span><span class="f">Back tomorrow</span></div>
     </div>
   </div>
 </section>
@@ -446,8 +446,8 @@ footer p{margin:0}
     <div class="report" role="img" aria-label="Sample daily report: phone system calls beside logged calls, and meetings from the calendar.">
       <div class="head"><b>Yesterday</b><span>Ready at 8 AM</span></div>
       <div class="cols">
-        <div><h4>Phone system</h4><div class="line c" style="width:92%"></div><div class="line c" style="width:76%"></div><div class="line c" style="width:84%"></div><div class="line c" style="width:60%"></div></div>
-        <div><h4>Logged</h4><div class="line" style="width:92%"></div><div class="line" style="width:76%"></div><div class="line" style="width:84%"></div><div class="line m" style="width:34%"></div></div>
+        <div><h3>Phone system</h3><div class="line c" style="width:92%"></div><div class="line c" style="width:76%"></div><div class="line c" style="width:84%"></div><div class="line c" style="width:60%"></div></div>
+        <div><h3>Logged</h3><div class="line" style="width:92%"></div><div class="line" style="width:76%"></div><div class="line" style="width:84%"></div><div class="line m" style="width:34%"></div></div>
       </div>
       <div class="foot"><span class="cal" aria-hidden="true"></span>Meetings, from the calendar</div>
     </div>
