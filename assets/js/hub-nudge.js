@@ -81,7 +81,7 @@
     const button = (text, cls, fn) => { const b = el('button', text, 'ps-btn' + (cls ? ' ' + cls : '')); b.type = 'button'; b.onclick = fn; return b; };
     const next = button('Next call', 'primary', () => {
       send('idle_prompt_next'); touch(); close();
-      if (onDialer()) { try { window.scrollTo(0, 0); } catch {} const call = document.querySelector('a[href^="tel:"]'); if (call && typeof call.focus === 'function') call.focus(); }
+      if (onDialer()) { try { window.scrollTo(0, 0); } catch {} const call = document.querySelector('a[href^="tel:"],a[href^="openphone:"]'); if (call && typeof call.focus === 'function') call.focus(); }
       else location.href = '/dialer/';
     });
     const onCall = button("I'm on a call", '', () => { send('idle_prompt_on_call'); put(SNOOZE, Date.now() + SNOOZE_MS); touch(); close(); });

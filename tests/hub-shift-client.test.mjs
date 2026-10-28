@@ -146,3 +146,12 @@ test('a slow read sent before a press does not overwrite the press', async () =>
     assert.equal(s.window.__staffifyShift.state(), 'on', 'the older read was discarded');
     assert.match(s.dom.text(bar(s)), /On shift/);
 });
+
+// Paul, 2026-10-28: "we need to be able to click the number and go right to openphone to dial, with all reps!" On a
+// phone the dialer links to Quo's own openphone:// dial link; the shift gate stops it exactly like a tel: link.
+test('Quo\'s own dial link is gated off shift like any phone link', async () => {
+    const s = boot(); await settle();
+    const a = s.document.createElement('a'); a.setAttribute('href', 'openphone://dial?number=%2B15125550001&action=call'); a.textContent = '+1 512 555 0001'; s.document.body.append(a);
+    assert.equal(clickTel(s, a), false, 'stopped off shift');
+    assert.ok(s.document.getElementById('shift-gate'), 'and explained');
+});

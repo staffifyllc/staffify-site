@@ -38,7 +38,13 @@ const session={started:Date.now(),saved:{},texts:0,tasks:0};
 // ---- small helpers ------------------------------------------------------------------------
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!=null)e.textContent=text;if(cls)e.className=cls;return e;};
 const button=(label,fn,cls='btn')=>{const b=el('button',label,cls);b.type='button';b.onclick=fn;return b;};
-const link=(label,url,cls)=>{const a=el('a',label,cls);a.href=url;if(!/^tel:/.test(url)){a.target='_blank';a.rel='noopener';}return a;};
+const link=(label,url,cls)=>{const a=el('a',label,cls);a.href=url;if(!/^(tel|openphone):/.test(url)){a.target='_blank';a.rel='noopener';}return a;};
+// Paul, 2026-10-28: "we need to be able to click the number and go right to openphone to dial, with all reps!" On a
+// phone, Quo's own link opens Quo and dials. On a computer Quo answers tel: links once it is the default calling app
+// (Quo's desktop and web apps do not take its own links), so the card says how to set that up, once per rep.
+const PHONE_UA=/iPhone|iPad|iPod|Android/i.test((typeof navigator!=='undefined'&&navigator.userAgent)||'');
+const dialHref=n=>{const d=String(n||'').replace(/[^+\d]/g,'');return PHONE_UA?'openphone://dial?number='+encodeURIComponent(d)+'&action=call':'tel:'+d;};
+const QUO_KEY='staffify-dialer-quo-setup';
 const heading=t=>el('h3',t,'dw-h');
 // Hear a name said aloud by the browser's own voice. Rendered only where speech is available.
 function hearButton(text){if(!text||typeof window==='undefined'||!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined')return null;
@@ -334,19 +340,23 @@ function renderWho(pane,row,b){
  else if(p.phone&&shiftBlocked(b)){cardGated=true;num.append(shiftGateBlock(row,b));}                                  // the shift paused or ended after this card loaded
  else if(p.phone){cardGated=false;
   const trust=numberTrust(p.dial);
-  num.append(link(p.phone,'tel:'+p.phone,'dw-num'));
+  const dialing=()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');refreshBar();};
+  const big=link(p.phone,dialHref(p.phone),'dw-num');big.addEventListener('click',dialing);num.append(big);
   num.append(el('span',trust.word,'dw-trust '+trust.tone));
   if(trust.detail)num.append(el('p',trust.detail,'dw-numdetail'));
   const acts=el('div',null,'dw-actions');
-  const call=link('Call now','tel:'+p.phone,'btn dw-primary');call.id='call-now';call.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');refreshBar();});
+  const call=link('Call now',dialHref(p.phone),'btn dw-primary');call.id='call-now';call.addEventListener('click',dialing);
   acts.append(call,button('Copy',async()=>{holdKind='calling';holdCard(row.id,'calling');try{await navigator.clipboard.writeText(p.phone);toast('Number copied.');}catch{toast('Select the number and copy it.',true);}},'btn btn-ghost'));
   // Text: the rep's one-click follow-up (Paul, 2026-10-22), back on Hiring now cards (2026-10-28). Paused work
   // shows no button, and the server refuses a paused or no-longer-listed card whatever this page sends.
   if(!row.pausedFollowUp&&!row.pausedFromPool)acts.append(textButton(row,p));
   num.append(acts);
-  if(p.dial&&p.dial.alternates&&p.dial.alternates.length){const alts=el('div',null,'dw-alts');alts.append(el('span','Also on file:'));for(const a of p.dial.alternates){const t=link(a,'tel:'+a);t.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');});alts.append(t);}num.append(alts);}
+  if(p.dial&&p.dial.alternates&&p.dial.alternates.length){const alts=el('div',null,'dw-alts');alts.append(el('span','Also on file:'));for(const a of p.dial.alternates){const t=link(a,dialHref(a));t.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');});alts.append(t);}num.append(alts);}
   if(p.dial&&p.dial.sourceUrl){const w=el('p',null,'dw-small');w.append(link('Where this number is published',p.dial.sourceUrl));num.append(w);}
-  num.append(el('p','On iPhone, tap Call now and use your business line. The Hub does not detect iPhone calls; log the outcome on the right.','dw-small'));
+  let quoSet=false;try{quoSet=localStorage.getItem(QUO_KEY)==='1';}catch{}
+  if(PHONE_UA)num.append(el('p','Tapping the number opens Quo and dials from your Quo line. Log the outcome here when you hang up.','dw-small'));
+  else if(!quoSet){const q=el('div',null,'dw-quo');q.append(el('p','Clicking the number opens Quo once Quo is this computer\'s calling app. One time on a Mac: open FaceTime, then Settings, and set "Default for calls" to Quo. On Windows: Settings, Default apps, "Choose default apps by protocol", and set TEL to Quo. Then restart your browser.','dw-small'));q.append(button('Done, hide this',()=>{try{localStorage.setItem(QUO_KEY,'1');}catch{}q.remove();},'btn btn-ghost'));num.append(q);}
+  else num.append(el('p','Clicking the number opens Quo.','dw-small'));
  } else {
   num.append(el('div','No number on file','dw-trust'),el('p',(p.phoneEvidence&&p.phoneEvidence.detail)||'A number is being found automatically. Skip ahead; finding numbers is not your job.','dw-numdetail'));
  }

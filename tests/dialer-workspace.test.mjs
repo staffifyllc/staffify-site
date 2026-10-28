@@ -388,3 +388,27 @@ test('a caller off shift gets the card without the number; Start on the card bri
     delete globalThis.window.__staffifyShift;
     restore2();
 });
+// Paul, 2026-10-28: "we need to be able to click the number and go right to openphone to dial, with all reps!"
+test('the number itself dials: Quo on a phone, a tel: link Quo answers on a computer, and it holds the card as a call', async () => {
+    for (const [ua, want] of [['Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)', /^tel:\+1\d{10}$/], ['Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)', /^openphone:\/\/dial\?number=%2B1\d{10}&action=call$/]]) {
+        const d = makeDom(); const restore = install(d);
+        globalThis.navigator.userAgent = ua;
+        const app = document.createElement('div'); app.id = 'app'; app.className = 'wrap'; document.body.append(app);
+        const a3 = stubApi();
+        await import('../assets/js/dialer-workspace.js?' + Date.now() + 'quo' + ua.length);
+        await tick(60);
+        const big = document.querySelector('.dw-num');
+        assert.ok(big, 'the number is a link'); assert.match(big.href, want);
+        assert.match(document.getElementById('call-now').href, want, 'Call now goes the same way');
+        const before = a3.calls.filter(c => c.url === '/api/call-hold/' && c.body && c.body.kind === 'calling').length;
+        big.click(); await tick(30);
+        assert.equal(a3.calls.filter(c => c.url === '/api/call-hold/' && c.body && c.body.kind === 'calling').length, before + 1, 'clicking the number holds the card as a call');
+        const text = d.text(document.body);
+        if (/iPhone/.test(ua)) assert.match(text, /Tapping the number opens Quo and dials/);
+        else { assert.match(text, /Clicking the number opens Quo once Quo is this computer's calling app/); assert.match(text, /set "Default for calls" to Quo/); }
+        restore();
+    }
+});
+
+
+

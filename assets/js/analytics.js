@@ -173,7 +173,7 @@
     var href = a.href;
     var kind = /calendly\.com/i.test(href) ? 'booking'
              : /^mailto:/i.test(href) ? 'email'
-             : /^tel:/i.test(href) ? 'phone'
+             : /^(tel|openphone):/i.test(href) ? 'phone'
              : (a.host && a.host !== location.host) ? 'outbound' : null;
     if (!kind) return;           /* internal links show up as the next pageview */
     send('click', { kind: kind, href: href, text: (a.textContent || '').trim().slice(0, 80) });

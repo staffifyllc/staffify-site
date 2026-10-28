@@ -8,7 +8,7 @@
 // The server owns the shift (api/shift.js). This script shows it, sends the four presses, keeps the
 // clock running from the server's timestamps, and keeps every open tab in step (BroadcastChannel,
 // with a localStorage ping as the fallback, plus a poll every minute and on becoming visible).
-// It also holds the one gate for phone links: a click on any tel: link in the Hub while the shift
+// It also holds the one gate for phone links: a click on any tel: (or Quo openphone:) link in the Hub while the shift
 // is not running is stopped and explained, with the start action right there. The Hub cannot see
 // or stop a call placed from a phone app on its own; it only declines to hand over the number.
 (function () {
@@ -109,7 +109,7 @@
   document.addEventListener('click', e => {
     const t = e.target; const a = t && typeof t.closest === 'function' ? t.closest('a') : null;
     const href = a ? a.getAttribute('href') || '' : '';
-    if (!a || !/^tel:/i.test(href)) return;
+    if (!a || !/^(tel|openphone):/i.test(href)) return;   // Quo's own dial link on phones is a call too
     // The first read has not answered yet: hold the click until it does, then call or explain.
     if (!loaded) {
       e.preventDefault(); e.stopPropagation(); if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
