@@ -147,11 +147,13 @@ export async function profileIdentity(posting, deps) {
     if (profile && profile.error) return { error: profile.error, noBudget: !!profile.noBudget };
     const m = profileMatches(posting.company, profile, posting.location);
     if (!m.ok) return { ok: false, unresolved: m.why, tried: profile && profile.title ? [profile.title] : [] };
+    // A hospital or health system has its own recruiting team: Google types the listing itself as one.
+    if (/\b(hospital|medical\s+center|health\s+system|university|school\s+district|government\s+office)\b/i.test(String(profile.type || ''))) return { ok: false, large: true, unresolved: `Google lists them as a ${profile.type}, a large employer.` };
     const sz = profile.size || {};
     if ((sz.employees && sz.employees > LARGE_EMPLOYEES) || sz.listed || sz.parent) return { ok: false, large: true, unresolved: `Google's panel shows a large employer (${sz.employees ? sz.employees + ' employees' : sz.listed ? 'publicly traded' : 'part of ' + sz.parent}).` };
     const host = profile.website ? hostOf(profile.website) : null;
     const d = digits10(profile.phone);
-    return { ok: true, how: 'google_business_profile', website: profile.website || null, domain: host, phone: d.length === 10 ? '+1' + d : null, address: profile.address || null, listingName: profile.title, evidenceUrl: profile.link || null };
+    return { ok: true, how: 'google_business_profile', website: profile.website || null, domain: host, phone: d.length === 10 ? '+1' + d : null, address: profile.address || null, listingName: profile.title, listingType: profile.type || null, evidenceUrl: profile.link || null };
 }
 
 // ---- one posting, start to finish ---------------------------------------------------------------
@@ -185,7 +187,7 @@ export async function processPosting(p, provenance, deps, report) {
     // One card per company. A second matching role joins the first card.
     const bk = gj ? companyKey(posting.company, posting.location) : boardKey(p);
     const job = gj
-        ? { source: 'google_jobs', title: posting.title, url: posting.url, applyUrl: posting.applyUrl, via: posting.via, googleJobId: p.listing.job_id || null, postedAt: posting.postedAt, ageDays: q.age, checkedAt, location: posting.location, city: cityOf(posting.location), state: stateOf(posting.location), workplace: posting.workplace, restrictions: q.restrictions }
+        ? { source: 'google_jobs', title: posting.title, url: posting.url, applyUrl: posting.applyUrl, via: posting.via, googleJobId: p.listing.job_id || null, postedAt: posting.postedAt, ageDays: q.age, checkedAt, location: posting.location, city: cityOf(posting.location), usState: stateOf(posting.location), workplace: posting.workplace, restrictions: q.restrictions }
         : { source: 'ats', title: posting.title, url: posting.url, ats: posting.ats, board: posting.board, postingId: posting.id, postedAt: posting.postedAt, ageDays: q.age, checkedAt, location: posting.location, locations: posting.locations, workplace: posting.workplace || 'remote', team: posting.team, commitment: posting.commitment, restrictions: q.restrictions };
     const id = idFor(bk);
     const known = parseValue(await kv.hget(HK.companies, bk));
@@ -227,7 +229,7 @@ export async function processPosting(p, provenance, deps, report) {
     if (ident.error) return { verdict: 'error', reason: ident.noBudget ? 'no_budget' : 'lookup_unavailable', detail: ident.error };
     if (ident.large) { await kv.hset(HK.companies, { [bk]: JSON.stringify({ verdict: 'large', at: checkedAt }) }); await mark('excluded', 'large_employer', { detail: ident.unresolved }); return { verdict: 'excluded', reason: 'large_employer', detail: ident.unresolved }; }
     if (!ident.ok) return toBacklog('identity_unresolved', ident.unresolved, { missing: gj ? ['business listing', 'phone'] : ['website', 'phone'], identityTried: ident.tried });
-    const company = { ...base.company, website: ident.website || null, domain: ident.domain || null, address: ident.address || null, identity: { how: ident.how, evidenceUrl: ident.evidenceUrl, listingName: ident.listingName || null, checkedAt } };
+    const company = { ...base.company, website: ident.website || null, domain: ident.domain || null, address: ident.address || null, identity: { how: ident.how, evidenceUrl: ident.evidenceUrl, listingName: ident.listingName || null, listingType: ident.listingType || null, checkedAt } };
     base.company = company;
     // One card per employer, not per board: a second board or a new ATS at a confirmed domain joins the card
     // already there, and a domain that was stopped, a client or in research stays that way.

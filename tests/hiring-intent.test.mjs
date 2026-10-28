@@ -636,3 +636,13 @@ test('cards made under older rules are re-checked every run: a staffing firm or 
     assert.equal((await getRecord(w.kv, rec.id)).status, 'excluded');
     assert.equal((await getRecord(w.kv, owned.id)).status, 'ready', 'a card a caller owns is left for a person to judge');
 });
+
+test('a hospital found through its own Google listing is a large employer, not a card', async () => {
+    const w = jobsWorld({ profile: { title: 'Royal Electrical Services', type: 'Hospital', website: 'https://www.royalelect.com/', phone: '(945) 218-4003', address: '4518 Ash Ln, Dallas, TX 75223' } });
+    const r = await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    assert.equal(r.reasons.large_employer, 1); assert.equal((await allRecords(w.kv)).length, 0);
+    const ok = jobsWorld();
+    await runHiring(ok.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(ok.kv))[0];
+    assert.equal(rec.job.usState, 'TX'); assert.equal(rec.job.state, undefined, 'the job state is open/closed/stale, never a US state');
+});
