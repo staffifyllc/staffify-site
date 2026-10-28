@@ -9,7 +9,7 @@
     <link rel="canonical" href="https://www.gostaffify.com/">
     <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <style>
-@font-face{font-family:Inter;font-style:normal;font-weight:300 900;font-display:swap;src:url(/assets/fonts/inter-latin.woff2) format("woff2");}
+@font-face{font-family:Inter;font-style:normal;font-weight:300 900;font-display:optional;src:url(/assets/fonts/inter-latin.woff2) format("woff2");}
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1876,8 +1876,9 @@
 
 /* Fast initial paint and readable secondary text. */
 .hero-media,.hero-eyebrow,.hero-sub,.hero-actions,.hero-stats,.hero-status,.nav-logo,.nav-cta{opacity:1;animation:none;}
+.hero .text-inner{animation:none;transform:none;filter:none;}
 .footer-brand p,.footer-col h4,.footer-col a,.footer-bottom{color:#b5b5bf;}
-@media(max-width:899px){.hero .orb,.hero-streaks,.hero-spotlight{display:none;}}
+@media(max-width:899px){.hero .orb,.hero .aurora,.hero-streaks,.hero-spotlight{display:none;}}
 </style>
     <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 
@@ -2768,7 +2769,7 @@ lenis.on('scroll', ({ scroll }) => {
 // ── 2a. Falling colorway: randomized light streaks in the hero ──────────────
 (() => {
     const container = document.getElementById('heroStreaks');
-    if (!container) return;
+    if (!container || window.matchMedia("(max-width:899px)").matches) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const COUNT = 18;
@@ -2817,7 +2818,7 @@ if (heroSection && heroSpotlight && window.matchMedia('(hover: hover)').matches)
 const heroGrid  = document.querySelector('.hero-grid');
 const heroInner = document.querySelector('.hero-inner');
 const heroSt    = document.querySelector('.hero-status');
-if (heroGrid) {
+if (heroGrid && window.matchMedia("(min-width:900px) and (prefers-reduced-motion:no-preference)").matches) {
     [heroGrid, heroInner, heroSt].forEach(el => { if (el) el.style.willChange = 'transform'; });
     lenis.on('scroll', ({ scroll: y }) => {
         // background moves slowest → foreground fastest = real depth
