@@ -30,7 +30,7 @@ export const NAMES = {
     // 2026-10-27 read every one); the old "candidates" flag hid them from every rate and mislabelled the page.
     [TALENT_ID]: { name: 'Talent network outreach', motion: 'email_call', motionLabel: 'Email, then call', summary: 'Businesses that may need remote talent. Four emails, then a call to anyone who has not replied.' },
     // Call first, no email before the call: the business is hiring for the role right now (api/_hiring-intent.js).
-    [HIRING_ID]: { name: 'Hiring now', motion: 'call', motionLabel: 'Call first', summary: 'Businesses with a current job post for a remote support, admin or scheduling role. Called first, from the number on their own website.' },
+    [HIRING_ID]: { name: 'Hiring now', motion: 'call', motionLabel: 'Call first', summary: 'Businesses hiring right now for a customer service, sales or admin seat a remote person can fill. Called first, on the number their business lists.' },
 };
 export const MOTIONS = [
     { key: 'email_call', label: 'Email, then call' },

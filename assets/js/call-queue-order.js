@@ -17,7 +17,7 @@
 //   4. no answer and voicemail           at the back: fewest tries first, then longest since tried
 // Wrong number, not interested and conversations never reach this list: the server's callReady
 // keeps them out. Nothing here changes an outcome or a callback time; it only sets the order.
-const DIALABLE=['business_listed','available','vendor_direct','site_main','crm_unconfirmed'];
+const DIALABLE=['business_listed','available','vendor_direct','site_main','listing_main','crm_unconfirmed'];
 const ms=s=>{const n=Date.parse(s||'');return Number.isFinite(n)?n:null;};
 const attempts=r=>(r.callHistory||[]).filter(c=>c&&c.at&&(c.outcome==='no_answer'||c.outcome==='voicemail')).length;
 const lastTried=r=>Math.max(0,...(r.callHistory||[]).map(c=>ms(c&&c.at)||0));

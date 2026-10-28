@@ -26,7 +26,11 @@
 import { createHash } from 'node:crypto';
 
 export const HIRING_ID = 'staffify-hiring-intent';
-export const MAX_AGE_DAYS = 45;
+// Paul, 2026-10-28: "job postings ... might be good today, but they could have filled that role tomorrow,
+// which I'm fine with. But we really don't want to be looking at data over like a very long span of time."
+// A post older than MAX_AGE_DAYS is not called about; Google Jobs searches only look back DISCOVERY_DAYS.
+export const MAX_AGE_DAYS = 14;
+export const DISCOVERY_DAYS = 7;
 // A card is offered only while its posting was confirmed live this recently. The run re-reads the
 // oldest ready cards every time (api/_hiring-run.js refreshReady); weekend gaps fit inside this.
 export const FRESH_MS = 72 * 3600e3;
@@ -41,6 +45,8 @@ export const HK = {
     runs: 'staffify:hiring:runs',           // list of run reports, newest first
     lock: 'staffify:hiring:lock',
     cursor: 'staffify:hiring:cursor',
+    jobsCursor: 'staffify:hiring:jobs-cursor', // position in JOB_QUERIES (role x city)
+    profile: key => 'staffify:hiring:profile:' + key, // Google business listing per employer, misses too, 30 days
     serpDay: day => 'staffify:hiring:serp:' + day,
     contact: domain => 'staffify:hiring:contact:' + domain,
     recLock: id => 'staffify:hiring:lock:' + id,
@@ -90,24 +96,48 @@ export const boardKey = p => `${p.ats}:${String(p.board).toLowerCase()}`;
 export const domainKey = d => 'domain:' + String(d || '').toLowerCase().replace(/^www\./, '');
 
 // ---- what a posting has to be ----------------------------------------------------------------
-// The work Staffify places: support, admin, scheduling, account coordination. Leadership, sales,
-// engineering and licensed clinical roles are not.
+// The work Staffify places: support, admin, scheduling, account coordination and phone sales.
+// Leadership, closing, engineering and licensed clinical roles are not.
+const EXPLICIT_SALES = /\b(inside|telephone|phone|outbound|inbound|remote)\s+sales\b|\bsales\s+(development|coordinator|assistant|support|admin(istrator)?)\b|\b(sdr|bdr)\b|\bappointment\s+setter\b|\blead\s+gen(eration)?\b|\bbusiness\s+development\s+(representative|rep|associate)\b|\btelesales\b|\btelemarket(ing|er)\b/i;
+const BARE_SALES = /\bsales\s+(representative|rep|associate|specialist|consultant|agent)\b/i;
+const PHONE_SALES = /\b(inside\s+sales|phone|calls?|calling|outbound|inbound|remote|crm|book(ing)?\s+appointments|cold\s+call|leads?)\b/i;
+const FIELD_SALES = /\b(territory|showroom|sales\s+floor|our\s+lot|dealership|door[- ]to[- ]door|in[- ]home|in[- ]person\s+(visits|meetings)|travel\s+to|visit\s+(customers|clients|prospects)|retail\s+store|walk[- ]in)\b/i;
+/** Is a bare sales title a phone seat? Explicit inside/SDR titles always are; otherwise the post has to say so. */
+export function salesSeatOk(title, text) {
+    if (EXPLICIT_SALES.test(String(title || '')) || !BARE_SALES.test(String(title || ''))) return true;
+    const t = String(text || '');
+    return PHONE_SALES.test(t) && !FIELD_SALES.test(t);
+}
 const ROLE_FIT = [
     ['support', /\b(customer|client|member|guest|player|patient|user)\s+(support|service|care|experience|happiness|success)\b|\bsupport\s+(agent|specialist|representative|rep|associate|advocate)\b|\b(technical|tech|it|product|l1|tier\s*1|level\s*1)\s+support\b|\bhelp\s*desk\b|\bcall\s+cent(er|re)\b/i],
-    ['admin', /\b(administrative|admin|executive|personal|virtual|operations|office|team)\s+assistant\b|\badministrative\s+(coordinator|specialist|associate)\b|\bdata\s+entry\b|\bback\s+office\b/i],
-    ['scheduling', /\bschedul(er|ing)\b|\bdispatch(er)?\b|\b(patient|intake|appointment|care)\s+(coordinator|setter|specialist)\b|\breceptionist\b|\bfront\s+desk\b/i],
+    ['admin', /\b(administrative|admin|executive|personal|virtual|operations|office|team)\s+assistant\b|\badministrative\s+(coordinator|specialist|associate)\b|\boffice\s+admin(istrator)?\b|\bdata\s+entry\b|\bback\s+office\b/i],
+    ['scheduling', /\bschedul(er|ing)\b|\bdispatch(er)?\b|\b(patient|intake|appointment|care)\s+(coordinator|specialist)\b|\breceptionist\b|\bfront\s+desk\b/i],
+    // Paul, 2026-10-28: "remote teams, like customer service, sales, and admin support". Sales here is the
+    // seat that books and qualifies (inside sales, SDR/BDR, appointment setting), not a closer or a manager.
+    ['sales', EXPLICIT_SALES],
+    // A bare "Sales Representative" or "Sales Associate" is often a showroom, lot or territory job: it is a
+    // phone seat only when the post says so (salesSeatOk, checked where the description is known).
+    ['sales', BARE_SALES],
     ['account', /\b(account|client|customer)\s+(coordinator|support|associate|onboarding)\b|\bonboarding\s+(specialist|coordinator|associate)\b|\b(customer|client)\s+success\s+(associate|coordinator|specialist|representative)\b|\bimplementation\s+(specialist|coordinator)\b/i],
 ];
-const NOT_FILLABLE = /\b(director|head\s+of|vp|vice\s+president|chief|principal|staff\s+engineer|engineer|developer|architect|scientist|attorney|lawyer|counsel|physician|nurse|\brn\b|lpn|pharmacist|therapist|account\s+executive|sales\s+(rep|representative|development)|sdr|bdr|recruiter|intern(ship)?)\b/i;
+const NOT_FILLABLE = /\b(director|head\s+of|vp|vice\s+president|chief|principal|staff\s+engineer|engineer|developer|architect|scientist|attorney|lawyer|counsel|physician|nurse|\brn\b|lpn|pharmacist|therapist|account\s+executive|recruiter|intern(ship)?)\b/i;
+// Work that needs a body in a place: no remote person can do it, whatever the title says.
+// Always physical: the seat itself is a place. Sometimes physical: a word that is a seat on its own
+// ("Driver", "HVAC Technician") but only a department next to a remote-capable seat ("Field Service
+// Dispatcher", "Help Desk Technician", "Customer Service Representative - Driver Support").
+const PHYSICAL = /\b(store|in[- ]store|retail|cashier|warehouse|valet|housekeep(er|ing)|janitor|custodian|cook|barista|bartender|caregiver|security\s+(officer|guard)|guard|merchandiser|stocker|loader|forklift|hotel|front\s+desk\s+agent|showroom|dealership|door[- ]to[- ]door|outside\s+sales|territory|route\s+sales|911|police|emergency|on[- ]site\s+only)\b/i;
+const PHYSICAL_SEAT = /\b(field|driver|delivery|technician|installer|courier|porter|mechanic|server)\b/i;
+const REMOTE_SEAT = /\b(help\s*desk|support|dispatch(er|ing)?|schedul(er|ing)|coordinator|customer\s+service|call\s+cent(er|re)|representative|specialist|assistant|admin(istrator)?|receptionist|sales\s+development|inside\s+sales|appointment\s+setter)\b/i;
 const SENIOR = /\b(manager|lead|supervisor|senior|sr\.?)\b/i;
 
 /** The role family a title belongs to, or null when it is not work Staffify places. */
 export function roleFamily(title) {
     const t = String(title || '');
-    if (!t || NOT_FILLABLE.test(t)) return null;
+    if (!t || NOT_FILLABLE.test(t) || PHYSICAL.test(t)) return null;
+    if (PHYSICAL_SEAT.test(t) && !REMOTE_SEAT.test(t)) return null;
     // "Customer Support Manager" is a leader; "Customer Support Specialist (Senior)" is still a seat we
     // could fill, but a manager or team lead is not.
-    if (/\b(manager|lead|supervisor)\b/i.test(t) && !/\bassistant\b/i.test(t)) return null;
+    if (/\b(manager|lead(?!\s+gen)|supervisor)\b/i.test(t) && !/\bassistant\b/i.test(t)) return null;
     for (const [family, re] of ROLE_FIT) if (re.test(t)) return family;
     return null;
 }
@@ -116,11 +146,13 @@ export const seniorTitle = title => SENIOR.test(String(title || ''));
 // Staffing, recruiting, BPO and outsourcing firms are competitors, not buyers. Also job boards
 // reposting someone else's role.
 const COMPETITOR = /\b(staffing|recruit(ing|ment)\s+(agency|firm|partner|solutions)|talent\s+(solutions|partners|agency)|outsourc(e|ing)|\bbpo\b|offshore\s+(team|staff)|virtual\s+assistant\s+(company|agency|services)|on\s+behalf\s+of\s+(our|a)\s+client|our\s+client\s+is\s+(seeking|looking|hiring)|employer\s+of\s+record|nearshore\s+(staffing|talent))\b/i;
-const COMPETITOR_NAMES = /\b(taskus|teleperformance|concentrix|ttec|alorica|sitel|foundever|startek|boldr|support\s*ninja|supportyourapp|helpware|belay|time\s*etc|prialto|wing\s+assistant|athena|magic\s+(virtual|assistant)|myoutdesk|virtual\s+staff\s+finder|cloudstaff|remote\s+staff|staffify|hirequotient|toptal|upwork|crossover|turing|andela|lemon\.io|bairesdev|near\s+(inc|staffing)|somewhere\.com|stealth\s+agents|go\s*remote|hire\s+overseas|support\s*shepherd|peak\s+support|influx|simplycontact|partnerhero|hugo|working\s+solutions|liveops|arise|transcom|ibex|ubiquity|5ca|everise|telus\s+international|qualfon|itel|global\s+lingo)\b/i;
+const COMPETITOR_NAMES = /\b(taskus|teleperformance|concentrix|ttec|alorica|sitel|foundever|startek|boldr|support\s*ninja|supportyourapp|helpware|belay|time\s*etc|prialto|wing\s+assistant|athena|magic\s+(virtual|assistant)|myoutdesk|virtual\s+staff\s+finder|cloudstaff|remote\s+staff|staffify|hirequotient|toptal|upwork|crossover|turing|andela|lemon\.io|bairesdev|near\s+(inc|staffing)|somewhere\.com|stealth\s+agents|go\s*remote|hire\s+overseas|support\s*shepherd|peak\s+support|influx|simplycontact|partnerhero|hugo|working\s+solutions|liveops|arise|transcom|ibex|ubiquity|5ca|everise|telus\s+international|qualfon|itel|global\s+lingo|randstad|robert\s+half|kelly\s+services|adecco|aerotek|manpower|insight\s+global|teksystems|express\s+employment|spherion|nextsource|frontline\s+source|spectraforce|beacon\s+hill|addison\s+group|vaco|aston\s+carter|peopleready|labor\s+finders|tandym|apex\s+systems|volt\s+workforce|allegis|kforce|ajilon|accountemps|officeteam|appleone|snelling|staffmark|employbridge|prolink|actalent|maximus|jobot|cybercoders|medix|hays|michael\s+page|lhh|korn\s+ferry|akkodis|collabera|cynet|mindlance|russell\s+tobin|solomon\s+page|24\s+seven|hirequest|trueblue|nesco|labormax|sutherland|conduent|iqor|sykes|vxi|alorica)\b|\bmanpower\w*|^\s*kelly\s*$/i;
+const STAFFING_IN_NAME = /\w*staff(ing|ers)?\b|\bstaff\w*|\brecruit\w*|\bresourcing\b|\bpersonnel\b|\bemployment\s+(agency|services|solutions)\b|\btemps?\b|\btemporary\s+(staffing|services|employment)\b|\bworkforce\b|\btalent\w*|\bsearch\s+(group|partners)\b|\bplacements?\b|\bhire\s*velocity\b/i;
 
 /** Why a company is a competitor (they sell what Staffify sells), or null. */
 export function competitorReason({ company, text }) {
     if (COMPETITOR_NAMES.test(String(company || ''))) return 'a staffing or outsourcing firm by name';
+    if (STAFFING_IN_NAME.test(String(company || ''))) return 'a staffing or recruiting firm by its name';
     const t = String(text || '');
     const m = t.match(COMPETITOR);
     if (m) return 'the post describes a staffing, recruiting or outsourcing business ("' + m[0].slice(0, 60) + '")';
@@ -136,7 +168,7 @@ const HARD = [
     [/\b(u\.?s\.?|united\s+states|american)\s+citizen(ship)?\b/i, 'requires US citizenship'],
     [/\bsecurity\s+clearance\b|\bclearance\s+(required|eligible)\b|\bpublic\s+trust\b/i, 'requires a security clearance'],
     [/\bitar\b|\bexport[- ]controlled\b/i, 'export-controlled work (ITAR)'],
-    [/\b(licensed|license|licence)\s+(in|insurance|agent|producer)\b|\bnmls\b|\bseries\s+(6|7|63|65)\b/i, 'requires a state or financial licence'],
+    [/\b(licensed|license|licence)\s+(in|insurance|agent|producer|required)\b|\b(license|licence)\s+is\s+required\b|\bnmls\b|\bseries\s+(6|7|63|65)\b|\bp\s*&\s*c\b|\bproperty\s+(and|&)\s+casualty\b|\blife\s+(and|&)\s+health\b|\b(2-15|2-20|4-40)\b/i, 'requires a state or financial licence'],
     [/\bmust\s+(be\s+able\s+to\s+)?(commute|work\s+on[- ]?site|report\s+to\s+(the|our)\s+office)\b|\bon[- ]?site\s+(only|required)\b|\bin[- ]office\s+(only|required)\b/i, 'onsite attendance required'],
 ];
 const SOFT = [
@@ -181,6 +213,145 @@ export function qualifyPosting(p, now = Date.now()) {
     if (r.hard.length) return { ok: false, reason: 'hard_restriction', detail: 'The post ' + r.hard.join(' and ') + '.' };
     if (p.openRoles != null && p.openRoles > LARGE_EMPLOYER_OPEN_ROLES) return { ok: false, reason: 'large_employer', detail: `${p.openRoles} open roles on their board; we prioritize small and midsize businesses.` };
     return { ok: true, family, age, restrictions: r };
+}
+
+// ---- Google Jobs: the loop that does not run dry ----------------------------------------------
+// The ATS searches above reach one system (Ashby) and repeat within a day. Google Jobs, searched by
+// role and city and limited to the last few days, returns local employers hiring for the seats
+// Staffify fills, whether they posted the job as remote or in the office: a business hiring a front
+// desk admin in Dallas can fill that seat with a remote person (Paul, 2026-10-28: "open positions
+// that they have that can be filled remotely by us"). Every role here is one a remote person does.
+export const JOB_TERMS = [
+    ['support', 'customer service representative'], ['support', 'customer support specialist'],
+    ['admin', 'administrative assistant'], ['admin', 'executive assistant'], ['admin', 'office administrator'],
+    ['scheduling', 'receptionist'], ['scheduling', 'scheduling coordinator'], ['scheduling', 'dispatcher'],
+    ['sales', 'inside sales representative'], ['sales', 'appointment setter'], ['sales', 'sales development representative'],
+    ['account', 'account coordinator'],
+    // Widened 2026-10-28 for two full-time callers (Paul: "3 to 5 is just impossible").
+    ['support', 'call center representative'], ['support', 'customer care representative'], ['admin', 'data entry clerk'],
+    ['scheduling', 'patient coordinator'], ['scheduling', 'intake coordinator'], ['sales', 'sales assistant'],
+];
+export const METROS = [
+    'New York, New York', 'Los Angeles, California', 'Chicago, Illinois', 'Dallas, Texas', 'Houston, Texas', 'Phoenix, Arizona',
+    'Philadelphia, Pennsylvania', 'San Antonio, Texas', 'San Diego, California', 'Austin, Texas', 'Jacksonville, Florida', 'Columbus, Ohio',
+    'Charlotte, North Carolina', 'Indianapolis, Indiana', 'Denver, Colorado', 'Seattle, Washington', 'Nashville, Tennessee', 'Atlanta, Georgia',
+    'Miami, Florida', 'Tampa, Florida', 'Orlando, Florida', 'Boston, Massachusetts', 'Las Vegas, Nevada', 'Salt Lake City, Utah',
+    'Raleigh, North Carolina', 'Kansas City, Missouri', 'St. Louis, Missouri', 'Minneapolis, Minnesota', 'Detroit, Michigan', 'Pittsburgh, Pennsylvania',
+    'Cincinnati, Ohio', 'Cleveland, Ohio', 'Sacramento, California', 'Portland, Oregon', 'Baltimore, Maryland', 'Richmond, Virginia',
+    'Oklahoma City, Oklahoma', 'Louisville, Kentucky', 'Milwaukee, Wisconsin', 'Fort Lauderdale, Florida', 'West Palm Beach, Florida', 'Scottsdale, Arizona',
+    'San Jose, California', 'Fort Worth, Texas', 'El Paso, Texas', 'Memphis, Tennessee', 'Albuquerque, New Mexico', 'Tucson, Arizona',
+    'Fresno, California', 'Omaha, Nebraska', 'Colorado Springs, Colorado', 'Virginia Beach, Virginia', 'Tulsa, Oklahoma', 'New Orleans, Louisiana',
+    'Birmingham, Alabama', 'Buffalo, New York', 'Greenville, South Carolina', 'Boise, Idaho', 'Des Moines, Iowa', 'Knoxville, Tennessee',
+];
+/** The (role, city) pairs in rotation order: every role in one city, then the next city. */
+export const JOB_QUERIES = (() => {
+    const out = [];
+    for (const city of METROS) for (const [family, term] of JOB_TERMS) out.push({ family, q: `${term} in the last 3 days`, location: city + ', United States', term });
+    // Interleave cities so consecutive searches never hit one city twice in a row.
+    const byIndex = [];
+    for (let i = 0; i < JOB_TERMS.length; i++) for (let c = 0; c < METROS.length; c++) byIndex.push(out[c * JOB_TERMS.length + ((i + c) % JOB_TERMS.length)]);
+    return byIndex;
+})();
+
+/**
+ * Days since a listing went up. Google's label ("3 days ago") is only true on the day it was read, so a
+ * listing kept for later carries the date it implied (posted_at, stamped by compactListing) and its
+ * age is counted from that date. A retry a week later is a week older.
+ */
+export function listingAge(l, now = Date.now()) {
+    if (l && l.posted_at) { const t = Date.parse(l.posted_at); if (Number.isFinite(t)) return Math.max(0, Math.floor((now - t) / 864e5)); }
+    return jobAgeDays(l && l.extensions);
+}
+/** Days since a Google Jobs listing went up, from its "3 days ago" / "5 hours ago" label, or null. */
+export function jobAgeDays(extensions) {
+    for (const e of extensions || []) {
+        const m = String(e).match(/^(\d+)\+?\s+(minute|hour|day|week|month)s?\s+ago$/i);
+        if (!m) continue;
+        const n = Number(m[1]), unit = m[2].toLowerCase();
+        return unit === 'minute' || unit === 'hour' ? 0 : unit === 'day' ? n : unit === 'week' ? n * 7 : n * 30;
+    }
+    return null;
+}
+// Big employers apply through enterprise systems; small and midsize ones through Indeed, ZipRecruiter,
+// Paylocity, BambooHR, Workable. An enterprise apply link is the size signal Google Jobs gives us.
+// A careers site of its own (jobs.spectrum.com, careers.x.com, amazon.jobs) is a big employer's habit.
+const BRAND_CAREERS = /^(jobs|careers|career|work|join)\.[a-z0-9-]+\.[a-z]+$|\.jobs$/i;
+const ENTERPRISE_ATS = /(myworkdayjobs\.com|wd\d+\.myworkday|oraclecloud\.com|taleo\.net|icims\.com|avature\.net|successfactors|brassring|ultipro|ukg\.net|phenompeople|dayforcehcm\.com|jobs\.jobvite\.com|smartrecruiters\.com\/[A-Z]|eightfold\.ai)/i;
+// Public bodies by their form, not by a word that a small business can carry ("Lakewood Animal Hospital",
+// "Orange County Plumbing", "University Park Dental", "The Roofing Authority").
+const INSTITUTION = /^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b/i;
+export const jobKey = j => 'gjobs:' + createHash('sha256').update([j.company_name, j.title, j.location].map(x => String(x || '').trim().toLowerCase()).join('|')).digest('hex').slice(0, 20);
+// "Royal Electric", "Royal Electric, LLC" and "Royal Electric Co." are one employer: the key drops legal suffixes.
+export const companyKey = (name, location) => 'gco:' + (nameWords(name).join('') || String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')) + ':' + String(stateOf(location) || '').toLowerCase();
+// A business with no website still has one number: a second card on the same number is the same business.
+export const phoneKey = n => 'phone:' + String(n || '').replace(/\D/g, '').slice(-10);
+const STATES = { alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA', colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA', hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA', kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD', massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT', virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY', 'district of columbia': 'DC' };
+/** The two-letter state in "Tampa, FL", "Tampa, Florida" or "4518 Ash Ln, Dallas, TX 75223", or null. */
+export function stateOf(text) {
+    const t = String(text || '');
+    const m = t.match(/,\s*([A-Z]{2})(?:\s+\d{5}(?:-\d{4})?)?\s*(?:,|$|\()/);
+    if (m && Object.values(STATES).includes(m[1])) return m[1];
+    const low = t.toLowerCase();
+    for (const [name, code] of Object.entries(STATES)) if (new RegExp('\\b' + name + '\\b').test(low)) return code;
+    return null;
+}
+export const cityOf = text => { const m = String(text || '').match(/^\s*([^,(]+?)\s*,/); return m ? m[1] : null; };
+
+/**
+ * The verdict on one Google Jobs listing, before anything is spent on the company.
+ * Returns { ok:true, family, age, restrictions } or { ok:false, reason, detail }.
+ */
+export function qualifyJob(j, now = Date.now()) {
+    const title = String(j && j.title || '');
+    const family = roleFamily(title);
+    if (!family) return { ok: false, reason: 'role_not_fillable', detail: `"${title}" is not a customer service, sales or admin seat a remote person fills.` };
+    const age = listingAge(j, now);
+    if (age == null) return { ok: false, reason: 'undated_post', detail: 'Google Jobs shows no posting age, so it may be old.' };
+    if (age > DISCOVERY_DAYS) return { ok: false, reason: 'stale_post', detail: `Posted ${age} days ago; we only call about the last ${DISCOVERY_DAYS} days.` };
+    const company = String(j.company_name || '');
+    const comp = competitorReason({ company, text: j.description });
+    if (comp) return { ok: false, reason: 'competitor', detail: comp };
+    const links = (j.apply_options || []).map(a => a && a.link).filter(Boolean);
+    const hosts = links.map(l => { try { return new URL(l).hostname.toLowerCase(); } catch { return ''; } });
+    if (INSTITUTION.test(company) || hosts.some(h => /\.(edu|gov|mil)$/.test(h))) return { ok: false, reason: 'institution', detail: `${company} is a public body, school or hospital system.` };
+    const big = links.find(l => ENTERPRISE_ATS.test(l));
+    if (big) return { ok: false, reason: 'large_employer', detail: 'They hire through an enterprise system (' + (big.match(ENTERPRISE_ATS) || [''])[0] + '), a sign of a large employer.' };
+    const own = hosts.find(h => BRAND_CAREERS.test(h.replace(/^www\./, '')));
+    if (own) return { ok: false, reason: 'large_employer', detail: `They post on a careers site of their own (${own}), a sign of a large employer.` };
+    if (!salesSeatOk(title, j.description)) return { ok: false, reason: 'field_sales', detail: 'A sales seat the post describes as in person (a lot, a showroom, a territory), or never says is by phone.' };
+    const r = restrictions([title, j.description, j.location].join(' '));
+    // Onsite attendance is fine here: the point is a remote person can do the seat. Licences and clearances are not.
+    const hard = r.hard.filter(x => !/onsite/.test(x));
+    if (hard.length) return { ok: false, reason: 'hard_restriction', detail: 'The post ' + hard.join(' and ') + '.' };
+    if (!stateOf(j.location) && !/anywhere|remote|united states/i.test(String(j.location || ''))) return { ok: false, reason: 'outside_us', detail: `"${j.location}" is not a US location.` };
+    return { ok: true, family, age, restrictions: { ...r, hard } };
+}
+
+const NAME_STOP = new Set(['inc', 'llc', 'ltd', 'co', 'corp', 'corporation', 'company', 'the', 'and', 'of', 'group', 'services', 'service', 'solutions', 'pllc', 'pc', 'pa', 'lp', 'llp', 'usa', 'us', 'america']);
+function nameWords(n) { return String(n || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(w => w && !NAME_STOP.has(w)); }
+// Employer names that say nothing about who the employer is.
+const GENERIC = new Set(['confidential', 'hiring', 'employer', 'private', 'practice', 'dental', 'office', 'medical', 'law', 'firm', 'insurance', 'agency', 'clinic', 'local', 'small', 'business', 'family', 'owned', 'home', 'health', 'care', 'remote', 'team', 'staff', 'client', 'our', 'a', 'an', 'company']);
+// Same word, or the same word with a plural or adjective ending: electric/electrical, home/homes. Not smith/smithfield.
+const sameWord = (a, b) => a === b || [a, b].some((x, i) => { const y = i ? a : b; return y.length > x.length && /^(s|es|al|als|ing|er|ers)$/.test(y.slice(x.length)) && y.startsWith(x); });
+/**
+ * Is this Google business listing the employer that posted the job? Two distinctive words in common
+ * (or exactly the same name), every distinctive word of one name found in the other, and the same
+ * state. One shared word is never enough: "Royal Services" is not "Royal Plumbing", "Spectrum" is not
+ * "Spectrum Store", and a job with no state has nothing to confirm the place against.
+ */
+export function profileMatches(company, profile, jobLocation) {
+    if (!profile || !profile.title) return { ok: false, why: 'Google shows no business listing for this name.' };
+    const a = nameWords(company), b = nameWords(profile.title);
+    if (!a.length || !b.length || a.every(w => GENERIC.has(w))) return { ok: false, why: `"${company}" is too generic a name to match to one business.` };
+    const exact = a.join(' ') === b.join(' ');
+    const aInB = a.filter(w => b.some(x => sameWord(w, x))).length, bInA = b.filter(w => a.some(x => sameWord(w, x))).length;
+    const nameOk = exact || ((aInB === a.length || bInA === b.length) && Math.min(aInB, bInA) >= 2);
+    if (!nameOk) return { ok: false, why: `Google's listing "${profile.title}" is not clearly "${company}".` };
+    const js = stateOf(jobLocation), ps = stateOf(profile.address);
+    if (!js) return { ok: false, why: `The job location "${jobLocation}" names no state, so the listing cannot be confirmed as this employer.` };
+    if (!ps) return { ok: false, why: 'Google\'s listing has no address to confirm the location.' };
+    if (js !== ps) return { ok: false, why: `The listing is in ${ps}; the job is in ${js}.` };
+    return { ok: true };
 }
 
 /** Higher first. LATAM or Philippines in the post, a fresh post, a small board, a named contact. */
@@ -265,7 +436,7 @@ export function careersLinks(page, limit = 2) {
 
 // ---- the record ------------------------------------------------------------------------------
 export const firstNameOf = name => { const f = String(name || '').trim().split(/\s+/)[0] || ''; return /^[A-Za-z][A-Za-z'’-]{0,30}$/.test(f) ? f[0].toUpperCase() + f.slice(1) : ''; };
-const FAMILY_WORDS = { support: 'customer support', admin: 'admin', scheduling: 'scheduling', account: 'account support' };
+const FAMILY_WORDS = { support: 'customer support', admin: 'admin', scheduling: 'scheduling', account: 'account support', sales: 'sales' };
 export const familyWords = f => FAMILY_WORDS[f] || 'support';
 
 /** The short researched brief a caller reads before dialling. Facts only, each one sourced on the record. */
@@ -276,9 +447,11 @@ export function briefFor(rec) {
     const caveat = (r.soft || []).length ? ` Note: the post ${r.soft.join(' and ')}. That is about who they hire directly; a managed placement is a different arrangement, so ask rather than assume.` : '';
     const more = (rec.jobs || []).length > 1 ? ` They have ${rec.jobs.length} matching roles open.` : '';
     return {
-        summary: `${c.name} is hiring a ${j.title}. The post ${when} and was still open on their careers page when we checked.${where}${more}`,
+        summary: j.source === 'google_jobs'
+            ? `${c.name} is hiring a ${j.title}${j.city ? ' in ' + j.city : ''}. The listing ${when} on Google Jobs${j.via ? ' (' + j.via + ')' : ''}.${where}${more} The seat is one a remote person can do, so offer to fill it and run their hiring for roles like it.`
+            : `${c.name} is hiring a ${j.title}. The post ${when} and was still open on their careers page when we checked.${where}${more}`,
         need: `A ${familyWords(rec.family)} hire: ${j.title}${j.location ? ' (' + j.location + ')' : ''}.${caveat}`,
-        nextStep: 'Book a short call with Paul to scope the role, so we only send people who fit.',
+        nextStep: 'Book a short call with Paul to scope the role and how we would run their remote hiring for customer service, sales and admin.',
     };
 }
 
@@ -300,9 +473,11 @@ export function callRow(rec, viewer, now = Date.now()) {
         callOwner: owner, callOwnerAt: rec.callOwnerAt || null, callHistory: rec.callHistory || [],
         claimed: !!owner, mine, unclaimed: ready && !owner, dueForMe: ready && mine, pausedFollowUp: false,
         phone: p.number || null,
-        callContact: { phone: p.number || null, phoneStatus: p.number ? 'site_main' : 'missing', phoneSource: 'Published on their website', phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: 'The company line from their own website, not a direct line.' },
+        callContact: p.source === 'Google business listing'
+            ? { phone: p.number || null, phoneStatus: p.number ? 'listing_main' : 'missing', phoneSource: 'Google business listing', phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: 'The main line on their Google business listing, not a direct line.' }
+            : { phone: p.number || null, phoneStatus: p.number ? 'site_main' : 'missing', phoneSource: 'Published on their website', phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: 'The company line from their own website, not a direct line.' },
         industry: { key: 'hiring', label: 'Hiring now', source: 'job post' },
-        hiring: { title: rec.job && rec.job.title, url: rec.job && rec.job.url, postedAt: rec.job && rec.job.postedAt, checkedAt: rec.job && rec.job.checkedAt, jobState: rec.job && rec.job.state || 'open', location: rec.job && rec.job.location, priority: rec.priority || 0, offshore: !!(rec.job && rec.job.restrictions && rec.job.restrictions.offshore) },
+        hiring: { source: rec.job && rec.job.source || 'ats', city: rec.job && rec.job.city || null, title: rec.job && rec.job.title, url: rec.job && rec.job.url, postedAt: rec.job && rec.job.postedAt, checkedAt: rec.job && rec.job.checkedAt, jobState: rec.job && rec.job.state || 'open', location: rec.job && rec.job.location, priority: rec.priority || 0, offshore: !!(rec.job && rec.job.restrictions && rec.job.restrictions.offshore) },
     };
 }
 
@@ -312,6 +487,8 @@ const PROMISED = ['callback', 'gatekeeper', 'timing'];
 export function jobCurrent(rec, now = Date.now()) {
     const j = rec && rec.job;
     if (!j || j.state === 'closed' || j.state === 'stale') return false;
+    // A Google Jobs card has no posting API to re-read: it is current until MAX_AGE_DAYS after it went up.
+    if (j.source === 'google_jobs') return Date.parse(j.postedAt) > now - MAX_AGE_DAYS * 864e5;
     return Date.parse(j.checkedAt) > now - FRESH_MS;
 }
 /**

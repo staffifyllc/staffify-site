@@ -19,7 +19,7 @@ import { clientCheck } from './_client-guard.js';
 import { contact as crmContact } from './_outreach-crm.js';
 import { crmStop } from './_rep-email-gates.js';
 import { loadBad, isBad } from './_bad-numbers.js';
-import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady } from './_hiring-intent.js';
+import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf } from './_hiring-intent.js';
 import { runHiring, addPending } from './_hiring-run.js';
 
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail)\./i;
@@ -46,6 +46,34 @@ async function serpSearch(q) {
     const j = await r.json();
     if (!r.ok || (j.error && !/hasn't returned any results/i.test(j.error))) throw Error('SerpApi search failed (' + r.status + ')');
     return { links: (j.organic_results || []).map(x => x.link).filter(Boolean) };
+}
+// Google Jobs: one role in one city, the listings Google shows for it.
+async function serpJobs(q, location) {
+    const u = 'https://serpapi.com/search.json?engine=google_jobs&hl=en&gl=us&q=' + encodeURIComponent(q) + '&location=' + encodeURIComponent(location) + '&api_key=' + encodeURIComponent(process.env.SERPAPI_KEY || '');
+    const r = await fetch(u, { signal: AbortSignal.timeout(30000) });
+    const j = await r.json();
+    if (!r.ok || (j.error && !/hasn't returned any results/i.test(j.error))) throw Error('SerpApi Google Jobs failed (' + r.status + ')');
+    return { jobs: j.jobs_results || [] };
+}
+// The employer's Google business listing (name, website, phone, address), one search per employer and
+// state, remembered 30 days including a miss, so an employer is never paid for twice.
+async function businessProfile(company, location, budget) {
+    const key = companyKey(company, location);
+    const saved = parseValue(await redis.get(HK.profile(key)));
+    if (saved && Date.parse(saved.expiresAt) > Date.now()) return saved.profile || {};
+    if (!budget || !await budget.take()) return { error: 'No SerpApi searches left for today; the lookup waits for the next run.', noBudget: true };
+    const q = [company, cityOf(location), stateOf(location)].filter(Boolean).join(' ');
+    const r = await fetch('https://serpapi.com/search.json?engine=google&hl=en&gl=us&q=' + encodeURIComponent(q) + '&api_key=' + encodeURIComponent(process.env.SERPAPI_KEY || ''), { signal: AbortSignal.timeout(30000) });
+    const j = await r.json();
+    if (!r.ok || (j.error && !/hasn't returned any results/i.test(j.error))) throw Error('SerpApi lookup failed (' + r.status + ')');
+    const k = j.knowledge_graph || null;
+    const places = Array.isArray(j.local_results) ? j.local_results : (j.local_results && j.local_results.places) || [];
+    const p0 = places[0] || null;
+    const profile = k && k.title && (k.phone || k.website || k.address)
+        ? { title: k.title, type: k.type || null, website: k.website || null, phone: k.phone || null, address: k.address || null, link: 'https://www.google.com/search?q=' + encodeURIComponent(q), source: 'knowledge panel' }
+        : p0 && p0.title ? { title: p0.title, type: p0.type || null, website: (p0.links && p0.links.website) || null, phone: p0.phone || null, address: p0.address || null, link: 'https://www.google.com/search?q=' + encodeURIComponent(q), source: 'local results' } : {};
+    await redis.set(HK.profile(key), { profile, query: q, expiresAt: new Date(Date.now() + 30 * 864e5).toISOString() });
+    return profile;
 }
 const fmHeaders = () => ({ Authorization: 'Bearer ' + process.env.FINDYMAIL_KEY, 'Content-Type': 'application/json', Accept: 'application/json' });
 async function findymailCredits() {
@@ -83,7 +111,7 @@ async function outreachDomains() {
 }
 
 export function deps() {
-    return { kv: redis, getJson, getPage, serpAccount, serpSearch, findymailCredits, findContact, findSitePhone, verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad };
+    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad };
 }
 
 export default async function handler(req, res) {
@@ -98,7 +126,7 @@ export default async function handler(req, res) {
             try {
                 const d = { ...deps(), outreachDomains: await outreachDomains() };
                 const cap = (v, max, dflt) => Math.max(0, Math.min(max, Number.isFinite(Number(v)) && v !== undefined && v !== '' ? Number(v) : dflt));
-                const report = await runHiring(d, { maxSearches: cap(req.query?.searches, 6, 4), maxCandidates: cap(req.query?.candidates, 20, 14), discover: req.query?.discover !== '0' });
+                const report = await runHiring(d, { maxSearches: cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 30, 25), discover: req.query?.discover !== '0' });
                 return res.status(200).json({ status: 'complete', report });
             } finally { if (await redis.get(HK.lock) === nonce) await redis.del(HK.lock); }
         }
@@ -115,6 +143,9 @@ export default async function handler(req, res) {
                 pending: Object.values(pendingAll || {}).map(parseValue).filter(Boolean).map(e => ({ key: e.key, url: e.url, attempts: e.attempts, lastError: e.lastError || null, seed: !!(e.provenance && e.provenance.seed), nextTryAt: e.nextTryAt })),
                 screened: { postings: seen.length, byVerdict: count(seen, s => s.verdict), excludedBy: count(seen.filter(s => s.verdict === 'excluded'), s => s.reason) },
                 runs: (runs || []).map(parseValue).filter(Boolean),
+                // Is the loop running? The cron fires weekdays at :15 past every hour 13-23 UTC (9:15 AM to 7:15 PM ET).
+                loop: (() => { const rs = (runs || []).map(parseValue).filter(Boolean); const last = rs[0] || null; const today = new Date().toISOString().slice(0, 10);
+                    return { lastRunAt: last && last.startedAt || null, lastRunReady: last ? (last.ready || []).length : null, cardsAddedToday: records.filter(r => String(r.createdAt || '').slice(0, 10) === today).length, schedule: 'weekdays every hour, 9:15 AM to 7:15 PM ET' }; })(),
             };
             if (view === 'records') out.records = records;
             return res.status(200).json(out);

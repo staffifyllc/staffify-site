@@ -69,7 +69,7 @@
     },
     {
       "path": "/api/hiring-intent/",
-      "schedule": "15 13-23/2 * * 1-5"
+      "schedule": "15 13-23 * * 1-5"
     }
   ],
   "rewrites": [

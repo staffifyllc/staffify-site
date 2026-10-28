@@ -113,10 +113,11 @@ const rate = (num, den) => (den > 0 ? { num, den, pct: Math.round((num / den) * 
 const sum = (rows, f) => { let n = 0; for (const r of rows) { const v = f(r); if (v === null || v === undefined) return null; n += v; } return n; };
 
 // ---- leads still to call ----------------------------------------------------------------------
-const DIALABLE = ['business_listed', 'available', 'vendor_direct', 'site_main', 'crm_unconfirmed'];
+const DIALABLE = ['business_listed', 'available', 'vendor_direct', 'site_main', 'listing_main', 'crm_unconfirmed'];
 export const SOURCE_LABEL = {
     business_listed: 'Published on their own website',
     site_main: 'Main line from their website',
+    listing_main: 'Main line from their Google business listing',
     vendor_direct: 'Direct dial from a data vendor',
     crm_unconfirmed: 'CRM number, not found on their website',
     available: 'CRM number, website not checked yet',

@@ -11,7 +11,7 @@
 //                          contact email go through optOutEverywhere: the global list every campaign
 //                          checks, plus the CRM contact's other address and number
 //   timing                 comes back on the date given. No nurture email: this campaign is call-first.
-import { HK, getRecord, putRecord, putBacklog, applyOutcome, callRow, boardKey, domainKey, parseAts, hiringCallReady } from './_hiring-intent.js';
+import { HK, MAX_AGE_DAYS, getRecord, putRecord, putBacklog, applyOutcome, callRow, boardKey, domainKey, companyKey, phoneKey, parseAts, hiringCallReady } from './_hiring-intent.js';
 import { hiringCallScript } from './_call-scripts.js';
 import { scheduleCallbackTask } from './_callback-task.js';
 import { markBad } from './_bad-numbers.js';
@@ -55,12 +55,15 @@ export async function saveHiringOutcome(kv, { rep, body }, deps = {}) {
         const known = [next.phone && next.phone.number, ...((next.phone && next.phone.alternates) || [])].filter(Boolean);
         out.wrongNumber = body.dialled ? await (deps.markBad || markBad)(kv, { email: id, phone: body.dialled, known, by: rep.email }) : { ok: false, reason: 'the dialled number was not recorded' };
         const now = Date.now();
-        await putBacklog(kv, { id, campaignId: next.campaignId, company: next.company, job: next.job, jobs: next.jobs, contact: next.contact, provenance: next.provenance, reason: 'wrong_number', detail: 'A caller logged the listed number as wrong. The next run looks for another number on their site.', missing: ['phone'], attempts: 0, state: 'open', firstSeenAt: new Date(now).toISOString(), lastTriedAt: null, nextTryAt: new Date(now).toISOString() });
+        const gjob = next.job && next.job.source === 'google_jobs';
+        await putBacklog(kv, { id, campaignId: next.campaignId, company: next.company, job: next.job, jobs: next.jobs, contact: next.contact, ...(next.listing ? { listing: next.listing } : {}), provenance: next.provenance, reason: 'wrong_number', detail: gjob ? 'A caller logged the listed number as wrong. The next run looks for another number on their website, if they have one.' : 'A caller logged the listed number as wrong. The next run looks for another number on their site.', missing: ['phone'], attempts: 0, state: 'open', firstSeenAt: new Date(now).toISOString(), lastTriedAt: null, nextTryAt: new Date(now).toISOString() });
     }
     if (outcome === 'suppress') {
         const p = parseAts(next.job && next.job.url);
         const mark = JSON.stringify({ id, verdict: 'suppressed', at: new Date().toISOString(), by: rep.email });
         if (p) await kv.hset(HK.companies, { [boardKey(p)]: mark });
+        if (next.job && next.job.source === 'google_jobs' && next.company) await kv.hset(HK.companies, { [companyKey(next.company.name, next.job.location)]: mark });
+        if (next.phone && next.phone.number) await kv.hset(HK.companies, { [phoneKey(next.phone.number)]: mark });
         if (next.company && next.company.domain) await kv.hset(HK.companies, { [domainKey(next.company.domain)]: mark });
         // The global stop list (api/_optout.js), read by every send, text and call path: the number they
         // answered on and, if we have one, their email. A phone-only card is still stopped everywhere.
@@ -94,24 +97,28 @@ export async function hiringBrief(kv, { id, caller, callerEmail, shiftGate }, de
     const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'their website'; } };
     const named = c.name && (c.status === 'verified' || c.status === 'unconfirmed') ? c.name : null;
     const askFor = named || `whoever is hiring the ${j.title}`;
-    const script = hiringCallScript({ caller, callerEmail, company: co.name, firstName: named ? c.firstName : '', jobTitle: j.title, family: rec.family, offshore: j.restrictions && j.restrictions.offshore });
-    const dial = ph.number ? { number: ph.number, label: 'Published on their own website', detail: `The company line from ${host(ph.sourceUrl)}, checked ${new Date(ph.checkedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}. It reaches the company, not a named person: ask for ${askFor}.`, alternates: ph.alternates || [], sourceUrl: ph.sourceUrl || null } : null;
+    const script = hiringCallScript({ caller, callerEmail, company: co.name, firstName: named ? c.firstName : '', jobTitle: j.title, family: rec.family, offshore: j.restrictions && j.restrictions.offshore, city: j.city || null });
+    const fromListing = ph.source === 'Google business listing';
+    const checked = new Date(ph.checkedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+    const dial = ph.number ? { number: ph.number, label: fromListing ? 'Main line from their Google business listing' : 'Published on their own website', detail: fromListing ? `The main line on their Google business listing (${(co.identity && co.identity.listingName) || co.name}), checked ${checked}. It reaches the business, not a named person: ask for ${askFor}.` : `The company line from ${host(ph.sourceUrl)}, checked ${checked}. It reaches the company, not a named person: ask for ${askFor}.`, alternates: ph.alternates || [], sourceUrl: ph.sourceUrl || null } : null;
     const posted = j.postedAt ? new Date(j.postedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }) : null;
     return { status: 200, body: {
         callable: hiringCallReady(rec), hiring: true, campaignId: rec.campaignId, callQueue: 'shared', callerName: caller,
         company: co.name, website: co.website, recipient: c.email || null,
         name: named, title: named ? c.role : null,
-        identity: named ? { status: 'researched', source: c.source + (c.status === 'verified' ? ', email verified' : ', email ' + c.status), checkedAt: c.checkedAt } : { status: 'unknown', reason: (c.status === 'lookup_failed' ? 'The contact lookup failed (' + (c.reason || 'error') + ').' : 'Findymail found no named contact.') + ' Ask for ' + askFor + '.' },
+        identity: named ? { status: 'researched', source: c.source + (c.status === 'verified' ? ', email verified' : ', email ' + c.status), checkedAt: c.checkedAt } : { status: 'unknown', reason: (c.status === 'lookup_failed' ? 'The contact lookup failed (' + (c.reason || 'error') + ').' : c.status === 'not_searched' ? 'Their Google listing names no website, so no contact search was run.' : 'Findymail found no named contact.') + ' Ask for ' + askFor + '.' },
         industry: { key: 'hiring', label: 'Hiring now', source: 'job post' },
         location: j.location || null, prospectTimezone: null,
         phone: allowed ? ph.number || null : null, dial: allowed ? dial : null,
         phoneEvidence: allowed ? null : { status: 'withheld', detail: shiftGate.message, checkedAt: null, sourceUrl: null },
         shiftGate,
         checkedAt: j.checkedAt,
-        why: `Hiring now: ${j.title}${posted ? ', posted ' + posted : ''}. Still open on their careers page when checked ${new Date(j.checkedAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ET. Nothing has been emailed; this is the first touch.`,
+        why: j.source === 'google_jobs'
+            ? `Hiring now: ${j.title}${j.city ? ' in ' + j.city : ''}, listed on Google Jobs${j.via ? ' via ' + j.via : ''}${posted ? ' around ' + posted : ''}. A post can be filled any day; this one is under ${MAX_AGE_DAYS} days old. Nothing has been emailed; this is the first touch.`
+            : `Hiring now: ${j.title}${posted ? ', posted ' + posted : ''}. Still open on their careers page when checked ${new Date(j.checkedAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ET. Nothing has been emailed; this is the first touch.`,
         fact: [rec.brief && rec.brief.summary, rec.brief && rec.brief.need].filter(Boolean).join(' '),
         source: { url: j.url },
-        job: { title: j.title, url: j.url, postedAt: j.postedAt, ageDays: j.ageDays, checkedAt: j.checkedAt, location: j.location, workplace: j.workplace, restrictions: j.restrictions, more: (rec.jobs || []).slice(1).map(x => ({ title: x.title, url: x.url })) },
+        job: { source: j.source || 'ats', city: j.city || null, via: j.via || null, title: j.title, url: j.url, postedAt: j.postedAt, ageDays: j.ageDays, checkedAt: j.checkedAt, location: j.location, workplace: j.workplace, restrictions: j.restrictions, more: (rec.jobs || []).slice(1).map(x => ({ title: x.title, url: x.url })) },
         companyIdentity: co.identity, openRoles: co.openRoles, contactStatus: c.status || null,
         nextStep: rec.brief && rec.brief.nextStep, provenance: rec.provenance,
         events: [], callHistory: history(rec.callHistory),

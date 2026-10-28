@@ -2,9 +2,10 @@
 // nothing here calls, texts, emails or spends a credit.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HK, HIRING_ID, FRESH_MS, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS } from '../api/_hiring-run.js';
+import { HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
+import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript } from '../api/_call-scripts.js';
 import { crmStop } from '../api/_rep-email-gates.js';
 import { loadBad, isBad } from '../api/_bad-numbers.js';
@@ -221,20 +222,6 @@ function threeBoards() {
     return { json, pages, links: ids.map((id, i) => `https://jobs.lever.co/co${i}/${id}`) };
 }
 
-test('search results beyond the run cap wait in the pending queue for the next run', async () => {
-    const t = threeBoards();
-    const w = world({ json: t.json, pages: t.pages, links: t.links });
-    const first = await runHiring(w.deps, { maxSearches: 1, maxCandidates: 1, refresh: 0 });
-    assert.equal(first.verdicts.ready, 1);
-    assert.equal(first.pendingAfter, 2, 'two paid-for postings are kept, not discarded');
-    let searched = 0;
-    const second = await runHiring({ ...w.deps, serpSearch: async () => { searched++; return { links: [] }; } }, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
-    assert.equal(second.verdicts.ready, 2);
-    assert.equal(second.pendingAfter, 0);
-    assert.equal((await allRecords(w.kv)).length, 3);
-    assert.equal(searched, 1, 'a search runs only after the waiting work is done');
-});
-
 test('a posting that cannot be read stays pending, then is parked as research, never lost', async () => {
     const w = world();
     await addPending(w.kv, { ...lever, url: LEVER_URL }, { seed: true, discoveredBy: 'seed' }, NOW);
@@ -406,4 +393,218 @@ test('a refused card hides dialled numbers and numbers in notes from a caller of
     const text = JSON.stringify(b.body);
     assert.doesNotMatch(text, /3056360188|636-0199|636-0188/);
     assert.equal(b.body.callHistory[0].dialled, null);
+});
+
+// ---- Google Jobs: the loop that does not run dry (Paul, 2026-10-28) ------------------------------
+const listing = (over = {}) => ({ job_id: 'j1', title: 'Administrative Assistant - Front Desk', company_name: 'Royal Electric', location: 'Dallas, TX', via: 'Indeed',
+    extensions: ['2 days ago', 'Full-time'], description: 'Answer phones, schedule service calls and keep the office running.', apply_options: [{ title: 'Indeed', link: 'https://www.indeed.com/viewjob?jk=1' }], share_link: 'https://www.google.com/search?ibp=htl;jobs#j1', ...over });
+const ROYAL = { title: 'Royal Electrical Services', type: 'Contractor in Dallas, Texas', website: 'https://www.royalelect.com/', phone: '(945) 218-4003', address: '4518 Ash Ln, Dallas, TX 75223', link: 'https://www.google.com/search?q=Royal+Electric+Dallas+TX' };
+
+test('Google Jobs listings: customer service, sales and admin seats from the last week, no agencies or big employers', () => {
+    assert.equal(qualifyJob(listing(), NOW).ok, true);
+    assert.equal(qualifyJob(listing({ title: 'Inside Sales Representative' }), NOW).family, 'sales');
+    assert.equal(qualifyJob(listing({ title: 'Appointment Setter' }), NOW).family, 'sales');
+    assert.equal(qualifyJob(listing({ title: 'Dispatcher and Customer Service Representative' }), NOW).family, 'support');
+    assert.equal(qualifyJob(listing({ extensions: ['9 days ago'] }), NOW).reason, 'stale_post');
+    assert.equal(qualifyJob(listing({ extensions: ['Full-time'] }), NOW).reason, 'undated_post', 'no date is not assumed fresh');
+    assert.equal(qualifyJob(listing({ company_name: 'Randstad USA' }), NOW).reason, 'competitor');
+    assert.equal(qualifyJob(listing({ company_name: 'Frontline Source Group' }), NOW).reason, 'competitor');
+    assert.equal(qualifyJob(listing({ company_name: 'Spade Recruiting' }), NOW).reason, 'competitor');
+    assert.equal(qualifyJob(listing({ company_name: 'UT Southwestern Medical Center', apply_options: [{ link: 'https://jobs.utsouthwestern.edu/x' }] }), NOW).reason, 'institution');
+    assert.equal(qualifyJob(listing({ company_name: 'City of Dallas' }), NOW).reason, 'institution');
+    // Small businesses that only carry the word stay in.
+    for (const c of ['Lakewood Animal Hospital', 'Orange County Plumbing Inc', 'University Park Dental', 'The Roofing Authority', 'College Hunks Hauling Junk & Moving', 'Dallas Family Medical Center']) assert.equal(qualifyJob(listing({ company_name: c }), NOW).ok, true, c);
+    assert.equal(qualifyJob(listing({ apply_options: [{ link: 'https://quest.wd1.myworkdayjobs.com/x' }] }), NOW).reason, 'large_employer');
+    assert.equal(qualifyJob(listing({ title: 'Customer Service Representative - Store (PT)' }), NOW).reason, 'role_not_fillable');
+    // A phone seat in a field services department is still a phone seat (review, 2026-10-28).
+    assert.equal(qualifyJob(listing({ title: 'Customer Service Representative - Field Services' }), NOW).family, 'support');
+    assert.equal(qualifyJob(listing({ title: 'Account Executive' }), NOW).reason, 'role_not_fillable');
+    // An office job is fine: the seat is one a remote person does. A licence is not.
+    assert.equal(qualifyJob(listing({ description: 'Must report to the office daily.' }), NOW).ok, true);
+    assert.equal(qualifyJob(listing({ description: 'Must hold a licensed insurance agent credential.' }), NOW).reason, 'hard_restriction');
+    assert.equal(jobAgeDays(['5 hours ago']), 0); assert.equal(jobAgeDays(['30+ days ago']), 30);
+});
+
+test('the searches rotate every role through every city, never the same city twice in a row', () => {
+    assert.equal(JOB_QUERIES.length, JOB_TERMS.length * METROS.length);
+    assert.equal(new Set(JOB_QUERIES.map(q => q.q + '@' + q.location)).size, JOB_QUERIES.length);
+    for (let i = 1; i < JOB_QUERIES.length; i++) assert.notEqual(JOB_QUERIES[i].location, JOB_QUERIES[i - 1].location);
+    assert.ok(JOB_QUERIES.every(q => /in the last 3 days$/.test(q.q)));
+    assert.ok(new Set(JOB_QUERIES.slice(0, JOB_TERMS.length).map(q => q.term)).size === JOB_TERMS.length, 'the first pass covers every role');
+});
+
+test('the employer is matched to its Google business listing by name and state, not by one shared word', () => {
+    assert.equal(profileMatches('Royal Electric', ROYAL, 'Dallas, TX').ok, true);
+    assert.equal(profileMatches('Royal Electric', { ...ROYAL, title: 'Royal Plumbing' }, 'Dallas, TX').ok, false);
+    assert.equal(profileMatches('Royal Electric', { ...ROYAL, address: '12 Main St, Tulsa, OK 74103' }, 'Dallas, TX').ok, false);
+    assert.equal(profileMatches('Royal Electric', { ...ROYAL, address: null }, 'Dallas, TX').ok, false, 'no address, no proof of place');
+    assert.equal(profileMatches('Royal Electric', {}, 'Dallas, TX').ok, false);
+    assert.equal(stateOf('Phoenix, AZ (+3 others)'), 'AZ');
+});
+
+function jobsWorld(over = {}) {
+    const w = world();
+    let lookups = 0, phoneLookups = 0;
+    w.deps.businessProfile = async (company, location, budget) => { if (!await budget.take()) return { error: 'no budget', noBudget: true }; lookups++; return over.profile === undefined ? ROYAL : over.profile; };
+    w.deps.findSitePhone = async () => { phoneLookups++; return null; };
+    w.deps.findContact = async d => (d === 'royalelect.com' ? { name: 'Maria Lopez', role: null, email: 'maria@royalelect.com' } : {});
+    w.deps.serpJobs = async () => ({ jobs: over.jobs || [listing()] });
+    return { ...w, counts: () => ({ lookups, phoneLookups }) };
+}
+
+test('a Google Jobs listing becomes a card with the listing number, the job and the contact, each with its source', async () => {
+    const w = jobsWorld();
+    const r = await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    assert.equal(r.verdicts.ready, 1, JSON.stringify(r.reasons));
+    const rec = (await allRecords(w.kv))[0];
+    assert.equal(rec.job.source, 'google_jobs'); assert.equal(rec.job.city, 'Dallas'); assert.equal(rec.job.via, 'Indeed');
+    assert.equal(rec.job.ageDays, 2); assert.equal(rec.job.url, 'https://www.google.com/search?ibp=htl;jobs#j1');
+    assert.equal(rec.company.identity.how, 'google_business_profile'); assert.equal(rec.company.identity.listingName, 'Royal Electrical Services');
+    assert.equal(rec.company.domain, 'royalelect.com');
+    assert.equal(rec.phone.number, '+19452184003'); assert.equal(rec.phone.source, 'Google business listing');
+    assert.equal(rec.contact.email, 'maria@royalelect.com');
+    assert.equal(w.counts().phoneLookups, 0, 'the listing gave the number; no site crawl needed');
+    assert.equal(hiringCallReady(rec, NOW), true);
+    assert.match(rec.brief.summary, /Google Jobs \(Indeed\)/);
+    assert.equal(r.searchBudget.used, 2, 'one job search and one listing lookup');
+});
+
+test('a listing whose employer cannot be matched to Google goes to research and is not called', async () => {
+    const w = jobsWorld({ profile: { ...ROYAL, title: 'Royal Plumbing' } });
+    const r = await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    assert.equal(r.verdicts.backlog, 1); assert.equal(r.reasons.identity_unresolved, 1);
+    assert.equal((await allRecords(w.kv)).length, 0);
+    assert.equal(w.counts().phoneLookups, 0);
+});
+
+test('listings beyond the run cap, or beyond the day\'s search budget, wait in pending untouched', async () => {
+    const jobs = [listing(), listing({ job_id: 'j2', company_name: 'DEX Imaging LLC', location: 'Tampa, FL', title: 'Dispatcher and Customer Service Representative' }), listing({ job_id: 'j3', company_name: 'Vickery Development', location: 'Garland, TX', title: 'Administrative Assistant' })];
+    const w = jobsWorld({ jobs });
+    const first = await runHiring(w.deps, { maxSearches: 1, maxCandidates: 1, refresh: 0 });
+    assert.equal(first.listings.queued, 3);
+    assert.equal(first.pendingAfter, 2, 'two found listings are kept for the next run');
+    // A day with no searches left: nothing is processed, nothing is marked as a failed attempt.
+    const broke = await runHiring({ ...w.deps, serpAccount: async () => ({ left: 250 }) }, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    assert.equal(broke.searchBudget.allowedThisRun, 0);
+    assert.equal(broke.waitingForBudget, 1);
+    const pend = Object.values(await w.kv.hgetall(HK.pending)).map(JSON.parse);
+    assert.equal(pend.length, 2); assert.ok(pend.every(e => e.attempts === 0));
+});
+
+test('a Google Jobs card expires two weeks after posting, keeping any promised callback', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    const later = NOW + (MAX_AGE_DAYS - 2 + 1) * 864e5;  // posted 2 days before NOW
+    assert.equal(hiringCallReady(rec, later - 2 * 864e5), true);
+    assert.equal(hiringCallReady(rec, later + 864e5), false);
+    const out = await refreshReady({ ...w.deps, now: later + 864e5 }, { limit: 5 });
+    assert.equal(out.stale, 1);
+    assert.equal((await getRecord(w.kv, rec.id)).job.state, 'stale');
+});
+
+test('the hiring script offers to run their remote hiring, names the city, and never claims an email', () => {
+    const s = hiringCallScript({ caller: 'Milton', company: 'Royal Electric', firstName: '', jobTitle: 'Administrative Assistant', family: 'admin', city: 'Dallas' });
+    assert.match(s.opener, /in Dallas/);
+    assert.match(s.reason, /run the hiring for remote customer service, sales and admin roles/);
+    const spoken = [s.opener, s.reason, s.voicemail, ...s.questions, ...Object.values(s.tree).map(n => n.say || '')].join(' ');
+    assert.doesNotMatch(spoken, /we sent|sent you (over|a few|some)|our (e-?mails?|notes)|e-?mailed you/i);
+    assert.doesNotMatch(spoken, /—/);
+});
+
+// ---- the review of 2026-10-28: each confirmed finding, pinned ------------------------------------
+test('every searched role term is a seat the rules accept, and office seats next to field work stay in', () => {
+    for (const [, term] of JOB_TERMS) assert.ok(roleFamily(term.replace(/\b\w/g, c => c.toUpperCase())), term);
+    for (const t of ['Help Desk Technician', 'Field Service Dispatcher', 'Delivery Dispatcher', 'Customer Service Representative - Driver Support', 'Server Support Specialist', 'Office Administrator', 'Lead Generation Specialist']) assert.ok(roleFamily(t), t);
+    for (const t of ['HVAC Technician', 'Driver', 'Outside Sales Representative', '911 Dispatcher', 'Front Desk Agent', 'Door to Door Sales Representative']) assert.equal(roleFamily(t), null, t);
+    assert.equal(qualifyJob(listing({ title: 'Sales Representative', company_name: 'Park Place Motors', description: 'Sell new and pre-owned vehicles on our lot' }), NOW).reason, 'field_sales');
+    assert.equal(qualifyJob(listing({ title: 'Sales Representative', company_name: 'Acme Roofing', description: 'Call inbound leads and book appointments by phone' }), NOW).ok, true);
+    assert.equal(qualifyJob(listing({ title: 'Insurance Customer Service Representative', description: 'Must hold a P&C license' }), NOW).reason, 'hard_restriction');
+});
+
+test('staffing agencies and BPOs are caught by name, and big brands by their own careers site', () => {
+    for (const c of ['Get It Recruit - Customer Service', 'ProStaff', 'PrideStaff', 'ManpowerGroup', 'Kelly', 'Jobot', 'CyberCoders', 'Sutherland', 'TempStaff', 'Advantage Resourcing']) assert.equal(qualifyJob(listing({ company_name: c }), NOW).reason, 'competitor', c);
+    assert.equal(qualifyJob(listing({ company_name: 'Spectrum', apply_options: [{ link: 'https://jobs.spectrum.com/job/1' }] }), NOW).reason, 'large_employer');
+    assert.equal(qualifyJob(listing({ company_name: 'Amazon', apply_options: [{ link: 'https://amazon.jobs/en/jobs/1' }] }), NOW).reason, 'large_employer');
+});
+
+test('the business match needs two distinctive words or the exact name, a state, and never a generic name', () => {
+    const at = a => ({ address: a + ', Dallas, TX 75201' });
+    assert.equal(profileMatches('Elite Services LLC', { title: 'Elite Auto Repair', ...at('1 Main St') }, 'Dallas, TX').ok, false);
+    assert.equal(profileMatches('Premier Solutions Group', { title: 'Premier Plumbing & Drain', ...at('1 Main St') }, 'Dallas, TX').ok, false);
+    assert.equal(profileMatches('Confidential', { title: 'Confidential Shredding Services', ...at('1 Main St') }, 'Dallas, TX').ok, false);
+    assert.equal(profileMatches('Dental Office', { title: 'Smile Dental Office', ...at('1 Main St') }, 'Dallas, TX').ok, false);
+    assert.equal(profileMatches('Smith Dental', { title: 'Smithfield Dental Care', ...at('1 Main St') }, 'Dallas, TX').ok, false);
+    assert.equal(profileMatches('Spectrum', { title: 'Spectrum Store', ...at('5000 Belt Line Rd') }, 'Dallas, TX').ok, false);
+    assert.equal(profileMatches('Precision Plumbing', { title: 'Precision Plumbing Inc', address: '1 Main St, Phoenix, AZ 85001' }, 'Anywhere').ok, false, 'no state on the job, nothing to confirm');
+    assert.equal(profileMatches('QED', { title: 'QED', address: '1 Main St, Mesa, AZ 85201' }, 'Mesa, AZ').ok, true, 'an exact one-word name in the same state');
+    assert.equal(profileMatches('DEX Imaging LLC', { title: 'DEX Imaging', address: '5109 W Lemon St, Tampa, FL 33609' }, 'Tampa, FL').ok, true);
+});
+
+test('a listing kept for later ages in real days: a retry a week on is stale, not "2 days ago"', async () => {
+    const kept = compactListing(listing(), NOW);
+    assert.ok(kept.posted_at);
+    assert.equal(qualifyJob(kept, NOW).ok, true);
+    assert.equal(qualifyJob(kept, NOW + 6 * 864e5).reason, 'stale_post', 'posted 8 days before the retry');
+    // A card made from a listing that waited three days carries the real posting date.
+    const w = jobsWorld();
+    await addPending(w.kv, { kind: 'gjob', key: 'gjobs:waited', listing: kept }, { discoveredBy: 'test' }, NOW);
+    const later = NOW + 3 * 864e5;
+    await runHiring({ ...w.deps, now: later }, { discover: false, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    assert.equal(rec.job.ageDays, 5); assert.equal(rec.job.postedAt, kept.posted_at);
+});
+
+test('a wrong number on a Google Jobs card is retried with a number from their website, and never pins the retry step', async () => {
+    const w = jobsWorld();
+    let site = 0;
+    w.deps.findSitePhone = async () => { site++; return { phone: '+12145550190'.replace('555', '636'), alternates: [], sourceUrl: 'https://www.royalelect.com/contact', checkedAt: new Date(NOW).toISOString() }; };
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    await saveHiringOutcome(w.kv, { rep: MILTON, body: { action: 'call-outcome', id: rec.id, outcome: 'wrong_number', dialled: '+19452184003' } }, { recordActivity: async () => {} });
+    const entry = (await allBacklog(w.kv)).find(b => b.reason === 'wrong_number');
+    assert.ok(entry.listing, 'the listing travels with the research entry');
+    // The research entry is due from the moment it is saved (saved at the real clock).
+    const T = Date.now() + 3600e3;
+    const r = await runHiring({ ...w.deps, now: T }, { discover: false, refresh: 0 });
+    assert.equal(r.verdicts.ready, 1, JSON.stringify(r.reasons));
+    const fixed = await getRecord(w.kv, rec.id);
+    assert.equal(fixed.status, 'ready'); assert.equal(fixed.phone.number, '+12146360190'); assert.equal(fixed.phone.source, 'business website');
+    assert.equal(fixed.callHistory.length, 1, 'history kept'); assert.ok(site >= 1);
+    // An entry with nothing to retry is closed, so it cannot hold one of the four retry slots.
+    await putBacklogStore(w.kv, { id: 'hire:00000000000000dd', reason: 'wrong_number', state: 'open', nextTryAt: new Date(T).toISOString(), job: { url: 'https://www.google.com/search?ibp=htl;jobs#x' } });
+    await runHiring({ ...w.deps, now: T + 3600e3 }, { discover: false, refresh: 0 });
+    assert.equal((await allBacklog(w.kv)).find(b => b.id === 'hire:00000000000000dd').state, 'closed');
+});
+
+test('an employer that posts again after its card aged out gets the new job on its card, offered again', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    const later = NOW + 20 * 864e5;
+    assert.equal(hiringCallReady(rec, later), false);
+    w.deps.serpJobs = async () => ({ jobs: [listing({ job_id: 'j9', title: 'Receptionist', extensions: ['1 day ago'] })] });
+    const r = await runHiring({ ...w.deps, now: later }, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    assert.equal(r.reasons.reopened, 1);
+    const again = await getRecord(w.kv, rec.id);
+    assert.equal(again.job.title, 'Receptionist'); assert.equal(hiringCallReady(again, later), true);
+    assert.equal((await allRecords(w.kv)).length, 1, 'still one card');
+});
+
+test('name variants and a shared number make one card, not three', async () => {
+    assert.equal(companyKey('Royal Electric', 'Dallas, TX'), companyKey('Royal Electric, LLC', 'Dallas, TX'));
+    const w = jobsWorld({ profile: { ...ROYAL, website: null } });
+    w.deps.serpJobs = async () => ({ jobs: [listing(), listing({ job_id: 'j2', share_link: 'https://www.google.com/search?ibp=htl;jobs#j2', company_name: 'Royal Electric, LLC', title: 'Receptionist' }), listing({ job_id: 'j3', share_link: 'https://www.google.com/search?ibp=htl;jobs#j3', company_name: 'Royal Electrical Services', title: 'Dispatcher' })] });
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const recs = await allRecords(w.kv);
+    assert.equal(recs.length, 1);
+    assert.equal(recs[0].jobs.length, 3);
+    assert.ok(await w.kv.hget(HK.companies, phoneKey('+19452184003')));
+});
+
+test('an unreadable daily search counter spends nothing', async () => {
+    const w = jobsWorld();
+    const kv = { ...w.kv, get: async k => { if (String(k).startsWith('staffify:hiring:serp:')) throw Error('store down'); return w.kv.get(k); } };
+    const r = await runHiring({ ...w.deps, kv }, { maxSearches: 2, maxCandidates: 5, refresh: 0 });
+    assert.equal(r.searchBudget.allowedThisRun, 0); assert.equal(r.searches.length, 0); assert.ok(r.searchBudgetError);
 });
