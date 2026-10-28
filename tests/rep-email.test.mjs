@@ -21,17 +21,20 @@ const { SESSION_TTL } = await import('../api/_auth.js');
 
 const MILTON = { email: 'miltion@trystaffify.com', name: 'Milton', role: 'caller' };   // the misspelt Hub record
 const PAUL = { email: 'hello@gostaffify.com', name: 'Paul', role: 'admin' };
-const MADISON = { email: 'madison@gostaffify.com', name: 'Madison', role: 'rep' };   // no sending mailbox in the Hub
+const MADISON = { email: 'madison@gostaffify.com', name: 'Madison', role: 'rep' };
+const STRANGER = { email: 'nobody@gostaffify.com', name: 'Nobody', role: 'rep' };   // no sending mailbox in the Hub
 const ROW = { id: 'r1', company: 'Realkit', recipient: 'support@realkit.com', phone: '+14043135871', sender: 'paul@trystaffify.com' };
 const decode = raw => Buffer.from(raw.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
 const parts = mime => [...mime.matchAll(/Content-Type: (text\/\w+); charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n([\s\S]*?)\r\n--/g)].map(m => [m[1], Buffer.from(m[2].replace(/\r\n/g, ''), 'base64').toString('utf8')]);
 
 // ---- the mailbox, the signature ---------------------------------------------------------------
-test('Milton sends from milton@trystaffify.com, whichever spelling his Hub record has; Paul from hello@; nobody else', () => {
+test('Milton sends from milton@trystaffify.com, whichever spelling his Hub record has; Paul from hello@; Madison from her own; nobody else', () => {
     assert.equal(R.mailboxFor(MILTON), 'milton@trystaffify.com');
     assert.equal(R.mailboxFor({ email: 'milton@trystaffify.com' }), 'milton@trystaffify.com');
     assert.equal(R.mailboxFor(PAUL), 'hello@gostaffify.com', 'Paul opened it as himself and was told he had no mailbox');
-    assert.equal(R.mailboxFor(MADISON), null, 'a rep with no entry gets no mailbox, never a guessed one');
+    assert.equal(R.mailboxFor(MADISON), 'madison@gostaffify.com', 'Paul, 2026-10-28: each rep has their own inbox');
+    assert.equal(R.profileFor('madison@gostaffify.com').name, 'Madison Sterling'); assert.equal(R.profileFor('madison@gostaffify.com').title, 'Growth Strategist');
+    assert.equal(R.mailboxFor(STRANGER), null, 'a rep with no entry gets no mailbox, never a guessed one');
     assert.equal(R.mailboxFor({ email: 'admin', role: 'admin' }), null);
 });
 
@@ -105,6 +108,33 @@ test('the message: named From, both parts, the signature in the HTML only once, 
 });
 
 // ---- the cleanup pass -------------------------------------------------------------------------
+test('routed to hello@: every rep but Paul copies hello@ and asks for answers there too; headers stay injection-proof', () => {
+    assert.deepEqual(R.routeCopy('hello@gostaffify.com', 'Paul Chareth'), {}, 'Paul already sends from hello@');
+    assert.deepEqual(R.routeCopy('madison@gostaffify.com', 'Madison Sterling'), { bcc: 'hello@gostaffify.com', replyTo: '"Madison Sterling" <madison@gostaffify.com>, hello@gostaffify.com' });
+    assert.deepEqual(R.routeCopy('Milton@TryStaffify.com'), { bcc: 'hello@gostaffify.com', replyTo: 'milton@trystaffify.com, hello@gostaffify.com' });
+    assert.deepEqual([...R.TEAM_MAILBOXES].sort(), ['madison@gostaffify.com', 'milton@trystaffify.com']);
+    const paul = R.buildMime({ from: 'hello@gostaffify.com', fromName: 'Paul Chareth', to: 'a@b.co', subject: 's', text: 't', html: 'h', ...R.routeCopy('hello@gostaffify.com', 'Paul Chareth') });
+    assert.doesNotMatch(paul, /\r\nBcc:|\r\nReply-To:/);
+    assert.throws(() => R.buildMime({ from: 'a@b.co', to: 'c@d.co', subject: 's', text: 't', html: 'h', bcc: 'x@y.co\r\nX-Evil: 1' }), /Invalid mail header/);
+    assert.throws(() => R.buildMime({ from: 'a@b.co', to: 'c@d.co', subject: 's', text: 't', html: 'h', replyTo: 'x@y.co\nX-Evil: 1' }), /Invalid mail header/);
+});
+
+test('owners see which reps can send from their own inbox: yes or no and when, never a token; an unreadable store is unknown', async () => {
+    const open = v => v.sealed;
+    const kv = { get: async k => ({
+        'outreach:oauth:hello@gostaffify.com': { sealed: { scope: 'https://www.googleapis.com/auth/gmail.readonly', connectedAt: '2026-09-01T00:00:00Z', refresh_token: 'secret-1' } },
+        'outreach:oauth:milton@trystaffify.com': { sealed: { scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose', connectedAt: '2026-10-27T21:00:00Z', refresh_token: 'secret-2' } },
+    })[k] ?? null };
+    const { mailboxReport } = await import('../api/rep-email.js');
+    const rows = Object.fromEntries((await mailboxReport({ kv, open })).map(r => [r.mailbox, r]));
+    assert.deepEqual(rows['milton@trystaffify.com'], { mailbox: 'milton@trystaffify.com', name: 'Milton Hodgson', state: 'can_send', canSend: true, connectedAt: '2026-10-27T21:00:00Z', copiesTo: 'hello@gostaffify.com' });
+    assert.equal(rows['hello@gostaffify.com'].state, 'read_only', 'a read-only token cannot send'); assert.equal(rows['hello@gostaffify.com'].copiesTo, null);
+    assert.equal(rows['madison@gostaffify.com'].state, 'not_connected');
+    assert.doesNotMatch(JSON.stringify(rows), /secret-/, 'no token ever leaves');
+    const broken = await mailboxReport({ kv: { get: async () => { throw Error('down'); } }, open });
+    assert.ok(broken.every(r => r.state === 'unknown' && r.canSend === false), 'a failed read is not "not connected"');
+});
+
 test('rules alone fix the non-negotiables without touching links, times or addresses', () => {
     const r = C.ruleClean({ subject: 'thanks — talk soon', body: 'hi nick,\n\ni loved the call — i\'ll send times. we can meet at 10 a.m. on friday. book here https://calendly.com/go-staffify/discovery-call and email support@realkit.com.\n\nthanks,\nMilton' });
     assert.equal(r.subject, 'Thanks, talk soon');
@@ -207,6 +237,8 @@ test('the send: his mailbox, his signature, drafts then send, read back, receipt
     const mime = decode(g.calls[0].body.message.raw);
     assert.match(mime, /From: "Milton Hodgson" <milton@trystaffify\.com>/);
     assert.match(mime, /To: support@realkit\.com/);
+    assert.match(mime, /\r\nBcc: hello@gostaffify\.com\r\n/, 'Paul: his own inbox, routed to hello@');
+    assert.match(mime, /\r\nReply-To: "Milton Hodgson" <milton@trystaffify\.com>, hello@gostaffify\.com\r\n/, 'their answer reaches Milton and hello@');
     const html = parts(mime).find(p => p[0] === 'text/html')[1];
     assert.match(html, /Growth Strategist/); assert.match(html, /Thanks for taking my call today/);
     assert.equal((kv.lists.get(K.sent('support@realkit.com')) || []).length, 1, 'a receipt per prospect');
@@ -251,8 +283,8 @@ test('opt-outs, clients, a check that could not answer, strangers and the daily 
     const c = await cleaned(deps);
     const capped = await sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c }, deps, now: Date.parse('2026-10-27T21:30:00Z') });
     assert.match(capped.body.reason, /daily limit/); assert.equal(g.calls.length, 0);
-    const nobody = await sendRepEmail({ rep: MADISON, input: DRAFT, deps });
-    assert.equal(nobody.status, 403, 'no mailbox, no send'); assert.match(nobody.body.reason, /madison@gostaffify\.com/, 'it says which login has no mailbox');
+    const nobody = await sendRepEmail({ rep: STRANGER, input: DRAFT, deps });
+    assert.equal(nobody.status, 403, 'no mailbox, no send'); assert.match(nobody.body.reason, /nobody@gostaffify\.com/, 'it says which login has no mailbox');
 });
 
 test('the send refuses a suppressed prospect and whatever the gates stop, before Gmail is touched', async () => {
@@ -317,7 +349,8 @@ test('status: mailbox, templates, signature and what was already sent to this pr
     assert.equal(s.mailbox, 'milton@trystaffify.com'); assert.equal(s.title, 'Growth Strategist'); assert.equal(s.connected, false);
     assert.equal(s.templates[0].id, 'thanks-book'); assert.match(s.signatureHtml, /Milton Hodgson/);
     assert.equal(s.history.length, 1); assert.equal(s.history[0].subject, 'Thanks for your time today');
-    assert.equal((await repEmailStatus({ rep: MADISON, kv })).mailbox, null);
+    assert.equal((await repEmailStatus({ rep: STRANGER, kv })).mailbox, null);
+    assert.equal((await repEmailStatus({ rep: MADISON, kv, line: async () => null })).mailbox, 'madison@gostaffify.com');
     assert.equal((await repEmailStatus({ rep: PAUL, kv, line: async () => null })).mailbox, 'hello@gostaffify.com');
 });
 
@@ -395,6 +428,11 @@ test('handler: signed-in Milton gets his status; an admin token is not a caller;
     assert.equal((await call(handler, { bearer: 'test-admin' })).code, 403);
     assert.equal((await call(handler, {})).code, 401);
     assert.equal((await call(handler, { method: 'POST', cookie: 'milton-sid', body: DRAFT, origin: 'https://evil.example' })).code, 403);
+    const owners = await call(handler, { bearer: 'test-admin', query: { action: 'mailboxes' } });
+    assert.equal(owners.code, 200); assert.equal(owners.body.routeTo, 'hello@gostaffify.com');
+    assert.deepEqual(owners.body.mailboxes.map(m => m.mailbox).sort(), ['hello@gostaffify.com', 'madison@gostaffify.com', 'milton@trystaffify.com']);
+    assert.equal((await call(handler, { cookie: 'milton-sid', query: { action: 'mailboxes' } })).code, 403, 'a caller does not see who else is connected');
+    assert.equal((await call(handler, { cookie: 'paul-sid', query: { action: 'mailboxes' } })).code, 200);
 });
 
 test('connect: Google consent for HIS mailbox only, and the callback brings him back to the card', async () => {
@@ -403,6 +441,7 @@ test('connect: Google consent for HIS mailbox only, and the callback brings him 
     assert.equal(start.code, 302);
     const g = new URL(start.location);
     assert.equal(g.host, 'accounts.google.com'); assert.equal(g.searchParams.get('login_hint'), 'milton@trystaffify.com');
+    assert.equal(g.searchParams.get('hd'), 'trystaffify.com', 'Google lists only that domain\'s accounts, so a Flylisted login is never offered');
     assert.equal(g.searchParams.get('redirect_uri'), 'https://www.gostaffify.com/api/outreach-connect/?action=callback');
     const state = g.searchParams.get('state');
     assert.deepEqual(JSON.parse(store.get('outreach:oauth-state:' + state)), { email: 'milton@trystaffify.com', rep: 'miltion@trystaffify.com', returnTo: '/dialer/?open=r1' });

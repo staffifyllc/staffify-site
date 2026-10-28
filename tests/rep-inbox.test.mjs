@@ -73,6 +73,8 @@ test('the reply cleanup cleans the body only and keeps the thread subject, then 
     const mime = Buffer.from(draft.body.message.raw.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
     assert.match(mime, /\r\nIn-Reply-To: <m2@mail\.example>\r\n/); assert.match(mime, /\r\nReferences: <m1@mail\.example> <m2@mail\.example>\r\n/);
     assert.match(mime, /Subject: Re: Nick, thanks for your time today/); assert.match(mime, /From: "Milton Hodgson" <milton@trystaffify\.com>/);
+    assert.match(mime, /\r\nBcc: hello@gostaffify\.com\r\n/, 'a reply is routed to hello@ too');
+    assert.match(mime, /\r\nReply-To: "Milton Hodgson" <milton@trystaffify\.com>, hello@gostaffify\.com\r\n/);
     const again = await I.sendReply({ rep: MILTON, box: BOX, input: { threadId: 'thr0001', body: c.body.body, nonce: 'nonce-1234' }, deps: d });
     assert.equal(again.body.repeat, true); assert.equal(g.calls.filter(x => x.path === 'drafts/send').length, 1, 'never twice');
     assert.equal(kv.lists.get(K.sent('support@realkit.com')).length, 1);
@@ -130,4 +132,21 @@ test('second review: drafts are not messages, Reply-To wins, and a display name 
     viaForm.payload.headers.push({ name: 'Reply-To', value: 'lead@prospect.example' });
     assert.equal(I.otherParty([viaForm], 'milton@trystaffify.com').addr, 'lead@prospect.example');
     assert.equal(I.otherParty([msg('m5', '"info@realkit.com via Form" <noreply@forms.example>', {})], BOX).addr, 'noreply@forms.example');
+});
+
+test('routed to hello@: a teammate\'s copy keeps the prospect as the other party; a teammate writing to hello@ is still answerable', () => {
+    const HELLO = 'hello@gostaffify.com';
+    const copy = msg('c1', '"Milton Hodgson" <milton@trystaffify.com>', { to: 'support@realkit.com' });
+    copy.payload.headers.push({ name: 'Reply-To', value: '"Milton Hodgson" <milton@trystaffify.com>, hello@gostaffify.com' });
+    assert.deepEqual(I.otherParty([copy], HELLO), { addr: 'support@realkit.com', name: 'support@realkit.com', wrote: false }, 'Paul never ends up replying to Milton about Milton\'s prospect');
+    const answer = msg('c2', 'Nick Rossi <support@realkit.com>', { to: 'milton@trystaffify.com, hello@gostaffify.com' });
+    assert.deepEqual(I.otherParty([copy, answer], HELLO), { addr: 'support@realkit.com', name: 'Nick Rossi', wrote: true });
+    assert.equal(I.otherParty([copy, answer], BOX).addr, 'support@realkit.com', 'Milton\'s own inbox is unchanged');
+    const row = I.threadRow({ id: 'tc', messages: [copy] }, HELLO, RECORDS);
+    assert.deepEqual(row.prospect, { recordId: 'rk', company: 'Realkit' }, 'the copy files under the prospect in Paul\'s inbox');
+    const direct = msg('d1', '"Milton Hodgson" <milton@trystaffify.com>', { to: HELLO });
+    assert.equal(I.otherParty([direct], HELLO).addr, 'milton@trystaffify.com', 'Milton writing to Paul is someone to answer');
+    const stranger = msg('s1', 'Someone <someone@else.com>', { to: HELLO });
+    stranger.payload.headers.push({ name: 'Reply-To', value: 'hello@gostaffify.com' });
+    assert.equal(I.otherParty([stranger], HELLO).addr, 'someone@else.com', 'only our own reps count as ours');
 });

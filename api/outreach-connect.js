@@ -39,13 +39,13 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
  }
  if(action==='start-website-reply'){
   const rep=await currentRep(req);if(!rep||!['all','Paul'].includes(owner))return res.status(403).json({error:'Paul must sign in to connect his reply inbox'});
-  const state=newToken();await redis.set('outreach:oauth-state:'+state,{email:'hello@gostaffify.com',rep:who.email,readOnly:true},{ex:600});const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');Object.entries({client_id:clientId(),redirect_uri:callback,response_type:'code',scope:SCOPES[0],access_type:'offline',prompt:'consent',login_hint:'hello@gostaffify.com',state}).forEach(([k,v])=>url.searchParams.set(k,v));res.writeHead(302,{Location:url.toString()});return res.end();
+  const state=newToken();await redis.set('outreach:oauth-state:'+state,{email:'hello@gostaffify.com',rep:who.email,readOnly:true},{ex:600});const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');Object.entries({client_id:clientId(),redirect_uri:callback,response_type:'code',scope:SCOPES[0],access_type:'offline',prompt:'consent',login_hint:'hello@gostaffify.com',hd:'gostaffify.com',state}).forEach(([k,v])=>url.searchParams.set(k,v));res.writeHead(302,{Location:url.toString()});return res.end();
  }
  if(action==='start'){
   const rep=await currentRep(req);if(!rep)return res.status(401).json({error:'Browser sign-in required'});
   const email=String(req.query.email||'').toLowerCase();const account=cfg.accounts.find(a=>a.email===email);if(!account||(owner!=='all'&&owner!==account.owner))return res.status(403).json({error:'Mailbox not assigned to you'});
   if(!clientId()||!clientSecret())return res.status(503).json({error:'Google OAuth client configuration required',redirectUri:callback});
-  const state=newToken();await redis.set('outreach:oauth-state:'+state,{email,rep:who.email},{ex:600});const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');Object.entries({client_id:clientId(),redirect_uri:callback,response_type:'code',scope:SCOPES.join(' '),access_type:'offline',prompt:'consent',login_hint:email,state}).forEach(([k,v])=>url.searchParams.set(k,v));res.writeHead(302,{Location:url.toString()});return res.end();
+  const state=newToken();await redis.set('outreach:oauth-state:'+state,{email,rep:who.email},{ex:600});const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');Object.entries({client_id:clientId(),redirect_uri:callback,response_type:'code',scope:SCOPES.join(' '),access_type:'offline',prompt:'consent',login_hint:email,hd:String(email).split('@')[1]||'',state}).forEach(([k,v])=>url.searchParams.set(k,v));res.writeHead(302,{Location:url.toString()});return res.end();
  }
  if(req.method==='POST'){
   if(owner!=='all')return res.status(403).json({error:'Administrator required'});

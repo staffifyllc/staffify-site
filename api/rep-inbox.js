@@ -24,7 +24,7 @@ import { isOptedOut } from './_optout.js';
 import { recordActivity, dayOf } from './_hub-activity.js';
 import { financeAccess } from './_finance-access.js';
 import { cleanEmail } from './_email-cleanup.js';
-import { mailboxFor, profileFor, signatureHtml, signatureText, bodyHtml, buildMime, rawOf, LIMITS, copyProblem } from './_rep-email.js';
+import { mailboxFor, profileFor, signatureHtml, signatureText, bodyHtml, buildMime, rawOf, LIMITS, copyProblem, routeCopy, ROUTE_TO, TEAM_MAILBOXES } from './_rep-email.js';
 import { gateFor, maskPhoneRuns } from './_shift.js';
 import { ownerFor } from './_outreach-queue.js';
 import { K, canSendWith, settlePending, photoUrlFor } from './rep-email.js';
@@ -37,6 +37,13 @@ const ADDR = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
 const addrOf = s => { const t = String(s || ''); const a = t.match(/<([^>]+)>/); return (((a ? a[1] : t).match(ADDR) || [])[0] || '').toLowerCase(); };
 const notDraft = m => !((m && m.labelIds) || []).includes('DRAFT');
 const nameOf = s => { const m = String(s || '').match(/^\s*"?([^"<]+?)"?\s*</); return m ? m[1].trim() : addrOf(s); };
+// Sent by this mailbox, or a teammate's email routed into hello@ (hello@ in its Reply-To): either way it is ours, and
+// the prospect stays the other party. A teammate writing to hello@ directly is still someone to answer.
+const ours = (h, box) => {
+    const from = addrOf(h.from);
+    if (from === box) return true;
+    return box === ROUTE_TO && TEAM_MAILBOXES.includes(from) && String(h['reply-to'] || '').split(',').some(a => addrOf(a) === box);
+};
 const IK = {
     access: box => 'staffify:rep-inbox:access:' + box,
     count: box => 'staffify:rep-inbox:count:' + box,
@@ -63,7 +70,7 @@ export function otherParty(messages, box) {
     const sent = (messages || []).filter(notDraft);   // an unsent draft is not a message
     for (const m of [...sent].reverse()) {
         const h = headersOf(m), from = addrOf(h.from);
-        if (from && from !== box) { const rt = addrOf(h['reply-to']); return { addr: rt && rt !== box ? rt : from, name: nameOf(h.from), wrote: true }; }
+        if (from && !ours(h, box)) { const rt = addrOf(h['reply-to']); return { addr: rt && rt !== box ? rt : from, name: nameOf(h.from), wrote: true }; }
     }
     const first = sent[0];
     const to = first ? addrOf(headersOf(first).to) : '';
@@ -124,7 +131,9 @@ export default async function handler(req, res) {
             if (cached && typeof cached.unread === 'number') return res.status(200).json({ ...base, unread: cached.unread });
             try {
                 const token = await accessFor(box);
-                const r = await gmail(token, 'threads?' + new URLSearchParams({ q: 'in:inbox is:unread newer_than:30d', maxResults: '50' }));
+                // A teammate's routed copy is not a reply to read: only a thread where someone else wrote counts.
+                const copies = box === ROUTE_TO ? TEAM_MAILBOXES.map(b => ' -from:' + b).join('') : '';
+                const r = await gmail(token, 'threads?' + new URLSearchParams({ q: 'in:inbox is:unread newer_than:30d' + copies, maxResults: '50' }));
                 // Opened in the Hub counts as read here, so the badge goes down when he reads a reply.
                 const seen = new Set((await redis.smembers(IK.seen(box)).catch(() => [])) || []);
                 const unread = (r.threads || []).filter(t => !seen.has(t.id)).length;
@@ -268,7 +277,7 @@ export async function sendReply({ rep, box, input, deps, now = Date.now() }) {
     const references = [lh.references, messageId].filter(Boolean).join(' ').trim();
     const signed = { phone: p.phone || null, photo: deps.photo ? await deps.photo(box).catch(() => null) : null };
     let mime;
-    try { mime = buildMime({ from: box, fromName: p.name, to: other.addr, subject, text: body + '\n\n-- \n' + signatureText(box, signed), html: bodyHtml(body, signatureHtml(box, signed)), inReplyTo: messageId, references }); }
+    try { mime = buildMime({ from: box, fromName: p.name, to: other.addr, subject, text: body + '\n\n-- \n' + signatureText(box, signed), html: bodyHtml(body, signatureHtml(box, signed)), ...routeCopy(box, p.name), inReplyTo: messageId, references }); }
     catch { await deps.redis.del(op); return out(400, { sent: false, reason: 'That conversation has a header the Hub cannot reply to. Use Gmail for this one.' }); }
     let draft;
     try { draft = await deps.gmail(token, 'drafts', { message: { raw: rawOf(mime), threadId } }); }

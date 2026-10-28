@@ -29,7 +29,7 @@ import { clientCheck } from './_client-guard.js';
 import { recordActivity, dayOf } from './_hub-activity.js';
 import { SCOPES, clientId, access, gmail, unseal } from './_outreach-gmail.js';
 import { loginAliases } from './_login-aliases.js';
-import { mailboxFor, profileFor, signatureHtml, signatureText, lineFor, templatesFor, copyProblem, LIMITS, bodyHtml, buildMime, rawOf } from './_rep-email.js';
+import { mailboxFor, profileFor, signatureHtml, signatureText, lineFor, templatesFor, copyProblem, LIMITS, bodyHtml, buildMime, rawOf, routeCopy, REP_MAILBOXES, ROUTE_TO } from './_rep-email.js';
 import { cleanEmail } from './_email-cleanup.js';
 import { stopsFor } from './_rep-email-gates.js';
 import { contact } from './_outreach-crm.js';
@@ -258,7 +258,7 @@ export async function sendRepEmail({ rep, input, deps, now = Date.now() }) {
     }
     const line = await deps.line(box, rep).catch(() => null);
     const signed = { phone: line, photo: deps.photo ? await deps.photo(box).catch(() => null) : null };
-    const mime = buildMime({ from: box, fromName: profile.name, to, subject, text: body + '\n\n-- \n' + signatureText(box, signed), html: bodyHtml(body, signatureHtml(box, signed)) });
+    const mime = buildMime({ from: box, fromName: profile.name, to, subject, text: body + '\n\n-- \n' + signatureText(box, signed), html: bodyHtml(body, signatureHtml(box, signed)), ...routeCopy(box, profile.name) });
 
     let draft;
     try { draft = await deps.gmail(token, 'drafts', { message: { raw: rawOf(mime) } }); }
@@ -327,6 +327,21 @@ export async function cleanRepEmail({ rep, input, deps, now = Date.now() }) {
 }
 
 /** What the composer needs to draw. */
+/**
+ * Owners: can each rep send from their own inbox right now? A yes or no per mailbox and when it was connected,
+ * never a token. A store that could not be read says so; it is never reported as "not connected".
+ */
+export async function mailboxReport({ kv = redis, open = unseal } = {}) {
+    return Promise.all(Object.keys(REP_MAILBOXES).map(async box => {
+        let saved, readable = true;
+        try { saved = await kv.get('outreach:oauth:' + box); } catch { readable = false; }
+        let connectedAt = null;
+        try { connectedAt = saved ? (open(typeof saved === 'string' ? JSON.parse(saved) : saved).connectedAt || null) : null; } catch {}
+        const state = !readable ? 'unknown' : !saved ? 'not_connected' : canSendWith(saved, open) ? 'can_send' : 'read_only';
+        return { mailbox: box, name: profileFor(box).name, state, canSend: state === 'can_send', connectedAt, copiesTo: box === ROUTE_TO ? null : ROUTE_TO };
+    }));
+}
+
 export async function repEmailStatus({ rep, email = '', kv = redis, line = quoLine, open = unseal, findRow = null }) {
     const box = mailboxFor(rep);
     if (!box) return { mailbox: null, reason: `No sending mailbox is set up for ${rep && rep.email || 'this login'} yet. Ask Paul to add it.` };
@@ -366,6 +381,10 @@ export default async function handler(req, res) {
             const c = await cleanEmail({ subject: 'quick follow up', body: "hi there,\n\ni wanted to here your thoughts — thanks for you're time today.\n\nMilton" });
             return res.status(200).json({ by: c.by, subject: c.subject, body: c.body, changes: c.changes, note: c.note || null, error: c.error || null });
         }
+        if (req.method === 'GET' && action === 'mailboxes') {
+            if (!adminAuthorized(req) && rep.role !== 'admin') return res.status(403).json({ error: 'Owners only' });
+            return res.status(200).json({ routeTo: ROUTE_TO, mailboxes: await mailboxReport() });
+        }
         if (rep.email === 'admin' || !canUseCallQueue(rep)) return res.status(403).json({ error: 'Sign in as the caller who is sending' });
 
         if (req.method === 'GET' && action === 'connect') {
@@ -375,7 +394,7 @@ export default async function handler(req, res) {
             const state = newToken();
             await redis.set('outreach:oauth-state:' + state, { email: box, rep: rep.email, returnTo: safeBack(req.query.back) }, { ex: 600 });
             const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-            Object.entries({ client_id: clientId(), redirect_uri: CALLBACK, response_type: 'code', scope: SCOPES.join(' '), access_type: 'offline', prompt: 'consent', login_hint: box, state }).forEach(([k, v]) => url.searchParams.set(k, v));
+            Object.entries({ client_id: clientId(), redirect_uri: CALLBACK, response_type: 'code', scope: SCOPES.join(' '), access_type: 'offline', prompt: 'consent', login_hint: box, hd: box.split('@')[1], state }).forEach(([k, v]) => url.searchParams.set(k, v));
             res.writeHead(302, { Location: url.toString() });
             return res.end();
         }

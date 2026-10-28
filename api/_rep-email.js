@@ -34,6 +34,13 @@ export const REP_MAILBOXES = Object.freeze({
     // you yet." His Hub login is hello@gostaffify.com, a real mailbox and the address on his own
     // signature, so that is the one he sends from. Name, title and phone are copied from that
     // signature (~/Desktop/Claude Code/staffify-signature/_src/build_sigs.py, PEOPLE.paul).
+    // Paul, 2026-10-28: "each rep should have their own inbox". From her own signature (staffify-signature/_src/build_sigs.py).
+    'madison@gostaffify.com': Object.freeze({
+        name: 'Madison Sterling',
+        first: 'Madison',
+        title: 'Growth Strategist',
+        phone: Object.freeze({ e164: '+15616179973', display: '(561) 617-9973' }),
+    }),
     'hello@gostaffify.com': Object.freeze({
         name: 'Paul Chareth',
         first: 'Paul',
@@ -51,6 +58,18 @@ export function mailboxFor(rep) {
     return REP_MAILBOXES[box] ? box : null;
 }
 export const profileFor = mailbox => REP_MAILBOXES[String(mailbox || '').toLowerCase()] || null;
+
+// Paul, 2026-10-28: "each rep should have their own inbox BUT it needs to route to hello@gostaffify.com". A rep's email
+// goes out from their own mailbox with hello@ as a blind copy, and replies go to the rep and to hello@ together, so the
+// company inbox holds every conversation and the rep keeps their own thread. Paul's own mailbox is hello@ already.
+export const ROUTE_TO = String(process.env.REP_EMAIL_ROUTE_TO || 'hello@gostaffify.com').trim().toLowerCase();
+export function routeCopy(box, name) {
+    const from = String(box || '').toLowerCase();
+    if (!ROUTE_TO || !from || from === ROUTE_TO) return {};
+    return { bcc: ROUTE_TO, replyTo: [(name ? quoteName(name) + ' <' + from + '>' : from), ROUTE_TO].join(', ') };
+}
+// The other reps' own mailboxes: a copy one of them routes into hello@ is the team's mail, not a stranger's.
+export const TEAM_MAILBOXES = Object.freeze(Object.keys(REP_MAILBOXES).filter(b => b !== ROUTE_TO));
 
 // ---- the signature ---------------------------------------------------------------------------
 // The same layout as the team's Gmail signatures (~/Desktop/Claude Code/staffify-signature,
@@ -261,12 +280,14 @@ export function bodyHtml(text, signature) {
 }
 
 /** multipart/alternative, base64 parts, CRLF line endings. Throws on a header that could inject. */
-export function buildMime({ from, fromName, to, subject, text, html, boundary, inReplyTo = '', references = '' }) {
-    for (const h of [from, fromName || '', to, subject, inReplyTo, references]) if (/[\r\n]/.test(h)) throw Error('Invalid mail header');
+export function buildMime({ from, fromName, to, subject, text, html, boundary, inReplyTo = '', references = '', bcc = '', replyTo = '' }) {
+    for (const h of [from, fromName || '', to, subject, inReplyTo, references, bcc, replyTo]) if (/[\r\n]/.test(h)) throw Error('Invalid mail header');
     const b = boundary || 'sfy-' + Buffer.from(from + to + subject).toString('hex').slice(0, 24);
     return [
         'From: ' + (fromName ? quoteName(fromName) + ' <' + from + '>' : from),
         'To: ' + to,
+        ...(bcc ? ['Bcc: ' + bcc] : []),
+        ...(replyTo ? ['Reply-To: ' + replyTo] : []),
         'Subject: ' + encodeHeader(subject),
         // A reply names the message it answers, so every mail client keeps it in the conversation.
         ...(inReplyTo ? ['In-Reply-To: ' + inReplyTo] : []),
