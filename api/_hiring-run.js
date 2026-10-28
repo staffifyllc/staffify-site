@@ -11,7 +11,7 @@ import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
     parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey, listingEvidence, remotePost,
-    ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel, hiringCallReady, tollFree,
+    ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel, hiringCallReady, tollFree, laneFor,
 } from './_hiring-intent.js';
 
 export const SERP_RESERVE = 300;      // searches left in the month that this campaign never touches
@@ -656,6 +656,24 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
     // Every Google Jobs card (a date check, free) and the ATS cards checked longest ago (a fetch each).
     const recs = [...live.filter(r => ageBased(r.job.source)), ...live.filter(r => !ageBased(r.job.source)).sort((a, b) => Date.parse(a.job.checkedAt || 0) - Date.parse(b.job.checkedAt || 0)).slice(0, limit)];
     const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0, excluded: 0 };
+    // Paul, 2026-10-28: "we do want the insurance and law firms, but those should specifically go to Milton not madison and
+    // I". Cards taken off the list as law or insurance come back; a law or insurance card someone else booked a callback
+    // or retry on goes to Milton at the same time, its history kept. A card in conversation stays with whoever is in it.
+    for (const rec of (await allRecords(kv)).filter(r => (r.status === 'excluded' && r.exclusion && r.exclusion.reason === 'law_or_insurance') || (r.status === 'ready' && r.callOwner && laneFor(r) && String(r.callOwner).toLowerCase() !== laneFor(r)))) {
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (!fresh) continue;
+            const at = new Date(now).toISOString(), lane = laneFor(fresh);
+            let next = null;
+            if (fresh.status === 'excluded' && fresh.exclusion && fresh.exclusion.reason === 'law_or_insurance') { next = { ...fresh, status: 'ready', exclusion: null, restored: { from: 'law_or_insurance', at, by: 'rules re-check' } }; out.restored = (out.restored || 0) + 1; }
+            else if (fresh.status === 'ready' && fresh.callOwner && lane && String(fresh.callOwner).toLowerCase() !== lane) { next = { ...fresh, callOwner: lane, callOwnerAt: at, reassigned: { from: fresh.callOwner, to: lane, at, why: 'law or insurance: Milton\'s' } }; out.reassigned = (out.reassigned || 0) + 1; }
+            if (!next) continue;
+            next.brief = briefFor(next);
+            await putRecord(kv, next);
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
     // Paul, 2026-10-28: "dont ever publish a 1800 number because we wont call it, go find the cell phone". Cards made
     // before that: a toll-free line leaves the card; the next number up rings instead, or, with nothing else, the card
     // waits in research for the owner's cell (ownerCells looks those up first). Owner and history stay.

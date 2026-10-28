@@ -218,8 +218,6 @@ export function qualifyPosting(p, now = Date.now()) {
     if (!family) return { ok: false, reason: 'role_not_fillable', detail: `"${p.title}" is not a support, admin, scheduling or account role Staffify places.` };
     const age = ageDays(p.postedAt, now);
     if (age != null && age > MAX_AGE_DAYS) return { ok: false, reason: 'stale_post', detail: `Posted ${age} days ago; older than ${MAX_AGE_DAYS} days.` };
-    const sector = sectorExcluded(p.company);
-    if (sector) return { ok: false, ...sector };
     const comp = competitorReason({ company: p.company, text: p.text });
     if (comp) return { ok: false, reason: 'competitor', detail: comp };
     const ev = postEvidence({ company: p.company, title: p.title, text: p.text, family });
@@ -303,16 +301,22 @@ const ENTERPRISE_ATS = /(myworkdayjobs\.com|wd\d+\.myworkday|oraclecloud\.com|ta
 // "Orange County Plumbing", "University Park Dental", "The Roofing Authority").
 const INSTITUTION = /^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b|\b(state'?s?|district|county|city|u\.?s\.?)\s+attorney|attorney'?s?\s+office\b|\b(circuit|superior|district|municipal|county)\s+court\b|\bpublic\s+defender\b|\bboard\s+of\s+(education|supervisors|commissioners)\b|\bisd\b|\bindependent\s+school\b|\btax\s+board\b|\bfranchise\s+tax\b/i;
 /** A staffing firm or a public body, by its name alone. The refresh pass re-applies this to cards already made. */
-// Paul, 2026-10-28: "exclude most of all the law firms and insurance firms" (he chose: every law firm and insurance
-// agency off the list, callbacks kept). Read from the business name, the industry a researcher wrote down, or the
-// Google listing type; from every source, Madison's lists and the hourly search alike.
+// Law firms and insurance agencies are Milton's (Paul, 2026-10-28: "we do want the insurance and law firms, but those
+// should specifically go to Milton not madison and I"). Read from the business name, the industry a researcher wrote
+// down, or the Google listing type. Such a card is offered as new work to Milton only; it is never excluded for it.
 const LAW_FIRM = /\b(law|legal|attorneys?|lawyers?|esq|litigation)\b|\bcounsel\b(?!ing)/i;
-const INSURANCE_FIRM = /\b(insurance|insurers?|underwriters?|state\s+farm|allstate|ins\.?\s+agency)\b|\bfarmers\s+(insurance|agent|agency|ins)\b/i;
-export function sectorExcluded(name, context = '') {
+const INSURANCE_FIRM = /\b(insurance|insurers?|underwriters?|state\s+farm|allstate|ins\.?\s+agency)\b|\bfarmers\s+(insurance|agent|agency|ins)\b|\b(law\s+firm|attorney|lawyer|insurance\s+(agency|broker|company))\b/i;
+export const SECTOR_CALLER = String(process.env.HIRING_LAW_INSURANCE_CALLER || 'miltion@trystaffify.com').toLowerCase();
+/** 'law' or 'insurance' when the business is one, else null. */
+export function sectorOf(name, context = '') {
     const t = [name, context].filter(Boolean).join(' ');
-    if (LAW_FIRM.test(t)) return { reason: 'law_or_insurance', detail: `${name} is a law firm. Law firms and insurance agencies are left out of Hiring now (Paul, 2026-10-28).` };
-    if (INSURANCE_FIRM.test(t)) return { reason: 'law_or_insurance', detail: `${name} is an insurance agency. Law firms and insurance agencies are left out of Hiring now (Paul, 2026-10-28).` };
-    return null;
+    return LAW_FIRM.test(t) ? 'law' : INSURANCE_FIRM.test(t) ? 'insurance' : null;
+}
+/** The one caller a card is offered to as new work, or null for the shared pool. */
+export function laneFor(rec) {
+    if (!rec) return null;
+    const ctx = [rec.lead && rec.lead.industry, rec.lead && rec.lead.vertical, rec.company && rec.company.identity && rec.company.identity.listingType].filter(Boolean).join(' ');
+    return sectorOf(rec.company && rec.company.name, ctx) ? SECTOR_CALLER : null;
 }
 export function companyExcluded(name, context = '') {
     const comp = competitorReason({ company: name, text: '' });
@@ -320,7 +324,7 @@ export function companyExcluded(name, context = '') {
     if (INSTITUTION.test(String(name || ''))) return { reason: 'institution', detail: `${name} is a public body, school or court.` };
     const big = String(name || '').match(KNOWN_LARGE);
     if (big) return { reason: 'large_employer', detail: `${name} is a large employer with its own recruiting team (${big[0]}).` };
-    return sectorExcluded(name, context);
+    return null;
 }
 // Large employers and health systems that reached the list before the size checks existed (PM review,
 // 2026-10-28: "UnityPoint, Beth Israel Deaconess, C&S, Byram and other known out-of-scope employers").
@@ -458,7 +462,6 @@ export function addressCity(address) {
  */
 export function listingEvidence({ company, website, domain, listingName, listingType, address, jobLocation, remote }) {
     if (AGENCY_TYPE.test(String(listingType || ''))) return { action: 'exclude', reason: 'competitor', detail: `Google lists them as a ${listingType}: a recruiter, not an employer hiring for its own seat.` };
-    if (/\b(law\s+firm|attorney|lawyer|insurance\s+(agency|broker|company))\b/i.test(String(listingType || ''))) return { action: 'exclude', ...sectorExcluded(company || listingName, listingType) };
     if (CARE_TYPE.test(String(listingType || ''))) return { action: 'exclude', reason: 'institutional_clinical', detail: `Google lists them as a ${listingType}, a care institution.` };
     let u = null;
     try { u = website ? new URL(/^https?:/i.test(website) ? website : 'https://' + website) : null; } catch { u = null; }
@@ -566,8 +569,6 @@ export function qualifyJob(j, now = Date.now()) {
     if (age == null) return { ok: false, reason: 'undated_post', detail: 'Google Jobs shows no posting age, so it may be old.' };
     if (age > DISCOVERY_DAYS) return { ok: false, reason: 'stale_post', detail: `Posted ${age} days ago; we only call about the last ${DISCOVERY_DAYS} days.` };
     const company = String(j.company_name || '');
-    const sector = sectorExcluded(company);
-    if (sector) return { ok: false, ...sector };
     const comp = competitorReason({ company, text: j.description });
     if (comp) return { ok: false, reason: 'competitor', detail: comp };
     const links = (j.apply_options || []).map(a => a && a.link).filter(Boolean);
@@ -731,6 +732,7 @@ export function callRow(rec, viewer, now = Date.now()) {
     const me = String(viewer || '').toLowerCase();
     const owner = rec.callOwner || null;
     const mine = !!owner && String(owner).toLowerCase() === me;
+    const lane = laneFor(rec);
     const ready = hiringCallReady(rec, now);
     const p0 = rec.phone || {};
     const p = { ...p0, number: tollFree(p0.number) ? null : p0.number, alternates: (p0.alternates || []).filter(n => !tollFree(n)) };
@@ -743,7 +745,7 @@ export function callRow(rec, viewer, now = Date.now()) {
         owner: null, salesOwner: null, sender: null, threadId: null, sentTouches: 0, verifiedSentTouches: 0, lastSentAt: null,
         status: rec.status, exclusion: rec.exclusion ? { reason: rec.exclusion.reason } : null, hold: rec.hold ? { reason: rec.hold.reason } : null, callReady: ready, callOutcome: rec.callOutcome || null, nextCallAt: rec.nextCallAt || null,
         callOwner: owner, callOwnerAt: rec.callOwnerAt || null, callHistory: rec.callHistory || [],
-        claimed: !!owner, mine, unclaimed: ready && !owner, dueForMe: ready && mine, pausedFollowUp: false,
+        claimed: !!owner, mine, unclaimed: ready && !owner && (!lane || lane === me), dueForMe: ready && mine, pausedFollowUp: false, ...(lane ? { lane: 'Milton', laneCaller: lane } : {}),
         phone: p.number || null,
         callContact: p.source === 'vendor'
             ? { phone: p.number || null, phoneStatus: p.number ? 'vendor_direct' : 'missing', phoneSource: p.vendor || 'Data vendor', phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: `${p.person ? p.person + '\'s ' : 'A '}${p.lineType || 'number'} from a ${p.vendor || 'data vendor'} lookup${p.grade ? ' (grade ' + p.grade + ')' : ''}${!p.siteCheck ? '.' : p.siteCheck.result === 'confirmed' ? ', also on their website.' : ', not published on their website.'}` }

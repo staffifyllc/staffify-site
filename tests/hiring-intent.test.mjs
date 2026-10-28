@@ -2,7 +2,7 @@
 // nothing here calls, texts, emails or spends a credit.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sectorExcluded, postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
+import { sectorOf, laneFor, SECTOR_CALLER, postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
 import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops, saveHiringContactEmail } from '../api/_hiring-calls.js';
 import { templatesFor, HIRING_TEMPLATES } from '../api/_rep-email.js';
@@ -800,7 +800,7 @@ test('a Google listing is proof of the employer only when it is the employer: st
     assert.equal(listingEvidence({ ...base, company: 'Grand Villa of Delray Beach East', listingType: 'Assisted living facility in Palm Beach County, Florida' }).reason, 'institutional_clinical');
     assert.equal(listingEvidence({ ...base, listingType: 'Civil engineer in Tampa, Florida' }), null);
     assert.equal(listingEvidence({ ...base, company: 'Builders FirstSource', website: 'https://www.bldr.com/contact/request-quote?utm_source=yext&utm_medium=listing&utm_content=WILMNCYD', domain: 'bldr.com' }).reason, 'chain_location');
-    assert.equal(listingEvidence({ ...base, listingType: 'Health insurance agency' }).reason, 'law_or_insurance', 'an insurance agency is left out (Paul, 2026-10-28)');
+    assert.equal(listingEvidence({ ...base, listingType: 'Health insurance agency' }), null, 'an insurance agency is a business (Milton\'s, not excluded)');
 });
 
 test('the number goes in the order the employer publishes it: a site number first, the listing kept as an alternate', () => {
@@ -861,9 +861,9 @@ test('the wider seats: insurance service, legal support, retention and client se
         assert.ok(roleFamily(t), t);
     for (const t of ['VP, Strategic Finance & FP&A', 'Director, M&A Value Capture', 'Account Executive - New Business', 'Customer Service Manager', 'Legal Intake Team Lead - remote', 'Business Development Manager', 'Account Manager'])
         assert.equal(roleFamily(t), null, t);
-    // Paul, 2026-10-28: law firms and insurance agencies are left out, whatever the seat.
-    assert.equal(qualifyLead(LEAD({ business: 'Farmers Insurance - Zachary Rogers', industry: 'Insurance (Farmers agency)', role_posted: 'Account Manager - Fully Remote - US' }), NOW).reason, 'law_or_insurance');
-    assert.equal(qualifyLead(LEAD({ business: 'Kyle & Kyle Law', industry: 'Law firm', role_posted: 'Family Law Paralegal' }), NOW).reason, 'law_or_insurance');
+    // Law firms and insurance agencies are Milton's, not excluded (Paul, 2026-10-28).
+    assert.equal(qualifyLead(LEAD({ business: 'Farmers Insurance - Zachary Rogers', industry: 'Insurance (Farmers agency)', role_posted: 'Account Manager - Fully Remote - US' }), NOW).family, 'account', 'an insurance agency\'s account manager services accounts');
+    assert.equal(qualifyLead(LEAD({ business: 'Kyle & Kyle Law', industry: 'Law firm', role_posted: 'Family Law Paralegal' }), NOW).ok, true);
     assert.equal(qualifyLead(LEAD({ role_posted: 'Licensed Insurance Account Manager', notes: 'P&C license required.' }), NOW).reason, 'hard_restriction');
     assert.equal(qualifyLead(LEAD({ role_posted: 'Licensed Farmers Administrative Assistant / Client Experience Manager', notes: '' }), NOW).reason, 'hard_restriction');
     assert.equal(qualifyLead(LEAD({ role_posted: 'Insurance Service Associate (licensed)', notes: '' }), NOW).reason, 'hard_restriction');
@@ -1267,24 +1267,33 @@ test('the filled-role branch: Paul\'s pivot, then stay in touch books a callback
     assert.equal(s.objections.find(o => o.label === 'Already filled it').say, s.tree.filled.say);
 });
 
-// Paul, 2026-10-28: "exclude most of all the law firms and insurance firms" (his choice: all of them, callbacks kept).
-test('law firms and insurance agencies are left out from every source; a card someone is working stays with them', async () => {
-    for (const [n, c] of [['Farmers Insurance - Zachary Rogers', ''], ['Insuramax', 'Insurance (independent P&C agency)'], ['Coleman Litigation', ''], ['Kyle & Kyle Law', ''], ['Gabriel C Garza Ins Agency Inc (The Garza Agency - Farmers)', ''], ['Peyton Pettus - State Farm Agent', '']])
-        assert.equal(sectorExcluded(n, c).reason, 'law_or_insurance', n);
+// Paul, 2026-10-28: "we do want the insurance and law firms, but those should specifically go to Milton not madison and I".
+test('law firms and insurance agencies are offered to Milton only; cards taken off come back and callbacks move to him', async () => {
+    for (const [n, c] of [['Farmers Insurance - Zachary Rogers', ''], ['Insuramax', 'Insurance (independent P&C agency)'], ['Coleman Litigation', ''], ['Kyle & Kyle Law', ''], ['Gabriel C Garza Ins Agency Inc (The Garza Agency - Farmers)', ''], ['Peyton Pettus - State Farm Agent', ''], ['Acme', 'Insurance agency in Austin, Texas']])
+        assert.ok(sectorOf(n, c), n);
     for (const [n, c] of [['Zoe Rose Therapy, PLLC', 'Mental health counseling'], ['Lawrence Plumbing', ''], ['Farmers Market Co-op', ''], ['NextPath Care Management & Consulting', '']])
-        assert.equal(sectorExcluded(n, c), null, n);
-    assert.equal(qualifyJob(listing({ company_name: 'Smith & Jones Law Group' }), NOW).reason, 'law_or_insurance', 'the hourly search too');
-    // Cards made before: the untouched one leaves on the next run; the one a caller booked a callback on stays.
+        assert.equal(sectorOf(n, c), null, n);
+    assert.equal(qualifyJob(listing({ company_name: 'Smith & Jones Law Group' }), NOW).ok, true, 'never excluded for it');
     const w = jobsWorld();
-    for (const [biz, key] of [['Mormile Agency Inc. (Farmers Insurance)', 'lead:a'], ['Abrolat Law', 'lead:b']]) {
-        const l = LEAD({ business: biz, industry: '', vertical: '', phone: biz === 'Abrolat Law' ? '310-999-2007' : '520-600-0025' });
-        await putRecord(w.kv, { id: 'hire:' + key.slice(-1).repeat(16), campaignId: 'staffify-hiring-intent', status: 'ready', lead: l, company: { name: biz }, job: { source: 'provided', title: 'Customer Service Representative', postedAt: new Date(NOW - 864e5).toISOString(), state: 'open' }, phone: { number: biz === 'Abrolat Law' ? '+13109992007' : '+15206000025', alternates: [] }, contact: {}, callHistory: [], ...(biz === 'Abrolat Law' ? { callOwner: 'hello@gostaffify.com', callOutcome: 'no_answer', nextCallAt: new Date(NOW + 864e5).toISOString() } : {}), createdAt: new Date(NOW).toISOString() });
-    }
+    const card = (id, biz, extra = {}) => putRecord(w.kv, { id, campaignId: 'staffify-hiring-intent', status: 'ready', lead: LEAD({ business: biz, industry: '', vertical: '' }), company: { name: biz }, job: { source: 'provided', title: 'Customer Service Representative', postedAt: new Date(NOW - 864e5).toISOString(), state: 'open' }, phone: { number: '+1520600' + id.slice(-4).replace(/\D/g, '0').padStart(4, '1'), alternates: [] }, contact: {}, callHistory: [], createdAt: new Date(NOW).toISOString(), ...extra });
+    await card('hire:aaaaaaaaaaaa0001', 'Mormile Agency Inc. (Farmers Insurance)', { status: 'excluded', exclusion: { reason: 'law_or_insurance', by: 'rules re-check' } });
+    await card('hire:bbbbbbbbbbbb0002', 'Abrolat Law', { callOwner: 'hello@gostaffify.com', callOutcome: 'no_answer', nextCallAt: new Date(NOW + 864e5).toISOString(), callHistory: [{ at: 'x', caller: 'hello@gostaffify.com', outcome: 'no_answer' }] });
+    await card('hire:cccccccccccc0003', 'Rogers Home Services');
     const out = await refreshReady({ ...w.deps, now: NOW }, { limit: 0, siteChecks: 0 });
-    assert.equal(out.excluded, 1);
-    assert.equal((await getRecord(w.kv, 'hire:aaaaaaaaaaaaaaaa')).exclusion.reason, 'law_or_insurance');
-    assert.equal((await getRecord(w.kv, 'hire:bbbbbbbbbbbbbbbb')).status, 'ready', 'a callback a caller booked is left with them');
+    assert.equal(out.restored, 1); assert.equal(out.reassigned, 1);
+    const back = await getRecord(w.kv, 'hire:aaaaaaaaaaaa0001');
+    assert.equal(back.status, 'ready'); assert.equal(back.exclusion, null); assert.equal(back.restored.from, 'law_or_insurance');
+    const moved = await getRecord(w.kv, 'hire:bbbbbbbbbbbb0002');
+    assert.equal(moved.callOwner, SECTOR_CALLER); assert.equal(moved.reassigned.from, 'hello@gostaffify.com'); assert.equal(moved.callHistory.length, 1, 'history kept'); assert.equal(moved.nextCallAt, new Date(NOW + 864e5).toISOString(), 'same callback time');
+    // Offered as new work: Milton yes; Paul and Madison no. The shared pool is everyone's.
+    assert.equal(callRow(back, SECTOR_CALLER, NOW).unclaimed, true);
+    assert.equal(callRow(back, 'hello@gostaffify.com', NOW).unclaimed, false);
+    assert.equal(callRow(back, 'madison@gostaffify.com', NOW).unclaimed, false);
+    assert.equal(callRow(back, 'madison@gostaffify.com', NOW).lane, 'Milton');
+    const shared = await getRecord(w.kv, 'hire:cccccccccccc0003');
+    assert.equal(laneFor(shared), null); assert.equal(callRow(shared, 'madison@gostaffify.com', NOW).unclaimed, true);
 });
+
 
 // Paul, 2026-10-28: "I specifically want to see the wedding video editor, where is that".
 test('video editing is a seat Staffify places; shooting on location and creator or host roles are not', async () => {
