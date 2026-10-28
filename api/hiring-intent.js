@@ -7,6 +7,7 @@
 //   GET  ?view=records (owner)               every card with its evidence, for read-back
 //   POST {action:'seed', urls:[...]}         owner or machine: official job URLs to qualify next run
 //   POST {action:'hold-cards', holds:[...]}  machine only: named cards off the worklist, with the reason
+//   POST {action:'fill-research', source, fills:[...]}  machine only: looked-up numbers for research leads
 //   POST {action:'import-leads', source, leads:[...]}  owner or machine: researched leads into the pending
 //                                            queue; worked by the next run (?leads=only works them alone)
 // Logic lives in api/_hiring-intent.js and api/_hiring-run.js; this file only wires the real
@@ -24,7 +25,7 @@ import { contact as crmContact } from './_outreach-crm.js';
 import { crmStop } from './_rep-email-gates.js';
 import { loadBad, isBad } from './_bad-numbers.js';
 import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf, leadKey } from './_hiring-intent.js';
-import { runHiring, addPending, holdCards } from './_hiring-run.js';
+import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS } from './_hiring-run.js';
 
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail)\./i;
 async function getJson(url) {
@@ -175,6 +176,19 @@ export default async function handler(req, res) {
                 if (write && Number(body.expected) !== holds.length) return res.status(400).json({ error: 'expected must equal the number of holds' });
                 const results = await holdCards(redis, { holds, write, by: String(body.by || 'machine').slice(0, 120) });
                 return res.status(200).json({ ok: true, write, results });
+            }
+            // Machine only: numbers looked up for research leads (api/_hiring-run.js fillResearch). Same guard as above.
+            if (body.action === 'fill-research') {
+                if (!machine) return res.status(403).json({ error: 'Machine only' });
+                const source = String(body.source || '').trim().slice(0, 40);
+                if (!source) return res.status(400).json({ error: 'Name where the numbers came from' });
+                const fills = (Array.isArray(body.fills) ? body.fills : []).slice(0, 100).filter(f => f && /^hire:[0-9a-f]{16}$/.test(String(f.id)))
+                    .map(f => ({ id: String(f.id), phone: String(f.phone || ''), phone_type: String(f.phone_type || '').slice(0, 30) || null, phone_person: String(f.phone_person || '').slice(0, 80) || null, phone_grade: String(f.phone_grade || '').slice(0, 4) || null, phone_alternates: (Array.isArray(f.phone_alternates) ? f.phone_alternates : []).map(String).slice(0, 3), checked_at: String(f.checked_at || '').slice(0, 30) || null, source_url: String(f.source_url || '').slice(0, 300) || null, ...Object.fromEntries(FILL_FIELDS.map(k => [k, String(f[k] || '').slice(0, 300)])) }));
+                if (!fills.length) return res.status(400).json({ error: 'No valid fills' });
+                const write = body.write === true;
+                if (write && Number(body.expected) !== fills.length) return res.status(400).json({ error: 'expected must equal the number of fills' });
+                const results = await fillResearch(redis, { source, fills, write, by: String(body.by || 'machine').slice(0, 120) });
+                return res.status(200).json({ ok: true, write, source, results });
             }
             // Leads a person researched (Madison's list, 2026-10-28). Into the pending queue first, so none is lost;
             // each one meets every check a found posting meets when a run works it (api/_hiring-run.js processLead).

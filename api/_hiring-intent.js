@@ -341,6 +341,29 @@ const FIELD_DUTIES = [
     /\bdeliver(s|ing)?\s+(the\s+)?products?\b|\bproduct\s+deliver(y|ies)\b/i,
     /\bfield[- ]based\b|\bdoor[- ]to[- ]door\b/i,
 ];
+// Paul, 2026-10-28: "if there are ones ... that truly cannot be done remotely, that didn't make it through
+// our filters, please make sure to do that." Duties that need a body somewhere, whatever the title says:
+// meeting customers face to face, visiting homes, driving a territory, a parts counter, a warehouse.
+// One strong sign is enough; the others need two. A phone seat posted as in-office is still fine.
+const IN_PERSON_STRONG = /\bface[- ]to[- ]face\s+(with\s+)?(customers|clients|patients|prospects)\b|\b(connect|meet|interact)\w*\s+(with\s+)?(customers|clients|prospects)\s+face[- ]to[- ]face\b|\bdoor[- ]to[- ]door\b|\bin[- ]home\s+(visits?|assessments?|consultations?)\b|\bhome\s+visits\b/i;
+const IN_PERSON_DUTIES = [
+    /\b(travel|drive|driving)\s+(through|throughout|within|across|to)\b.{0,40}\b(territor(y|ies)|client\s+homes|customers'?\s+homes|job\s*sites)\b|\b(assigned|open)\s+territor(y|ies)\b/i,
+    /\bdriver'?s\s+licen[cs]e\s*(\(required\)|(is\s+)?required)|\bvalid\s+driver'?s\s+licen[cs]e\b|\breliable\s+transportation\b/i,
+    /\bcounter\s+(customer\s+)?(service|sales)\b|\bparts\s+counter\b|\bbehind\s+the\s+counter\b/i,
+    /\b(lift|carry)\s+(up\s+to\s+)?\d{2,3}\s*(lbs?|pounds)\b/i,
+    /\bforklift\b/i,
+    /\bshowroom\b/i,
+    /\bbrand\s+ambassador\b/i,
+    /\bgoes\s+on[- ]site\b|\bon[- ]site\s+(with|at)\s+(customers|clients)\b/i,
+];
+// A front desk: greeting visitors, the mail and the office itself. Phones alone are not this; three signs are.
+const DESK_DUTIES = [
+    /\bgreet(s|ing)?\s+(all\s+)?(clients|customers|visitors|guests|patients|walk[- ]?ins)\b/i,
+    /\b(reception|front)[- ]desk\b/i,
+    /\b(incoming|outgoing)(\s*\/\s*(incoming|outgoing))?\s+(mail|packages|shipments)\b|\bmail\s+and\s+(packages|shipments)\b/i,
+    /\bkitchen\s+supplies\b|\b(clean|tidy)\s+office\s+environment\b|\b(stock|restock)\w*\s+(the\s+)?(kitchen|break\s*room)\b/i,
+    /\bwalk[- ]?in\s+(clients|customers|patients)\b|\bcheck(s|ing)?[- ]in\s+(patients|clients|visitors)\b/i,
+];
 // A hospital, a residential care home or a health plan: the employer is an institution, not a small business.
 const CLINICAL_NAME = /\b(hospital|health\s*care\s+system|health\s+system|psychiatric|nursing\s+(home|center|facility)|skilled\s+nursing|wellness\s+and\s+rehabilitation|rehabilitation\s+hospital|assisted\s+living|senior\s+living|memory\s+care|hospice|health\s+plan)\b/i;
 const NOT_CLINICAL_NAME = /\b(animal|pet|veterinar\w*|vet|equine)\b/i;
@@ -364,6 +387,8 @@ const ENTERPRISE_TEXT = [
     /\b(we\s+are|we're|is)\s+(a\s+|an\s+)?(publicly\s+traded|fortune\s+(50|100|500|1000))\b/i,
     /\b(our|we\s+have|with)\s+(over\s+|more\s+than\s+)?\d{1,3}(,\d{3})+\+?\s+(employees|team\s+members|associates|colleagues)\b/i,
     /\blarge,?\s+stable\s+employer\b/i,
+    // An employee stock purchase plan is a public company's benefit.
+    /\b(employee\s+)?stock\s+purchase\s+plan\b|\bespp\b/i,
     // "Builders FirstSource, America's largest supplier", "we are the nation's largest": the employer about itself.
     /(,|\bwe\s+are|\bwe're|\bis)\s+(america|the\s+nation|the\s+country|north\s+america|the\s+world|the\s+u\.?s\.?)['’]?s\s+largest\b/i,
     /\bthe\s+#\s?1\s+name\s+in\s+(our|the)\s+industry\b/i,
@@ -379,6 +404,9 @@ export function postEvidence({ company, title, text, family }) {
     const name = String(company || '');
     if (hits(FLOOR_DUTIES, t) >= 2) return { reason: 'store_floor_role', detail: 'The duties are store, counter or warehouse floor work (a register, a sales floor, stock or load-out), not a seat a remote person fills.' };
     if ((family === 'sales' || family === 'account') && hits(FIELD_DUTIES, t) >= 2) return { reason: 'field_sales', detail: 'The duties are in-person selling on a route or a territory (account visits, driving, merchandising), not a phone seat.' };
+    const strong = t.match(IN_PERSON_STRONG);
+    if (strong || hits(IN_PERSON_DUTIES, t) >= 2) return { reason: 'in_person_role', detail: 'The duties need someone there in person' + (strong ? ' ("' + strong[0].replace(/\s+/g, ' ') + '")' : ' (a territory, a counter, lifting or a driver\'s licence)') + ', so a remote person cannot do the job.' };
+    if (hits(DESK_DUTIES, t) >= 3) return { reason: 'in_person_desk', detail: 'The seat is a front desk: greeting visitors, handling the mail and keeping the office, which a remote person cannot do.' };
     if (CLINICAL_NAME.test(name) && !NOT_CLINICAL_NAME.test(name)) return { reason: 'institutional_clinical', detail: `${name} is a hospital, care facility or health plan by its name.` };
     if (hits(FACILITY_TEXT, t) >= 2) return { reason: 'institutional_clinical', detail: 'The post describes an inpatient, residential or long-term care facility.' };
     if (hits(PAYER_TEXT, t) >= 2) return { reason: 'institutional_clinical', detail: 'The post describes a health plan serving members and providers, not a small business.' };
@@ -390,7 +418,8 @@ export function postEvidence({ company, title, text, family }) {
 const LOCATOR_HOST = /^(locations?|stores?|local|branch(es)?|find|directory)\./i;
 const LOCATOR_PATH = /\/(store-?locator|storelocator|locator|find-a-(store|location|branch)|store-?finder)(\/|$|\?)/i;
 // Yext manages location listings for multi-location brands: its tag on the listing's link is a branch of a chain.
-const LOCATOR_TAG = /[?&](utm_source|y_source)=yext\b/i;
+// Yext also tags links as utm_campaign=Yext, and PowerListings is its product name (Capital One, 2026-10-28).
+const LOCATOR_TAG = /[?&](utm_source|y_source|utm_campaign|utm_medium)=(yext|powerlistings)\b/i;
 const BRANCH_PATH = /\/(stores?|locations?|branch(es)?|offices?)\/[^/?#]+/i;
 const BRANCH_NAME = /\b(store|shop|outlet|branch|location)\b/i;
 // What Google says the business is, when that alone settles it: a recruiter is a competitor, a care home an institution.
@@ -505,6 +534,9 @@ export function qualifyJob(j, now = Date.now()) {
     if (INSTITUTION.test(company) || hosts.some(h => /\.(edu|gov|mil)$/.test(h))) return { ok: false, reason: 'institution', detail: `${company} is a public body, school or hospital system.` };
     const big = links.find(l => ENTERPRISE_ATS.test(l));
     if (big) return { ok: false, reason: 'large_employer', detail: 'They hire through an enterprise system (' + (big.match(ENTERPRISE_ATS) || [''])[0] + '), a sign of a large employer.' };
+    // "Columbus, OH (+7 others)": one job posted across many cities is a large employer's.
+    const many = String(j.location || '').match(/\(\+\s*(\d+)\s+others?\)/i);
+    if (many && Number(many[1]) >= 3) return { ok: false, reason: 'large_employer', detail: `The same job is posted in ${Number(many[1]) + 1} cities, a sign of a large employer.` };
     const own = hosts.find(h => BRAND_CAREERS.test(h.replace(/^www\./, '')));
     if (own) return { ok: false, reason: 'large_employer', detail: `They post on a careers site of their own (${own}), a sign of a large employer.` };
     // "Now Hiring", "Entry-Level ... - Chicago, IL", "no experience needed": mass recruiting ads, rarely the employer itself.
@@ -670,7 +702,9 @@ export function callRow(rec, viewer, now = Date.now()) {
         callOwner: owner, callOwnerAt: rec.callOwnerAt || null, callHistory: rec.callHistory || [],
         claimed: !!owner, mine, unclaimed: ready && !owner, dueForMe: ready && mine, pausedFollowUp: false,
         phone: p.number || null,
-        callContact: p.source === 'provided'
+        callContact: p.source === 'vendor'
+            ? { phone: p.number || null, phoneStatus: p.number ? 'vendor_direct' : 'missing', phoneSource: p.vendor || 'Data vendor', phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: `${p.person ? p.person + '\'s ' : 'A '}${p.lineType || 'number'} from a ${p.vendor || 'data vendor'} lookup${p.grade ? ' (grade ' + p.grade + ')' : ''}${p.siteCheck && p.siteCheck.result === 'confirmed' ? ', also on their website.' : ', not published on their website.'}` }
+            : p.source === 'provided'
             ? { phone: p.number || null, phoneStatus: p.number ? 'provided' : 'missing', phoneSource: 'Found by ' + (p.foundBy || 'our team'), phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: 'The number from ' + (p.foundBy || 'our team') + '\'s research' + (p.siteCheck && p.siteCheck.result === 'confirmed' ? ', also on their website.' : ', not yet seen on their own website.') }
             : p.source === 'Google business listing'
             ? { phone: p.number || null, phoneStatus: p.number ? 'listing_main' : 'missing', phoneSource: 'Google business listing', phoneSourceUrl: p.sourceUrl || null, phoneAlternates: p.alternates || [], phoneCheckedAt: p.checkedAt || null, phoneDetail: 'The main line on their Google business listing, not a direct line.' }

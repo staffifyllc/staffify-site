@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead } from '../api/_hiring-run.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript } from '../api/_call-scripts.js';
@@ -908,4 +908,57 @@ test('a lead meets every stop a found posting meets: booked, a number already on
     const again = await processLead({ kind: 'lead', key: 'lead:other', lead: LEAD({ business: 'Zachary Rogers Agency', role_posted: 'Receptionist' }) }, { source: 'Madison' }, w.deps);
     assert.equal(again.verdict, 'merged'); assert.equal(again.reason, 'same_number');
     assert.equal((await allRecords(w.kv)).length, 1);
+});
+
+// Paul, 2026-10-28: "if there are ones ... that truly cannot be done remotely, that didn't make it through our filters, please make sure to do that."
+test('a seat that needs someone there in person is out whatever its title; a phone seat posted in-office stays', () => {
+    const ev = (title, text, family = 'support') => postEvidence({ company: 'A Small Co', title, text, family });
+    assert.equal(ev('Entry Level Customer Service Rep', 'Connect with customers face-to-face, providing friendly service and helpful support.').reason, 'in_person_role');
+    assert.equal(ev('Client Care Coordinator', 'Reliable transportation and willingness to travel throughout the territory. License/Certification: Driver\'s License (Required)').reason, 'in_person_role');
+    assert.equal(ev('Parts Customer Service Assistant', 'Counter Customer Service, as needed. Ability to lift up to 50 pounds, ability to drive forklift.').reason, 'in_person_role');
+    assert.equal(ev('Office Administrative Assistant', 'Greet clients, vendors, and other guests from the reception desk. Receive, sort, and distribute incoming mail and packages. Keep kitchen supplies stocked.').reason, 'in_person_desk');
+    assert.equal(ev('Customer Service Rep / Appointment Setter', 'A full-time, in-office job, on the phone all day. In-office at our shop in Ardmore, OK. This is not remote.'), null, 'a phone seat the employer wants in the office is one a remote person does');
+    assert.equal(ev('Dispatcher', 'Dispatch our drivers from home. Valid driver\'s license preferred.'), null, 'one sign is not enough');
+    assert.equal(ev('Receptionist', 'Answer phones, greet visitors and schedule appointments.'), null, 'greeting is not a front desk on its own');
+});
+
+test('a chain\'s Yext link, one job posted in many cities and a stock purchase plan each mark a large employer', () => {
+    const le = listingEvidence({ company: 'Capital One', website: 'https://www.capitalone.com/local/eastontowncenter/?utm_source=PowerListings&utm_medium=Local&utm_campaign=Yext', domain: 'capitalone.com', listingName: 'Capital One Café', listingType: 'Coffee shop', address: '167 Easton Town Ctr, Columbus, OH 43219', jobLocation: 'Columbus, OH (+7 others)', remote: true });
+    assert.equal(le.reason, 'chain_location');
+    assert.equal(qualifyJob(listing({ location: 'Columbus, OH (+7 others)' }), NOW).reason, 'large_employer');
+    assert.equal(qualifyJob(listing({ location: 'Dallas, TX (+1 other)' }), NOW).ok, true, 'two cities is not a chain');
+    assert.equal(postEvidence({ company: 'X', title: 'Customer Service Coordinator', text: 'Benefits: 401 K and Stock Purchase Plan.', family: 'support' }).reason, 'large_employer');
+});
+
+test('a number looked up for a research lead: dry first, blank fields only, then a lead run makes a card that says whose number it is', async () => {
+    const w = jobsWorld();
+    const lead = LEAD({ business: 'Park Consulting Group', owner_first: 'Glenn', owner_last: 'Park', owner_title: 'Founder', owner_email: null, phone: null, website: 'https://www.parkconsulting.com', city: 'Irvine', state: 'CA', role_posted: 'Executive Assistant to Founder & CEO', email_source_url: null });
+    const first = await processLead({ kind: 'lead', key: leadKey(lead), lead }, { source: 'Madison', postingKey: leadKey(lead) }, w.deps);
+    assert.equal(first.reason, 'no_listed_phone');
+    const id = first.id;
+    const fill = { id, phone: '+1 714-345-6538', phone_type: 'mobile', phone_person: 'Glenn Park', phone_grade: 'A', phone_alternates: ['+19494613400'], owner_first: 'Glen', owner_email: 'glenn@parkconsulting.com' };
+    const dry = await fillResearch(w.kv, { source: 'RocketReach', fills: [fill, { id: 'hire:0000000000000000', phone: '5551234567' }], by: 'test', now: NOW });
+    assert.deepEqual(dry.map(x => x.done), [false, false]); assert.deepEqual(dry[0].added, ['phone', 'owner_email']); assert.equal(dry[1].why, 'not in research');
+    assert.equal((await w.kv.hgetall(HK.pending)) || null, null, 'a dry run changes nothing');
+    const wrote = await fillResearch(w.kv, { source: 'RocketReach', fills: [fill], write: true, by: 'test', now: NOW });
+    assert.equal(wrote[0].done, true);
+    const b = (await allBacklog(w.kv)).find(x => x.id === id);
+    assert.equal(b.lead.owner_first, 'Glenn', 'what the researcher wrote stays'); assert.equal(b.lead.phone_source, 'RocketReach'); assert.equal(b.enrichment.by, 'RocketReach');
+    // Their website publishes the front desk; the owner's mobile still goes first.
+    w.deps.getPage = async u => ({ url: u, html: '<p>Call 949-753-1200</p>', text: 'Call 949-753-1200' });
+    w.deps.findSitePhone = async () => ({ phone: '+19497531200', alternates: [], sourceUrl: 'https://www.parkconsulting.com/contact', context: 'Call 949-753-1200' });
+    const r = await runHiring(w.deps, { leadsOnly: true, maxCandidates: 10, refresh: 0 });
+    assert.equal(r.verdicts.ready, 1, JSON.stringify(r.reasons));
+    const rec = await getRecord(w.kv, id);
+    assert.equal(rec.phone.number, '+17143456538'); assert.equal(rec.phone.source, 'vendor'); assert.equal(rec.phone.vendor, 'RocketReach');
+    assert.equal(rec.phone.person, 'Glenn Park'); assert.equal(rec.phone.lineType, 'mobile'); assert.equal(rec.phone.owner, 'Glenn Park');
+    assert.deepEqual(rec.phone.alternates, ['+19494613400', '+19497531200']); assert.equal(rec.phone.siteCheck.result, 'person_line');
+    assert.equal(rec.job.foundBy, 'Madison'); assert.equal(rec.contact.email, 'glenn@parkconsulting.com'); assert.equal(rec.contact.source, 'RocketReach lookup');
+    const row = callRow(rec, MILTON.email, NOW);
+    assert.equal(row.callContact.phoneStatus, 'vendor_direct'); assert.equal(row.callContact.phoneSource, 'RocketReach'); assert.match(row.callContact.phoneDetail, /Glenn Park's mobile from a RocketReach lookup \(grade A\), not published on their website/);
+    assert.deepEqual(orderCallQueue([row], { now: NOW }).map(x => x.id), [id], 'a looked-up number reaches the dialler queue');
+    const base = { kv: w.kv, isOptedOut: async () => false, clientCheck: async () => ({ status: 'clear' }), crmContact: async () => { throw Error('CRM contact missing'); }, crmStop, loadBad, isBad, queueState: async () => ({ records: [] }) };
+    const brief = await hiringBrief(w.kv, { id, caller: 'Milton', callerEmail: MILTON.email, shiftGate: { allowed: true, required: true } }, base);
+    assert.equal(brief.body.dial.label, "Glenn Park's mobile, from RocketReach"); assert.match(brief.body.dial.detail, /Madison found the lead\. Ask for Glenn Park\./);
+    assert.equal((await allBacklog(w.kv)).some(x => x.id === id), false, 'the research entry is cleared once it is a card');
 });
