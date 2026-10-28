@@ -68,7 +68,8 @@ test('who reads a report: Milton his own, owners anyone, a colleague no one else
     const paul = await A({ cookie: 'paul-sid', query: { user: MILTON, date: '2026-10-23' } });
     assert.equal(paul.code, 200); assert.match(paul.body.schedule.destination, /No private Slack destination/);
     const people = await A({ cookie: 'paul-sid', query: { people: '1' } });
-    assert.deepEqual(people.body.people.map(p => p.email), [MILTON], 'only callers who are not owners get a report (a plain rep with no caller plan does not)');
+    // Paul, 2026-10-28: "I do want my metrics to also track on my end too". Callers, and the owners who call; a plain rep with no caller plan still does not.
+    assert.deepEqual(people.body.people.map(p => p.email), [MILTON, 'hello@gostaffify.com', 'madison@gostaffify.com']);
     assert.equal((await A({ cookie: 'milton-sid', query: { people: '1' } })).code, 403);
     assert.equal((await A({ cookie: 'paul-sid', query: { user: MILTON, date: '2099-01-01' } })).code, 400);
 });
@@ -81,7 +82,7 @@ test('the scheduled job: nothing before 8 AM Eastern; after it, yesterday’s re
     assert.equal(r.body.skipped, 'before 8 AM Eastern');
     Date.now = () => Date.parse('2026-10-24T12:05:00Z');   // 8:05 AM EDT
     r = await C({ bearer: 'test-admin' });
-    assert.equal(r.code, 200); assert.equal(r.body.day, '2026-10-23'); assert.deepEqual(r.body.people, [MILTON]);
+    assert.equal(r.code, 200); assert.equal(r.body.day, '2026-10-23'); assert.deepEqual(r.body.people, [MILTON, 'hello@gostaffify.com', 'madison@gostaffify.com'], 'the owners who call are reported too');
     assert.equal(r.body.results[0].status, 'stored_not_delivered');
     const snap = JSON.parse(store.get('report:daily:' + MILTON + ':2026-10-23'));
     assert.equal(snap.calls.loggedOutcomes, 1); assert.equal(snap.day, '2026-10-23');

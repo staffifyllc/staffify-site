@@ -7,6 +7,7 @@
 // guarded; a vendor error is recorded as an error and the row stays retryable, never as "none
 // found" (memory: an API error is not absence).
 import { contactLinks, phonesOnPage } from './_site-phone.js';
+import { syncQuoContacts } from './_quo-contacts.js';
 import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
@@ -1155,6 +1156,8 @@ export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, dea
 
     // 3b. The owner's cell for ready cards that still ring a main line (RocketReach, capped per day and month).
     if (cells && timeLeft()) { try { report.ownerCells = await ownerCells(d, { limit: cells, deadline: t0 + deadlineMs }); } catch (e) { report.ownerCells = { error: String((e && e.message) || e).slice(0, 120) }; } }
+    // 3c. A Quo contact for each card, so a callback shows who it is (api/_quo-contacts.js).
+    if (deps.quoContacts && timeLeft()) { try { const q = await syncQuoContacts({ kv, api: deps.quoContacts, now }, { limit: 40, write: true }); delete q.planned; report.quoContacts = q; } catch (e) { report.quoContacts = { error: String((e && e.message) || e).slice(0, 120) }; } }
 
     // 4. New listings: Google Jobs, one role in one city per search, the last three days only. Only when
     // nothing already paid for is still waiting, and leaving room in the budget for the lookups.

@@ -21,9 +21,20 @@ import { randomUUID } from 'node:crypto';
 const SITE = 'https://www.gostaffify.com';
 export const reportLink = (email, day) => `${SITE}/activity/report/?user=${encodeURIComponent(email)}&date=${day}`;
 
-/** Who gets a daily report: everyone who calls and is not a sales owner. Today that is Milton. */
+// Paul, 2026-10-28: "I do want my metrics to also track on my end too, so I can gauge my performance against other
+// people's performance in the company as well". Owners who call are measured like every caller.
+export const CALLING_OWNERS = String(process.env.HUB_CALLING_OWNERS || 'hello@gostaffify.com:Paul Chareth,madison@gostaffify.com:Madison')
+    .split(',').map(s => s.trim()).filter(Boolean).map(s => { const [email, name] = s.split(':'); return { email: email.trim().toLowerCase(), name: (name || '').trim() || null }; });
+/** Who gets a daily report and a caller review: everyone who calls. Callers, and the owners who call. */
 export async function reportPeople() {
-    return (await listReps()).filter(r => r && r.email && !ownerFor(r) && (r.role === 'caller' || hasCallerPlan(r.email)));
+    const reps = (await listReps()).filter(r => r && r.email);
+    const out = reps.filter(r => !ownerFor(r) && (r.role === 'caller' || hasCallerPlan(r.email)));
+    for (const o of CALLING_OWNERS) {
+        if (out.some(r => String(r.email).toLowerCase() === o.email)) continue;
+        const r = reps.find(x => String(x.email).toLowerCase() === o.email);
+        out.push(r ? { ...r, name: r.name || o.name } : { email: o.email, name: o.name || o.email });
+    }
+    return out;
 }
 
 /** The numbers on each card, the same way the dialer sees them. Best effort; a CRM outage leaves the record's own. */

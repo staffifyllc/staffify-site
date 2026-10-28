@@ -405,7 +405,7 @@ test('the number itself dials: Quo on a phone, a tel: link Quo answers on a comp
         assert.equal(a3.calls.filter(c => c.url === '/api/call-hold/' && c.body && c.body.kind === 'calling').length, before + 1, 'clicking the number holds the card as a call');
         const text = d.text(document.body);
         if (/iPhone/.test(ua)) assert.match(text, /Tapping the number opens Quo and dials/);
-        else { assert.match(text, /Clicking the number opens Quo once Quo is this computer's calling app/); assert.match(text, /set "Default for calls" to Quo/); }
+        else { assert.match(text, /Clicking the number opens Quo once the Quo desktop app is installed/); assert.match(text, /set "Default for calls" to Quo/); assert.ok(document.querySelectorAll('a').some(a => a.href === 'https://download.quo.com/Quo-latest.dmg'), 'a link straight to the Mac app'); }
         restore();
     }
 });

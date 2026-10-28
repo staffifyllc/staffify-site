@@ -10,6 +10,7 @@
 //   POST {action:'fill-research', source, fills:[...]}  machine only: looked-up numbers for research leads
 //   POST {action:'owner-lines', source, lines:[...]}   machine only: an owner's own line first on live cards
 //   POST {action:'cells-tried', tried:[...]}           machine only: cards already looked up by hand
+//   POST {action:'sync-quo-contacts', write?, limit?} machine only: a Quo contact per card, so callbacks show who
 //   POST {action:'import-leads', source, leads:[...], recheck?}  owner or machine: researched leads into the pending
 //                                            queue (recheck: true runs leads already turned away under older rules)
 //                                            queue; worked by the next run (?leads=only works them alone)
@@ -28,6 +29,8 @@ import { contact as crmContact } from './_outreach-crm.js';
 import { crmStop } from './_rep-email-gates.js';
 import { loadBad, isBad } from './_bad-numbers.js';
 import { rrConfigured, account as rrAccount, lookupPerson, checkStatus as rrCheckStatus, searchPeople } from './_rocketreach.js';
+import { quoConfigured } from './_quo.js';
+import { syncQuoContacts, quoContactsApi } from './_quo-contacts.js';
 import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf, leadKey } from './_hiring-intent.js';
 import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines, RR_TRIED } from './_hiring-run.js';
 
@@ -123,7 +126,7 @@ async function outreachDomains() {
 }
 
 export function deps() {
-    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null };
+    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null, quoContacts: quoConfigured() ? quoContactsApi : null };
 }
 
 export default async function handler(req, res) {
@@ -206,6 +209,13 @@ export default async function handler(req, res) {
                 if (write && Number(body.expected) !== lines.length) return res.status(400).json({ error: 'expected must equal the number of lines' });
                 const results = await ownerLines(redis, { source, lines, write, by: String(body.by || 'machine').slice(0, 120), isOptedOut, loadBad, isBad });
                 return res.status(200).json({ ok: true, write, source, results });
+            }
+            // Machine only: create or update the Quo contacts of the cards now (api/_quo-contacts.js). Dry unless write.
+            if (body.action === 'sync-quo-contacts') {
+                if (!machine) return res.status(403).json({ error: 'Machine only' });
+                if (!quoConfigured()) return res.status(503).json({ error: 'No Quo API key is set' });
+                const out = await syncQuoContacts({ kv: redis, api: quoContactsApi }, { limit: Math.max(1, Math.min(120, Number(body.limit) || 40)), write: body.write === true });
+                return res.status(200).json({ ok: true, write: body.write === true, ...out });
             }
             // Machine only: cards already looked up by hand, so the hourly owner-cell step does not pay for them again.
             if (body.action === 'cells-tried') {
