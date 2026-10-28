@@ -2750,12 +2750,14 @@
     </div>
 </footer>
 
-<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+
 <script>
 // ── 1. Lenis smooth scroll ────────────────────────────────────────────────────
-document.documentElement.style.scrollBehavior = 'auto';
-const lenis = new Lenis({ lerp: 0.08, smoothWheel: true, smoothTouch: false });
-(function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(0);
+// Native scrolling keeps controls independent of a third-party script.
+const lenis = {
+    on(event, handler) { if (event === 'scroll') window.addEventListener('scroll', () => handler({scroll: window.scrollY}), {passive:true}); },
+    scrollTo(target, options = {}) { if (target) window.scrollTo({top: target.getBoundingClientRect().top + window.scrollY + (options.offset || 0), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'}); }
+};
 
 // ── 2. Nav ────────────────────────────────────────────────────────────────────
 const nav = document.getElementById('nav');
