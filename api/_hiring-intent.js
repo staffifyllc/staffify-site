@@ -465,11 +465,27 @@ export function leadDomain(url) {
     let h; try { h = new URL(/^https?:/i.test(url) ? url : 'https://' + url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return null; }
     return SHARED_HOSTS.test(h) ? null : h;
 }
-/** The date a provided post was seen live: an ISO date in its note, else the import time. */
-export function leadPostedAt(l, now = Date.now()) {
-    const m = String(l.posting_date || '').match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+// Madison's spreadsheet keeps some dates as Excel serial numbers: 46266.0 is 2026-09-01. Read as text they
+// matched nothing and the card took the import time, so an eight-week-old post was offered as new (2026-10-28).
+const EXCEL_DAY0 = Date.UTC(1899, 11, 30);
+/** The date a provided lead says its post was live (an Excel serial or an ISO date in the note), or null. */
+export function leadStatedDate(l) {
+    const raw = String(l && l.posting_date || '').trim();
+    const serial = raw.match(/^(\d{5})(?:\.\d+)?$/);
+    if (serial && Number(serial[1]) > 40000 && Number(serial[1]) < 60000) return new Date(EXCEL_DAY0 + Number(serial[1]) * 864e5 + 12 * 3600e3).toISOString();
+    const m = raw.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
     const t = m ? Date.parse(m[1] + 'T12:00:00Z') : NaN;
-    return Number.isFinite(t) && t <= now ? new Date(t).toISOString() : new Date(now).toISOString();
+    return Number.isFinite(t) ? new Date(t).toISOString() : null;
+}
+/** The date a provided post was seen live: the date the lead states, else the import time. */
+export function leadPostedAt(l, now = Date.now()) {
+    const s = leadStatedDate(l);
+    return s && Date.parse(s) <= now ? s : new Date(now).toISOString();
+}
+/** The lead's date the way a person reads it: a serial number becomes the date it stands for. */
+export function leadDateLabel(l) {
+    const raw = String(l && l.posting_date || '').trim();
+    return /^\d{5}(\.\d+)?$/.test(raw) && leadStatedDate(l) ? 'Posted ' + leadStatedDate(l).slice(0, 10) : raw.slice(0, 160) || null;
 }
 /** The verdict on one provided lead, before anything is spent. { ok:true, family, ... } or { ok:false, reason, detail }. */
 export function qualifyLead(l, now = Date.now()) {

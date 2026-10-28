@@ -11,7 +11,7 @@ import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
     parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey, listingEvidence, remotePost,
-    ageBased, leadKey, leadDomain, qualifyLead,
+    ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel,
 } from './_hiring-intent.js';
 
 export const SERP_RESERVE = 300;      // searches left in the month that this campaign never touches
@@ -448,7 +448,7 @@ export async function processLead(p, provenance, deps, report) {
     const bk = companyKey(l.business, q.usState ? ', ' + q.usState : '');
     const id = idFor(bk);
     const via = (() => { try { return new URL(l.posting_url).hostname.replace(/^(www|app|jobs)\./, ''); } catch { return null; } })();
-    const job = { source: 'provided', title: String(l.role_posted).trim(), url: l.posting_url || null, applyUrl: l.posting_url || null, via, postedAt: q.postedAt, postedLabel: String(l.posting_date || '').trim().slice(0, 160) || null, ageDays: q.age, checkedAt, location: q.location, city: q.city, usState: q.usState, workplace: q.workplace, restrictions: q.restrictions, foundBy: source };
+    const job = { source: 'provided', title: String(l.role_posted).trim(), url: l.posting_url || null, applyUrl: l.posting_url || null, via, postedAt: q.postedAt, postedLabel: leadDateLabel(l), ageDays: q.age, checkedAt, location: q.location, city: q.city, usState: q.usState, workplace: q.workplace, restrictions: q.restrictions, foundBy: source };
     const known = parseValue(await kv.hget(HK.companies, bk));
     if (known && ['client', 'in_outreach', 'suppressed', 'large'].includes(known.verdict)) { await mark('excluded', 'company_' + known.verdict); return { verdict: 'excluded', reason: 'company_' + known.verdict }; }
     const existing = await getRecord(kv, id);
@@ -649,6 +649,24 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
     // Every Google Jobs card (a date check, free) and the ATS cards checked longest ago (a fetch each).
     const recs = [...live.filter(r => ageBased(r.job.source)), ...live.filter(r => !ageBased(r.job.source)).sort((a, b) => Date.parse(a.job.checkedAt || 0) - Date.parse(b.job.checkedAt || 0)).slice(0, limit)];
     const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0, excluded: 0 };
+    // Provided cards made before the lead's stated date was read (Excel serials, 2026-10-28) take that date, so
+    // they expire on the real post's age like any other card. Owner and history stay; only the dates change.
+    for (const rec of live.filter(r => r.lead && r.job.source === 'provided')) {
+        const stated = leadStatedDate(rec.lead);
+        if (!stated || !(Date.parse(stated) < Date.parse(rec.job.postedAt))) continue;
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (!fresh || fresh.status !== 'ready') continue;
+            const job = { ...fresh.job, postedAt: stated, ageDays: ageDays(stated, now), postedLabel: leadDateLabel(fresh.lead), redatedAt: new Date(now).toISOString() };
+            const next = { ...fresh, job, jobs: (fresh.jobs || []).map(j => (j.url === fresh.job.url && j.title === fresh.job.title ? { ...j, postedAt: stated, postedLabel: job.postedLabel } : j)) };
+            next.brief = briefFor(next);
+            await putRecord(kv, next);
+            rec.job = job;   // the expiry pass below reads the corrected date in this same run
+            out.redated = (out.redated || 0) + 1;
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
     // The rules improve; cards made under older rules are held to the current ones, for free: the name,
     // the role, the stored listing and the cached Google listing are all re-read, nothing is fetched.
     // A card leaves the worklist with the reason on it and everything else kept; one a caller owns is

@@ -2,7 +2,7 @@
 // nothing here calls, texts, emails or spends a credit.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
+import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
 import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
@@ -979,4 +979,24 @@ test('when the owner\'s looked-up number is logged wrong, the next one up says i
     }
     assert.equal(r2.record.phone.sourceUrl, 'https://www.floridabar.org/directories/find-mbr/profile/?num=1');
     assert.equal(callRow(r2.record, MILTON.email, NOW).callContact.phoneStatus, 'site_main');
+});
+
+test('a spreadsheet date kept as an Excel serial is read as the date it is, so an old post is not offered as new', async () => {
+    assert.equal(leadStatedDate({ posting_date: '46266.0' }), '2026-09-01T12:00:00.000Z');
+    assert.equal(leadStatedDate({ posting_date: '46302' }), '2026-10-07T12:00:00.000Z');
+    assert.equal(leadStatedDate({ posting_date: 'No post date shown' }), null);
+    assert.equal(leadDateLabel({ posting_date: '46266.0' }), 'Posted 2026-09-01');
+    assert.equal(leadDateLabel({ posting_date: 'Active on Indeed as of 2026-10-26' }), 'Active on Indeed as of 2026-10-26');
+    assert.equal(qualifyLead(LEAD({ posting_date: '46266.0' }), NOW).reason, 'stale_post');
+    assert.equal(qualifyLead(LEAD({ posting_date: String((Date.parse(new Date(NOW).toISOString().slice(0, 10)) - Date.UTC(1899, 11, 30)) / 864e5 - 3) }), NOW).ok, true, 'three days old is fine');
+    // A card already made under the old reading takes the stated date and expires on the next pass; owner and history stay.
+    const w = jobsWorld();
+    await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD() }, { source: 'Madison' }, w.deps);
+    const rec = (await allRecords(w.kv))[0];
+    await putRecord(w.kv, { ...rec, lead: { ...rec.lead, posting_date: '46266.0' }, callHistory: [{ at: 'x', outcome: 'no_answer' }] });
+    const out = await refreshReady({ ...w.deps, now: NOW }, { limit: 0, siteChecks: 0 });
+    assert.equal(out.redated, 1); assert.equal(out.stale, 1);
+    const after = await getRecord(w.kv, rec.id);
+    assert.equal(after.job.postedAt, '2026-09-01T12:00:00.000Z'); assert.equal(after.job.state, 'stale'); assert.equal(after.job.postedLabel, 'Posted 2026-09-01');
+    assert.equal(after.callHistory.length, 1); assert.equal(hiringCallReady(after, NOW), false);
 });
