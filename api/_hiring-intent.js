@@ -50,6 +50,7 @@ export const HK = {
     jobsCursor: 'staffify:hiring:jobs-cursor', // position in JOB_QUERIES (role x city)
     profile: key => 'staffify:hiring:profile:' + key, // Google business listing per employer, misses too, 30 days
     serpDay: day => 'staffify:hiring:serp:' + day,
+    rrDay: day => 'staffify:hiring:rr:' + day,  // RocketReach person lookups made that day (owner cells)
     contact: domain => 'staffify:hiring:contact:' + domain,
     recLock: id => 'staffify:hiring:lock:' + id,
 };
@@ -521,6 +522,9 @@ export const jobKey = j => 'gjobs:' + createHash('sha256').update([j.company_nam
 export const companyKey = (name, location) => 'gco:' + (nameWords(name).join('') || String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')) + ':' + String(stateOf(location) || '').toLowerCase();
 // A business with no website still has one number: a second card on the same number is the same business.
 export const phoneKey = n => 'phone:' + String(n || '').replace(/\D/g, '').slice(-10);
+// Paul, 2026-10-28: "dont ever publish a 1800 number because we wont call it, go find the cell phone". A toll-free
+// line is a switchboard: it is never the number on a card, never a backup, and a card with nothing else waits for a cell.
+export const tollFree = n => /^(800|888|877|866|855|844|833)\d{7}$/.test(String(n || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, ''));
 const STATES = { alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA', colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA', hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA', kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD', massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT', virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY', 'district of columbia': 'DC' };
 /** The two-letter state in "Tampa, FL", "Tampa, Florida" or "4518 Ash Ln, Dallas, TX 75223", or null. */
 export function stateOf(text) {
@@ -709,7 +713,8 @@ export function callRow(rec, viewer, now = Date.now()) {
     const owner = rec.callOwner || null;
     const mine = !!owner && String(owner).toLowerCase() === me;
     const ready = hiringCallReady(rec, now);
-    const p = rec.phone || {};
+    const p0 = rec.phone || {};
+    const p = { ...p0, number: tollFree(p0.number) ? null : p0.number, alternates: (p0.alternates || []).filter(n => !tollFree(n)) };
     return {
         id: rec.id, campaignId: HIRING_ID, kind: 'hiring', callQueue: 'shared',
         company: rec.company && rec.company.name || null,
@@ -750,7 +755,7 @@ export function jobCurrent(rec, now = Date.now()) {
  * says the job closed. A plain no-answer retry on a closed or unchecked post is not offered.
  */
 export function hiringCallReady(rec, now = Date.now()) {
-    if (!rec || rec.status !== 'ready' || !rec.phone || !rec.phone.number) return false;
+    if (!rec || rec.status !== 'ready' || !rec.phone || !rec.phone.number || tollFree(rec.phone.number)) return false;
     if (!rec.callOutcome) return jobCurrent(rec, now);
     if (!RETRY.includes(rec.callOutcome) || !rec.nextCallAt || Date.parse(rec.nextCallAt) > now) return false;
     return PROMISED.includes(rec.callOutcome) && !!rec.callOwner ? true : jobCurrent(rec, now);

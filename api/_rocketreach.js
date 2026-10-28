@@ -102,7 +102,8 @@ export async function checkStatus(ids) {
     const out = {};
     for (const b of rows) {
         if (!b || b.id == null) continue;
-        const done = !/progress|searching|pending/i.test(String(b.status || ''));
+        // Finished only when RocketReach says so: 'waiting' and 'not queued' are still on the way.
+        const done = !b.status || /^(complete|failed)$/i.test(String(b.status));
         const phones = (Array.isArray(b.phones) ? b.phones : [])
             .map(p => (typeof p === 'string' ? { number: p, type: null } : p))
             .map(p => ({ number: digits(p.number || p.phone), type: p.type || p.phone_type || null, recommended: !!p.recommended }))
@@ -110,9 +111,46 @@ export async function checkStatus(ids) {
         out[String(b.id)] = {
             done, found: done && !!phones.length, phones,
             name: b.name || null, title: b.current_title || b.title || null,
+            profile: profileOf(b),
         };
     }
     return out;
+}
+
+/** A profile as the Hub keeps it: who, where, the employer and its domain, and each number with RocketReach's own type and grade. */
+export function profileOf(b) {
+    const phones = (Array.isArray(b && b.phones) ? b.phones : [])
+        .map(p => (typeof p === 'string' ? { number: p } : p))
+        .map(p => ({ number: digits(p.e164 || p.number || p.phone), type: p.type || p.phone_type || null, grade: p.grade || null, valid: p.validity ? p.validity === 'valid' : null, recommended: !!p.recommended }))
+        .filter(p => p.number.replace(/\D/g, '').length >= 10);
+    return {
+        id: b && b.id || null, name: b && (b.name || [b.first_name, b.last_name].filter(Boolean).join(' ')) || null, title: b && (b.current_title || b.title) || null,
+        employer: b && b.current_employer || null, employerDomain: b && b.current_employer_domain || null,
+        location: b && b.location || null, region: String(b && b.region || '').trim() || null, linkedin: b && b.linkedin_url || null, phones,
+    };
+}
+
+/**
+ * One person by RocketReach profile id, or by name at an employer, as a premium lookup (the one that
+ * carries phone numbers). A lookup that finds nobody costs nothing; one that finds someone spends a
+ * credit even when RocketReach is still "searching" (`pending`), so that id is kept and collected
+ * later with checkStatus, which is free.
+ */
+export async function lookupPerson({ id, name, employer } = {}) {
+    const q = id ? `id=${encodeURIComponent(id)}` : name && employer ? `name=${encodeURIComponent(name)}&current_employer=${encodeURIComponent(employer)}` : null;
+    if (!q) return { found: false, reason: 'no id or name' };
+    const r = await call(`/person/lookup?${q}&lookup_type=premium`);
+    if (!r.ok) {
+        if (r.status === 404) return { found: false, reason: 'not in RocketReach' };
+        if (r.status === 429) return { found: false, reason: 'rate limited', retryable: true };
+        if (r.status === 401 || r.status === 403) return { found: false, reason: 'key rejected', fatal: true };
+        return { found: false, reason: r.error || `http ${r.status}`, retryable: r.status >= 500 || r.status === 0 };
+    }
+    const b = r.body || {};
+    // Finished only when RocketReach says complete or failed (the same rule as checkStatus): anything else is on its way.
+    if (b.status && !/^(complete|failed)$/i.test(String(b.status))) return { found: false, pending: true, id: b.id || null, profile: profileOf(b), reason: 'RocketReach is still searching; the credit is spent and the result lands later' };
+    const profile = profileOf(b);
+    return { found: !!profile.phones.length, profile, reason: profile.phones.length ? null : 'no number on the RocketReach record' };
 }
 
 /** Company names as RocketReach spells them, for a loose match: "McKinstry Co." ~ "mckinstry". */

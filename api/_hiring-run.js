@@ -11,7 +11,7 @@ import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
     parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey, listingEvidence, remotePost,
-    ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel,
+    ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel, hiringCallReady, tollFree,
 } from './_hiring-intent.js';
 
 export const SERP_RESERVE = 300;      // searches left in the month that this campaign never touches
@@ -170,8 +170,9 @@ export async function siteCheck({ website, domain, getPage, findSitePhone }) {
     // just the first one with a number: a city line on the contact page is as published as the homepage's.
     const pages = [home];
     for (const u of contactLinks(home, 3)) { try { const pg = await fetchOnce(u); if (pg) pages.push(pg); } catch { /* skip */ } }
-    const numbers = [...new Set(pages.flatMap(pg => phonesOnPage(pg).map(h => '+1' + h.digits)))];
-    const site = await findSitePhone({ website, fetchSite: fetchOnce, maxPages: 4 }).catch(() => null);
+    const numbers = [...new Set(pages.flatMap(pg => phonesOnPage(pg).map(h => '+1' + h.digits)))].filter(n => !tollFree(n));
+    const found = await findSitePhone({ website, fetchSite: fetchOnce, maxPages: 4 }).catch(() => null);
+    const site = found && found.phone && tollFree(found.phone) ? null : found;
     const first = site && site.phone ? site : numbers.length ? { phone: numbers[0], sourceUrl: home.url || website } : null;
     return { numbers: first && !numbers.includes(first.phone) ? [first.phone, ...numbers] : numbers, site: first };
 }
@@ -386,10 +387,12 @@ export async function processPosting(p, provenance, deps, report) {
     }
     const bad = await deps.loadBad(kv, id).catch(() => new Set());
     let usable = phone && phone.phone ? [phone.phone, ...(phone.alternates || [])].filter(n => !deps.isBad(bad, n)) : [];
+    const tollOnly = usable.length > 0 && usable.every(tollFree);
+    if (!tollOnly) usable = usable.filter(n => !tollFree(n));
     // The listing's number was logged as wrong: their own website may publish another.
     if (!usable.length && listed && ident.website) {
         const site = await deps.findSitePhone({ website: ident.website, fetchSite: deps.getPage, maxPages: 4 }).catch(() => null);
-        if (site && site.phone) { phone = { ...site, source: 'business website' }; usable = [site.phone, ...(site.alternates || [])].filter(n => !deps.isBad(bad, n)); }
+        if (site && site.phone && !tollFree(site.phone)) { phone = { ...site, source: 'business website' }; usable = [site.phone, ...(site.alternates || [])].filter(n => !deps.isBad(bad, n) && !tollFree(n)); }
     }
     if (!phone || !phone.phone) return toBacklog('no_listed_phone', 'No phone number is published ' + (ident.domain ? 'on ' + ident.domain : 'on their Google listing') + '.', { company, contact });
     if (!usable.length) return toBacklog('no_listed_phone', 'Every listed number was logged as wrong.', { company, contact });
@@ -415,6 +418,7 @@ export async function processPosting(p, provenance, deps, report) {
     // A wrong number re-researched: same card, same history and owner; the new number is a new lead to ring.
     if (existing) Object.assign(rec, { createdAt: existing.createdAt, callHistory: existing.callHistory || [], callOwner: existing.callOwner || null, callOwnerAt: existing.callOwnerAt || null, jobs: existing.jobs && existing.jobs.length ? existing.jobs : rec.jobs, provenance: existing.provenance || rec.provenance });
     rec.priority = priorityOf({ age: q.age, restrictions: q.restrictions, openRoles: posting.openRoles, contact });
+    if (tollOnly) Object.assign(rec, { status: 'research', hold: { reason: 'toll_free_only', detail: 'The only number they publish is toll-free, a switchboard we do not call. The owner\'s cell is looked up next.', at: checkedAt, by: 'admission' } });
     rec.brief = briefFor(rec);
     // A wrong-number retry rebuilds the card: if it was booked or closed meanwhile, that stands.
     if (existing) { const now2 = await getRecord(kv, id); if (now2 && (now2.booking || now2.status !== existing.status)) { await mark('merged', 'changed_meanwhile', { id }); return { verdict: 'merged', reason: 'changed_meanwhile', id }; } }
@@ -497,7 +501,7 @@ export async function processLead(p, provenance, deps, report) {
     // where a website's number reaches the front desk; the website's numbers ride along as alternates.
     const d = digits10(l.phone);
     const vendor = String(l.phone_source || '').trim() || null;
-    const personNums = vendor ? [d, ...String(l.phone_alternates || '').split(/[,;\s]+/).map(digits10)].filter((x, i, a) => x.length === 10 && a.indexOf(x) === i).map(x => '+1' + x) : [];
+    const personNums = vendor ? [d, ...String(l.phone_alternates || '').split(/[,;\s]+/).map(digits10)].filter((x, i, a) => x.length === 10 && a.indexOf(x) === i && !tollFree(x)).map(x => '+1' + x) : [];
     // The business's own published line, seen by whoever checked the lookup, rides last as the company's.
     const publicNum = vendor && digits10(l.public_phone).length === 10 ? '+1' + digits10(l.public_phone) : null;
     let phone = d.length !== 10 ? null
@@ -518,8 +522,10 @@ export async function processLead(p, provenance, deps, report) {
     }
     if (!phone) return toBacklog('no_listed_phone', `No number in the lead${domain ? ' and none published on ' + domain : ''}.`);
     const bad = await deps.loadBad(kv, id).catch(() => new Set());
-    const usable = [phone.phone, ...(phone.alternates || [])].filter(n => !deps.isBad(bad, n));
+    let usable = [phone.phone, ...(phone.alternates || [])].filter(n => !deps.isBad(bad, n));
     if (!usable.length) return toBacklog('no_listed_phone', 'Every number on file was logged as wrong.');
+    const tollOnly = usable.every(tollFree);
+    if (!tollOnly) usable = usable.filter(n => !tollFree(n));
     for (const n of usable) if (await deps.isOptedOut({ phone: n })) { await mark('excluded', 'opted_out'); return { verdict: 'excluded', reason: 'opted_out' }; }
     const byPhone = parseValue(await kv.hget(HK.companies, phoneKey(usable[0])));
     if (byPhone && byPhone.id && byPhone.id !== id) {
@@ -547,6 +553,7 @@ export async function processLead(p, provenance, deps, report) {
     };
     if (existing) Object.assign(rec, { createdAt: existing.createdAt, callHistory: existing.callHistory || [], callOwner: existing.callOwner || null, callOwnerAt: existing.callOwnerAt || null, jobs: existing.jobs && existing.jobs.length ? existing.jobs : rec.jobs, provenance: existing.provenance || rec.provenance });
     rec.priority = priorityOf({ age: q.age, restrictions: q.restrictions, openRoles: null, contact });
+    if (tollOnly) Object.assign(rec, { status: 'research', hold: { reason: 'toll_free_only', detail: 'The only number they publish is toll-free, a switchboard we do not call. The owner\'s cell is looked up next.', at: checkedAt, by: 'admission' } });
     rec.brief = briefFor(rec);
     if (existing) { const now2 = await getRecord(kv, id); if (now2 && (now2.booking || now2.status !== existing.status)) { await mark('merged', 'changed_meanwhile', { id }); return { verdict: 'merged', reason: 'changed_meanwhile', id }; } }
     await putRecord(kv, rec);
@@ -649,6 +656,27 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
     // Every Google Jobs card (a date check, free) and the ATS cards checked longest ago (a fetch each).
     const recs = [...live.filter(r => ageBased(r.job.source)), ...live.filter(r => !ageBased(r.job.source)).sort((a, b) => Date.parse(a.job.checkedAt || 0) - Date.parse(b.job.checkedAt || 0)).slice(0, limit)];
     const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0, excluded: 0 };
+    // Paul, 2026-10-28: "dont ever publish a 1800 number because we wont call it, go find the cell phone". Cards made
+    // before that: a toll-free line leaves the card; the next number up rings instead, or, with nothing else, the card
+    // waits in research for the owner's cell (ownerCells looks those up first). Owner and history stay.
+    for (const rec of live.filter(r => r.phone && [r.phone.number, ...(r.phone.alternates || [])].some(tollFree))) {
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (!fresh || fresh.status !== 'ready' || !fresh.phone) continue;
+            const at = new Date(now).toISOString();
+            const keep = [fresh.phone.number, ...(fresh.phone.alternates || [])].filter(n => n && !tollFree(n));
+            const dropped = [fresh.phone.number, ...(fresh.phone.alternates || [])].filter(tollFree);
+            const next = keep.length
+                ? { ...fresh, phone: { ...fresh.phone, number: keep[0], alternates: keep.slice(1), ...(tollFree(fresh.phone.number) ? { previous: { number: fresh.phone.number, source: fresh.phone.source || null, why: 'toll-free' } } : {}) }, tollFreeDropped: dropped, updatedAt: at }
+                : { ...fresh, status: 'research', hold: { reason: 'toll_free_only', detail: 'The only number on the card is toll-free, a switchboard we do not call. The owner\'s cell is looked up next.', at, by: 'rules re-check' }, tollFreeDropped: dropped, updatedAt: at };
+            next.brief = briefFor(next);
+            await putRecord(kv, next);
+            Object.assign(rec, { phone: next.phone, status: next.status });
+            out.tollFree = (out.tollFree || 0) + 1;
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
     // Provided cards made before the lead's stated date was read (Excel serials, 2026-10-28) take that date, so
     // they expire on the real post's age like any other card. Owner and history stay; only the dates change.
     for (const rec of live.filter(r => r.lead && r.job.source === 'provided')) {
@@ -707,7 +735,7 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
     }
     // Google Jobs cards made before the website check: is the number one the employer publishes? A few a run.
     // A card a caller owns keeps its number (a callback was promised on it); an unreadable site is tried up to three times.
-    for (const rec of live.filter(r => r.job.source === 'google_jobs' && r.phone && r.phone.number && !r.phone.siteCheck && !r.callOwner && (r.phone.siteTries || 0) < 3 && r.company && r.company.website).slice(0, siteChecks)) {
+    for (const rec of live.filter(r => r.job.source === 'google_jobs' && r.phone && r.phone.number && r.phone.source !== 'vendor' && !r.phone.siteCheck && !r.callOwner && (r.phone.siteTries || 0) < 3 && r.company && r.company.website).slice(0, siteChecks)) {
         const chk = await siteCheck({ website: rec.company.website, domain: rec.company.domain, getPage: deps.getPage, findSitePhone: deps.findSitePhone });
         const lock = HK.recLock(rec.id);
         if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
@@ -815,9 +843,10 @@ export async function ownerLines(kv, { source, lines, write = false, by, now = D
             const rec = await getRecord(kv, id);
             if (!rec) { out.push({ id, done: false, why: 'not found' }); continue; }
             const base = { id, company: rec.company && rec.company.name || null, owner: rec.callOwner || null };
-            if (rec.booking || !['ready', 'conversation'].includes(rec.status)) { out.push({ ...base, done: false, why: rec.booking ? 'booked' : 'status ' + rec.status }); continue; }
+            const tollHeld = rec.status === 'research' && rec.hold && rec.hold.reason === 'toll_free_only';
+            if (rec.booking || !(['ready', 'conversation'].includes(rec.status) || tollHeld)) { out.push({ ...base, done: false, why: rec.booking ? 'booked' : 'status ' + rec.status }); continue; }
             const person = String(f.phone_person || '').trim();
-            const nums = [f.phone, ...(f.phone_alternates || [])].map(digits10).filter((x, i, a) => x.length === 10 && a.indexOf(x) === i).map(x => '+1' + x);
+            const nums = [f.phone, ...(f.phone_alternates || [])].map(digits10).filter((x, i, a) => x.length === 10 && a.indexOf(x) === i && !tollFree(x)).map(x => '+1' + x);
             if (!nums.length || !person) { out.push({ ...base, done: false, why: !person ? 'no person named' : 'no usable number' }); continue; }
             let usable = [], why = null;
             try {
@@ -829,14 +858,14 @@ export async function ownerLines(kv, { source, lines, write = false, by, now = D
             const primary = usable[0];
             const lineType = primary === nums[0] ? String(f.phone_type || '').trim() || 'number' : 'other number';
             const phone = {
-                number: primary, alternates: [...usable.slice(1), old.number, ...(old.alternates || [])].filter((n, i, a) => n && n !== primary && a.indexOf(n) === i).slice(0, 6),
+                number: primary, alternates: [...usable.slice(1, 3), old.number, ...(old.alternates || [])].filter((n, i, a) => n && n !== primary && !tollFree(n) && a.indexOf(n) === i).slice(0, 8),
                 source: 'vendor', vendor: source, foundBy: old.foundBy || (rec.job && rec.job.foundBy) || null, person, lineType, grade: primary === nums[0] ? f.phone_grade || null : null,
                 sourceUrl: null, context: `Looked up on ${source}`, checkedAt: f.checked_at || at, type: `${person}'s ${lineType} from ${source}`, owner: person,
                 localCheckedAt: old.localCheckedAt || at, previous: { number: old.number || null, source: old.source || null, type: old.type || null },
             };
             // A card with no named contact takes the person whose line this is.
             const contact = rec.contact && rec.contact.name ? rec.contact : { ...(rec.contact || {}), name: person, firstName: firstNameOf(person.split(/\s+/)[0]), role: String(f.owner_title || '').trim() || null, status: 'named', source: `${source} lookup`, checkedAt: at };
-            const next = { ...rec, phone, contact, updatedAt: at, ownerLine: { by: source, at, addedBy: by } };
+            const next = { ...rec, phone, contact, updatedAt: at, ownerLine: { by: source, at, addedBy: by }, ...(f.ownerCell ? { ownerCell: f.ownerCell } : {}), ...(tollHeld ? { status: 'ready', hold: null, released: { from: 'toll_free_only', at, by } } : {}) };
             next.brief = briefFor(next);
             if (write) {
                 await putRecord(kv, next);
@@ -844,6 +873,168 @@ export async function ownerLines(kv, { source, lines, write = false, by, now = D
             }
             out.push({ ...base, from: old.number || null, to: primary, lineType, done: write });
         } finally { if (write) await kv.del(lock).catch(() => {}); }
+    }
+    return out;
+}
+
+// ---- the owner's cell, found every run ----------------------------------------------------------
+// Paul, 2026-10-28: "I need cell phone numbers here from rocket reach, the folks I am hitting a gatekeeper each and
+// every single time", then "I just upgraded our rocketreach account to 1000 + a month". Each run looks up the owner of
+// a few ready cards that still ring a main line, newest first, inside a daily cap and above a monthly reserve. A
+// profile must be this business (its name words or its domain) in its state, and the card's named owner when it has
+// one; only a mobile is put first (ownerLines keeps the old number behind it). Every attempt is noted on the card, so
+// each card is tried once, and a "still searching" answer, already paid for, is collected free on a later run.
+export const RR_DAILY_CAP = 40, RR_RESERVE = 100, RR_PER_RUN = 6;
+const CARRIER = /\b(state\s+farm|allstate|farmers|nationwide|american\s+family|amfam|liberty\s+mutual|country\s+financial)\b/i;
+const RR_STOP = new Set(['inc', 'llc', 'pllc', 'pc', 'pa', 'llp', 'ltd', 'co', 'corp', 'the', 'and', 'of', 'group', 'law', 'firm', 'office', 'offices', 'agency', 'insurance', 'services', 'agent', 'associates', 'company', 'state', 'farm', 'farmers', 'allstate']);
+const rrWords = v => String(v || '').toLowerCase().replace(/&/g, ' ').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(w => w.length > 2 && !RR_STOP.has(w));
+const ownsCell = r => r.phone && r.phone.source === 'vendor' && r.phone.person && /mobile/i.test(r.phone.lineType || '');
+// Words that name a trade, not a business: "Lee Dental Care" and "Pacific Dental Services" share "dental" and nothing else.
+const RR_GENERIC = new Set(['dental', 'dentistry', 'plumbing', 'roofing', 'technology', 'technologies', 'tech', 'cpa', 'cpas', 'accounting', 'consulting', 'consultants', 'care', 'health', 'healthcare', 'medical', 'home', 'homes', 'construction', 'solutions', 'systems', 'supply', 'realty', 'legal', 'financial', 'finance', 'wealth', 'tax', 'management', 'marketing', 'media', 'therapy', 'psychotherapy', 'clinic', 'family', 'industrial', 'repair', 'partners', 'international', 'global', 'national', 'american', 'usa', 'enterprises', 'holdings', 'capital', 'properties', 'electric', 'electrical', 'hvac', 'mechanical', 'exteriors', 'cleaning', 'pest', 'environmental', 'logistics', 'trucking', 'transport', 'freight', 'staffing', 'wellness', 'spa', 'studio', 'design', 'digital', 'software', 'labs', 'institute', 'center', 'centre', 'network', 'professional', 'premier', 'elite', 'first', 'best', 'quality', 'united', 'north', 'south', 'east', 'west', 'central', 'coastal', 'pacific', 'atlantic', 'texas', 'florida', 'california']);
+const HONORIFIC = /^(dr|mr|mrs|ms|miss|jr|sr|ii|iii|iv|cpa|esq|md|dds|dmd|chfc|clu|cfp|phd|jd|mba|rn|np|lmhc|lcsw)$/;
+/** A person's name as two comparable tokens: honorifics, suffixes, credentials and initials dropped. */
+export function nameKey(n) {
+    const t = String(n || '').toLowerCase().replace(/[.,()]/g, ' ').split(/\s+/).filter(w => w && w.length > 1 && !HONORIFIC.test(w.replace(/[^a-z]/g, '')));
+    return t.length ? { first: t[0], last: t[t.length - 1], clean: t.join(' ') } : null;
+}
+const AGENT_TITLE = /\b(agent|agency|owner|principal|president|founder|ceo|producer|proprietor)\b/i;
+/**
+ * Is this RocketReach profile the card's business, in its state, and its named owner when there is one?
+ * With a named owner: the same person, and a business tie that is more than a trade word (or the same domain, or,
+ * for a carrier agency card, the same carrier with an agent or owner title). With no named owner (a company
+ * search): the same domain, or the same business name, and a state that agrees; nothing weaker.
+ */
+export function cellMatch(rec, p, { strictState = false, ignoreState = false } = {}) {
+    if (!p || !p.name) return { ok: false, why: 'no profile' };
+    const co = (rec.company && rec.company.name) || '', domain = rec.company && rec.company.domain;
+    const owner = rec.contact && rec.contact.name;
+    const want = owner ? nameKey(owner) : null, have = nameKey(p.name);
+    if (owner && !(want && have && want.first === have.first && want.last === have.last)) return { ok: false, why: `RocketReach found ${p.name}, not ${owner}` };
+    // The owner's own name is not the business: "Farmers Insurance - Zachary Rogers" must not match "Rogers Plumbing".
+    const mine = new Set(owner ? String(owner).toLowerCase().replace(/[^a-z\s-]/g, ' ').split(/\s+/).filter(Boolean) : []);
+    const distinct = v => rrWords(v).filter(w => !mine.has(w) && !RR_GENERIC.has(w) && !CARRIER.test(w));
+    const cw = new Set([...distinct(co), ...distinct(domain && domain.split('.')[0])]);
+    const ew = distinct(p.employer);
+    const flat = v => ' ' + String(v || '').toLowerCase().replace(/&/g, ' and ').replace(/\b(inc|llc|pllc|pc|pa|llp|ltd|co|corp|the)\b\.?/g, ' ').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    const fc = flat(co), fe = flat(p.employer);
+    const carrierOf = v => { const m = String(v || '').match(CARRIER); return m ? m[0].toLowerCase().split(/\s+/)[0] : null; };
+    // One name inside the other ("Abrolat Law" / "Abrolat Law PC"), unless the employer is only a carrier ("Farmers
+    // Insurance" sits inside every Farmers agency's name) or the shorter name is nothing but trade words ("Dental Care").
+    const bareCarrier = !!carrierOf(p.employer) && fe.replace(new RegExp(CARRIER.source, 'gi'), ' ').replace(/\b(insurance|agent|agents|agency|agencies|companies|company|group|exchange|mutual)\b/g, ' ').trim() === '';
+    const shorter = fc.length <= fe.length ? fc : fe;
+    const sameName = !bareCarrier && fc.trim().length > 3 && fe.trim().length > 3 && (fe.includes(fc) || fc.includes(fe)) && rrWords(shorter).some(w => !RR_GENERIC.has(w) && !CARRIER.test(w));
+    const byDomain = !!(domain && p.employerDomain && String(p.employerDomain).toLowerCase().replace(/^www\./, '') === domain);
+    const agencyCard = !!carrierOf(co) && /\b(insurance|agent|agency)\b/i.test(co);
+    const byCarrier = !!owner && agencyCard && carrierOf(co) === carrierOf([p.employer, p.title].join(' ')) && AGENT_TITLE.test(String(p.title || '')) && !/\b(adjuster|claims|underwriter|corporate|analyst|engineer|specialist)\b/i.test(String(p.title || ''));
+    const byWords = owner ? ew.some(w => cw.has(w)) : (cw.size > 0 && ew.length > 0 && ew.every(w => cw.has(w)) && [...cw].every(w => ew.includes(w)));
+    if (!(byDomain || sameName || byWords || byCarrier)) return { ok: false, why: `${p.name} works at ${p.employer || 'an unknown employer'}, not ${co}` };
+    // RocketReach writes the state as "TX", "Texas" or only inside "Cerritos, CA, US".
+    const st = rec.job && rec.job.usState, raw = String(p.region || '').trim();
+    const region = /^[A-Za-z]{2}$/.test(raw) ? raw.toUpperCase() : stateOf(raw) || stateOf(String(p.location || '').replace(/,\s*(US|USA|United States)\s*$/i, ''));
+    if (ignoreState) return { ok: true };   // a search result, before its paid lookup: the state is checked on the profile
+    if (st && region && region !== st) return { ok: false, why: `${p.name} is in ${region}, the job is in ${st}` };
+    if (st && !region && (strictState || !owner)) return { ok: false, why: `RocketReach gives no state for ${p.name}, and nothing else ties them to this business` };
+    return { ok: true };
+}
+const GRADE = { A: 0, 'A-': 1, B: 2 };
+const TOLL = /^\+?1?(800|888|877|866|855|844|833)/;
+/** The numbers to try, a mobile first: valid ones, best grade first, toll-free dropped. */
+export function cellsOf(profile, current) {
+    const ok = (profile.phones || []).filter(x => x.valid !== false && !TOLL.test(x.number.replace(/\D/g, '').slice(-10)));
+    const rank = x => (GRADE[x.grade] ?? 3) * 2 + (x.recommended ? 0 : 1);
+    const mobiles = ok.filter(x => /mobile/i.test(x.type || '')).sort((a, b) => rank(a) - rank(b));
+    const direct = ok.filter(x => /direct/i.test(x.type || '')).sort((a, b) => rank(a) - rank(b));
+    return { mobile: mobiles[0] || null, others: [...mobiles.slice(1), ...direct].map(x => x.number).slice(0, 2) };
+}
+// The attempts live in their own hash, written BEFORE any credit is spent, so a card is looked up once whatever
+// happens to the card's own lock; the card carries a copy (ownerCell) for people to read.
+export const RR_TRIED = 'staffify:hiring:rr:tried';
+export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity } = {}) {
+    const { kv, rr } = deps;
+    const now = deps.now || Date.now();
+    const out = { tried: 0, lookups: 0, added: 0, noMobile: 0, notFound: 0, mismatch: 0, pending: 0, collected: 0, reapplied: 0, errors: 0, skipped: null };
+    if (!rr) { out.skipped = 'RocketReach is not configured'; return out; }
+    const at = new Date(now).toISOString(), dayKey = HK.rrDay(at.slice(0, 10));
+    const room = () => Date.now() < deadline - 20000;
+    const mark = async (id, v) => { await kv.hset(RR_TRIED, { [id]: JSON.stringify(v) }); };
+    const note = async (id, ownerCell) => {   // best effort: the hash above is what counts
+        const lock = HK.recLock(id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) return;
+        try { const fresh = await getRecord(kv, id); if (fresh) await putRecord(kv, { ...fresh, ownerCell }); } finally { await kv.del(lock).catch(() => {}); }
+    };
+    const record = async (id, v) => { await mark(id, v); await note(id, v); };
+    const apply = async (id, line, base) => {
+        const [r] = await ownerLines(kv, { source: 'RocketReach', lines: [{ ...line, ownerCell: { ...base, result: 'added', person: line.phone_person } }], write: true, by: 'hourly owner-cell lookup', now, isOptedOut: deps.isOptedOut, loadBad: deps.loadBad, isBad: deps.isBad });
+        if (r && r.done) { out.added++; return mark(id, { ...base, result: 'added', person: line.phone_person }); }
+        // A caller saving the card, or a stop list that could not be read: the paid answer is kept and applied next run.
+        if (r && /saving it|could not be read/.test(r.why || '')) { out.errors++; return mark(id, { ...base, result: 'apply_later', line }); }
+        out.errors++; return record(id, { ...base, result: 'not_applied', why: r && r.why || 'unknown' });
+    };
+    const settle = async (rec, profile, base, { strictState }) => {
+        const m = cellMatch(rec, profile, { strictState });
+        if (!m.ok) { out.mismatch++; return record(rec.id, { ...base, result: 'mismatch', why: m.why }); }
+        const c = cellsOf(profile, rec.phone && rec.phone.number);
+        if (!c.mobile) { out.noMobile++; return record(rec.id, { ...base, result: 'no_mobile', person: profile.name }); }
+        return apply(rec.id, { id: rec.id, phone: c.mobile.number, phone_type: 'mobile', phone_grade: c.mobile.grade, phone_person: profile.name, phone_alternates: c.others, checked_at: at, owner_title: profile.title }, base);
+    };
+    let tried;
+    try { tried = Object.fromEntries(Object.entries((await kv.hgetall(RR_TRIED)) || {}).map(([k, v]) => [k, parseValue(v) || {}])); }
+    catch { out.skipped = 'the attempts could not be read'; return out; }
+    const all = await allRecords(kv);
+    const byId = new Map(all.map(r => [r.id, r]));
+    const tollHeld = r => r.status === 'research' && r.hold && r.hold.reason === 'toll_free_only' && jobCurrent(r, now);
+    const open = r => r && !r.booking && ((r.status === 'ready' && hiringCallReady(r, now)) || tollHeld(r));
+    // Free work first: answers already paid for.
+    for (const [id, t] of Object.entries(tried)) {
+        if (!room()) break;
+        const rec = byId.get(id);
+        if (t.result === 'apply_later' && t.line && open(rec)) { out.reapplied++; await apply(id, t.line, { at: t.at, profileId: t.profileId }); }
+    }
+    const waiting = Object.entries(tried).filter(([id, t]) => t.result === 'pending' && t.profileId && open(byId.get(id)));
+    if (waiting.length && room()) {
+        let st = {}; try { st = await rr.checkStatus(waiting.map(([, t]) => t.profileId)); } catch { st = {}; }
+        for (const [id, t] of waiting) { const s2 = st[String(t.profileId)]; if (s2 && s2.done) { out.collected++; await settle(byId.get(id), s2.profile || { name: s2.name, phones: s2.phones }, { at, profileId: t.profileId, how: t.how }, { strictState: t.how === 'search' }); } }
+    }
+    let acct = null; try { acct = await rr.account(); } catch { acct = null; }
+    const usage = acct && Array.isArray(acct.creditUsage) ? acct.creditUsage.find(c => c && c.credit_type === 'premium_lookup') : null;
+    const left = usage && Number.isFinite(Number(usage.remaining)) ? Number(usage.remaining) : null;
+    out.creditsLeft = left;
+    if (left == null) { out.skipped = 'the RocketReach balance could not be read'; return out; }
+    if (left <= RR_RESERVE) { out.skipped = `${left} lookups left this month; ${RR_RESERVE} are kept in reserve`; return out; }
+    const cap = Math.min(limit, left - RR_RESERVE);
+    // The day counter is the authority: taken before each lookup, so two runs together never pass the cap.
+    const take = async () => { const n = Number(await kv.incr(dayKey)); await kv.expire(dayKey, 3 * 86400).catch(() => {}); if (n > RR_DAILY_CAP) { out.skipped = `daily cap of ${RR_DAILY_CAP} reached`; return false; } out.lookups++; return true; };
+    const cand = all.filter(r => open(r) && !tried[r.id] && !ownsCell(r))
+        .sort((a, b) => (tollHeld(b) - tollHeld(a)) || (Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0)));
+    for (const rec of cand) {
+        if (out.lookups >= cap || out.skipped || !room()) break;
+        out.tried++;
+        const owner = rec.contact && rec.contact.name;
+        const co = rec.company && rec.company.name;
+        await mark(rec.id, { at, result: 'looking' });
+        try {
+            let res = null, how = null;
+            if (owner && nameKey(owner)) { if (!await take()) { await kv.hdel(RR_TRIED, rec.id); break; } how = 'name'; res = await rr.lookupPerson({ name: nameKey(owner).clean.replace(/\b\w/g, c => c.toUpperCase()), employer: CARRIER.test(co) && /\b(insurance|agent|agency)\b/i.test(co) ? String(co.match(CARRIER)[0]) : co }); }
+            if (res && res.fatal) { out.skipped = 'RocketReach rejected the key'; await kv.hdel(RR_TRIED, rec.id); break; }
+            if (res && res.retryable) { out.errors++; await kv.hdel(RR_TRIED, rec.id); break; }   // an outage or a rate limit: stop for this run
+            // Search only when the name found nobody at all (a profile with no phones is still that person).
+            if (!res || (!res.found && !res.pending && !(res.profile && res.profile.name))) {
+                const sr = await rr.searchPeople({ company: co });
+                if (sr.fatal) { out.skipped = 'RocketReach rejected the key'; await kv.hdel(RR_TRIED, rec.id); break; }
+                if (sr.retryable) { out.errors++; await kv.hdel(RR_TRIED, rec.id); break; }
+                const p = (sr.profiles || []).find(x => x.id && cellMatch(rec, { ...x, employer: x.current_employer, region: null }, { ignoreState: true }).ok && (!x.location || cellMatch(rec, { ...x, employer: x.current_employer, region: null }).ok));
+                if (p && out.lookups < cap) {
+                    if (!await take()) { await kv.hdel(RR_TRIED, rec.id); break; }
+                    how = 'search'; res = await rr.lookupPerson({ id: p.id });
+                    if (res && (res.retryable || res.fatal)) { out.errors++; await kv.hdel(RR_TRIED, rec.id); break; }
+                }
+            }
+            const base = { at, how, profileId: res && (res.id || (res.profile && res.profile.id)) || null };
+            if (res && res.pending) { out.pending++; await record(rec.id, { ...base, result: 'pending' }); continue; }
+            if (!res || !(res.profile && res.profile.name)) { out.notFound++; await record(rec.id, { ...base, result: 'not_found' }); continue; }
+            // A person found from a company search, not by the card's own owner name, must also be shown to be in its state.
+            await settle(rec, res.profile, base, { strictState: how === 'search' });
+        } catch (e) { out.errors++; await kv.hdel(RR_TRIED, rec.id).catch(() => {}); break; }
     }
     return out;
 }
@@ -885,7 +1076,7 @@ export async function fillResearch(kv, { source, fills, write = false, by, now =
  * Order: keep ready cards honest, then work what is already waiting (pending, then due research),
  * and only then pay for new searches, and only when the pending queue has room.
  */
-export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, deadlineMs = 230000, discover = true, refresh = 12, leadsOnly = false } = {}) {
+export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, deadlineMs = 230000, discover = true, refresh = 12, leadsOnly = false, cells = RR_PER_RUN } = {}) {
     const { kv } = deps;
     const t0 = Date.now(), now = deps.now || Date.now();
     const day = new Date(now).toISOString().slice(0, 10);
@@ -943,6 +1134,9 @@ export async function runHiring(deps, { maxSearches = 5, maxCandidates = 25, dea
         if (r.verdict === 'excluded') await putBacklog(kv, { ...b, state: 'closed', closedReason: r.reason, closedAt: new Date(now).toISOString() });
         tally(r);
     }
+
+    // 3b. The owner's cell for ready cards that still ring a main line (RocketReach, capped per day and month).
+    if (cells && timeLeft()) { try { report.ownerCells = await ownerCells(d, { limit: cells, deadline: t0 + deadlineMs }); } catch (e) { report.ownerCells = { error: String((e && e.message) || e).slice(0, 120) }; } }
 
     // 4. New listings: Google Jobs, one role in one city per search, the last three days only. Only when
     // nothing already paid for is still waiting, and leaving room in the budget for the lookups.

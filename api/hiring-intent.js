@@ -9,6 +9,7 @@
 //   POST {action:'hold-cards', holds:[...]}  machine only: named cards off the worklist, with the reason
 //   POST {action:'fill-research', source, fills:[...]}  machine only: looked-up numbers for research leads
 //   POST {action:'owner-lines', source, lines:[...]}   machine only: an owner's own line first on live cards
+//   POST {action:'cells-tried', tried:[...]}           machine only: cards already looked up by hand
 //   POST {action:'import-leads', source, leads:[...]}  owner or machine: researched leads into the pending
 //                                            queue; worked by the next run (?leads=only works them alone)
 // Logic lives in api/_hiring-intent.js and api/_hiring-run.js; this file only wires the real
@@ -25,8 +26,9 @@ import { clientCheck } from './_client-guard.js';
 import { contact as crmContact } from './_outreach-crm.js';
 import { crmStop } from './_rep-email-gates.js';
 import { loadBad, isBad } from './_bad-numbers.js';
+import { rrConfigured, account as rrAccount, lookupPerson, checkStatus as rrCheckStatus, searchPeople } from './_rocketreach.js';
 import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf, leadKey } from './_hiring-intent.js';
-import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines } from './_hiring-run.js';
+import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines, RR_TRIED } from './_hiring-run.js';
 
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail)\./i;
 async function getJson(url) {
@@ -120,7 +122,7 @@ async function outreachDomains() {
 }
 
 export function deps() {
-    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad };
+    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null };
 }
 
 export default async function handler(req, res) {
@@ -136,7 +138,7 @@ export default async function handler(req, res) {
                 const d = { ...deps(), outreachDomains: await outreachDomains() };
                 const cap = (v, max, dflt) => Math.max(0, Math.min(max, Number.isFinite(Number(v)) && v !== undefined && v !== '' ? Number(v) : dflt));
                 const leadsOnly = req.query?.leads === 'only';
-                const report = await runHiring(d, { maxSearches: leadsOnly ? 0 : cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 40, 25), discover: !leadsOnly && req.query?.discover !== '0', leadsOnly });
+                const report = await runHiring(d, { maxSearches: leadsOnly ? 0 : cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 40, 25), discover: !leadsOnly && req.query?.discover !== '0', leadsOnly, cells: leadsOnly && req.query?.cells == null ? 0 : cap(req.query?.cells, 20, 6) });
                 return res.status(200).json({ status: 'complete', report });
             } finally { if (await redis.get(HK.lock) === nonce) await redis.del(HK.lock); }
         }
@@ -203,6 +205,18 @@ export default async function handler(req, res) {
                 if (write && Number(body.expected) !== lines.length) return res.status(400).json({ error: 'expected must equal the number of lines' });
                 const results = await ownerLines(redis, { source, lines, write, by: String(body.by || 'machine').slice(0, 120), isOptedOut, loadBad, isBad });
                 return res.status(200).json({ ok: true, write, source, results });
+            }
+            // Machine only: cards already looked up by hand, so the hourly owner-cell step does not pay for them again.
+            if (body.action === 'cells-tried') {
+                if (!machine) return res.status(403).json({ error: 'Machine only' });
+                const rows = (Array.isArray(body.tried) ? body.tried : []).slice(0, 300).filter(t => t && /^hire:[0-9a-f]{16}$/.test(String(t.id)) && ['added', 'no_mobile', 'not_found', 'mismatch'].includes(t.result));
+                if (!rows.length) return res.status(400).json({ error: 'No valid rows' });
+                const at = new Date().toISOString();
+                if (body.write === true) {
+                    if (Number(body.expected) !== rows.length) return res.status(400).json({ error: 'expected must equal the number of rows' });
+                    await redis.hset(RR_TRIED, Object.fromEntries(rows.map(t => [String(t.id), JSON.stringify({ at, result: t.result, how: 'by hand', profileId: t.profileId || null, why: String(t.why || '').slice(0, 200) || null })])));
+                }
+                return res.status(200).json({ ok: true, write: body.write === true, rows: rows.length });
             }
             // Leads a person researched (Madison's list, 2026-10-28). Into the pending queue first, so none is lost;
             // each one meets every check a found posting meets when a run works it (api/_hiring-run.js processLead).

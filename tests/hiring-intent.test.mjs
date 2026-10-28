@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines } from '../api/_hiring-run.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript, spokenRole, articleFor } from '../api/_call-scripts.js';
@@ -1059,4 +1059,173 @@ test('a post that calls its employer a listed public company marks it large, in 
     assert.equal(ev('EVI Industries, Inc. (NYSE American: EVI) is the only U.S. public company focused on laundry.').reason, 'large_employer');
     assert.equal(ev('You will see how a growing public company is run.').reason, 'large_employer');
     assert.equal(ev('We support public companies and private clients with bookkeeping.'), null, 'a phrase about clients is not the employer');
+});
+
+// Paul, 2026-10-28: "I just upgraded our rocketreach account to 1000 + a month". Every run finds a few owners' cells.
+const RRP = (over = {}) => ({ id: 501, name: 'Zachary Rogers', title: 'Agency Owner', employer: 'Zachary Rogers Agency - Farmers Insurance', employerDomain: null, region: 'AZ', phones: [{ number: '+15203017788', type: 'mobile', grade: 'A', valid: true, recommended: true }, { number: '+15204440000', type: 'direct dial', grade: 'A-', valid: true }, { number: '+18005551212', type: 'mobile', grade: 'A', valid: true }], ...over });
+const fakeRR = (over = {}) => {
+    const calls = { lookups: [], searches: 0, status: 0 };
+    return { calls, rr: {
+        account: async () => ({ ok: true, creditUsage: [{ credit_type: 'premium_lookup', remaining: over.left ?? 900 }] }),
+        lookupPerson: async q => { calls.lookups.push(q); return over.lookup ? over.lookup(q) : { found: true, profile: RRP() }; },
+        searchPeople: async () => { calls.searches++; return { profiles: over.profiles || [] }; },
+        checkStatus: async ids => { calls.status++; return over.status ? over.status(ids) : {}; },
+    } };
+};
+async function cardWorld() {
+    const w = jobsWorld();
+    await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Madison' }, w.deps);
+    return { w, rec: (await allRecords(w.kv))[0] };
+}
+test('each run puts an owner\'s cell first on a card that rings a main line, once, inside the caps', async () => {
+    const { w, rec } = await cardWorld();
+    const f = fakeRR();
+    const out = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(out.added, 1); assert.equal(out.lookups, 1); assert.equal(out.creditsLeft, 900);
+    assert.deepEqual(f.calls.lookups[0], { name: 'Zachary Rogers', employer: 'Farmers' }, 'a franchise agent is looked up at the carrier');
+    const after = await getRecord(w.kv, rec.id);
+    assert.equal(after.phone.number, '+15203017788'); assert.equal(after.phone.lineType, 'mobile'); assert.equal(after.phone.person, 'Zachary Rogers');
+    assert.deepEqual(after.phone.alternates, ['+15204440000', '+15206000025'], 'toll-free dropped; the old line kept behind');
+    assert.equal(after.ownerCell.result, 'added'); assert.equal(after.ownerCell.profileId, 501);
+    const again = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(again.lookups, 0, 'a card is tried once');
+    assert.equal(Number(await w.kv.get('staffify:hiring:rr:' + new Date(NOW).toISOString().slice(0, 10))), 1);
+});
+test('a RocketReach profile that is someone else, elsewhere, or has no mobile is noted and never put on the card', async () => {
+    for (const [p, why] of [[RRP({ name: 'Zachary Rogers', employer: 'Rogers Plumbing', title: 'Owner' }), /works at Rogers Plumbing/], [RRP({ region: 'TX' }), /is in TX/], [RRP({ name: 'Zach Miller' }), /not Zachary Rogers/]]) {
+        const { w, rec } = await cardWorld();
+        const out = await ownerCells({ ...w.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: p }) }).rr, now: NOW });
+        assert.equal(out.mismatch, 1);
+        const after = await getRecord(w.kv, rec.id);
+        assert.equal(after.phone.number, '+15206000025'); assert.match(after.ownerCell.why, why);
+    }
+    const { w, rec } = await cardWorld();
+    await ownerCells({ ...w.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: RRP({ phones: [{ number: '+15204440000', type: 'direct dial', grade: 'A', valid: true }] }) }) }).rr, now: NOW });
+    assert.equal((await getRecord(w.kv, rec.id)).ownerCell.result, 'no_mobile');
+    assert.equal(cellMatch({ company: { name: 'Park Consulting Group', domain: 'parkconsulting.com' }, contact: { name: 'Glenn Park' }, job: { usState: 'CA' } }, { name: 'Glenn Park', employer: 'PCG', employerDomain: 'parkconsulting.com', region: 'CA' }).ok, true, 'the domain is enough');
+    assert.equal(cellsOf({ phones: [{ number: '+15551110000', type: 'mobile', grade: 'B', valid: true }, { number: '+15552220000', type: 'mobile', grade: 'A', valid: true }, { number: '+15553330000', type: 'mobile', grade: 'A', valid: false }] }, null).mobile.number, '+15552220000');
+});
+test('the daily cap and the monthly reserve stop spending; a "still searching" answer is collected free later', async () => {
+    let { w, rec } = await cardWorld();
+    await w.kv.set('staffify:hiring:rr:' + new Date(NOW).toISOString().slice(0, 10), String(RR_DAILY_CAP));
+    let f = fakeRR();
+    assert.match((await ownerCells({ ...w.deps, rr: f.rr, now: NOW })).skipped, /daily cap/); assert.equal(f.calls.lookups.length, 0);
+    ({ w, rec } = await cardWorld());
+    f = fakeRR({ left: 100 });
+    assert.match((await ownerCells({ ...w.deps, rr: f.rr, now: NOW })).skipped, /kept in reserve/); assert.equal(f.calls.lookups.length, 0);
+    ({ w, rec } = await cardWorld());
+    f = fakeRR({ lookup: () => ({ found: false, pending: true, id: 777 }), status: ids => ({ [ids[0]]: { done: true, profile: RRP({ id: 777 }) } }) });
+    const first = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(first.pending, 1); assert.equal((await getRecord(w.kv, rec.id)).ownerCell.result, 'pending');
+    const second = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(second.collected, 1); assert.equal(second.lookups, 0, 'collecting costs nothing');
+    assert.equal((await getRecord(w.kv, rec.id)).phone.number, '+15203017788');
+    // No owner on the card: the free search finds one, then a single lookup by id.
+    ({ w, rec } = await cardWorld());
+    await putRecord(w.kv, { ...rec, contact: { status: 'not_found' } });
+    f = fakeRR({ profiles: [{ id: 902, name: 'Zachary Rogers', current_title: 'Owner', current_employer: 'Zachary Rogers Agency' }], lookup: q => ({ found: true, profile: RRP({ id: q.id }) }) });
+    const anon = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(f.calls.searches, 1); assert.deepEqual(f.calls.lookups, [{ id: 902 }]); assert.equal(anon.added, 1);
+});
+test('a firm named for its owner still matches its own name, and only its own name', () => {
+    const m = (co, owner, emp, st = 'CA', title = null) => cellMatch({ company: { name: co }, contact: { name: owner }, job: { usState: st } }, { name: owner, employer: emp, region: st, title }).ok;
+    assert.equal(m('Abrolat Law', 'Nancy Abrolat', 'Abrolat Law PC'), true);
+    assert.equal(m('Law Office of Lalo Garcia APC', 'Lalo Garcia', 'Law Office of Lalo Garcia, APC'), true);
+    assert.equal(m('Coleman Litigation', 'Joseph Coleman', 'Coleman Litigation', 'FL'), true);
+    assert.equal(m('Peyton Pettus - State Farm Agent', 'Peyton Pettus', 'Peyton Pettus Insurance Agencies, Inc.(State Farm)', 'GA', 'Owner and President'), true);
+    assert.equal(m('Peyton Pettus - State Farm Agent', 'Peyton Pettus', 'Peyton Pettus Insurance Agencies, Inc.(State Farm)', 'GA'), false, 'a carrier match needs an agent or owner title');
+    assert.equal(m('Peyton Pettus - State Farm Agent', 'Peyton Pettus', 'Pettus Roofing', 'GA'), false);
+    assert.equal(m('Mark Jameson Allstate Agency', 'Mark Jameson', 'State Farm', 'TX'), false, 'another carrier is another business');
+});
+
+// Paul, 2026-10-28: "dont ever publish a 1800 number because we wont call it, go find the cell phone".
+test('a toll-free number is never on a card: dropped at intake, stripped from old cards, and a card with nothing else waits for a cell', async () => {
+    // Intake: a lead whose only number is toll-free becomes a held card, not a callable one.
+    const w = jobsWorld();
+    const r = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone: '888-553-3476', owner_email: null }) }, { source: 'Madison' }, w.deps);
+    const rec = await getRecord(w.kv, r.id);
+    assert.equal(rec.status, 'research'); assert.equal(rec.hold.reason, 'toll_free_only');
+    assert.equal(hiringCallReady({ ...rec, status: 'ready' }, NOW), false, 'never callable on a toll-free line');
+    const row = callRow({ ...rec, status: 'ready' }, MILTON.email, NOW);
+    assert.equal(row.phone, null); assert.equal(row.callContact.phone, null);
+    // The hourly lookup goes to it first, and the owner's cell releases it.
+    const f = fakeRR();
+    const out = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(out.added, 1);
+    const after = await getRecord(w.kv, r.id);
+    assert.equal(after.status, 'ready'); assert.equal(after.hold, null); assert.equal(after.phone.number, '+15203017788');
+    assert.ok(!after.phone.alternates.some(n => /^\+1(800|888|877|866|855|844|833)/.test(n)), 'and the toll-free line is not kept as a backup');
+    // An older card: the toll-free line leaves, the next number rings.
+    const w2 = jobsWorld();
+    const r2 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD() }, { source: 'Madison' }, w2.deps);
+    const old = await getRecord(w2.kv, r2.id);
+    await putRecord(w2.kv, { ...old, phone: { ...old.phone, number: '+18008330128', alternates: ['+13236330000', '+18665551234'] } });
+    const res = await refreshReady({ ...w2.deps, now: NOW }, { limit: 0, siteChecks: 0 });
+    assert.equal(res.tollFree, 1);
+    const fixed = await getRecord(w2.kv, r2.id);
+    assert.equal(fixed.phone.number, '+13236330000'); assert.deepEqual(fixed.phone.alternates, []); assert.equal(fixed.phone.previous.why, 'toll-free');
+    // A website's toll-free line is not a number the site check uses.
+    const chk = await siteCheck({ website: 'https://x.com/', domain: 'x.com', getPage: async u => ({ url: u, html: '<p>Call 800-833-0128 or 562-345-8700</p>', text: 'Call 800-833-0128 or 562-345-8700' }), findSitePhone: async () => ({ phone: '+18008330128', alternates: [] }) });
+    assert.deepEqual(chk.numbers, ['+15623458700']);
+});
+test('the website check never moves a card off the owner\'s cell', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0, cells: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    await putRecord(w.kv, { ...rec, phone: { ...rec.phone, number: '+12145550111', alternates: ['+19452184003'], source: 'vendor', vendor: 'RocketReach', person: 'Maria Lopez', lineType: 'mobile', siteCheck: undefined } });
+    w.deps.getPage = async u => ({ url: u, html: '<p>Call 945-218-4003</p>', text: 'Call 945-218-4003' });
+    w.deps.findSitePhone = async () => ({ phone: '+19452184003', alternates: [] });
+    await refreshReady({ ...w.deps, now: NOW }, { limit: 0, siteChecks: 6 });
+    assert.equal((await getRecord(w.kv, rec.id)).phone.number, '+12145550111');
+});
+
+test('the review of the owner-cell step: state names, search matches, the counter, and a paid answer never lost', async () => {
+    // "Texas" is a state too; a company-search match with no state at all is refused.
+    const card = { company: { name: 'Sun Plumbing' }, contact: {}, job: { usState: 'AZ' } };
+    assert.equal(cellMatch(card, { name: 'Bob Sun', employer: 'Sun Plumbing LLC', region: 'Texas' }).ok, false);
+    assert.equal(cellMatch(card, { name: 'Bob Sun', employer: 'Sun Plumbing LLC', location: 'Phoenix, AZ, US' }).ok, true);
+    assert.equal(cellMatch(card, { name: 'Bob Sun', employer: 'Sun Plumbing LLC' }, { strictState: true }).ok, false);
+    // Two runs together: the counter, taken before each lookup, is what stops the spend.
+    let { w } = await cardWorld();
+    await w.kv.set('staffify:hiring:rr:' + new Date(NOW).toISOString().slice(0, 10), String(RR_DAILY_CAP));
+    let f = fakeRR();
+    const capped = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.match(capped.skipped, /daily cap/); assert.equal(f.calls.lookups.length, 0); assert.equal((await w.kv.hgetall(RR_TRIED)) || null, null, 'the card is left to try another day');
+    // A caller saving the card when the answer lands: kept, and put on the card next run without a new lookup.
+    let rec; ({ w, rec } = await cardWorld());
+    f = fakeRR();
+    await w.kv.set('staffify:hiring:lock:' + rec.id, '1');
+    const busy = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(busy.added, 0); assert.equal(JSON.parse((await w.kv.hgetall(RR_TRIED))[rec.id]).result, 'apply_later');
+    await w.kv.del('staffify:hiring:lock:' + rec.id);
+    const later = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(later.reapplied, 1); assert.equal(later.added, 1); assert.equal(f.calls.lookups.length, 1, 'one lookup, not two');
+    assert.equal((await getRecord(w.kv, rec.id)).phone.number, '+15203017788');
+    // An outage stops the run and leaves the card untried.
+    ({ w, rec } = await cardWorld());
+    f = fakeRR({ lookup: () => ({ found: false, retryable: true, reason: 'rate limited' }) });
+    const down = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(down.errors, 1); assert.equal((await w.kv.hgetall(RR_TRIED)) || null, null);
+    // The owner found with no phone is not searched for again (no second credit).
+    ({ w, rec } = await cardWorld());
+    f = fakeRR({ lookup: () => ({ found: false, profile: RRP({ phones: [] }) }), profiles: [{ id: 9, name: 'Zachary Rogers', current_employer: 'Farmers Insurance' }] });
+    const empty = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    assert.equal(f.calls.searches, 0); assert.equal(empty.noMobile, 1);
+    // The card already rings the owner's best mobile: it is relabelled, not swapped for a weaker one.
+    ({ w, rec } = await cardWorld());
+    f = fakeRR({ lookup: () => ({ found: true, profile: RRP({ phones: [{ number: '+15206000025', type: 'mobile', grade: 'A', valid: true }, { number: '+15207770000', type: 'mobile', grade: 'B', valid: true }] }) }) });
+    await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
+    const same = await getRecord(w.kv, rec.id);
+    assert.equal(same.phone.number, '+15206000025'); assert.equal(same.phone.lineType, 'mobile'); assert.equal(same.phone.person, 'Zachary Rogers');
+});
+
+test('identity rules from the second review: trade words, carrier staff, bare carriers, suffixes', () => {
+    const m = (co, owner, emp, st, title, region) => cellMatch({ company: { name: co }, contact: owner ? { name: owner } : {}, job: { usState: st } }, { name: owner || 'Bob Sun', employer: emp, region: region === undefined ? st : region, title }).ok;
+    assert.equal(m('Lee Dental Care', 'David Lee', 'Pacific Dental Services', 'CA'), false, 'a shared trade word is not the same business');
+    assert.equal(m('Farmers Insurance - Zachary Rogers', 'Zachary Rogers', 'Farmers Insurance', 'AZ', 'Claims Adjuster'), false, 'carrier staff are not the agent');
+    assert.equal(m('Farmers Insurance - Zachary Rogers', 'Zachary Rogers', 'Farmers Insurance', 'AZ', 'Agency Owner'), true);
+    assert.equal(m('Golden Star Technology', 'Shirley Tai', 'Apex Technology Inc', null), false);
+    assert.equal(m('Ware Insurance', 'Sidney S. Kellam II', 'Ware Insurance', 'VA'), true, 'suffixes and initials do not break a match');
+    assert.equal(m('Sun Plumbing', null, 'Sun Valley Plumbing', 'AZ'), false, 'with no owner, only the same business name will do');
+    assert.equal(m('Dental Care', 'Ann Smith', 'Pacific Dental Care', 'CA'), false);
 });
