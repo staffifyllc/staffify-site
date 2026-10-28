@@ -334,8 +334,9 @@ function renderWho(pane,row,b){
   const acts=el('div',null,'dw-actions');
   const call=link('Call now','tel:'+p.phone,'btn dw-primary');call.id='call-now';call.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');refreshBar();});
   acts.append(call,button('Copy',async()=>{holdKind='calling';holdCard(row.id,'calling');try{await navigator.clipboard.writeText(p.phone);toast('Number copied.');}catch{toast('Select the number and copy it.',true);}},'btn btn-ghost'));
-  // A Hiring now number is a company line from their website, with no texting consent behind it: no Text button.
-  if(row.kind!=='hiring')acts.append(textButton(row,p));
+  // Text: the rep's one-click follow-up (Paul, 2026-10-22), back on Hiring now cards (2026-10-28). Paused work
+  // shows no button, and the server refuses a paused or no-longer-listed card whatever this page sends.
+  if(!row.pausedFollowUp&&!row.pausedFromPool)acts.append(textButton(row,p));
   num.append(acts);
   if(p.dial&&p.dial.alternates&&p.dial.alternates.length){const alts=el('div',null,'dw-alts');alts.append(el('span','Also on file:'));for(const a of p.dial.alternates){const t=link(a,'tel:'+a);t.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');});alts.append(t);}num.append(alts);}
   if(p.dial&&p.dial.sourceUrl){const w=el('p',null,'dw-small');w.append(link('Where this number is published',p.dial.sourceUrl));num.append(w);}
@@ -412,7 +413,9 @@ function textButton(row,p){
   if(!window.confirm('Text '+(firstName(p.name)||'them')+' at '+p.phone+' from the Staffify line? The message is drafted from the approved template and logged to the CRM.'))return;
   btn.disabled=true;btn.textContent='Sending…';
   try{
-   const j=await api('/api/send-text/',{phone:p.phone,first:firstName(p.name),company:p.company||row.company||'',motion:'outreach',emails:row.sentTouches||0,email:row.recipient});
+   // A Hiring now card is about the role they posted: the approved "the {role} role you posted" text, signed by the caller.
+   const body=row.kind==='hiring'?{id:row.id,phone:p.phone,first:firstName(p.name),company:p.company||row.company||'',motion:'staffing',role:(p.job&&p.job.title)||'',rep:p.callerName||'',email:row.recipient||''}:{id:row.id,phone:p.phone,first:firstName(p.name),company:p.company||row.company||'',motion:'outreach',emails:row.sentTouches||0,email:row.recipient};
+   const j=await api('/api/send-text/',body);
    if(j.sent){session.texts++;btn.textContent='Texted';toast('Text sent: '+(j.content||'').slice(0,140));const n=document.getElementById('call-notes');if(n&&!/Texted/.test(n.value))n.value=(n.value?n.value+'\n':'')+'Texted them after the call.';}
    else{btn.textContent='Text';btn.disabled=false;const why=TEXT_REASON[j.reason||j.error];toast('Not sent: '+(why||j.reason||j.error||'unknown'),true);}
   }catch(e){btn.textContent='Text';btn.disabled=false;toast('Could not reach the server. Nothing was sent.',true);}
@@ -420,7 +423,7 @@ function textButton(row,p){
  btn.title='Send the approved text to this number';
  return btn;
 }
-const TEXT_REASON={opted_out:'this number replied STOP.',already_texted:'this number was already texted once; we never text twice.',no_company:'no company on the record.',no_valid_number:'that is not a textable number.',rate_limited:'the hourly cap is reached.',no_rep_name:'your name is not on your Hub profile.',not_configured:'texting is not configured on the server.',unsupportable_claim:'the message made a claim we cannot back.'};
+const TEXT_REASON={opted_out:'this number replied STOP.',already_texted:'this number was already texted once; we never text twice.',no_company:'no company on the record.',no_valid_number:'that is not a textable number.',rate_limited:'the hourly cap is reached.',no_rep_name:'your name is not on your Hub profile.',not_configured:'texting is not configured on the server.',unsupportable_claim:'the message made a claim we cannot back.',no_role:'the card has no job title to mention.',campaign_paused:'this campaign is paused; nothing is texted for it.',not_callable:'this card is no longer on the call list.',booked:'they booked a call, so nothing else goes out.',not_found:'the card could not be found.',check_unavailable:'the card could not be checked just now.',sign_in:'sign in to the Hub first.',no_card:'the card was not named.'};
 
 // ---- email them -----------------------------------------------------------------------------
 // Paul, 2026-10-27: "milton needs to be able to send emails from here, they should be made with

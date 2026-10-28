@@ -147,7 +147,7 @@ export const seniorTitle = title => SENIOR.test(String(title || ''));
 
 // Staffing, recruiting, BPO and outsourcing firms are competitors, not buyers. Also job boards
 // reposting someone else's role.
-const COMPETITOR = /\b(staffing|recruit(ing|ment)\s+(agency|firm|partner|solutions)|talent\s+(solutions|partners|agency)|outsourc(e|ing)|\bbpo\b|offshore\s+(team|staff)|virtual\s+assistant\s+(company|agency|services)|on\s+behalf\s+of\s+(our|a)\s+client|our\s+client\s+is\s+(seeking|looking|hiring)|employer\s+of\s+record|nearshore\s+(staffing|talent))\b/i;
+const COMPETITOR = /\b(staffing|recruit(ing|ment)\s+(agency|firm|partner|solutions)|(is\s+)?partnering\s+with\s+an?\s+(established|leading|growing|well[- ]established|reputable)\s+(organization|company|firm|client)|talent\s+(solutions|partners|agency)|outsourc(e|ing)|\bbpo\b|offshore\s+(team|staff)|virtual\s+assistant\s+(company|agency|services)|on\s+behalf\s+of\s+(our|a)\s+client|our\s+client\s+is\s+(seeking|looking|hiring)|employer\s+of\s+record|nearshore\s+(staffing|talent))\b/i;
 const COMPETITOR_NAMES = /\b(taskus|teleperformance|concentrix|ttec|alorica|sitel|foundever|startek|boldr|support\s*ninja|supportyourapp|helpware|belay|time\s*etc|prialto|wing\s+assistant|athena|magic\s+(virtual|assistant)|myoutdesk|virtual\s+staff\s+finder|cloudstaff|remote\s+staff|staffify|hirequotient|toptal|upwork|crossover|turing|andela|lemon\.io|bairesdev|near\s+(inc|staffing)|somewhere\.com|stealth\s+agents|go\s*remote|hire\s+overseas|support\s*shepherd|peak\s+support|influx|simplycontact|partnerhero|hugo|working\s+solutions|liveops|arise|transcom|ibex|ubiquity|5ca|everise|telus\s+international|qualfon|itel|global\s+lingo|randstad|robert\s+half|kelly\s+services|adecco|aerotek|manpower|insight\s+global|teksystems|express\s+employment|spherion|nextsource|frontline\s+source|spectraforce|beacon\s+hill|addison\s+group|vaco|aston\s+carter|peopleready|labor\s+finders|tandym|apex\s+systems|volt\s+workforce|allegis|kforce|ajilon|accountemps|officeteam|appleone|snelling|staffmark|employbridge|prolink|actalent|maximus|jobot|cybercoders|medix|hays|michael\s+page|lhh|korn\s+ferry|akkodis|collabera|cynet|mindlance|russell\s+tobin|solomon\s+page|24\s+seven|hirequest|trueblue|nesco|labormax|sutherland|conduent|iqor|sykes|vxi|alorica|green\s+key|vaco|lasalle\s+network|atrium|bluecrew|instawork|wonolo|veterans\s+sourcing)\b|\bmanpower\w*|^\s*kelly\s*$/i;
 const STAFFING_IN_NAME = /\w*staff(ing|ers)?\b|\bstaff\w*|\brecruit\w*|\bresourcing\b|\bpersonnel\b|\bemployment\s+(agency|services|solutions)\b|\btemps?\b|\btemporary\s+(staffing|services|employment)\b|\bworkforce\b|\btalent\w*|\bsearch\s+(group|partners)\b|\bplacements?\b|\bhire\s*velocity\b/i;
 
@@ -208,6 +208,8 @@ export function qualifyPosting(p, now = Date.now()) {
     if (age != null && age > MAX_AGE_DAYS) return { ok: false, reason: 'stale_post', detail: `Posted ${age} days ago; older than ${MAX_AGE_DAYS} days.` };
     const comp = competitorReason({ company: p.company, text: p.text });
     if (comp) return { ok: false, reason: 'competitor', detail: comp };
+    const ev = postEvidence({ company: p.company, title: p.title, text: p.text, family });
+    if (ev) return { ok: false, ...ev };
     if (p.workplace === 'onsite' || p.workplace === 'hybrid') return { ok: false, reason: 'not_remote', detail: `The role is ${p.workplace}.` };
     const where = [p.location, ...(p.locations || []), p.text].join(' ');
     if (p.workplace !== 'remote' && !/\bremote\b|work\s+from\s+home|\bwfh\b|anywhere/i.test(where)) return { ok: false, reason: 'not_remote', detail: 'The post does not say the role is remote.' };
@@ -223,15 +225,19 @@ export function qualifyPosting(p, now = Date.now()) {
 // Staffify fills, whether they posted the job as remote or in the office: a business hiring a front
 // desk admin in Dallas can fill that seat with a remote person (Paul, 2026-10-28: "open positions
 // that they have that can be filled remotely by us"). Every role here is one a remote person does.
+// Office seats by their office names (PM, 2026-10-28): the bare "customer service representative", "call
+// center", "customer care", "receptionist" and "sales assistant" searches kept returning store floors,
+// staffing agencies, big call centers and care homes, which the admission rules then threw away after
+// the search had been paid for. A coordinator, client-services or office title is a desk at a business.
 export const JOB_TERMS = [
-    ['support', 'customer service representative'], ['support', 'customer support specialist'],
+    ['support', 'customer service coordinator'], ['support', 'customer support specialist'],
     ['admin', 'administrative assistant'], ['admin', 'executive assistant'], ['admin', 'office administrator'],
-    ['scheduling', 'receptionist'], ['scheduling', 'scheduling coordinator'], ['scheduling', 'dispatcher'],
+    ['scheduling', 'office receptionist'], ['scheduling', 'scheduling coordinator'], ['scheduling', 'dispatcher'],
     ['sales', 'inside sales representative'], ['sales', 'appointment setter'], ['sales', 'sales development representative'],
     ['account', 'account coordinator'],
     // Widened 2026-10-28 for two full-time callers (Paul: "3 to 5 is just impossible").
-    ['support', 'call center representative'], ['support', 'customer care representative'], ['admin', 'data entry clerk'],
-    ['scheduling', 'patient coordinator'], ['scheduling', 'intake coordinator'], ['sales', 'sales assistant'],
+    ['support', 'client service representative'], ['support', 'client care coordinator'], ['admin', 'data entry clerk'],
+    ['scheduling', 'patient coordinator'], ['scheduling', 'intake coordinator'], ['sales', 'sales support coordinator'],
 ];
 export const METROS = [
     'New York, New York', 'Los Angeles, California', 'Chicago, Illinois', 'Dallas, Texas', 'Houston, Texas', 'Phoenix, Arizona',
@@ -296,6 +302,112 @@ export function companyExcluded(name) {
 // Each is public knowledge: a health system, a teaching hospital, the largest US grocery wholesaler, an
 // Owens & Minor company, a multinational, a statewide agency of a thousand staff.
 const KNOWN_LARGE = /\b(unitypoint|beth\s+israel|deaconess|c\s*&\s*s\s+wholesale|byram\s+healthcare|altrad|one\s+hope\s+united|owens\s*&\s*minor|kaiser\s+permanente|advocate\s+aurora|atrium\s+health|banner\s+health|hca\s+healthcare|ascension|trinity\s+health|commonspirit|providence\s+health|mayo\s+clinic|cleveland\s+clinic|sutter\s+health|intermountain|baylor\s+scott|memorial\s+hermann|northwell|mass\s+general|brigham)\b/i;
+// ---- what the post and the employer show (PM, 2026-10-28) --------------------------------------
+// Title keywords let a Walgreens register job, a Circle K cashier, a Michael Kors store floor, a
+// beverage route, a psychiatric hospital and a national health plan through in one morning. These
+// read what the record already holds: the duties in the post, the employer's words about itself and
+// the Google listing's website and type. A rule needs two separate signs, or one that only a large or
+// institutional employer writes, so a stray word in a small firm's post does not cost it the card.
+const hits = (res, t) => res.filter(re => re.test(t)).length;
+// Work on a store, counter or warehouse floor: the seat is the place.
+const FLOOR_DUTIES = [
+    /\bcash\s+register\b|\brun(s|ning)?\s+the\s+register\b|\bregisters?\s+(customer\s+)?(sales|purchases)\b/i,
+    /\bcashier/i,
+    /\b(sales|selling|store|retail)\s+floor\b/i,
+    /\bstock\s*room\b/i,
+    /\b(re)?stock(s|ing)?\s+(the\s+)?shelves\b|\bcounters\s+and\s+shelves\b/i,
+    /\bpos\s+experience\b/i,
+    /\bstore\s+(manager|environment|tasks|appearance|associates?|hours)\b|\baround\s+the\s+store\b|\bstore\s+#?\d{3,}\b/i,
+    /\bshift\s+lead(er)?\b|\bkeyholder\b/i,
+    /\bmerchandis(e|ing)\s+(displays?|standards)\b|\bvisual\s+merchandising\b|\bmaintains?\s+displays\b/i,
+    /\bwarehouse\s+(manager|floor|team|staff)\b|\bload[- ]out\b|\breceiving\s+tickets\b|\bforklift\b/i,
+];
+// Selling in person on a route or a territory.
+const FIELD_DUTIES = [
+    /\bcalls?\s+on\s+(accounts|customers|clients)\b/i,
+    /\b(daily|assigned)\s+routes?\b|\broute\s+(sales|book)\b|\bcovers?\s+.{0,20}\broutes?\b/i,
+    /\bterritor(y|ies)\s+(manager|management|coverage|sales)\b|\b(open|assigned|different)\s+territor(y|ies)\b|\b(rotate|travel)s?\s+(through|throughout|within|across)\b.{0,40}\bterritor(y|ies)\b/i,
+    /\bvisit(s|ing)?\s+(accounts|customers|clients|stores|retailers|prospects|job\s*sites)\b|\bin[- ]person\s+(sales\s+)?(visits|calls|meetings)\b|\bface[- ]to[- ]face\s+(sales|meetings)\b/i,
+    /\bdriver'?s\s+licen[cs]e\b|\breliable\s+(vehicle|transportation)\b|\bmileage\s+reimburse/i,
+    /\bmerchandising\s+(department|periods?|duties)\b|\bresets?\b.{0,30}\b(shelf|shelves|displays?)\b/i,
+    /\bdeliver(s|ing)?\s+(the\s+)?products?\b|\bproduct\s+deliver(y|ies)\b/i,
+    /\bfield[- ]based\b|\bdoor[- ]to[- ]door\b/i,
+];
+// A hospital, a residential care home or a health plan: the employer is an institution, not a small business.
+const CLINICAL_NAME = /\b(hospital|health\s*care\s+system|health\s+system|psychiatric|nursing\s+(home|center|facility)|skilled\s+nursing|wellness\s+and\s+rehabilitation|rehabilitation\s+hospital|assisted\s+living|senior\s+living|memory\s+care|hospice|health\s+plan)\b/i;
+const NOT_CLINICAL_NAME = /\b(animal|pet|veterinar\w*|vet|equine)\b/i;
+const FACILITY_TEXT = [
+    /\binpatient\b/i, /\bpsychiatric\s+(hospital|unit|facility)\b/i, /\bacute\s+care\b/i, /\butilization\s+review\b/i,
+    /\b(admission|admit)s?\s+(of\s+)?patients?\b|\bpatient\s+admissions?\b/i,
+    /\b\d{2,3}[- ]bed\b|\bbeds?\s+(hospital|facility)\b/i,
+    /\bskilled\s+nursing\b|\blong[- ]term\s+care\s+(facility|community|residents?)\b|\bnursing\s+(home|facility)\b/i,
+    /\bassisted\s+living\b|\bmemory\s+care\b|\bsenior\s+(living|communit(y|ies))\b/i,
+    /\bresidents?\s+(and|&)\s+(their\s+)?famil(y|ies)\b|\bour\s+residents\b/i,
+    /\bcms\s+(five|four|5|4)[- ]star\b/i,
+];
+const PAYER_TEXT = [
+    /\bhealth\s+plans?\b/i, /\bmembers?\s*(and|&|\/|or)\s*providers?\b/i, /\bprovider\s+(portal|inquiries|network)\b/i,
+    /\bmember\s+(eligibility|services|inquiries|engagement|experience)\b/i, /\blines?\s+of\s+business\b/i,
+];
+// What only a large employer writes about ITSELF. One is enough. Never a phrase about its clients or
+// customers ("Fortune 500 clients", "ships to all 50 states", "powers thousands of stores").
+const ENTERPRISE_TEXT = [
+    /\((nyse|nasdaq)\s*:\s*[a-z.]{1,6}\)|\b(nyse|nasdaq)\s*:\s*[a-z.]{1,6}\b/i,
+    /\b(we\s+are|we're|is)\s+(a\s+|an\s+)?(publicly\s+traded|fortune\s+(50|100|500|1000))\b/i,
+    /\b(our|we\s+have|with)\s+(over\s+|more\s+than\s+)?\d{1,3}(,\d{3})+\+?\s+(employees|team\s+members|associates|colleagues)\b/i,
+    /\blarge,?\s+stable\s+employer\b/i,
+    /\bcurrent\s+(associate|employee|team\s+member)s?\b.{0,120}\b(internal|career\s+portal|jobs\s+hub|apply\s+internally)\b/i,
+];
+/**
+ * The duties and the employer a post describes, before anything is spent. Null, or
+ * { reason, detail } to exclude. `family` decides whether route and territory signs apply: a
+ * dispatcher's post talks about routes and a field team without the seat being in the field.
+ */
+export function postEvidence({ company, title, text, family }) {
+    const t = [title, text].join(' ');
+    const name = String(company || '');
+    if (hits(FLOOR_DUTIES, t) >= 2) return { reason: 'store_floor_role', detail: 'The duties are store, counter or warehouse floor work (a register, a sales floor, stock or load-out), not a seat a remote person fills.' };
+    if ((family === 'sales' || family === 'account') && hits(FIELD_DUTIES, t) >= 2) return { reason: 'field_sales', detail: 'The duties are in-person selling on a route or a territory (account visits, driving, merchandising), not a phone seat.' };
+    if (CLINICAL_NAME.test(name) && !NOT_CLINICAL_NAME.test(name)) return { reason: 'institutional_clinical', detail: `${name} is a hospital, care facility or health plan by its name.` };
+    if (hits(FACILITY_TEXT, t) >= 2) return { reason: 'institutional_clinical', detail: 'The post describes an inpatient, residential or long-term care facility.' };
+    if (hits(PAYER_TEXT, t) >= 2) return { reason: 'institutional_clinical', detail: 'The post describes a health plan serving members and providers, not a small business.' };
+    const big = ENTERPRISE_TEXT.find(re => re.test(t));
+    if (big) return { reason: 'large_employer', detail: 'The post describes a large employer ("' + (t.match(big) || [''])[0].replace(/\s+/g, ' ').slice(0, 60) + '").' };
+    return null;
+}
+// A store-locator system is a chain's; a /locations/<place> page is one branch of someone.
+const LOCATOR_HOST = /^(locations?|stores?|local|branch(es)?|find|directory)\./i;
+const LOCATOR_PATH = /\/(store-?locator|storelocator|locator|find-a-(store|location|branch)|store-?finder)(\/|$|\?)/i;
+const BRANCH_PATH = /\/(stores?|locations?|branch(es)?|offices?)\/[^/?#]+/i;
+const BRANCH_NAME = /\b(store|shop|outlet|branch|location)\b/i;
+// What Google says the business is, when that alone settles it: a recruiter is a competitor, a care home an institution.
+const AGENCY_TYPE = /\b(employment\s+agency|staffing\s+agency|temp(orary)?\s+agency|recruiter|executive\s+search|employment\s+consultant)\b/i;
+const CARE_TYPE = /\b(assisted\s+living|nursing\s+home|skilled\s+nursing|retirement\s+(home|community)|senior\s+(living|citizens?\s+center)|memory\s+care|hospice|rehabilitation\s+center|psychiatric|group\s+home)\b/i;
+export const remotePost = ({ title, location, extensions }) => /\b(remote|work\s+from\s+home|wfh|telecommute|virtual)\b/i.test([title, location, ...(extensions || [])].join(' '));
+/** The city in "3000 Corporate Exchange Dr, Columbus, OH 43231": the part before the state. */
+export function addressCity(address) {
+    const parts = String(address || '').split(',').map(x => x.trim()).filter(Boolean);
+    const i = parts.findIndex(x => /^[A-Z]{2}(\s+\d{5}(-\d{4})?)?$/.test(x));
+    return i > 0 ? parts[i - 1] : null;
+}
+/**
+ * Is the Google listing proof of the employer that posted the job? Null when it is, else
+ * { action: 'exclude'|'hold', reason, detail }. A hold is research: kept, never called.
+ */
+export function listingEvidence({ company, website, domain, listingName, listingType, address, jobLocation, remote }) {
+    if (AGENCY_TYPE.test(String(listingType || ''))) return { action: 'exclude', reason: 'competitor', detail: `Google lists them as a ${listingType}: a recruiter, not an employer hiring for its own seat.` };
+    if (CARE_TYPE.test(String(listingType || ''))) return { action: 'exclude', reason: 'institutional_clinical', detail: `Google lists them as a ${listingType}, a care institution.` };
+    let u = null;
+    try { u = website ? new URL(/^https?:/i.test(website) ? website : 'https://' + website) : null; } catch { u = null; }
+    if (u && (LOCATOR_HOST.test(u.hostname.replace(/^www\./i, '')) || LOCATOR_PATH.test(u.pathname)))
+        return { action: 'exclude', reason: 'chain_location', detail: `The Google listing is one store of a chain: its website is a store-locator page (${u.hostname}${u.pathname.slice(0, 40)}), not the employer's office.` };
+    if (u && BRANCH_PATH.test(u.pathname)) return { action: 'hold', reason: 'branch_listing', detail: `The Google listing's website is a branch page (${u.hostname}${u.pathname.slice(0, 40)}), so its number is one location, not proof of who hires.` };
+    if (listingName && BRANCH_NAME.test(listingName) && !BRANCH_NAME.test(String(company || ''))) return { action: 'hold', reason: 'branch_listing', detail: `Google's listing is "${listingName}", a store or branch, not "${company}" itself.` };
+    if (!domain || NOT_A_HOMEPAGE.test(String(domain)) || /(yelp|linktr\.ee|business\.site|wixsite|square\.site|nextdoor)/i.test(String(domain))) return { action: 'hold', reason: 'no_employer_website', detail: domain ? `Their Google listing points to ${domain}, not a website of their own, so the employer and the number cannot be confirmed.` : 'Their Google listing names no website, so the employer and the number cannot be confirmed.' };
+    const jc = cityOf(jobLocation), lc = addressCity(address);
+    if (remote && jc && lc && jc.toLowerCase() !== lc.toLowerCase()) return { action: 'hold', reason: 'location_unconfirmed', detail: `A remote post listed in ${jc} was matched to an office in ${lc}; the listing may not be the employer that posted it.` };
+    return null;
+}
 export const jobKey = j => 'gjobs:' + createHash('sha256').update([j.company_name, j.title, j.location].map(x => String(x || '').trim().toLowerCase()).join('|')).digest('hex').slice(0, 20);
 // "Royal Electric", "Royal Electric, LLC" and "Royal Electric Co." are one employer: the key drops legal suffixes.
 export const companyKey = (name, location) => 'gco:' + (nameWords(name).join('') || String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')) + ':' + String(stateOf(location) || '').toLowerCase();
@@ -338,6 +450,8 @@ export function qualifyJob(j, now = Date.now()) {
     // "Now Hiring", "Entry-Level ... - Chicago, IL", "no experience needed": mass recruiting ads, rarely the employer itself.
     if (/\bnow\s+hiring\b|\bhiring\s+(immediately|now)\b|\bimmediate\s+start\b|\bno\s+experience\s+(needed|necessary|required)\b|\bentry[- ]level\b.*\s-\s*[A-Z][a-zA-Z .]+,\s*[A-Z]{2}\s*$/i.test(title)) return { ok: false, reason: 'recruiting_ad', detail: `"${title}" reads as a mass recruiting ad, not an employer hiring for its own seat.` };
     if (!salesSeatOk(title, j.description)) return { ok: false, reason: 'field_sales', detail: 'A sales seat the post describes as in person (a lot, a showroom, a territory), or never says is by phone.' };
+    const ev = postEvidence({ company, title, text: j.description, family });
+    if (ev) return { ok: false, ...ev };
     const r = restrictions([title, j.description, j.location].join(' '));
     // Onsite attendance is fine here: the point is a remote person can do the seat. Licences and clearances are not.
     const hard = r.hard.filter(x => !/onsite/.test(x));
@@ -570,5 +684,6 @@ export async function hiringReportRows(kv, now = Date.now()) {
 /** Every hiring card for the dialer, in the shared call view's shape. A store that fails gives none. */
 export async function hiringCallRows(kv, viewer, now = Date.now()) {
     const recs = await allRecords(kv);
-    return recs.filter(r => r.status === 'ready' || r.callOwner).map(r => callRow(r, viewer, now));
+    // A card whose employer booked a call is off the list, owned or not (api/_booked-leads.js).
+    return recs.filter(r => (r.status === 'ready' || r.callOwner) && r.status !== 'booked' && !r.booking).map(r => callRow(r, viewer, now));
 }

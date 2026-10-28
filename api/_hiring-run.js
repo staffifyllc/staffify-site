@@ -6,11 +6,11 @@
 // ones live in api/hiring-intent.js. Paid calls (SerpApi, Findymail) are counted, capped and
 // guarded; a vendor error is recorded as an error and the row stays retryable, never as "none
 // found" (memory: an API error is not absence).
-import { contactLinks } from './_site-phone.js';
+import { contactLinks, phonesOnPage } from './_site-phone.js';
 import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
-    parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey,
+    parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey, listingEvidence, remotePost,
 } from './_hiring-intent.js';
 
 export const SERP_RESERVE = 300;      // searches left in the month that this campaign never touches
@@ -150,6 +150,41 @@ export function preferLocal(phone, local) {
     return { ...phone, number: local.phone, alternates, source: 'business website', sourceUrl: local.sourceUrl, context: local.context, checkedAt: local.checkedAt, type: 'company line for this location, from their own website', previous: { number: phone.number, source: phone.source }, localCheckedAt: local.checkedAt };
 }
 
+// ---- is the number one the employer publishes? ------------------------------------------------
+// PM, 2026-10-28: a Google listing's number was on no public page for four cards in one morning (a
+// law firm whose site gives another line, a clinic whose site gives only a toll-free number, a home
+// health agency whose domain had expired). The employer's own website decides: a number it
+// publishes goes first and the listing's stays as an alternate. A site that now lives on another
+// domain is held for research. A site that cannot be read changes nothing: that is not evidence.
+export async function siteCheck({ website, domain, getPage, findSitePhone }) {
+    if (!website || !findSitePhone) return { unreadable: true };
+    const memo = new Map();
+    const fetchOnce = u => { if (!memo.has(u)) memo.set(u, Promise.resolve().then(() => getPage(u))); return memo.get(u); };
+    let home;
+    try { home = await fetchOnce(website); } catch { return { unreadable: true }; }
+    if (!home) return { unreadable: true };
+    const h = hostOf(home.url || website), d = String(domain || hostOf(website) || '').toLowerCase();
+    if (h && d && !(h === d || h.endsWith('.' + d) || d.endsWith('.' + h))) return { moved: h };
+    // Every page a person would look at (the homepage and up to three contact or location pages), not
+    // just the first one with a number: a city line on the contact page is as published as the homepage's.
+    const pages = [home];
+    for (const u of contactLinks(home, 3)) { try { const pg = await fetchOnce(u); if (pg) pages.push(pg); } catch { /* skip */ } }
+    const numbers = [...new Set(pages.flatMap(pg => phonesOnPage(pg).map(h => '+1' + h.digits)))];
+    const site = await findSitePhone({ website, fetchSite: fetchOnce, maxPages: 4 }).catch(() => null);
+    const first = site && site.phone ? site : numbers.length ? { phone: numbers[0], sourceUrl: home.url || website } : null;
+    return { numbers: first && !numbers.includes(first.phone) ? [first.phone, ...numbers] : numbers, site: first };
+}
+/** The numbers in the order to ring them, given what the site publishes. */
+export function alignNumbers(primary, alternates, chk) {
+    const all = [primary, ...(alternates || [])].filter((n, i, a) => n && a.indexOf(n) === i);
+    if (!chk || chk.unreadable) return { primary, alternates: alternates || [], result: 'unreadable' };
+    if (!chk.numbers || !chk.numbers.length) return { primary, alternates: alternates || [], result: 'none_published' };
+    if (chk.numbers.includes(primary)) return { primary, alternates: alternates || [], result: 'confirmed' };
+    const onSite = all.find(n => chk.numbers.includes(n));
+    const first = onSite || chk.numbers[0];
+    return { primary: first, alternates: all.filter(n => n !== first), result: onSite ? 'alternate_on_site' : 'replaced', site: chk.site };
+}
+
 // ---- Google Jobs listings ---------------------------------------------------------------------
 const digits10 = v => String(v || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
 /** A Google Jobs result as a posting: no API to re-read it, so its age comes from Google's label. */
@@ -160,7 +195,7 @@ export function listingPosting(l, now = Date.now()) {
         live: true, source: 'google_jobs', title: l.title, company: l.company_name, location: l.location, via: String(l.via || '').replace(/^via\s+/i, '') || null,
         postedAt: l.posted_at || (age == null ? null : new Date(now - age * 864e5).toISOString()),
         url: l.share_link || links[0] || null, applyUrl: links[0] || null,
-        workplace: /\b(remote|work from home|anywhere)\b/i.test([l.location, ...(l.extensions || [])].join(' ')) ? 'remote' : 'onsite',
+        workplace: /\b(remote|work from home|anywhere)\b/i.test([l.title, l.location, ...(l.extensions || [])].join(' ')) ? 'remote' : 'onsite',
         text: l.description || '', openRoles: null,
     };
 }
@@ -265,6 +300,13 @@ export async function processPosting(p, provenance, deps, report) {
     if (!ident.ok) return toBacklog('identity_unresolved', ident.unresolved, { missing: gj ? ['business listing', 'phone'] : ['website', 'phone'], identityTried: ident.tried });
     const company = { ...base.company, website: ident.website || null, domain: ident.domain || null, address: ident.address || null, identity: { how: ident.how, evidenceUrl: ident.evidenceUrl, listingName: ident.listingName || null, listingType: ident.listingType || null, checkedAt } };
     base.company = company;
+    // A Google listing is proof of the employer only when it is the employer: not a chain's store page,
+    // not a branch, not a listing with no website, not an office in another city for a remote post.
+    if (gj) {
+        const le = listingEvidence({ company: posting.company, website: ident.website, domain: ident.domain, listingName: ident.listingName, listingType: ident.listingType, address: ident.address, jobLocation: posting.location, remote: remotePost({ title: posting.title, location: posting.location, extensions: p.listing.extensions }) });
+        if (le && le.action === 'exclude') { await kv.hset(HK.companies, { [bk]: JSON.stringify({ verdict: le.reason === 'competitor' ? 'excluded' : 'large', at: checkedAt }) }); await mark('excluded', le.reason, { detail: le.detail }); return { verdict: 'excluded', reason: le.reason, detail: le.detail }; }
+        if (le) return toBacklog(le.reason, le.detail, { company, missing: ['employer proof'] });
+    }
     // One card per employer, not per board: a second board or a new ATS at a confirmed domain joins the card
     // already there, and a domain that was stopped, a client or in research stays that way.
     const byDomain = ident.domain ? parseValue(await kv.hget(HK.companies, domainKey(ident.domain))) : null;
@@ -281,6 +323,11 @@ export async function processPosting(p, provenance, deps, report) {
     }
     if (byDomain && !byDomain.id && ['client', 'in_outreach', 'suppressed'].includes(byDomain.verdict)) { await mark('excluded', 'company_' + byDomain.verdict); return { verdict: 'excluded', reason: 'company_' + byDomain.verdict }; }
 
+    // Booked a Discovery call (api/_booked-leads.js): the employer is a conversation now, never a cold card.
+    if (deps.bookedIdentity && ident.domain) {
+        let hit; try { hit = await deps.bookedIdentity({ domain: ident.domain }); } catch { return { verdict: 'error', reason: 'lookup_unavailable', detail: 'The booked-call list could not be read.' }; }
+        if (hit) { await kv.hset(HK.companies, { [bk]: JSON.stringify({ verdict: 'in_outreach', via: 'booked', at: checkedAt }) }); await mark('excluded', 'booked_call'); return { verdict: 'excluded', reason: 'booked_call' }; }
+    }
     // Already being worked anywhere in Staffify outreach: never a second, colder touch.
     if (ident.domain && deps.outreachDomains && deps.outreachDomains.has(ident.domain)) { await kv.hset(HK.companies, { [bk]: JSON.stringify({ verdict: 'in_outreach', at: checkedAt }), [domainKey(ident.domain)]: JSON.stringify({ verdict: 'in_outreach', at: checkedAt }) }); await mark('excluded', 'already_in_outreach'); return { verdict: 'excluded', reason: 'already_in_outreach' }; }
     // A client, by company name, before any credit is spent.
@@ -296,6 +343,17 @@ export async function processPosting(p, provenance, deps, report) {
         if (loc && loc.phone !== listed.phone) listed = { phone: loc.phone, alternates: [listed.phone], sourceUrl: loc.sourceUrl, context: loc.context, checkedAt: loc.checkedAt, source: 'business website', local: true };
     }
     let phone = listed || (ident.website ? await deps.findSitePhone({ website: ident.website, fetchSite: deps.getPage, maxPages: 4 }).catch(() => null) : null);
+    if (gj && listed && listed.local) phone = { ...listed, siteCheck: { at: checkedAt, result: 'local_number' } };
+    else if (gj && listed && ident.website) {
+        const chk = await siteCheck({ website: ident.website, domain: ident.domain, getPage: deps.getPage, findSitePhone: deps.findSitePhone });
+        if (chk.moved) return toBacklog('website_unconfirmed', `Their website now goes to ${chk.moved}, not ${ident.domain}, so the employer cannot be confirmed.`, { company, missing: ['website'] });
+        const a = alignNumbers(listed.phone, listed.alternates, chk);
+        // An unreadable site is not a verdict: no note, so the hourly re-check tries again.
+        const siteCheckNote = a.result === 'unreadable' ? null : { at: checkedAt, result: a.result };
+        phone = a.result === 'replaced' || a.result === 'alternate_on_site'
+            ? { phone: a.primary, alternates: a.alternates, sourceUrl: a.site && a.site.sourceUrl || ident.website, context: a.site && a.site.context || null, checkedAt, source: 'business website', siteCheck: siteCheckNote, previous: { number: listed.phone, source: listed.source } }
+            : { ...listed, ...(siteCheckNote ? { siteCheck: siteCheckNote } : {}) };
+    }
     // The contact: Findymail's domain search, then its verifier. Optional; recorded either way.
     let contact = null;
     try {
@@ -310,6 +368,10 @@ export async function processPosting(p, provenance, deps, report) {
 
     // Exclusions on the person and the number.
     const email = contact && contact.email;
+    if (email && deps.bookedIdentity) {
+        let hit; try { hit = await deps.bookedIdentity({ email }); } catch { return toBacklog('crm_unavailable', 'The booked-call list could not be read.', { missing: ['booking check'], company, contact }); }
+        if (hit) { await mark('excluded', 'booked_call'); return { verdict: 'excluded', reason: 'booked_call' }; }
+    }
     if (email) {
         if (await deps.isOptedOut({ email })) { await mark('excluded', 'opted_out'); return { verdict: 'excluded', reason: 'opted_out' }; }
         const byEmail = await deps.clientCheck({ email, company: posting.company }).catch(() => ({ status: 'unknown' }));
@@ -345,13 +407,15 @@ export async function processPosting(p, provenance, deps, report) {
 
     const rec = {
         ...base, company, contact,
-        phone: { number: usable[0], alternates: usable.slice(1), source: phone.source || 'business website', sourceUrl: phone.sourceUrl, context: phone.context || null, checkedAt: phone.checkedAt || checkedAt, type: phone.source === 'Google business listing' ? 'main line on their Google business listing' : phone.local ? 'company line for this location, from their own website' : 'company line listed on their website', owner: 'the company, not a named person', ...(gj ? { localCheckedAt: checkedAt } : {}) },
+        phone: { number: usable[0], alternates: usable.slice(1), source: phone.source || 'business website', sourceUrl: phone.sourceUrl, context: phone.context || null, checkedAt: phone.checkedAt || checkedAt, type: phone.source === 'Google business listing' ? 'main line on their Google business listing' : phone.local ? 'company line for this location, from their own website' : 'company line listed on their website', owner: 'the company, not a named person', ...(gj ? { localCheckedAt: checkedAt } : {}), ...(phone.siteCheck ? { siteCheck: phone.siteCheck } : {}), ...(phone.previous ? { previous: phone.previous } : {}) },
         status: 'ready', callOutcome: null, nextCallAt: null, callOwner: null, callHistory: [],
     };
     // A wrong number re-researched: same card, same history and owner; the new number is a new lead to ring.
     if (existing) Object.assign(rec, { createdAt: existing.createdAt, callHistory: existing.callHistory || [], callOwner: existing.callOwner || null, callOwnerAt: existing.callOwnerAt || null, jobs: existing.jobs && existing.jobs.length ? existing.jobs : rec.jobs, provenance: existing.provenance || rec.provenance });
     rec.priority = priorityOf({ age: q.age, restrictions: q.restrictions, openRoles: posting.openRoles, contact });
     rec.brief = briefFor(rec);
+    // A wrong-number retry rebuilds the card: if it was booked or closed meanwhile, that stands.
+    if (existing) { const now2 = await getRecord(kv, id); if (now2 && (now2.booking || now2.status !== existing.status)) { await mark('merged', 'changed_meanwhile', { id }); return { verdict: 'merged', reason: 'changed_meanwhile', id }; } }
     await putRecord(kv, rec);
     await kv.hdel(HK.backlog, id).catch(() => {});
     await kv.hset(HK.companies, { [bk]: JSON.stringify({ id, verdict: 'ready', at: checkedAt }), [phoneKey(rec.phone.number)]: JSON.stringify({ id, verdict: 'ready', at: checkedAt }), ...(company.domain ? { [domainKey(company.domain)]: JSON.stringify({ id, verdict: 'ready', at: checkedAt }) } : {}) });
@@ -417,7 +481,7 @@ export async function recheck(rec, kv, now = Date.now()) {
     if (rec.listing) {
         // Age is handled by expiry; every other listing rule is applied as if the listing were new.
         const q = qualifyJob({ ...rec.listing, posted_at: rec.job && rec.job.postedAt || rec.listing.posted_at }, now);
-        if (!q.ok && !['stale_post', 'undated_post'].includes(q.reason)) return { reason: q.reason, detail: q.detail };
+        if (!q.ok && !['stale_post', 'undated_post'].includes(q.reason)) return { reason: q.reason, detail: q.detail, from: 'post' };
     }
     if (rec.job && rec.job.source === 'google_jobs') {
         const cached = parseValue(await kv.get(HK.profile(companyKey(name, rec.job.location))).catch(() => null));
@@ -425,6 +489,9 @@ export async function recheck(rec, kv, now = Date.now()) {
         if (/\b(hospital|medical\s+center|health\s+system|university|school\s+district|government\s+office)\b/i.test(String(p.type || (rec.company.identity && rec.company.identity.listingType) || ''))) return { reason: 'large_employer', detail: `Google lists them as a ${p.type || rec.company.identity.listingType}, a large employer.` };
         const sz = p.size || {};
         if ((sz.employees && sz.employees > LARGE_EMPLOYEES) || sz.listed || sz.parent) return { reason: 'large_employer', detail: "Google's company panel shows a large employer." };
+        const c = rec.company || {}, id = c.identity || {}, l = rec.listing || {};
+        const le = listingEvidence({ company: name, website: c.website, domain: c.domain, listingName: id.listingName, listingType: id.listingType || p.type, address: c.address, jobLocation: l.location || rec.job.location, remote: remotePost({ title: rec.job.title, location: l.location || rec.job.location, extensions: l.extensions }) });
+        if (le) return le;
     }
     return null;
 }
@@ -435,7 +502,7 @@ export async function recheck(rec, kv, now = Date.now()) {
 // card stops being offered (api/_hiring-intent.js hiringCallReady) and keeps its owner, history
 // and any promised time. A read that fails changes nothing and is tried again next run; the
 // freshness gate keeps an unconfirmed card off the list meanwhile.
-export async function refreshReady(deps, { limit = 12, report = null } = {}) {
+export async function refreshReady(deps, { limit = 12, report = null, siteChecks = 6 } = {}) {
     const { kv } = deps;
     const now = deps.now || Date.now();
     const live = (await allRecords(kv)).filter(r => r.status === 'ready' && r.job && r.job.state !== 'closed' && r.job.state !== 'stale');
@@ -455,9 +522,13 @@ export async function refreshReady(deps, { limit = 12, report = null } = {}) {
         try {
             const fresh = await getRecord(kv, rec.id);
             if (!fresh || fresh.status !== 'ready') continue;
-            if (x && !fresh.callOwner) {
+            if (x && x.action === 'hold' && !fresh.callOwner) {
+                // Uncertain proof is research: kept whole, never offered (PM, 2026-10-28).
+                await putRecord(kv, { ...fresh, brief, status: 'research', hold: { reason: x.reason, detail: x.detail, at: new Date(now).toISOString(), by: 'rules re-check' } });
+                out.held = (out.held || 0) + 1;
+            } else if (x && !fresh.callOwner) {
                 await putRecord(kv, { ...fresh, brief, status: 'excluded', exclusion: { reason: x.reason, detail: x.detail, at: new Date(now).toISOString(), by: 'rules re-check' } });
-                const keys = { [fresh.company && fresh.company.board || companyKey(fresh.company && fresh.company.name, fresh.job && fresh.job.location)]: JSON.stringify({ id: fresh.id, verdict: x.reason === 'large_employer' ? 'large' : 'excluded', at: new Date(now).toISOString() }) };
+                const keys = { [fresh.company && fresh.company.board || companyKey(fresh.company && fresh.company.name, fresh.job && fresh.job.location)]: JSON.stringify({ id: fresh.id, verdict: x.from !== 'post' && ['large_employer', 'chain_location', 'institutional_clinical', 'institution'].includes(x.reason) ? 'large' : 'excluded', at: new Date(now).toISOString() }) };
                 await kv.hset(HK.companies, keys);
                 out.excluded++;
             } else if (JSON.stringify(brief) !== JSON.stringify(fresh.brief)) await putRecord(kv, { ...fresh, brief: briefFor(fresh) });
@@ -474,6 +545,36 @@ export async function refreshReady(deps, { limit = 12, report = null } = {}) {
             const better = preferLocal(fresh.phone, loc);
             await putRecord(kv, { ...fresh, phone: better || { ...fresh.phone, localCheckedAt: new Date(now).toISOString() } });
             if (better) { out.localNumbers = (out.localNumbers || 0) + 1; await kv.hset(HK.companies, { [phoneKey(better.number)]: JSON.stringify({ id: fresh.id, verdict: 'ready', at: new Date(now).toISOString() }) }); }
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
+    // Google Jobs cards made before the website check: is the number one the employer publishes? A few a run.
+    // A card a caller owns keeps its number (a callback was promised on it); an unreadable site is tried up to three times.
+    for (const rec of live.filter(r => r.job.source === 'google_jobs' && r.phone && r.phone.number && !r.phone.siteCheck && !r.callOwner && (r.phone.siteTries || 0) < 3 && r.company && r.company.website).slice(0, siteChecks)) {
+        const chk = await siteCheck({ website: rec.company.website, domain: rec.company.domain, getPage: deps.getPage, findSitePhone: deps.findSitePhone });
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (!fresh || fresh.status !== 'ready' || fresh.callOwner) continue;
+            const at = new Date(now).toISOString();
+            if (chk.unreadable) { await putRecord(kv, { ...fresh, phone: { ...fresh.phone, siteTries: (fresh.phone.siteTries || 0) + 1 } }); continue; }
+            if (chk.moved) {
+                await putRecord(kv, { ...fresh, status: 'research', hold: { reason: 'website_unconfirmed', detail: `Their website now goes to ${chk.moved}, not ${fresh.company.domain}, so the employer cannot be confirmed.`, at, by: 'rules re-check' } });
+                out.held = (out.held || 0) + 1;
+                continue;
+            }
+            const a = alignNumbers(fresh.phone.number, fresh.phone.alternates, chk);
+            const moved = a.primary !== fresh.phone.number;
+            let okNew = false, readFailed = false;
+            if (moved) {
+                try { const bad = await deps.loadBad(kv, fresh.id); okNew = !deps.isBad(bad, a.primary) && !await deps.isOptedOut({ phone: a.primary }); }
+                catch { readFailed = true; }
+            }
+            if (readFailed) continue;   // the stop lists could not be read: nothing changes, tried again next run
+            await putRecord(kv, { ...fresh, phone: okNew
+                ? { ...fresh.phone, number: a.primary, alternates: a.alternates, source: 'business website', sourceUrl: a.site && a.site.sourceUrl || fresh.company.website, context: a.site && a.site.context || null, checkedAt: at, type: 'company line listed on their website', previous: { number: fresh.phone.number, source: fresh.phone.source }, siteCheck: { at, result: a.result } }
+                : { ...fresh.phone, siteCheck: { at, result: moved ? 'site_number_blocked' : a.result } } });
+            if (okNew) { out.siteNumbers = (out.siteNumbers || 0) + 1; await kv.hset(HK.companies, { [phoneKey(a.primary)]: JSON.stringify({ id: fresh.id, verdict: 'ready', at }) }); }
         } finally { await kv.del(lock).catch(() => {}); }
     }
     for (const rec of recs) {

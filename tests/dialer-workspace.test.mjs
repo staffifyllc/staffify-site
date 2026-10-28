@@ -194,7 +194,7 @@ test('the text button posts the approved motion and nothing it should not', asyn
     byText('.dw-actions button', 'Text').click();
     await tick();
     const post = api.calls.filter(c => c.url.startsWith('/api/send-text/')).pop();
-    assert.deepEqual(post.body, { phone: '+19107695931', first: 'Tom', company: 'Riley Jones Real Estate Media', motion: 'outreach', emails: 4, email: 'tom@rileyjonesrem.com' });
+    assert.deepEqual(post.body, { id: 'r1', phone: '+19107695931', first: 'Tom', company: 'Riley Jones Real Estate Media', motion: 'outreach', emails: 4, email: 'tom@rileyjonesrem.com' });
     assert.ok(!('message' in post.body), 'no message is composed in the browser');
     assert.match(dom.text(document.getElementById('toast')), /Text sent: Hi Tom/);
     assert.match(document.getElementById('call-notes').value, /Texted them after the call/);

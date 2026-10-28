@@ -62,7 +62,16 @@ test('a Hiring now card reads as a first touch about their job post, with the jo
     const links = dom.queryAll(document.body, 'a').map(a => [dom.text(a), a.href]);
     assert.ok(links.some(([t, h]) => t === 'Job post' && h === REC.job.url), 'the official job post is one tap away');
     assert.ok(!links.some(([t]) => t === 'Email thread'), 'there is no email thread to open');
-    assert.ok(!dom.queryAll(document.body, 'button').some(b => dom.text(b) === 'Text'), 'no texting a company line without consent');
+    // Texting is back on Hiring now cards (2026-10-28): the approved role text, signed by the caller, with the card id
+    // so the server can refuse a card that has left the list.
+    const textBtn = dom.queryAll(document.body, 'button').find(b => dom.text(b) === 'Text');
+    assert.ok(textBtn, 'a Hiring now card has the Text button');
+    const confirmWas = globalThis.window.confirm; globalThis.window.confirm = () => true;
+    textBtn.click(); await tick();
+    globalThis.window.confirm = confirmWas;
+    const sent = posts.filter(x => x.url.startsWith('/api/send-text/')).pop();
+    assert.equal(sent.body.id, REC.id); assert.equal(sent.body.motion, 'staffing'); assert.equal(sent.body.role, REC.job.title, 'the server trims it to the role words'); assert.equal(sent.body.rep, 'Milton');
+    assert.ok(!('message' in sent.body), 'no message is composed in the browser');
     assert.match(text, /careers page links to this job board/);
     // Not interested / stop posts the card id, so the hiring store records it.
     const stop = document.querySelectorAll('.dw-oc').find(o => o.dataset.outcome === 'suppress');

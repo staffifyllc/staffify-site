@@ -2,8 +2,8 @@
 // nothing here calls, texts, emails or spends a credit.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards } from '../api/_hiring-run.js';
+import { postEvidence, listingEvidence, addressCity, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript } from '../api/_call-scripts.js';
@@ -593,7 +593,8 @@ test('an employer that posts again after its card aged out gets the new job on i
 
 test('name variants and a shared number make one card, not three', async () => {
     assert.equal(companyKey('Royal Electric', 'Dallas, TX'), companyKey('Royal Electric, LLC', 'Dallas, TX'));
-    const w = jobsWorld({ profile: { ...ROYAL, website: null } });
+    // With a website: since 2026-10-28 a listing with no website is research, never a card (listingEvidence).
+    const w = jobsWorld();
     w.deps.serpJobs = async () => ({ jobs: [listing(), listing({ job_id: 'j2', share_link: 'https://www.google.com/search?ibp=htl;jobs#j2', company_name: 'Royal Electric, LLC', title: 'Receptionist' }), listing({ job_id: 'j3', share_link: 'https://www.google.com/search?ibp=htl;jobs#j3', company_name: 'Royal Electrical Services', title: 'Dispatcher' })] });
     await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
     const recs = await allRecords(w.kv);
@@ -722,4 +723,120 @@ test('a person\'s hold takes only the named ready cards off the list, keeps owne
     assert.equal(JSON.parse(await kv.hget(HK.companies, 'gco:coa1:fl')).verdict, 'large');
     assert.equal(hiringCallReady(a1, NOW) || hiringCallReady(a2, NOW), false, 'neither is offered');
     assert.deepEqual(out.map(r => r.done), [true, true, false]);
+});
+
+// ---- PM, 2026-10-28: admission on evidence, not title keywords ----------------------------------
+// Short excerpts of the morning's real leaks, and of cards that must stay.
+const POSTS = {
+    walgreens: 'Registers sales on assigned cash register, provides customers with checkout service. Keeps counters and shelves clean and well merchandised. Checks in merchandise as directed by store manager or shift leader.',
+    circleK: 'Store 2721229. You will greet customers, run the register, cashier, and work around the store to maintain store appearance.',
+    kors: 'Thrive in a fast-paced store environment. Perform store tasks. Keep selling floor and stock room neat. POS experience.',
+    breakthru: 'Rotate through a number of different territories. Calls on accounts and covers daily routes. Assist the Merchandising Department. Restocking shelves and delivering products.',
+    hospital: 'Assist in arranging for admission of patients. Maintain communication with Utilization Review and the business office.',
+    cbv: 'A not-for-profit community caring for older adults. We are a CMS five star rated community, here for our residents and their families.',
+    molina: 'Provides support to Molina members and providers. Supports Medicaid, Medicare and/or Marketplace lines of business. Provider portal and member eligibility questions.',
+    att: 'Be the voice of AT&T - a global leader in communications and technology.',
+    breakthruPortal: 'Are you a current Associate? To be considered, you must submit your application through the internal Career Portal (Jobs Hub).',
+    painIntake: 'Schedule video appointments between providers and patients, confirm details by phone and manage the scheduling system.',
+    damotech: 'Maintain installation schedules, confirm dates with customers and installers by phone, coordinate shipments and keep records in ClickUp.',
+    lawIntake: 'Answer intake calls from potential clients, schedule consultations with attorneys and keep the case management system current.',
+    dispatch: 'Schedule technicians in the field, plan daily routes for the crew and answer customer calls. Reliable transportation needed.',
+};
+test('the duties and the employer in the post decide, not the title: the morning\'s leaks are refused before any search', () => {
+    const q = (title, description, company = 'Some Co') => qualifyJob(listing({ title, description, company_name: company }), NOW);
+    assert.equal(q('Customer Service Associate', POSTS.walgreens, 'Walgreens').reason, 'store_floor_role');
+    assert.equal(q('Customer Service Representative', POSTS.circleK, 'Circle K').reason, 'store_floor_role');
+    assert.equal(q('Sales Development Representative', POSTS.breakthru, 'Breakthru Beverage Group').ok, false);
+    assert.equal(q('Intake Coordinator', POSTS.hospital, 'Hospital for Behavioral Medicine').reason, 'institutional_clinical');
+    assert.equal(q('Executive Assistant', POSTS.cbv, 'Central Baptist Village').reason, 'institutional_clinical');
+    assert.equal(q('Call Center Representative', POSTS.molina, 'Molina Healthcare').reason, 'institutional_clinical');
+    // Puffery is not evidence: AT&T's own post passes this check, and its store-page Google listing holds it (listingEvidence).
+    assert.equal(q('Call Center Customer Service Representative', POSTS.att, 'AT&T').ok, true);
+    assert.equal(q('Call Center Representative', 'Join us at Molina Healthcare (NYSE: MOH).', 'Molina').reason, 'large_employer', 'a stock ticker is the employer describing itself');
+    assert.equal(q('Account Coordinator', 'Our clients range from local shops to Fortune 500 brands, and we ship to all 50 states.', 'Small Agency').ok, true, 'big clients do not make a big employer');
+    assert.equal(q('Customer Support Specialist', 'Help our merchants by phone and chat with point of sale setup, cash register hardware and in-store printers.', 'POS Soft').ok, true, 'supporting a store product by phone is not store work');
+    assert.equal(q('Sales Assistant', 'Support our outside sales representatives: enter orders, track merchandise shipments and answer customer calls from the office.', 'Supply Co').ok, true, 'supporting a field team from the office is not field work');
+    assert.equal(q('Front Desk Coordinator', 'Greet patients and schedule visits.', 'Core Health & Rehab').ok, true, 'a Health & Rehab clinic is a small business');
+    assert.equal(postEvidence({ company: 'Breakthru', title: 'Sales Development Representative', text: POSTS.breakthru, family: 'sales' }).reason, 'field_sales', 'accounts on daily routes across territories');
+    assert.equal(postEvidence({ company: 'X', title: 'Inside Sales Representative', text: POSTS.breakthruPortal, family: 'sales' }).reason, 'large_employer', 'an internal associate portal is a large employer');
+    assert.equal(postEvidence({ company: 'Fiesta Park Wellness and Rehabilitation', title: 'Receptionist', text: 'Greets new patients.', family: 'scheduling' }).reason, 'institutional_clinical');
+    // Small businesses keep their cards.
+    assert.equal(q('Patient Coordinator', POSTS.painIntake, '1st Pain Specialists').ok, true);
+    assert.equal(q('Scheduling Coordinator', POSTS.damotech, 'Damotech').ok, true);
+    assert.equal(q('Intake Coordinator', POSTS.lawIntake, 'Abrahamson Rdzanek & Wilkins').ok, true);
+    assert.equal(q('Dispatcher', POSTS.dispatch, 'Royal Electric').ok, true, 'a dispatcher plans routes without being on one');
+    assert.equal(q('Receptionist', 'Greet clients and answer phones.', 'Lakewood Animal Hospital').ok, true, 'an animal hospital is a small business');
+    assert.equal(q('Receptionist', 'Greet patients and answer phones.', 'Dallas Family Medical Center').ok, true);
+    assert.equal(q('Retail Store Associate', 'x').ok, false, 'a store title is still refused by the title rule');
+    assert.equal(q('Senior Executive Assistant', 'The Nagler Group is partnering with an established organization in MetroWest, MA seeking a Senior Executive Assistant.', 'The Nagler Group').reason, 'competitor');
+    assert.equal(postEvidence({ company: 'Grand Villa', title: 'Administrative Assistant', text: 'Passionate about contributing to a senior community and to our residents and their families.', family: 'admin' }).reason, 'institutional_clinical');
+});
+
+test('a Google listing is proof of the employer only when it is the employer: store pages, branches, no website and a far office are not', () => {
+    const base = { company: 'Royal Electric', website: 'https://www.royalelect.com/', domain: 'royalelect.com', listingName: 'Royal Electrical Services', address: '4518 Ash Ln, Dallas, TX 75223', jobLocation: 'Dallas, TX', remote: false };
+    assert.equal(listingEvidence(base), null);
+    assert.equal(listingEvidence({ ...base, company: 'Michael Kors', website: 'https://locations.michaelkors.com/us/ga/atlanta/3393-peachtree-rd-ne', domain: 'locations.michaelkors.com' }).reason, 'chain_location');
+    assert.equal(listingEvidence({ ...base, company: 'Circle K', website: 'https://www.circlek.com/store-locator/US/palm-coast/6125-e-highway-100/2721229', domain: 'circlek.com' }).action, 'exclude');
+    assert.equal(listingEvidence({ ...base, company: 'Walgreens', website: 'https://www.walgreens.com/locator/walgreens-6297/id=10576', domain: 'walgreens.com' }).reason, 'chain_location');
+    const att = listingEvidence({ ...base, company: 'AT&T', listingName: 'AT&T Store', website: 'https://www.att.com/stores/north-carolina/charlotte/1191', domain: 'att.com' });
+    assert.equal(att.action, 'hold'); assert.equal(att.reason, 'branch_listing');
+    assert.equal(listingEvidence({ ...base, listingName: 'Royal Electric Outlet', website: 'https://www.royalelect.com/' }).reason, 'branch_listing');
+    assert.equal(listingEvidence({ ...base, website: null, domain: null }).reason, 'no_employer_website');
+    assert.equal(listingEvidence({ ...base, company: 'Molina Healthcare', listingName: 'Molina Healthcare of Ohio', address: '3000 Corporate Exchange Dr, Columbus, OH 43231', jobLocation: 'Columbia, OH', remote: true }).reason, 'location_unconfirmed');
+    assert.equal(listingEvidence({ ...base, address: '125 Parkwood St A, Lowell, AR 72745', jobLocation: 'Springdale, AR', remote: false }), null, 'a neighbouring town is fine for an office job');
+    assert.equal(addressCity('3000 Corporate Exchange Dr, Columbus, OH 43231'), 'Columbus');
+    assert.equal(listingEvidence({ ...base, company: 'The Nagler Group', listingType: 'Employment agency in Boston, Massachusetts' }).reason, 'competitor');
+    assert.equal(listingEvidence({ ...base, company: 'Grand Villa of Delray Beach East', listingType: 'Assisted living facility in Palm Beach County, Florida' }).reason, 'institutional_clinical');
+    assert.equal(listingEvidence({ ...base, listingType: 'Civil engineer in Tampa, Florida' }), null);
+    assert.equal(listingEvidence({ ...base, listingType: 'Health insurance agency' }), null, 'a small insurance agency is a business');
+});
+
+test('the number goes in the order the employer publishes it: a site number first, the listing kept as an alternate', () => {
+    assert.deepEqual(alignNumbers('+14793912357', [], { numbers: ['+14797176300'], site: { sourceUrl: 'https://www.dewitt.law/' } }).primary, '+14797176300');
+    assert.deepEqual(alignNumbers('+14793912357', [], { numbers: ['+14797176300'] }).alternates, ['+14793912357']);
+    assert.equal(alignNumbers('+18157237400', ['+18553997225'], { numbers: ['+18157237400'] }).result, 'confirmed');
+    assert.equal(alignNumbers('+18553997225', ['+18157237400'], { numbers: ['+18157237400'] }).primary, '+18157237400', 'an alternate the site publishes goes first');
+    assert.equal(alignNumbers('+1', [], { unreadable: true }).result, 'unreadable', 'an unreadable site is not evidence');
+    assert.equal(alignNumbers('+19452184003', [], { numbers: [] }).result, 'none_published');
+});
+
+test('a website that now lives on another domain is held; one that cannot be read changes nothing', async () => {
+    const moved = await siteCheck({ website: 'https://sanityhomehealthservices.com/', domain: 'sanityhomehealthservices.com', getPage: async () => ({ url: 'https://www.expireddomains.com/', html: '' }), findSitePhone: async () => null });
+    assert.equal(moved.moved, 'expireddomains.com');
+    const down = await siteCheck({ website: 'https://reliablewire.com/', domain: 'reliablewire.com', getPage: async () => { throw Error('403'); }, findSitePhone: async () => null });
+    assert.equal(down.unreadable, true);
+    const ok = await siteCheck({ website: 'https://www.royalelect.com/', domain: 'royalelect.com', getPage: async u => ({ url: u, html: '' }), findSitePhone: async () => ({ phone: '+12146360190', alternates: [] }) });
+    assert.deepEqual(ok.numbers, ['+12146360190']);
+});
+
+test('a new listing with no website, or a chain store page, never becomes a card; one whose site gives another number rings that first', async () => {
+    let w = jobsWorld({ profile: { ...ROYAL, website: null } });
+    let r = await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    assert.equal((await allRecords(w.kv)).length, 0);
+    assert.ok((await allBacklog(w.kv)).some(b => b.reason === 'no_employer_website'), JSON.stringify(r.reasons));
+    w = jobsWorld({ profile: { ...ROYAL, website: 'https://www.royalelect.com/store-locator/dallas' } });
+    r = await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    assert.equal((await allRecords(w.kv)).length, 0); assert.equal(r.reasons.chain_location, 1, JSON.stringify(r.reasons));
+    w = jobsWorld();
+    w.deps.getPage = async u => ({ url: u, html: '<p>Call 214-636-0190</p>', text: 'Call 214-636-0190' });
+    w.deps.findSitePhone = async () => ({ phone: '+12146360190', alternates: [], sourceUrl: 'https://www.royalelect.com/contact', context: 'Call 214-636-0190' });
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    assert.equal(rec.phone.number, '+12146360190'); assert.deepEqual(rec.phone.alternates, ['+19452184003']);
+    assert.equal(rec.phone.source, 'business website'); assert.equal(rec.phone.siteCheck.result, 'replaced');
+});
+
+test('cards made before these rules are held to them: a store job is excluded, a missing website is research, owner and history kept', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    // As if made yesterday: a store job, and a second card whose listing named no website.
+    await putRecord(w.kv, { ...rec, listing: { ...rec.listing, description: POSTS.walgreens } });
+    const other = { ...rec, id: 'hire:00000000000000e1', listing: { ...rec.listing, description: 'Answer phones.' }, company: { ...rec.company, board: 'gco:other:tx', website: null, domain: null }, callHistory: [{ outcome: 'no_answer' }] };
+    await putRecord(w.kv, other);
+    const out = await refreshReady({ ...w.deps, now: NOW }, { limit: 0 });
+    const a = await getRecord(w.kv, rec.id), b = await getRecord(w.kv, other.id);
+    assert.equal(a.status, 'excluded'); assert.equal(a.exclusion.reason, 'store_floor_role'); assert.equal(a.exclusion.by, 'rules re-check');
+    assert.equal(b.status, 'research'); assert.equal(b.hold.reason, 'no_employer_website'); assert.equal(b.callHistory.length, 1, 'history kept');
+    assert.equal(out.excluded, 1); assert.equal(out.held, 1);
 });

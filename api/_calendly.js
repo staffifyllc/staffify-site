@@ -72,6 +72,7 @@ export async function invitees(eventUri) {
     const { items } = await pages(`/scheduled_events/${encodeURIComponent(eventUuid(eventUri))}/invitees`, {}, { maxPages: 3 });
     return items.map(i => ({
         email: String(i.email || '').toLowerCase(),
+        uri: i.uri || null,
         name: i.name || [i.first_name, i.last_name].filter(Boolean).join(' ') || null,
         status: i.status || null,
         // What they typed when booking. This is the most reliable record of what the call was about:

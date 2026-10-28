@@ -22,6 +22,8 @@ export function mergeSnapshot(previous, incoming, now=new Date().toISOString()) 
   const agencyOwners=new Map(assignments.map(a=>[a.agencyKey,a.owner]));
   const suppressed=new Set([...(previous?.suppressions||[]),...(incoming.suppressions||[])].map(e=>String(e).toLowerCase()));
   const ids=new Set();
+  // A booking mark lives only here (api/_booked-leads.js); an uploaded snapshot never carries it, so it is kept.
+  const booked=new Map((previous?.records||[]).filter(r=>r.booking).map(r=>[r.id,r.booking]));
   const records=incoming.records.map(r=>{
     if(!r.id||ids.has(r.id)||!SENDERS.includes(r.sender)||!['Paul','Madison'].includes(r.owner))throw Error('Invalid record');
     ids.add(r.id);
@@ -29,7 +31,7 @@ export function mergeSnapshot(previous, incoming, now=new Date().toISOString()) 
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient))throw Error('Invalid recipient');
     const owner=assignment.get(recipient)||agencyOwners.get(r.agencyKey)||r.owner;
     const ownershipHold=owner==='Madison'&&!SENDERS.slice(4).includes(r.sender);
-    return {...r,recipient,owner,status:suppressed.has(recipient)?'suppressed':ownershipHold?'reserved_for_madison_external':r.status};
+    return {...r,...(booked.has(r.id)?{booking:booked.get(r.id),callReady:false}:{}),recipient,owner,status:suppressed.has(recipient)?'suppressed':ownershipHold?'reserved_for_madison_external':r.status};
   });
   return {revision:(previous?.revision||0)+1,records,assignments,suppressions:[...suppressed],pausedOwners:previous?.pausedOwners||[],updatedAt:now,mailboxes:incoming.mailboxes||[],lastWorkerError:incoming.lastWorkerError||null};
 }
@@ -89,7 +91,8 @@ export function sharedCallState(state, viewer=null) {
   const s=visibleState(state,'all');
   const me=String(viewer||'').toLowerCase();
   return {revision:s.revision,updatedAt:s.updatedAt,workerFresh:s.workerFresh,viewer:me||null,
-    records:s.records.filter(r=>r.callReady||r.callOwner).map(r=>{
+    // A lead who booked a call is off every list, owned or not (api/_booked-leads.js); the record stays.
+    records:s.records.filter(r=>(r.callReady||r.callOwner)&&!r.booking).map(r=>{
       const callOwner=r.callOwner||null;
       const mine=!!callOwner&&String(callOwner).toLowerCase()===me;
       return {...r,callQueue:'shared',salesOwner:r.owner,callOwner,callOwnerAt:r.callOwnerAt||null,

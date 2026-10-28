@@ -15,7 +15,13 @@
 //   whichever is easier to hand over. A plain number is normalised to E.164 before sending.
 
 import { recordActivity } from './_hub-activity.js';
-import { openIdentity, redis, readBody } from './_auth.js';
+import { requireAccess, redis, readBody } from './_auth.js';
+import { getRecord } from './_hiring-intent.js';
+import { isHiringId } from './_hiring-calls.js';
+import { KEY as QUEUE_KEY } from './_outreach-queue.js';
+import { campaignPaused, poolPaused } from './_campaign-pause.js';
+import { classified } from './_campaigns-model.js';
+import { INDUSTRY_KEY } from './_campaign-industry.js';
 import { slackNotify } from './_slack.js';
 import { configured as hsReady, findOrCreateContact, logText } from './_hubspot.js';
 import { isOptedOut } from './_optout.js';
@@ -85,6 +91,28 @@ function outreachMessage({ first, rep, company, emails }) {
 }
 
 // "2026-06-09" -> "June". Blank if we do not have a date, so the text never invents one.
+// Paused work is never texted, and a card only while it is still on the call list (PM relaying Paul,
+// 2026-10-28: REP sourcing, email and texting stay paused while human texting comes back for eligible
+// work). A card that cannot be checked is not texted. Returns the reason, or null.
+export async function textStop(id, { kv = redis } = {}) {
+    if (isHiringId(id)) {
+        const rec = await getRecord(kv, id);
+        if (!rec) return 'not_found';
+        return rec.status === 'ready' && !rec.booking ? null : 'not_callable';
+    }
+    const state = await kv.get(QUEUE_KEY);
+    const r = state && (state.records || []).find(x => x.id === id);
+    if (!r) return 'not_found';
+    if (campaignPaused(r)) return 'campaign_paused';
+    if (r.booking) return 'booked';
+    // The industry pause too (real estate media on any campaign), classified the way the call view does.
+    const stated = (await kv.hgetall(INDUSTRY_KEY).catch(() => null)) || {};
+    const [c] = classified([r], stated);
+    const v = c && c.v;
+    if (poolPaused({ ...r, industry: v && v.key ? { key: v.key } : null })) return 'campaign_paused';
+    return null;
+}
+
 function monthOf(iso) {
     const d = new Date(String(iso || '') + 'T12:00:00Z');
     return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
@@ -106,7 +134,9 @@ export default async function handler(req, res) {
     // caller recorded them asking on a call. Every other guard below is untouched, because those
     // protect the person on the other end rather than the wording.
 
-    const who = await openIdentity(req).catch(() => null);
+    // A signed-in Hub user, or the machine: the line is Staffify's own, so nobody sends from it anonymously.
+    const who = await requireAccess(req).catch(() => null);
+    if (!who) return res.status(401).json({ ok: false, error: 'sign_in' });
     const b = readBody(req);
     const to = e164(b.phone);
     const role = cleanRole(b.role);
@@ -116,6 +146,11 @@ export default async function handler(req, res) {
     const company = String(b.company || '').trim().slice(0, 60);
 
     if (!to) return res.status(200).json({ ok: true, sent: false, reason: 'no_valid_number' });
+    // Every text names its card, so the pause, the booking and the call list are checked server-side.
+    const cardId = String(b.id || '').slice(0, 80);
+    if (!cardId) return res.status(200).json({ ok: true, sent: false, reason: 'no_card' });
+    const stop = await textStop(cardId).catch(() => 'check_unavailable');
+    if (stop) return res.status(200).json({ ok: true, sent: false, reason: stop });
     // Each motion needs its own specific hook. Without it the text is generic, which is what reads as spam.
     if (motion === 'websites' || motion === 'outreach') {
         // No role was ever posted for this cohort, so requiring one would block every send. The

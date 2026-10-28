@@ -12,6 +12,7 @@
 import { randomUUID } from 'node:crypto';
 import { redis, requireAccess, adminAuthorized, readBody, SITE } from './_auth.js';
 import { ownerFor, KEY } from './_outreach-queue.js';
+import { bookedIdentity } from './_booked-leads.js';
 import { site } from './_outreach-supply.js';
 import { findSitePhone } from './_site-phone.js';
 import { verifyEmail } from './_outreach-verification.js';
@@ -115,7 +116,7 @@ async function outreachDomains() {
 }
 
 export function deps() {
-    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad };
+    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad };
 }
 
 export default async function handler(req, res) {
@@ -143,7 +144,9 @@ export default async function handler(req, res) {
             const out = {
                 campaignId: HIRING_ID, asOf: new Date().toISOString(),
                 cards: { total: records.length, byStatus: count(records, r => r.status), byJobState: count(records, r => (r.job && /^(open|closed|stale)$/.test(r.job.state || '') ? r.job.state : 'open')), offeredNow: records.filter(r => hiringCallReady(r)).length, ready: records.filter(r => r.status === 'ready' && !r.callOutcome).length, called: records.filter(r => (r.callHistory || []).length).length, withVerifiedContact: records.filter(r => r.contact && r.contact.status === 'verified').length },
-                research: { total: backlog.length, open: backlog.filter(b => b.state === 'open').length, byReason: count(backlog, b => b.reason), entries: backlog.map(b => ({ id: b.id, company: b.company && b.company.name, job: b.job && b.job.title, jobUrl: b.job && b.job.url, reason: b.reason, detail: b.detail, missing: b.missing, attempts: b.attempts, state: b.state, nextTryAt: b.nextTryAt })) },
+                research: { total: backlog.length, open: backlog.filter(b => b.state === 'open').length, byReason: count(backlog, b => b.reason),
+                    // Cards taken off the list for uncertain proof: kept whole, with the reason (status research).
+                    heldCards: records.filter(r => r.status === 'research').map(r => ({ id: r.id, company: r.company && r.company.name, job: r.job && r.job.title, reason: r.hold && r.hold.reason, detail: r.hold && r.hold.detail, at: r.hold && r.hold.at, by: r.hold && r.hold.by })), entries: backlog.map(b => ({ id: b.id, company: b.company && b.company.name, job: b.job && b.job.title, jobUrl: b.job && b.job.url, reason: b.reason, detail: b.detail, missing: b.missing, attempts: b.attempts, state: b.state, nextTryAt: b.nextTryAt })) },
                 pending: Object.values(pendingAll || {}).map(parseValue).filter(Boolean).map(e => ({ key: e.key, url: e.url, attempts: e.attempts, lastError: e.lastError || null, seed: !!(e.provenance && e.provenance.seed), nextTryAt: e.nextTryAt })),
                 screened: { postings: seen.length, byVerdict: count(seen, s => s.verdict), excludedBy: count(seen.filter(s => s.verdict === 'excluded'), s => s.reason) },
                 runs: (runs || []).map(parseValue).filter(Boolean),

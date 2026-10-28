@@ -58,6 +58,7 @@ export const callbackSet = (r, now = Date.now()) => isCallback(r) && !!r.nextCal
 /** The state a prospect is in, in words a rep uses. One state per record, first match wins. */
 export function prospectState(r, now = Date.now()) {
     if (r.status === 'suppressed' || r.callOutcome === 'suppress') return { key: 'stopped', label: 'Asked us to stop' };
+    if (r.booking) return { key: 'booked', label: 'Booked a call' };
     if (needsHuman(r)) return { key: 'reply', label: 'Replied, needs a human' };
     if (replied(r)) return { key: 'replied', label: 'Replied' };
     if (connected(r)) return { key: 'connected', label: 'Connected on a call' };
@@ -214,7 +215,7 @@ export function campaignView(records, campaignId, stated = {}, now = Date.now())
             phone: r.callContact && r.callContact.phone ? { number: r.callContact.phone, status: r.callContact.phoneStatus } : null,
         };
     }).sort((a, b) => {
-        const order = { reply: 0, callback_due: 1, connected: 2, ready: 3, callback: 4, finding: 5, wrong_number: 5, retry: 6, four_sent: 7, sequence: 8, timing: 9, held: 10, queued: 11, stopped: 12 };
+        const order = { booked: 0, reply: 0, callback_due: 1, connected: 2, ready: 3, callback: 4, finding: 5, wrong_number: 5, retry: 6, four_sent: 7, sequence: 8, timing: 9, held: 10, queued: 11, stopped: 12 };
         return (order[a.state] ?? 20) - (order[b.state] ?? 20) || String(b.lastTouch || '').localeCompare(String(a.lastTouch || ''));
     });
 

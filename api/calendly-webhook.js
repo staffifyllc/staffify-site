@@ -17,6 +17,7 @@ import crypto from 'node:crypto';
 import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
 import { applyBookingEvent } from './_booking-match.js';
 import { enqueueSync } from './_pilot-sync.js';
+import { removeBookedLead } from './_booked-leads.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -306,12 +307,21 @@ export default async function handler(req, res) {
     // Asking Calendly to send it again is the whole point of a 5xx here.
     if (pilot.retryable) return res.status(503).json({ ok: false, error: pilot.reason, retry: true });
 
+    // Paul, 2026-10-28: a booking takes that lead off every call list, sequence and text (api/_booked-leads.js).
+    // A failed write asks Calendly to send the event again rather than leave them callable.
+    let booked = null;
+    if (event.event === 'invitee.created') {
+        const bp = event.payload || {}, se = bp.scheduled_event || {};
+        try { booked = await removeBookedLead(redis, { email: bp.email, inviteeUri: bp.uri, eventUri: se.uri || bp.event || null, eventName: se.name || null, startTime: se.start_time || null, source: 'calendly webhook' }); }
+        catch (e) { return res.status(503).json({ ok: false, error: 'booked lead not taken off the lists yet', retry: true }); }
+    }
+
     if (event.event !== 'invitee.created') {
-        return res.status(200).json({ ok: true, skipped: event.event, pilot });
+        return res.status(200).json({ ok: true, skipped: event.event, pilot, booked });
     }
     if (pilot.matched) {
         // Recorded against their request, and deliberately given no automated email.
-        return res.status(200).json({ ok: true, pilot,
+        return res.status(200).json({ ok: true, pilot, booked,
             nurture: pilot.created ? 'suppressed: booked the media-owner call directly'
                 : 'suppressed: inbound role-map request' });
     }
@@ -402,5 +412,5 @@ export default async function handler(req, res) {
         utm_content: utmContent,
     });
 
-    return res.status(200).json({ ok: true, role, sent });
+    return res.status(200).json({ ok: true, role, sent, booked });
 }

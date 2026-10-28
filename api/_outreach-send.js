@@ -34,7 +34,7 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(op?.messageId){const m=compactMessage(await gmail(tokens[row.sender],'messages/'+op.messageId+'?format=full'),row.sender);if(m.sent)applySent(row,state,m,op.id);}
   state=await save(state);
  }
- const candidates=fairCandidates(state.records.filter(r=>campaignAllowed(r,cfg)&&inCampaign(r)&&r.status==='draft_saved'&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
+ const candidates=fairCandidates(state.records.filter(r=>campaignAllowed(r,cfg)&&inCampaign(r)&&r.status==='draft_saved'&&!r.booking&&r.draftId&&tokens[r.sender]&&cfg.accounts.some(a=>a.email===r.sender&&a.owner===r.owner)&&state.creations.some(c=>c.id===r.id+':'+(r.sentTouches+1)&&c.status==='verified')),state.sends);
  const sentMailboxes=new Set();
  for(const row of candidates){
   if(sentMailboxes.has(row.sender)||sentMailboxes.size>=7)continue;

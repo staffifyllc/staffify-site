@@ -70,6 +70,10 @@
     {
       "path": "/api/hiring-intent/",
       "schedule": "15 13-23 * * 1-5"
+    },
+    {
+      "path": "/api/booked-leads/",
+      "schedule": "*/15 * * * *"
     }
   ],
   "rewrites": [
@@ -342,6 +346,9 @@
     },
     "api/hiring-intent.js": {
       "maxDuration": 300
+    },
+    "api/booked-leads.js": {
+      "maxDuration": 120
     }
   }
 }
