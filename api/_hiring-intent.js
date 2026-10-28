@@ -101,7 +101,7 @@ export const domainKey = d => 'domain:' + String(d || '').toLowerCase().replace(
 // ---- what a posting has to be ----------------------------------------------------------------
 // The work Staffify places: support, admin, scheduling, account coordination and phone sales.
 // Leadership, closing, engineering and licensed clinical roles are not.
-const EXPLICIT_SALES = /\b(inside|telephone|phone|outbound|inbound|remote)\s+sales\b|\bsales\s+(development|coordinator|assistant|support|admin(istrator)?)\b|\b(sdr|bdr)\b|\bappointment\s+sett(er|ing)\b|\bcold\s+call(er|ing)\b|\blead[\s-]+gen(eration)?\b|\bbusiness\s+development\s+(representative|rep|associate)\b|\btelesales\b|\btelemarket(ing|er)\b/i;
+const EXPLICIT_SALES = /\blead\s+setter\b|\b(inside|telephone|phone|outbound|inbound|remote)\s+sales\b|\bsales\s+(development|coordinator|assistant|support|admin(istrator)?)\b|\b(sdr|bdr)\b|\bappointment\s+sett(er|ing)\b|\bcold\s+call(er|ing)\b|\blead[\s-]+gen(eration)?\b|\bbusiness\s+development\s+(representative|rep|associate)\b|\btelesales\b|\btelemarket(ing|er)\b/i;
 const BARE_SALES = /\bsales\s+(representative|rep|associate|specialist|consultant|agent)\b/i;
 const PHONE_SALES = /\b(inside\s+sales|phone|calls?|calling|outbound|inbound|remote|crm|book(ing)?\s+appointments|cold\s+call|leads?)\b/i;
 const FIELD_SALES = /\b(territory|showroom|sales\s+floor|our\s+lot|dealership|door[- ]to[- ]door|in[- ]home|in[- ]person\s+(visits|meetings)|travel\s+to|visit\s+(customers|clients|prospects)|retail\s+store|walk[- ]in)\b/i;
@@ -126,6 +126,10 @@ const ROLE_FIT = [
     // services members; a firm's tax administration is back-office desk work.
     ['scheduling', /\bbooking\s+(coordinator|specialist|agent)\b/i],
     ['account', /\bmembership\s+(coordinator|specialist|representative|associate)\b/i],
+    // Widened 2026-10-28 night from the job-board sweep: desk seats small businesses post under plain titles.
+    ['admin', /\bsecretary\b|\b(general|office)\s+administrator\b|\badmin(istrative)?\s+services?\s+(coordinator|specialist|assistant)\b|\badministrative\s*(&|and)\s*\w+\s+assistant\b|\bassistant\s+bookkeeper\b|\bbookkeeping\s+(assistant|clerk)\b|\baccounts\s+(payable|receivable)\s+(clerk|specialist|assistant)\b/i],
+    ['scheduling', /\bfront\s+office\s+(coordinator|assistant|specialist)\b|\b(patient\s+)?enrollment\s+(specialist|coordinator)\b/i],
+    ['support', /\bclient\s+services?\s+(assistant|associate)\b|\bclient\s+relations(hip)?\s+(associate|specialist|coordinator|representative)\b|\bcustomer\s+relations\b/i],
     ['admin', /\b(tax|practice|firm)\s+admin(istration|istrator)?\b/i],
     ['scheduling', /\bschedul(er|ing)\b|\bdispatch(er)?\b|\b(patient|intake|appointment|care)\s+(coordinator|specialist)\b|\breceptionist\b|\bfront\s+desk\b/i],
     // Paul, 2026-10-28: "remote teams, like customer service, sales, and admin support". Sales here is the
@@ -149,12 +153,14 @@ const SENIOR = /\b(manager|lead|supervisor|senior|sr\.?)\b/i;
 /** The role family a title belongs to, or null when it is not work Staffify places. */
 export function roleFamily(title) {
     const t = String(title || '');
-    if (!t || NOT_FILLABLE.test(t) || PHYSICAL.test(t)) return null;
+    // "Executive Assistant to Chief Executive Officer": who the seat supports is not the seat.
+    const seat = t.replace(/\b(assistant|coordinator|secretary)\s+to\s+(the\s+)?.*$/i, '$1');
+    if (!t || NOT_FILLABLE.test(seat) || PHYSICAL.test(t)) return null;
     if (PHYSICAL_SEAT.test(t) && !REMOTE_SEAT.test(t)) return null;
     // "Customer Support Manager" is a leader; "Customer Support Specialist (Senior)" is still a seat we
     // could fill, but a manager or team lead is not.
     // An account manager at an insurance agency services accounts; a legal case manager runs files. Neither manages people.
-    if (/\b(manager|lead(?![\s-]+gen)|supervisor)\b/i.test(t) && !/\bassistant\b|\baccount\s+manager\b|\bcase\s+manager\b/i.test(t)) return null;
+    if (/\b(manager|lead(?![\s-]+(gen|sett))|supervisor)\b/i.test(seat) && !/\bassistant\b|\baccount\s+manager\b|\bcase\s+manager\b/i.test(t)) return null;
     for (const [family, re] of ROLE_FIT) if (re.test(t)) return family;
     return null;
 }

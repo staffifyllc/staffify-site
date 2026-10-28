@@ -1341,6 +1341,10 @@ test('a catch-up run may raise the day\'s lookup cap, never past the ceiling', a
     f = fakeRR();
     assert.match((await ownerCells({ ...w.deps, rr: f.rr, now: NOW }, { dailyCap: 5000 })).skipped, /daily cap of 150/, 'never past the ceiling');
 });
+test('plain desk titles from the job-board sweep are seats we fill; the executive they support is not the seat', () => {
+    for (const [t, f] of [['Secretary - From $20 an hour', 'admin'], ['Front Office Coordinator', 'scheduling'], ['Admin Services Coordinator', 'admin'], ['General Administrator - $24 - $28 an hour', 'admin'], ['Administrative & Marketing Assistant', 'admin'], ['Assistant Bookkeeper (Part time)', 'admin'], ['Trilingual Client Services Assistant', 'support'], ['Client Relationship Associate (Liaison)', 'support'], ['Customer Relations Phone Representative', 'support'], ['Patient Enrollment Specialist - Health & Wellness Sales', 'scheduling'], ['IT Telemarketing / Lead Setter', 'sales'], ['Executive Assistant to Chief Executive Officer', 'admin']]) assert.equal(roleFamily(t), f, t);
+    for (const t of ['Chief Executive Officer', 'Network Administrator', 'Systems Administrator', 'Office Manager', 'Lead Customer Service Supervisor', 'Bookkeeper and Accounting Manager', 'Director of Client Relations']) assert.equal(roleFamily(t), null, t);
+});
 test('the website check never moves a card off the owner\'s cell', async () => {
     const w = jobsWorld();
     await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0, cells: 0 });
