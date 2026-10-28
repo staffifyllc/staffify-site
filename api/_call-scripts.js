@@ -313,14 +313,14 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
     // again, because the person put through has not heard the opener.
     // The owner's own cell: they answer it themselves, so greet them and say why, no front-desk ask.
     const opener = direct && firstName
-        ? `Hi, is this ${firstName}? This is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}.`
+        ? `Hi, is this ${firstName}? This is ${caller} with Staffify.`
         : firstName
         ? `Hi, this is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}. I'm looking to speak with ${firstName}, or the person in charge of hiring. Is that you?`
         : `Hi, this is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}. I'm looking to speak with the person in charge of hiring for it. Is that you, or could you point me to them?`;
-    const intro = `Great. I'll be straight with you, this is a cold call. I saw ${who} is hiring ${aRole}${inCity} and I had one quick question about it. Do you have a second?`;
-    const reason = `The reason I'm calling: we run the hiring for remote customer service, sales and admin roles. We recruit, vet and manage dedicated people from Latin America and the Philippines, so the seat gets filled and you are not starting from scratch every time.`
-        + (offshore ? ` I noticed your post is open to candidates in ${offshore}, which is exactly where our people are.` : '')
-        + ` Since the ${role} role is open right now, I wanted to see if it would help to have a few vetted people in front of you.`;
+    const intro = `Great, thanks. I'll be straight with you, this is a cold call. Do you have a quick second?`;
+    // Paul, 2026-10-28 evening, word for word with the role swapped in: "The reason I'm calling is we help companies
+    // hire remote customer service, sales, and admin staff ... I saw you're hiring an Executive Assistant ...".
+    const reason = `The reason I'm calling is we help companies hire remote customer service, sales, and admin staff from Latin America and the Philippines. We recruit, vet, and manage those team members, filling over 150 roles a month. I saw you're hiring ${aRole} and wanted to see if it would be helpful to put a few vetted candidates in front of you.`;
     const questions = [
         'How is the search going so far? Have you found the right person yet?',
         'What will that person spend most of their day on? Tickets, phones, chat, scheduling?',
@@ -328,10 +328,10 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
         "The easiest next step is fifteen minutes with Paul, our founder, to scope this role and how we would handle the next hires like it. What does later this week look like?",
     ];
     const tree = {
-        open: { choices: direct && firstName ? [["Yes, that's me", 'intro'], ["What's this about?", 'context'], ['Wrong person', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] : [["That's me / putting you through", 'intro'], ["What's this about?", 'context'], ['Not here / someone else', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
+        open: { choices: direct && firstName ? [["Yes, that's me", 'reason'], ["What's this about?", 'context'], ['Wrong person', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] : [["That's me / putting you through", 'intro'], ["What's this about?", 'context'], ['Not here / someone else', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
         intro: { say: intro, choices: [['Go ahead', 'reason'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
-        reason: { say: reason, note: 'Say it once and stop talking. The question after this is what the call is for.', choices: [['Keep going', 'discover'], ['They pushed back', 'busy']] },
-        context: { say: `Of course. I saw your post for ${aRole}. We run hiring for remote customer service, sales and admin roles: we find the people, vet them and manage them for you. I just wanted to ask how the search is going.`, choices: [['Go ahead', 'discover'], ['Not interested', 'stop']] },
+        reason: { say: reason, note: (offshore ? `Their post is open to candidates in ${offshore}: say so, it is exactly where our people are. ` : '') + 'Say it once and stop talking. Their answer decides the next step.', choices: [['Yes, that would help', 'dig'], ['How would it work? / tell me more', 'discover'], ['Already filled it', 'filled'], ['We only hire in-house', 'inhouse'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
+        context: { say: `Of course. ${reason}`, choices: [['Yes, that would help', 'dig'], ['How would it work? / tell me more', 'discover'], ['Not interested', 'stop']] },
         discover: { say: questions[0], choices: [['Still looking', 'dig'], ['Filled it', 'filled'], ['We only hire in-house', 'inhouse']] },
         dig: { say: questions[1], note: 'Write down the work, the hours and the tools. It is what we match people to.', choices: [['They described it', 'offer']] },
         offer: { say: questions[2], choices: [['Yes', 'close'], ['Maybe, send something', 'sendinfo'], ['No', 'future']] },
