@@ -32,7 +32,7 @@ import { rrConfigured, account as rrAccount, lookupPerson, checkStatus as rrChec
 import { quoConfigured } from './_quo.js';
 import { syncQuoContacts, quoContactsApi } from './_quo-contacts.js';
 import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf, leadKey } from './_hiring-intent.js';
-import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines, ownerEmails, RR_TRIED, RR_DAILY_CAP, RR_DAILY_MAX } from './_hiring-run.js';
+import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines, ownerEmails, recheckOwnerEmails, RR_TRIED, RR_DAILY_CAP, RR_DAILY_MAX } from './_hiring-run.js';
 
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail)\./i;
 async function getJson(url) {
@@ -225,7 +225,7 @@ export default async function handler(req, res) {
                 if (!machine) return res.status(403).json({ error: 'Machine only' });
                 if (!rrConfigured()) return res.status(503).json({ error: 'RocketReach is not configured' });
                 const write = body.write === true;
-                const result = await ownerEmails(redis, { rr: { checkStatus: rrCheckStatus }, write, limit: Math.max(1, Math.min(300, Number(body.limit) || 300)) });
+                const result = body.recheck === true ? await recheckOwnerEmails(redis, { write }) : await ownerEmails(redis, { rr: { checkStatus: rrCheckStatus }, write, limit: Math.max(1, Math.min(300, Number(body.limit) || 300)) });
                 return res.status(200).json({ ok: true, write, ...result });
             }
             if (body.action === 'cells-tried') {

@@ -1012,8 +1012,18 @@ export function ownerEmail(profile, domain) {
     const now = String(profile && profile.employerDomain || '').toLowerCase().replace(/^www\./, '');
     const at = (e, d) => !!d && (host(e) === d || host(e).endsWith('.' + d));
     // A work address off the card's domain only at their current employer: an old job's mailbox may be someone else's now.
-    const pick = (dom && ok.find(e => at(e, dom))) || (now && ok.find(e => at(e, now) && !FREE_MAIL.test(e.email))) || ok.find(e => e.type === 'personal' || FREE_MAIL.test(e.email));
+    // A personal mailbox only when it carries the person's own name: RocketReach also files a spouse's or an assistant's
+    // Gmail under the owner (2026-10-28: majarvis@live.com on Christopher McNeely's profile).
+    const pick = (dom && ok.find(e => at(e, dom))) || (now && ok.find(e => at(e, now) && !FREE_MAIL.test(e.email))) || ok.find(e => (e.type === 'personal' || FREE_MAIL.test(e.email)) && mailNamed(e.email, profile && profile.name));
     return pick ? { email: pick.email, type: at(pick, dom) ? 'work' : FREE_MAIL.test(pick.email) || pick.type === 'personal' ? 'personal' : 'work (their current employer)', grade: pick.grade } : null;
+}
+/** Does the address's name part carry this person's surname, first name, or the first four letters of it? */
+export function mailNamed(email, name) {
+    const local = String(email || '').split('@')[0].toLowerCase().replace(/[^a-z]/g, '');
+    const k = nameKey(name);
+    if (!local || !k) return false;
+    const last = k.last.replace(/[^a-z]/g, ''), first = k.first.replace(/[^a-z]/g, '');
+    return (last.length >= 3 && local.includes(last)) || (first.length >= 3 && local.includes(first)) || (first.length >= 4 && local.includes(first.slice(0, 4)));
 }
 // The same person: same surname and the same first name, a common nickname, or a first name that shares its first four
 // letters (Mario, Marius). Never just an initial: Michael and Mary Smith are two people.
@@ -1153,6 +1163,30 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
 // Every owner found before 2026-10-28 night was looked up with their address too, and it was not kept. checkStatus
 // reads a looked-up profile back for free; the address goes on the card under the same rules as ownerCells. Dry
 // unless `write`; a card someone is saving is left for the next run.
+/** Personal addresses RocketReach put on cards that do not carry the person's name come off (dry unless `write`). */
+export async function recheckOwnerEmails(kv, { write = false, now = Date.now() } = {}) {
+    const at = new Date(now).toISOString(), out = { checked: 0, removed: 0, busy: 0, planned: [] };
+    for (const rec of await allRecords(kv)) {
+        const c = rec.contact || {};
+        if (c.emailSource !== 'RocketReach' || !c.email || !FREE_MAIL.test(c.email)) continue;
+        out.checked++;
+        if (mailNamed(c.email, c.emailPerson || c.name)) continue;
+        out.planned.push({ id: rec.id, company: rec.company && rec.company.name, person: c.emailPerson || c.name, email: c.email });
+        if (!write) continue;
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) { out.busy++; continue; }
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            const f = fresh && fresh.contact || {};
+            if (!fresh || f.email !== c.email || f.emailSource !== 'RocketReach') continue;
+            const { emailSource, emailPerson, emailType, emailGrade, emailCheckedAt, ...rest } = f;
+            await putRecord(kv, { ...fresh, contact: { ...rest, email: null, candidateEmail: null, emailRemoved: { email: c.email, why: 'the address does not carry their name', at } }, updatedAt: at });
+            out.removed++;
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
+    return out;
+}
+
 export async function ownerEmails(kv, { rr, write = false, now = Date.now(), limit = 300 }) {
     const at = new Date(now).toISOString(), out = { candidates: 0, read: 0, found: 0, saved: 0, noEmail: 0, otherPerson: 0, busy: 0, planned: [] };
     const tried = Object.entries((await kv.hgetall(RR_TRIED)) || {}).map(([id, v]) => [id, parseValue(v) || {}]).filter(([, t]) => t.profileId && ['added', 'no_mobile'].includes(t.result));

@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sectorOf, laneFor, SECTOR_CALLER, postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED, MAIN_LINE, ownerEmail, contactWithEmail, ownerEmails } from '../api/_hiring-run.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED, MAIN_LINE, ownerEmail, contactWithEmail, ownerEmails, mailNamed, recheckOwnerEmails } from '../api/_hiring-run.js';
 import { profileOf } from '../api/_rocketreach.js';
 import { mainLabel, mainNumbers, callerNumbers } from '../api/_hiring-intent.js';
 import { contactOf } from '../api/_quo-contacts.js';
@@ -1295,7 +1295,7 @@ test('the owner\'s email comes with the lookup that found their cell, only one R
     assert.equal(unnamed.name, 'Larry Rogers'); assert.equal(unnamed.role, 'General Manager', 'an address always says whose it is');
     assert.equal(contactWithEmail({ contact: { name: 'Zachary Rogers', candidateEmail: 'owner@acme.com' } }, { email: 'z@acme.com' }, 'Zachary Rogers', 'now'), null, 'an unconfirmed address already checked against the stop lists is not swapped');
     assert.equal(contactWithEmail({ status: 'excluded', contact: { name: 'Zachary Rogers' } }, { email: 'z@acme.com' }, 'Zachary Rogers', 'now'), null, 'a closed card takes no address');
-    assert.equal(ownerEmail(profileOf({ emails: [{ email: 'zach@gmail.com', smtp_valid: 'valid', type: 'personal', grade: 'A' }] }), 'rogershome.com').type, 'personal');
+    assert.equal(ownerEmail(profileOf({ name: 'Zachary Rogers', emails: [{ email: 'zach@gmail.com', smtp_valid: 'valid', type: 'personal', grade: 'A' }] }), 'rogershome.com').type, 'personal');
     assert.equal(ownerEmail(profileOf({ emails: [{ email: 'zr@rogershome.com', smtp_valid: 'accept-all', grade: 'A' }, { email: 'x@rogershome.com', smtp_valid: 'valid', grade: 'B' }] }), 'rogershome.com'), null, 'nothing RocketReach could not confirm');
     const mail = { email: 'zach@rogershome.com', type: 'work', grade: 'A' };
     assert.equal(contactWithEmail({ contact: { name: 'Zachary Rogers', email: 'given@x.com' } }, mail, 'Zachary Rogers', 'now'), null, 'an address given on the call is never replaced');
@@ -1344,6 +1344,21 @@ test('a catch-up run may raise the day\'s lookup cap, never past the ceiling', a
 test('plain desk titles from the job-board sweep are seats we fill; the executive they support is not the seat', () => {
     for (const [t, f] of [['Secretary - From $20 an hour', 'admin'], ['Front Office Coordinator', 'scheduling'], ['Admin Services Coordinator', 'admin'], ['General Administrator - $24 - $28 an hour', 'admin'], ['Administrative & Marketing Assistant', 'admin'], ['Assistant Bookkeeper (Part time)', 'admin'], ['Trilingual Client Services Assistant', 'support'], ['Client Relationship Associate (Liaison)', 'support'], ['Customer Relations Phone Representative', 'support'], ['Patient Enrollment Specialist - Health & Wellness Sales', 'scheduling'], ['IT Telemarketing / Lead Setter', 'sales'], ['Executive Assistant to Chief Executive Officer', 'admin']]) assert.equal(roleFamily(t), f, t);
     for (const t of ['Chief Executive Officer', 'Network Administrator', 'Systems Administrator', 'Office Manager', 'Lead Customer Service Supervisor', 'Bookkeeper and Accounting Manager', 'Director of Client Relations']) assert.equal(roleFamily(t), null, t);
+});
+test('a personal mailbox is the owner\'s only when it carries their name; ones that do not come off the cards', async () => {
+    for (const [e, n] of [['mtabo80@gmail.com', 'Matthew Tabo'], ['kmandrus@yahoo.com', 'Kevin Andrus'], ['erkerpm@gmail.com', 'Patrick Erker'], ['christopherrowland@gmail.com', 'Chris Rowland'], ['thesingingcpa@gmail.com', 'Steven Zelin']]) assert.equal(mailNamed(e, n), !e.startsWith('thesinging'), e);
+    assert.equal(mailNamed('majarvis@live.com', 'Christopher McNeely'), false);
+    assert.equal(ownerEmail(profileOf({ name: 'Christopher McNeely', emails: [{ email: 'majarvis@live.com', smtp_valid: 'valid', type: 'personal', grade: 'A' }] }), 'mcneelylawgroup.com'), null);
+    const w = jobsWorld();
+    const r = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Paul' }, w.deps);
+    const card = await getRecord(w.kv, r.id);
+    await putRecord(w.kv, { ...card, contact: { ...card.contact, email: 'majarvis@live.com', candidateEmail: 'majarvis@live.com', emailSource: 'RocketReach', emailPerson: 'Zachary Rogers' } });
+    const dry = await recheckOwnerEmails(w.kv, { write: false, now: NOW });
+    assert.equal(dry.planned.length, 1); assert.equal((await getRecord(w.kv, r.id)).contact.email, 'majarvis@live.com');
+    const wet = await recheckOwnerEmails(w.kv, { write: true, now: NOW });
+    assert.equal(wet.removed, 1);
+    const after = (await getRecord(w.kv, r.id)).contact;
+    assert.equal(after.email, null); assert.equal(after.emailSource, undefined); assert.equal(after.emailRemoved.email, 'majarvis@live.com');
 });
 test('the website check never moves a card off the owner\'s cell', async () => {
     const w = jobsWorld();
