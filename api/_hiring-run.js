@@ -1017,13 +1017,13 @@ export function ownerEmail(profile, domain) {
     const pick = (dom && ok.find(e => at(e, dom))) || (now && ok.find(e => at(e, now) && !FREE_MAIL.test(e.email))) || ok.find(e => (e.type === 'personal' || FREE_MAIL.test(e.email)) && mailNamed(e.email, profile && profile.name));
     return pick ? { email: pick.email, type: at(pick, dom) ? 'work' : FREE_MAIL.test(pick.email) || pick.type === 'personal' ? 'personal' : 'work (their current employer)', grade: pick.grade } : null;
 }
-/** Does the address's name part carry this person's surname, first name, or the first four letters of it? */
+/** Does the address's name part carry this person's surname or first name, or the first four letters of either? */
 export function mailNamed(email, name) {
     const local = String(email || '').split('@')[0].toLowerCase().replace(/[^a-z]/g, '');
     const k = nameKey(name);
     if (!local || !k) return false;
     const last = k.last.replace(/[^a-z]/g, ''), first = k.first.replace(/[^a-z]/g, '');
-    return (last.length >= 3 && local.includes(last)) || (first.length >= 3 && local.includes(first)) || (first.length >= 4 && local.includes(first.slice(0, 4)));
+    return (last.length >= 3 && local.includes(last)) || (first.length >= 3 && local.includes(first)) || [first, last].some(n => n.length >= 4 && local.includes(n.slice(0, 4)));
 }
 // The same person: same surname and the same first name, a common nickname, or a first name that shares its first four
 // letters (Mario, Marius). Never just an initial: Michael and Mary Smith are two people.

@@ -1346,7 +1346,7 @@ test('plain desk titles from the job-board sweep are seats we fill; the executiv
     for (const t of ['Chief Executive Officer', 'Network Administrator', 'Systems Administrator', 'Office Manager', 'Lead Customer Service Supervisor', 'Bookkeeper and Accounting Manager', 'Director of Client Relations']) assert.equal(roleFamily(t), null, t);
 });
 test('a personal mailbox is the owner\'s only when it carries their name; ones that do not come off the cards', async () => {
-    for (const [e, n] of [['mtabo80@gmail.com', 'Matthew Tabo'], ['kmandrus@yahoo.com', 'Kevin Andrus'], ['erkerpm@gmail.com', 'Patrick Erker'], ['christopherrowland@gmail.com', 'Chris Rowland'], ['thesingingcpa@gmail.com', 'Steven Zelin']]) assert.equal(mailNamed(e, n), !e.startsWith('thesinging'), e);
+    for (const [e, n] of [['mtabo80@gmail.com', 'Matthew Tabo'], ['kmandrus@yahoo.com', 'Kevin Andrus'], ['erkerpm@gmail.com', 'Patrick Erker'], ['christopherrowland@gmail.com', 'Chris Rowland'], ['alwelling@aol.com', 'Abe Wellington'], ['rstew78@gmail.com', 'Roger Stewart'], ['thesingingcpa@gmail.com', 'Steven Zelin']]) assert.equal(mailNamed(e, n), !e.startsWith('thesinging'), e);
     assert.equal(mailNamed('majarvis@live.com', 'Christopher McNeely'), false);
     assert.equal(ownerEmail(profileOf({ name: 'Christopher McNeely', emails: [{ email: 'majarvis@live.com', smtp_valid: 'valid', type: 'personal', grade: 'A' }] }), 'mcneelylawgroup.com'), null);
     const w = jobsWorld();
