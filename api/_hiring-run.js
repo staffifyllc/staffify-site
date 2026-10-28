@@ -8,7 +8,7 @@
 // found" (memory: an API error is not absence).
 import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
-    boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf,
+    boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES,
     parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey,
 } from './_hiring-intent.js';
 
@@ -147,6 +147,8 @@ export async function profileIdentity(posting, deps) {
     if (profile && profile.error) return { error: profile.error, noBudget: !!profile.noBudget };
     const m = profileMatches(posting.company, profile, posting.location);
     if (!m.ok) return { ok: false, unresolved: m.why, tried: profile && profile.title ? [profile.title] : [] };
+    const sz = profile.size || {};
+    if ((sz.employees && sz.employees > LARGE_EMPLOYEES) || sz.listed || sz.parent) return { ok: false, large: true, unresolved: `Google's panel shows a large employer (${sz.employees ? sz.employees + ' employees' : sz.listed ? 'publicly traded' : 'part of ' + sz.parent}).` };
     const host = profile.website ? hostOf(profile.website) : null;
     const d = digits10(profile.phone);
     return { ok: true, how: 'google_business_profile', website: profile.website || null, domain: host, phone: d.length === 10 ? '+1' + d : null, address: profile.address || null, listingName: profile.title, evidenceUrl: profile.link || null };
@@ -187,7 +189,7 @@ export async function processPosting(p, provenance, deps, report) {
         : { source: 'ats', title: posting.title, url: posting.url, ats: posting.ats, board: posting.board, postingId: posting.id, postedAt: posting.postedAt, ageDays: q.age, checkedAt, location: posting.location, locations: posting.locations, workplace: posting.workplace || 'remote', team: posting.team, commitment: posting.commitment, restrictions: q.restrictions };
     const id = idFor(bk);
     const known = parseValue(await kv.hget(HK.companies, bk));
-    if (known && ['client', 'in_outreach', 'suppressed'].includes(known.verdict)) { await mark('excluded', 'company_' + known.verdict); return { verdict: 'excluded', reason: 'company_' + known.verdict }; }
+    if (known && ['client', 'in_outreach', 'suppressed', 'large'].includes(known.verdict)) { await mark('excluded', 'company_' + known.verdict); return { verdict: 'excluded', reason: 'company_' + known.verdict }; }
     const existing = await getRecord(kv, id);
     // A card that exists keeps its history. Only a retry of a wrong number re-researches it.
     if (existing && !(existing.status === 'number_research' && provenance.retry)) {
@@ -223,6 +225,7 @@ export async function processPosting(p, provenance, deps, report) {
     // own business listing under the same name in the same state; a search that could not run is retried.
     const ident = gj ? await profileIdentity(posting, deps) : await resolveIdentity(posting, deps);
     if (ident.error) return { verdict: 'error', reason: ident.noBudget ? 'no_budget' : 'lookup_unavailable', detail: ident.error };
+    if (ident.large) { await kv.hset(HK.companies, { [bk]: JSON.stringify({ verdict: 'large', at: checkedAt }) }); await mark('excluded', 'large_employer', { detail: ident.unresolved }); return { verdict: 'excluded', reason: 'large_employer', detail: ident.unresolved }; }
     if (!ident.ok) return toBacklog('identity_unresolved', ident.unresolved, { missing: gj ? ['business listing', 'phone'] : ['website', 'phone'], identityTried: ident.tried });
     const company = { ...base.company, website: ident.website || null, domain: ident.domain || null, address: ident.address || null, identity: { how: ident.how, evidenceUrl: ident.evidenceUrl, listingName: ident.listingName || null, checkedAt } };
     base.company = company;
@@ -377,7 +380,18 @@ export async function refreshReady(deps, { limit = 12, report = null } = {}) {
     const live = (await allRecords(kv)).filter(r => r.status === 'ready' && r.job && r.job.state !== 'closed' && r.job.state !== 'stale');
     // Every Google Jobs card (a date check, free) and the ATS cards checked longest ago (a fetch each).
     const recs = [...live.filter(r => r.job.source === 'google_jobs'), ...live.filter(r => r.job.source !== 'google_jobs').sort((a, b) => Date.parse(a.job.checkedAt || 0) - Date.parse(b.job.checkedAt || 0)).slice(0, limit)];
-    const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0 };
+    const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0, excluded: 0 };
+    // The rules improve; cards made under older rules are held to the current ones. Free: a name check.
+    for (const rec of live) {
+        const x = companyExcluded(rec.company && rec.company.name);
+        if (!x) continue;
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (fresh && fresh.status === 'ready' && !fresh.callOwner) { await putRecord(kv, { ...fresh, status: 'excluded', exclusion: { reason: x.reason, detail: x.detail, at: new Date(now).toISOString(), by: 'rules re-check' } }); out.excluded++; }
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
     for (const rec of recs) {
         // A Google Jobs card has no posting API: it goes stale MAX_AGE_DAYS after it was posted.
         if (rec.job.source === 'google_jobs') {

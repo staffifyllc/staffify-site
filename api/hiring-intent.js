@@ -69,8 +69,11 @@ async function businessProfile(company, location, budget) {
     const k = j.knowledge_graph || null;
     const places = Array.isArray(j.local_results) ? j.local_results : (j.local_results && j.local_results.places) || [];
     const p0 = places[0] || null;
+    // Google's company panel carries size signals for big employers: a head count, a stock quote, a parent.
+    const employees = k && (k.number_of_employees || k.employees) ? Number(String(k.number_of_employees || k.employees).replace(/[^0-9]/g, '')) || null : null;
+    const size = k ? { employees, listed: !!(k.stock_price || k.ticker || k.stock), parent: k.parent_organization || k.parent || null } : null;
     const profile = k && k.title && (k.phone || k.website || k.address)
-        ? { title: k.title, type: k.type || null, website: k.website || null, phone: k.phone || null, address: k.address || null, link: 'https://www.google.com/search?q=' + encodeURIComponent(q), source: 'knowledge panel' }
+        ? { title: k.title, type: k.type || null, website: k.website || null, phone: k.phone || null, address: k.address || null, size, link: 'https://www.google.com/search?q=' + encodeURIComponent(q), source: 'knowledge panel' }
         : p0 && p0.title ? { title: p0.title, type: p0.type || null, website: (p0.links && p0.links.website) || null, phone: p0.phone || null, address: p0.address || null, link: 'https://www.google.com/search?q=' + encodeURIComponent(q), source: 'local results' } : {};
     await redis.set(HK.profile(key), { profile, query: q, expiresAt: new Date(Date.now() + 30 * 864e5).toISOString() });
     return profile;

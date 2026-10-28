@@ -35,6 +35,8 @@ export const DISCOVERY_DAYS = 7;
 // oldest ready cards every time (api/_hiring-run.js refreshReady); weekend gaps fit inside this.
 export const FRESH_MS = 72 * 3600e3;
 export const LARGE_EMPLOYER_OPEN_ROLES = 60;
+// Above this head count on Google's company panel, an employer has its own recruiting team.
+export const LARGE_EMPLOYEES = 500;
 
 export const HK = {
     records: 'staffify:hiring:records',     // hash: id -> ready (or worked) record
@@ -146,7 +148,7 @@ export const seniorTitle = title => SENIOR.test(String(title || ''));
 // Staffing, recruiting, BPO and outsourcing firms are competitors, not buyers. Also job boards
 // reposting someone else's role.
 const COMPETITOR = /\b(staffing|recruit(ing|ment)\s+(agency|firm|partner|solutions)|talent\s+(solutions|partners|agency)|outsourc(e|ing)|\bbpo\b|offshore\s+(team|staff)|virtual\s+assistant\s+(company|agency|services)|on\s+behalf\s+of\s+(our|a)\s+client|our\s+client\s+is\s+(seeking|looking|hiring)|employer\s+of\s+record|nearshore\s+(staffing|talent))\b/i;
-const COMPETITOR_NAMES = /\b(taskus|teleperformance|concentrix|ttec|alorica|sitel|foundever|startek|boldr|support\s*ninja|supportyourapp|helpware|belay|time\s*etc|prialto|wing\s+assistant|athena|magic\s+(virtual|assistant)|myoutdesk|virtual\s+staff\s+finder|cloudstaff|remote\s+staff|staffify|hirequotient|toptal|upwork|crossover|turing|andela|lemon\.io|bairesdev|near\s+(inc|staffing)|somewhere\.com|stealth\s+agents|go\s*remote|hire\s+overseas|support\s*shepherd|peak\s+support|influx|simplycontact|partnerhero|hugo|working\s+solutions|liveops|arise|transcom|ibex|ubiquity|5ca|everise|telus\s+international|qualfon|itel|global\s+lingo|randstad|robert\s+half|kelly\s+services|adecco|aerotek|manpower|insight\s+global|teksystems|express\s+employment|spherion|nextsource|frontline\s+source|spectraforce|beacon\s+hill|addison\s+group|vaco|aston\s+carter|peopleready|labor\s+finders|tandym|apex\s+systems|volt\s+workforce|allegis|kforce|ajilon|accountemps|officeteam|appleone|snelling|staffmark|employbridge|prolink|actalent|maximus|jobot|cybercoders|medix|hays|michael\s+page|lhh|korn\s+ferry|akkodis|collabera|cynet|mindlance|russell\s+tobin|solomon\s+page|24\s+seven|hirequest|trueblue|nesco|labormax|sutherland|conduent|iqor|sykes|vxi|alorica)\b|\bmanpower\w*|^\s*kelly\s*$/i;
+const COMPETITOR_NAMES = /\b(taskus|teleperformance|concentrix|ttec|alorica|sitel|foundever|startek|boldr|support\s*ninja|supportyourapp|helpware|belay|time\s*etc|prialto|wing\s+assistant|athena|magic\s+(virtual|assistant)|myoutdesk|virtual\s+staff\s+finder|cloudstaff|remote\s+staff|staffify|hirequotient|toptal|upwork|crossover|turing|andela|lemon\.io|bairesdev|near\s+(inc|staffing)|somewhere\.com|stealth\s+agents|go\s*remote|hire\s+overseas|support\s*shepherd|peak\s+support|influx|simplycontact|partnerhero|hugo|working\s+solutions|liveops|arise|transcom|ibex|ubiquity|5ca|everise|telus\s+international|qualfon|itel|global\s+lingo|randstad|robert\s+half|kelly\s+services|adecco|aerotek|manpower|insight\s+global|teksystems|express\s+employment|spherion|nextsource|frontline\s+source|spectraforce|beacon\s+hill|addison\s+group|vaco|aston\s+carter|peopleready|labor\s+finders|tandym|apex\s+systems|volt\s+workforce|allegis|kforce|ajilon|accountemps|officeteam|appleone|snelling|staffmark|employbridge|prolink|actalent|maximus|jobot|cybercoders|medix|hays|michael\s+page|lhh|korn\s+ferry|akkodis|collabera|cynet|mindlance|russell\s+tobin|solomon\s+page|24\s+seven|hirequest|trueblue|nesco|labormax|sutherland|conduent|iqor|sykes|vxi|alorica|green\s+key|vaco|lasalle\s+network|atrium|bluecrew|instawork|wonolo|veterans\s+sourcing)\b|\bmanpower\w*|^\s*kelly\s*$/i;
 const STAFFING_IN_NAME = /\w*staff(ing|ers)?\b|\bstaff\w*|\brecruit\w*|\bresourcing\b|\bpersonnel\b|\bemployment\s+(agency|services|solutions)\b|\btemps?\b|\btemporary\s+(staffing|services|employment)\b|\bworkforce\b|\btalent\w*|\bsearch\s+(group|partners)\b|\bplacements?\b|\bhire\s*velocity\b/i;
 
 /** Why a company is a competitor (they sell what Staffify sells), or null. */
@@ -279,7 +281,14 @@ const BRAND_CAREERS = /^(jobs|careers|career|work|join)\.[a-z0-9-]+\.[a-z]+$|\.j
 const ENTERPRISE_ATS = /(myworkdayjobs\.com|wd\d+\.myworkday|oraclecloud\.com|taleo\.net|icims\.com|avature\.net|successfactors|brassring|ultipro|ukg\.net|phenompeople|dayforcehcm\.com|jobs\.jobvite\.com|smartrecruiters\.com\/[A-Z]|eightfold\.ai)/i;
 // Public bodies by their form, not by a word that a small business can carry ("Lakewood Animal Hospital",
 // "Orange County Plumbing", "University Park Dental", "The Roofing Authority").
-const INSTITUTION = /^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b/i;
+const INSTITUTION = /^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b|\b(state'?s?|district|county|city|u\.?s\.?)\s+attorney|attorney'?s?\s+office\b|\b(circuit|superior|district|municipal|county)\s+court\b|\bpublic\s+defender\b|\bboard\s+of\s+(education|supervisors|commissioners)\b|\bisd\b|\bindependent\s+school\b|\btax\s+board\b|\bfranchise\s+tax\b/i;
+/** A staffing firm or a public body, by its name alone. The refresh pass re-applies this to cards already made. */
+export function companyExcluded(name) {
+    const comp = competitorReason({ company: name, text: '' });
+    if (comp) return { reason: 'competitor', detail: comp };
+    if (INSTITUTION.test(String(name || ''))) return { reason: 'institution', detail: `${name} is a public body, school or court.` };
+    return null;
+}
 export const jobKey = j => 'gjobs:' + createHash('sha256').update([j.company_name, j.title, j.location].map(x => String(x || '').trim().toLowerCase()).join('|')).digest('hex').slice(0, 20);
 // "Royal Electric", "Royal Electric, LLC" and "Royal Electric Co." are one employer: the key drops legal suffixes.
 export const companyKey = (name, location) => 'gco:' + (nameWords(name).join('') || String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')) + ':' + String(stateOf(location) || '').toLowerCase();
@@ -318,6 +327,8 @@ export function qualifyJob(j, now = Date.now()) {
     if (big) return { ok: false, reason: 'large_employer', detail: 'They hire through an enterprise system (' + (big.match(ENTERPRISE_ATS) || [''])[0] + '), a sign of a large employer.' };
     const own = hosts.find(h => BRAND_CAREERS.test(h.replace(/^www\./, '')));
     if (own) return { ok: false, reason: 'large_employer', detail: `They post on a careers site of their own (${own}), a sign of a large employer.` };
+    // "Now Hiring", "Entry-Level ... - Chicago, IL", "no experience needed": mass recruiting ads, rarely the employer itself.
+    if (/\bnow\s+hiring\b|\bhiring\s+(immediately|now)\b|\bimmediate\s+start\b|\bno\s+experience\s+(needed|necessary|required)\b|\bentry[- ]level\b.*\s-\s*[A-Z][a-zA-Z .]+,\s*[A-Z]{2}\s*$/i.test(title)) return { ok: false, reason: 'recruiting_ad', detail: `"${title}" reads as a mass recruiting ad, not an employer hiring for its own seat.` };
     if (!salesSeatOk(title, j.description)) return { ok: false, reason: 'field_sales', detail: 'A sales seat the post describes as in person (a lot, a showroom, a territory), or never says is by phone.' };
     const r = restrictions([title, j.description, j.location].join(' '));
     // Onsite attendance is fine here: the point is a remote person can do the seat. Licences and clearances are not.
@@ -345,7 +356,9 @@ export function profileMatches(company, profile, jobLocation) {
     if (!a.length || !b.length || a.every(w => GENERIC.has(w))) return { ok: false, why: `"${company}" is too generic a name to match to one business.` };
     const exact = a.join(' ') === b.join(' ');
     const aInB = a.filter(w => b.some(x => sameWord(w, x))).length, bInA = b.filter(w => a.some(x => sameWord(w, x))).length;
-    const nameOk = exact || ((aInB === a.length || bInA === b.length) && Math.min(aInB, bInA) >= 2);
+    // Both names mostly agree: "State Attorney" does not cover "Cook County State's Attorney's Office".
+    const half = n => Math.ceil(n / 2);
+    const nameOk = exact || ((aInB === a.length || bInA === b.length) && Math.min(aInB, bInA) >= 2 && aInB >= half(a.length) && bInA >= half(b.length));
     if (!nameOk) return { ok: false, why: `Google's listing "${profile.title}" is not clearly "${company}".` };
     const js = stateOf(jobLocation), ps = stateOf(profile.address);
     if (!js) return { ok: false, why: `The job location "${jobLocation}" names no state, so the listing cannot be confirmed as this employer.` };

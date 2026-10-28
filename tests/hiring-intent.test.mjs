@@ -608,3 +608,31 @@ test('an unreadable daily search counter spends nothing', async () => {
     const r = await runHiring({ ...w.deps, kv }, { maxSearches: 2, maxCandidates: 5, refresh: 0 });
     assert.equal(r.searchBudget.allowedThisRun, 0); assert.equal(r.searches.length, 0); assert.ok(r.searchBudgetError);
 });
+
+// ---- the first live Google Jobs run, 2026-10-28: what it let through, pinned ----------------------
+test('live-run catches: a staffing firm, a prosecutor, a school district, a tax board, mass recruiting ads', () => {
+    for (const c of ['Green Key Resources', "Cook County State's Attorney's Office", 'Alvin ISD', 'California Franchise Tax Board']) assert.ok(qualifyJob(listing({ company_name: c }), NOW).ok === false, c);
+    for (const t of ['Entry-Level Administrative Assistant - Chicago, IL', 'Customer Service Sales Representative - Now Hiring']) assert.equal(qualifyJob(listing({ title: t }), NOW).reason, 'recruiting_ad', t);
+    for (const c of ['Frontline International, Inc.', 'Haga Kommer, Ltd.', 'Central Credit Union of Illinois']) assert.equal(qualifyJob(listing({ company_name: c }), NOW).ok, true, c);
+    assert.equal(profileMatches("Cook County State's Attorney's Office", { title: 'State Attorney', address: 'Markham, IL 60428' }, 'Markham, IL').ok, false, 'two shared words out of five is not the same name');
+});
+
+test('a big employer by Google\'s own panel is left out before any contact credit is spent', async () => {
+    const w = jobsWorld({ profile: { ...ROYAL, size: { employees: 2400, listed: false, parent: null } } });
+    let contacts = 0; w.deps.findContact = async () => { contacts++; return {}; };
+    const r = await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    assert.equal(r.reasons.large_employer, 1); assert.equal((await allRecords(w.kv)).length, 0); assert.equal(contacts, 0);
+});
+
+test('cards made under older rules are re-checked every run: a staffing firm or a public body leaves the list', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const rec = (await allRecords(w.kv))[0];
+    await putRecord(w.kv, { ...rec, company: { ...rec.company, name: 'Green Key Resources' } });
+    const owned = { ...rec, id: 'hire:00000000000000ee', company: { ...rec.company, name: "Cook County State's Attorney's Office" }, callOwner: MILTON.email, callOutcome: 'callback', nextCallAt: new Date(NOW + 3600e3).toISOString() };
+    await putRecord(w.kv, owned);
+    const out = await refreshReady(w.deps, { limit: 5 });
+    assert.equal(out.excluded, 1);
+    assert.equal((await getRecord(w.kv, rec.id)).status, 'excluded');
+    assert.equal((await getRecord(w.kv, owned.id)).status, 'ready', 'a card a caller owns is left for a person to judge');
+});
