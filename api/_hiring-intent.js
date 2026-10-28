@@ -176,6 +176,8 @@ const HARD = [
     [/\b(u\.?s\.?|united\s+states|american)\s+citizen(ship)?\b/i, 'requires US citizenship'],
     [/\bsecurity\s+clearance\b|\bclearance\s+(required|eligible)\b|\bpublic\s+trust\b/i, 'requires a security clearance'],
     [/\bitar\b|\bexport[- ]controlled\b/i, 'export-controlled work (ITAR)'],
+    // "Licensed Farmers Administrative Assistant", "Insurance Service Associate (licensed)": the seat itself is licensed.
+    [/\(licensed\)|\blicensed\s+(\w+\s+){0,3}(assistant|associate|representative|rep|csr|agent|account\s+manager|producer|specialist|coordinator)\b/i, 'requires a state or financial licence'],
     [/\b(licensed|license|licence)\s+(in|insurance|agent|producer|required)\b|\b(license|licence)\s+is\s+required\b|\bnmls\b|\bseries\s+(6|7|63|65)\b|\bp\s*&\s*c\b|\bproperty\s+(and|&)\s+casualty\b|\blife\s+(and|&)\s+health\b|\b(2-15|2-20|4-40)\b/i, 'requires a state or financial licence'],
     [/\bmust\s+(be\s+able\s+to\s+)?(commute|work\s+on[- ]?site|report\s+to\s+(the|our)\s+office)\b|\bon[- ]?site\s+(only|required)\b|\bin[- ]office\s+(only|required)\b/i, 'onsite attendance required'],
 ];

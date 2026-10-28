@@ -858,6 +858,9 @@ test('the wider seats: insurance service, legal support, retention and client se
         assert.equal(roleFamily(t), null, t);
     assert.equal(qualifyLead(LEAD({ role_posted: 'Account Manager - Fully Remote - US' }), NOW).family, 'account', 'an insurance agency\'s account manager services accounts');
     assert.equal(qualifyLead(LEAD({ role_posted: 'Licensed Insurance Account Manager', notes: 'P&C license required.' }), NOW).reason, 'hard_restriction');
+    assert.equal(qualifyLead(LEAD({ role_posted: 'Licensed Farmers Administrative Assistant / Client Experience Manager', notes: '' }), NOW).reason, 'hard_restriction');
+    assert.equal(qualifyLead(LEAD({ role_posted: 'Insurance Service Associate (licensed)', notes: '' }), NOW).reason, 'hard_restriction');
+    assert.equal(qualifyLead(LEAD({ role_posted: 'Client Intake Specialist ($37,440-$43,000/yr)', notes: '' }), NOW).ok, true, 'a salary is not a licence');
 });
 
 test('a provided lead is qualified on its own facts: role, place, freshness, the shared franchise host is not its website', () => {
