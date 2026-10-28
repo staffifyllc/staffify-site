@@ -112,6 +112,9 @@ export function salesSeatOk(title, text) {
     return PHONE_SALES.test(t) && !FIELD_SALES.test(t);
 }
 const ROLE_FIT = [
+    // Paul, 2026-10-28: "I specifically want to see the wedding video editor, where is that". Video editing is one of
+    // the seats Staffify places (the site's nav: Exec Admins, CSR, Video Editors, Sales); a shoot on location is not.
+    ['video', /\bvideo\s+(editor|editing|producer|specialist|assistant)\b|\bpost[- ]production\s+(specialist|editor|assistant|coordinator)\b|\b(reels?|short[- ]form|podcast|youtube|social\s+media)\s+(video\s+)?editor\b|\baudio\s+and\s+video\s+editor\b/i],
     // Widened 2026-10-28 from Madison's researched list: insurance service seats, legal support, retention and
     // client services are remote-doable desk work Staffify places. Licensed seats still fail the licence rule.
     ['admin', /\blegal\s+(assistant|secretary)\b|\bparalegal\b|\b(law\s+firm|legal)\s+case\s+manager\b|\bbilling\s+specialist\b|\bproject\s+assistant\b|\badministrative\s+(&|and)\s+operations\s+coordinator\b/i],
@@ -702,7 +705,7 @@ export function careersLinks(page, limit = 2) {
 
 // ---- the record ------------------------------------------------------------------------------
 export const firstNameOf = name => { const f = String(name || '').trim().split(/\s+/)[0] || ''; return /^[A-Za-z][A-Za-z'’-]{0,30}$/.test(f) ? f[0].toUpperCase() + f.slice(1) : ''; };
-const FAMILY_WORDS = { support: 'customer support', admin: 'admin', scheduling: 'scheduling', account: 'account support', sales: 'sales' };
+const FAMILY_WORDS = { support: 'customer support', admin: 'admin', scheduling: 'scheduling', account: 'account support', sales: 'sales', video: 'video editing' };
 export const familyWords = f => FAMILY_WORDS[f] || 'support';
 
 /** The short researched brief a caller reads before dialling. Facts only, each one sourced on the record. */

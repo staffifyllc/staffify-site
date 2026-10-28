@@ -1285,3 +1285,20 @@ test('law firms and insurance agencies are left out from every source; a card so
     assert.equal((await getRecord(w.kv, 'hire:aaaaaaaaaaaaaaaa')).exclusion.reason, 'law_or_insurance');
     assert.equal((await getRecord(w.kv, 'hire:bbbbbbbbbbbbbbbb')).status, 'ready', 'a callback a caller booked is left with them');
 });
+
+// Paul, 2026-10-28: "I specifically want to see the wedding video editor, where is that".
+test('video editing is a seat Staffify places; shooting on location and creator or host roles are not', async () => {
+    for (const t of ['Post-Production Specialist (video edit review and creation; social reels)', 'Part-Time Video Editor (remote contract, $1,000/mo, 20 hrs/wk)', 'Short-Form Video Editor - B2B, Podcasts & Founder Content', 'Content Editor (part-time, remote); also Audio and Video Editor (remote)'])
+        assert.equal(roleFamily(t), 'video', t);
+    for (const t of ['AI Image & Video Evaluator (Remote)', 'Sports Content Creator / Podcast Host', 'Wedding Videographer', 'Video Production Manager'])
+        assert.equal(roleFamily(t), null, t);
+    // A lead turned away under the old rules comes back when it is imported again with recheck.
+    const w = jobsWorld();
+    const lead = LEAD({ business: 'Wedding Weekender', owner_first: 'Anne Marie', owner_last: 'Carroll', role_posted: 'Post-Production Specialist (video edit review and creation; social reels)', industry: 'Wedding media', vertical: 'online', website: null, owner_email: null });
+    await w.kv.hset(HK.seen, { [leadKey(lead)]: JSON.stringify({ verdict: 'excluded', reason: 'role_not_fillable' }) });
+    assert.equal((await processLead({ kind: 'lead', key: leadKey(lead), lead }, { source: 'Madison' }, w.deps)).verdict, 'seen', 'without recheck it stays turned away');
+    const again = await processLead({ kind: 'lead', key: leadKey(lead), lead }, { source: 'Madison', retry: true }, w.deps);
+    assert.equal(again.verdict, 'ready'); assert.equal(again.record.family, 'video');
+    const s = hiringCallScript({ caller: 'Paul', company: 'Wedding Weekender', firstName: 'Anne', jobTitle: lead.role_posted, family: 'video', direct: true });
+    assert.match(s.reason, /I saw you're hiring a Post-Production Specialist\. We help companies hire dedicated Post-Production Specialists from Latin America and the Philippines/);
+});

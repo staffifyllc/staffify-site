@@ -10,7 +10,8 @@
 //   POST {action:'fill-research', source, fills:[...]}  machine only: looked-up numbers for research leads
 //   POST {action:'owner-lines', source, lines:[...]}   machine only: an owner's own line first on live cards
 //   POST {action:'cells-tried', tried:[...]}           machine only: cards already looked up by hand
-//   POST {action:'import-leads', source, leads:[...]}  owner or machine: researched leads into the pending
+//   POST {action:'import-leads', source, leads:[...], recheck?}  owner or machine: researched leads into the pending
+//                                            queue (recheck: true runs leads already turned away under older rules)
 //                                            queue; worked by the next run (?leads=only works them alone)
 // Logic lives in api/_hiring-intent.js and api/_hiring-run.js; this file only wires the real
 // services in. Nothing here dials, texts or emails anyone.
@@ -230,7 +231,7 @@ export default async function handler(req, res) {
                     if (!l.business || !l.role_posted) { refused++; continue; }
                     const key = leadKey(l);
                     if (await redis.hget(HK.pending, key)) { waiting++; continue; }
-                    await addPending(redis, { kind: 'lead', key, lead: l }, { seed: true, discoveredBy: 'provided', source, addedBy: rep ? rep.email : 'machine', discoveredAt: at, file: String(body.file || '').slice(0, 120) || null });
+                    await addPending(redis, { kind: 'lead', key, lead: l }, { ...(body.recheck === true ? { retry: true } : {}), seed: true, discoveredBy: 'provided', source, addedBy: rep ? rep.email : 'machine', discoveredAt: at, file: String(body.file || '').slice(0, 120) || null });
                     added++;
                 }
                 return res.status(200).json({ ok: true, source, received: leads.length, added, alreadyWaiting: waiting, refused });

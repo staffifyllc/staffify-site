@@ -288,7 +288,7 @@ export function callScript({ campaignId, caller, callerEmail, company, firstName
 // here says it was (PM, 2026-10-27: "must not say 'we sent a few emails' for these 0-touch
 // records"). The reason for the call is their own job post, which is on the caller's screen with
 // the date it was checked. With no named contact the opener asks for whoever is hiring the role.
-const HIRING_WORK = { support: 'customer support', admin: 'admin and executive support', scheduling: 'scheduling and front desk', account: 'account support', sales: 'sales' };
+const HIRING_WORK = { support: 'customer support', admin: 'admin and executive support', scheduling: 'scheduling and front desk', account: 'account support', sales: 'sales', video: 'video editing' };
 // Paul, 2026-10-28: "Ultimately, we're looking to create partnerships with people where we are doing all
 // their hiring for remote teams, like customer service, sales, and admin support." The open role is the
 // reason for the call; the offer is to run that hiring for them, this seat and the ones after it.
