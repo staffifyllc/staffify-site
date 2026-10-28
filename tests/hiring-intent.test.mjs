@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch } from '../api/_hiring-run.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines } from '../api/_hiring-run.js';
 import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript, spokenRole, articleFor } from '../api/_call-scripts.js';
@@ -1015,4 +1015,37 @@ test('the opener says the job the way a person would, not the posting\'s full ti
     assert.match(s.tree.intro.say, /is hiring a Customer Service Representative in Tucson/, 'the person put through hears the job too');
     const a = hiringCallScript({ caller: 'Milton', company: 'Acme', firstName: '', jobTitle: 'Account Manager - Fully Remote', family: 'account' });
     assert.match(a.tree.intro.say, /is hiring an Account Manager and/); assert.match(a.voicemail, /is hiring an Account Manager\./);
+});
+
+// Paul, 2026-10-28: "I need cell phone numbers here from rocket reach, the folks I am hitting a gatekeeper each and every single time".
+test('an owner\'s cell goes first on a live card, the old line stays behind it, and the opener greets them by name', async () => {
+    const w = jobsWorld();
+    await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Madison' }, w.deps);
+    const rec = (await allRecords(w.kv))[0];
+    assert.equal(rec.contact.status, 'named');
+    await putRecord(w.kv, { ...rec, callOwner: 'hello@gostaffify.com', callHistory: [{ outcome: 'gatekeeper', at: 'x', caller: 'hello@gostaffify.com', dialled: '+15206000025' }] });
+    const deps = { isOptedOut: async q => q.phone === '+15205550000', loadBad, isBad };
+    const line = { id: rec.id, phone: '+1 520-301-7788', phone_type: 'mobile', phone_person: 'Zachary Rogers', phone_grade: 'A', phone_alternates: ['5208881234'] };
+    const dry = await ownerLines(w.kv, { source: 'RocketReach', lines: [line], by: 'test', now: NOW, ...deps });
+    assert.equal(dry[0].done, false); assert.equal(dry[0].to, '+15203017788'); assert.equal((await getRecord(w.kv, rec.id)).phone.number, '+15206000025', 'dry changes nothing');
+    const res = await ownerLines(w.kv, { source: 'RocketReach', lines: [line, { ...line, id: 'hire:00000000000000ff' }, { id: rec.id, phone: '520-555-0000', phone_person: 'Zachary Rogers' }], write: true, by: 'test', now: NOW, ...deps });
+    assert.equal(res[0].done, true); assert.equal(res[1].why, 'not found'); assert.equal(res[2].why, 'opted out');
+    const after = await getRecord(w.kv, rec.id);
+    assert.equal(after.phone.number, '+15203017788'); assert.deepEqual(after.phone.alternates, ['+15208881234', '+15206000025'], 'the line Madison found stays, behind the owner\'s');
+    assert.equal(after.phone.source, 'vendor'); assert.equal(after.phone.person, 'Zachary Rogers'); assert.equal(after.phone.previous.number, '+15206000025');
+    assert.equal(after.callOwner, 'hello@gostaffify.com'); assert.equal(after.callHistory.length, 1, 'owner and history untouched');
+    assert.equal(callRow(after, 'hello@gostaffify.com', NOW).callContact.phoneStatus, 'vendor_direct');
+    const base = { kv: w.kv, isOptedOut: async () => false, clientCheck: async () => ({ status: 'clear' }), crmContact: async () => { throw Error('CRM contact missing'); }, crmStop, loadBad, isBad, queueState: async () => ({ records: [] }) };
+    const brief = await hiringBrief(w.kv, { id: rec.id, caller: 'Paul', callerEmail: 'hello@gostaffify.com', shiftGate: { allowed: true, required: true } }, base);
+    assert.equal(brief.body.opener, "Hi, is this Zachary? This is Paul with Staffify. I'm calling about the Customer Service Representative job you posted in Tucson.");
+    assert.equal(brief.body.tree.open.choices[0][0], "Yes, that's me");
+    assert.equal(brief.body.dial.label, "Zachary Rogers's mobile, from RocketReach");
+    assert.equal(brief.body.name, 'Zachary Rogers', 'a researched owner with no email is still named on the card');
+});
+
+test('a post that calls its employer a listed public company marks it large, in any of the forms they write it', () => {
+    const ev = text => postEvidence({ company: 'EVI Industries, Inc.', title: 'Executive Assistant', text, family: 'admin' });
+    assert.equal(ev('EVI Industries, Inc. (NYSE American: EVI) is the only U.S. public company focused on laundry.').reason, 'large_employer');
+    assert.equal(ev('You will see how a growing public company is run.').reason, 'large_employer');
+    assert.equal(ev('We support public companies and private clients with bookkeeping.'), null, 'a phrase about clients is not the employer');
 });

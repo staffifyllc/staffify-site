@@ -299,7 +299,7 @@ export function spokenRole(title) {
 }
 /** "a" or "an" as it is said: an Account Manager, an L1 Technical Support Agent, an SDR, a Senior Paralegal. */
 export const articleFor = w => (/^[aeiou]/i.test(w) || /^[FHLMNRSX][A-Z0-9]*\b/.test(w) ? 'an' : 'a');
-export function hiringCallScript({ caller, callerEmail, company, firstName, jobTitle, family, offshore, city }) {
+export function hiringCallScript({ caller, callerEmail, company, firstName, jobTitle, family, offshore, city, direct = false }) {
     const who = company || 'your company';
     const role = jobTitle ? spokenRole(jobTitle) : 'that role';
     const aRole = articleFor(role) + ' ' + role;
@@ -311,7 +311,10 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
     // Paul, later the same day: "can the beginning of the call script mention the job we're calling about?" The
     // job comes first, so whoever answers knows why we are calling before we ask for anyone. The intro names it
     // again, because the person put through has not heard the opener.
-    const opener = firstName
+    // The owner's own cell: they answer it themselves, so greet them and say why, no front-desk ask.
+    const opener = direct && firstName
+        ? `Hi, is this ${firstName}? This is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}.`
+        : firstName
         ? `Hi, this is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}. I'm looking to speak with ${firstName}, or the person in charge of hiring. Is that you?`
         : `Hi, this is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}. I'm looking to speak with the person in charge of hiring for it. Is that you, or could you point me to them?`;
     const intro = `Great. I'll be straight with you, this is a cold call. I saw ${who} is hiring ${aRole}${inCity} and I had one quick question about it. Do you have a second?`;
@@ -325,7 +328,7 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
         "The easiest next step is fifteen minutes with Paul, our founder, to scope this role and how we would handle the next hires like it. What does later this week look like?",
     ];
     const tree = {
-        open: { choices: [["That's me / putting you through", 'intro'], ["What's this about?", 'context'], ['Not here / someone else', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
+        open: { choices: direct && firstName ? [["Yes, that's me", 'intro'], ["What's this about?", 'context'], ['Wrong person', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] : [["That's me / putting you through", 'intro'], ["What's this about?", 'context'], ['Not here / someone else', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
         intro: { say: intro, choices: [['Go ahead', 'reason'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
         reason: { say: reason, note: 'Say it once and stop talking. The question after this is what the call is for.', choices: [['Keep going', 'discover'], ['They pushed back', 'busy']] },
         context: { say: `Of course. I saw your post for ${aRole}. We run hiring for remote customer service, sales and admin roles: we find the people, vet them and manage them for you. I just wanted to ask how the search is going.`, choices: [['Go ahead', 'discover'], ['Not interested', 'stop']] },

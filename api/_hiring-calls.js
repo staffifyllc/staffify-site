@@ -95,9 +95,14 @@ export async function hiringBrief(kv, { id, caller, callerEmail, shiftGate }, de
     }
     const j = rec.job || {}, c = rec.contact || {}, ph = rec.phone || {}, co = rec.company || {};
     const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'their website'; } };
-    const named = c.name && (c.status === 'verified' || c.status === 'unconfirmed') ? c.name : null;
-    const askFor = named || `whoever is hiring the ${j.title}`;
-    const script = hiringCallScript({ caller, callerEmail, company: co.name, firstName: named ? c.firstName : '', jobTitle: j.title, family: rec.family, offshore: j.restrictions && j.restrictions.offshore, city: j.city || null });
+    // A researched owner with no email yet ('named') is still the person to ask for.
+    const named = c.name && ['verified', 'unconfirmed', 'named'].includes(c.status) ? c.name : null;
+    // A looked-up line that is the person's own: they pick up, so the opener greets them by name (Paul, 2026-10-28,
+    // "the folks I am hitting a gatekeeper each and every single time").
+    const direct = ph.source === 'vendor' && !!ph.person;
+    const askFor = named || (direct ? ph.person : `whoever is hiring the ${j.title}`);
+    const greet = direct ? (named && c.firstName && String(ph.person).toLowerCase().includes(String(c.firstName).toLowerCase()) ? c.firstName : String(ph.person).split(/\s+/)[0]) : named ? c.firstName : '';
+    const script = hiringCallScript({ caller, callerEmail, company: co.name, firstName: greet, direct, jobTitle: j.title, family: rec.family, offshore: j.restrictions && j.restrictions.offshore, city: j.city || null });
     const fromListing = ph.source === 'Google business listing';
     const checked = new Date(ph.checkedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' });
     const provided = ph.source === 'provided';
@@ -108,7 +113,7 @@ export async function hiringBrief(kv, { id, caller, callerEmail, shiftGate }, de
         callable: hiringCallReady(rec), hiring: true, campaignId: rec.campaignId, callQueue: 'shared', callerName: caller,
         company: co.name, website: co.website, recipient: c.email || null,
         name: named, title: named ? c.role : null,
-        identity: named ? { status: 'researched', source: c.source + (c.status === 'verified' ? ', email verified' : ', email ' + c.status), checkedAt: c.checkedAt } : { status: 'unknown', reason: (c.status === 'lookup_failed' ? 'The contact lookup failed (' + (c.reason || 'error') + ').' : c.status === 'not_searched' ? 'Their Google listing names no website, so no contact search was run.' : 'Findymail found no named contact.') + ' Ask for ' + askFor + '.' },
+        identity: named ? { status: 'researched', source: c.source + (c.status === 'verified' ? ', email verified' : c.status === 'named' ? ', no email yet' : ', email ' + c.status), checkedAt: c.checkedAt } : { status: 'unknown', reason: (c.status === 'lookup_failed' ? 'The contact lookup failed (' + (c.reason || 'error') + ').' : c.status === 'not_searched' ? 'Their Google listing names no website, so no contact search was run.' : 'Findymail found no named contact.') + ' Ask for ' + askFor + '.' },
         industry: { key: 'hiring', label: 'Hiring now', source: 'job post' },
         location: j.location || null, prospectTimezone: null,
         phone: allowed ? ph.number || null : null, dial: allowed ? dial : null,

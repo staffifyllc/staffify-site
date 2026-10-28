@@ -384,6 +384,9 @@ const PAYER_TEXT = [
 // customers ("Fortune 500 clients", "ships to all 50 states", "powers thousands of stores").
 const ENTERPRISE_TEXT = [
     /\((nyse|nasdaq)\s*:\s*[a-z.]{1,6}\)|\b(nyse|nasdaq)\s*:\s*[a-z.]{1,6}\b/i,
+    // "EVI Industries, Inc. (NYSE American: EVI) is the only U.S. public company ..." (2026-10-28).
+    /\b(nyse|nasdaq)\s+(american|arca|global(\s+select)?\s+market|capital\s+market)\s*:\s*[a-z.]{1,6}\b/i,
+    /\b(the\s+only\s+(u\.?s\.?\s+)?|a\s+growing\s+|our\s+)public(ly\s+traded)?\s+company\b/i,
     /\b(we\s+are|we're|is)\s+(a\s+|an\s+)?(publicly\s+traded|fortune\s+(50|100|500|1000))\b/i,
     /\b(our|we\s+have|with)\s+(over\s+|more\s+than\s+)?\d{1,3}(,\d{3})+\+?\s+(employees|team\s+members|associates|colleagues)\b/i,
     /\blarge,?\s+stable\s+employer\b/i,

@@ -800,6 +800,54 @@ export async function holdCards(kv, { holds, write = false, by, now = Date.now()
     return out;
 }
 
+// ---- an owner's own line on a card --------------------------------------------------------------
+// Paul, 2026-10-28: "I need cell phone numbers here from rocket reach, the folks I am hitting a gatekeeper each and
+// every single time". The owner's mobile goes first on a card that is being offered or worked, owned or not; the
+// number it had stays as an alternate, so nothing a caller relied on is lost. Logged wrong numbers and opt-outs
+// still win, and a stop list that cannot be read changes nothing. Dry unless `write`.
+export async function ownerLines(kv, { source, lines, write = false, by, now = Date.now(), isOptedOut, loadBad, isBad }) {
+    const at = new Date(now).toISOString(), out = [];
+    for (const f of lines) {
+        const id = String(f && f.id || '');
+        const lock = HK.recLock(id);
+        if (write && !await kv.set(lock, '1', { nx: true, ex: 10 })) { out.push({ id, done: false, why: 'a caller is saving it; try again' }); continue; }
+        try {
+            const rec = await getRecord(kv, id);
+            if (!rec) { out.push({ id, done: false, why: 'not found' }); continue; }
+            const base = { id, company: rec.company && rec.company.name || null, owner: rec.callOwner || null };
+            if (rec.booking || !['ready', 'conversation'].includes(rec.status)) { out.push({ ...base, done: false, why: rec.booking ? 'booked' : 'status ' + rec.status }); continue; }
+            const person = String(f.phone_person || '').trim();
+            const nums = [f.phone, ...(f.phone_alternates || [])].map(digits10).filter((x, i, a) => x.length === 10 && a.indexOf(x) === i).map(x => '+1' + x);
+            if (!nums.length || !person) { out.push({ ...base, done: false, why: !person ? 'no person named' : 'no usable number' }); continue; }
+            let usable = [], why = null;
+            try {
+                const bad = await loadBad(kv, id);
+                for (const n of nums) { if (isBad(bad, n)) continue; if (await isOptedOut({ phone: n })) { why = 'opted out'; break; } usable.push(n); }
+            } catch { why = 'the stop lists could not be read'; }
+            if (why || !usable.length) { out.push({ ...base, done: false, why: why || 'every looked-up number was logged wrong' }); continue; }
+            const old = rec.phone || {};
+            const primary = usable[0];
+            const lineType = primary === nums[0] ? String(f.phone_type || '').trim() || 'number' : 'other number';
+            const phone = {
+                number: primary, alternates: [...usable.slice(1), old.number, ...(old.alternates || [])].filter((n, i, a) => n && n !== primary && a.indexOf(n) === i).slice(0, 6),
+                source: 'vendor', vendor: source, foundBy: old.foundBy || (rec.job && rec.job.foundBy) || null, person, lineType, grade: primary === nums[0] ? f.phone_grade || null : null,
+                sourceUrl: null, context: `Looked up on ${source}`, checkedAt: f.checked_at || at, type: `${person}'s ${lineType} from ${source}`, owner: person,
+                localCheckedAt: old.localCheckedAt || at, previous: { number: old.number || null, source: old.source || null, type: old.type || null },
+            };
+            // A card with no named contact takes the person whose line this is.
+            const contact = rec.contact && rec.contact.name ? rec.contact : { ...(rec.contact || {}), name: person, firstName: firstNameOf(person.split(/\s+/)[0]), role: String(f.owner_title || '').trim() || null, status: 'named', source: `${source} lookup`, checkedAt: at };
+            const next = { ...rec, phone, contact, updatedAt: at, ownerLine: { by: source, at, addedBy: by } };
+            next.brief = briefFor(next);
+            if (write) {
+                await putRecord(kv, next);
+                await kv.hset(HK.companies, { [phoneKey(primary)]: JSON.stringify({ id, verdict: 'ready', at }) });
+            }
+            out.push({ ...base, from: old.number || null, to: primary, lineType, done: write });
+        } finally { if (write) await kv.del(lock).catch(() => {}); }
+    }
+    return out;
+}
+
 // ---- numbers looked up for research leads -------------------------------------------------------
 // Paul, 2026-10-28: "use rocket reach to find the missing prospects here so the datasets full ... we can
 // start with a call". A provided lead waiting in research for a number gets the one a lookup found, with
