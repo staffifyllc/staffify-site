@@ -76,3 +76,13 @@ test('the alias list stays small and declared', () => {
     assert.deepEqual(loginAliases('MILTON@TRYSTAFFIFY.COM'), ['milton@trystaffify.com', 'miltion@trystaffify.com']);
     assert.deepEqual(loginAliases(null), []);
 });
+
+// Paul, 2026-10-28: "I do want my metrics to also track on my end too". A Quo seat under another address counts the
+// right person's dials, without becoming a way to sign in as them.
+test('Madison\'s Quo seat (Molly Smith) counts as hers, and is not a sign-in alias', async () => {
+    const { findSeat } = await import('../api/_quo.js');
+    const users = [{ actorId: 'USM22VeXVa', email: 'molly@gostaffify.com', name: 'Molly Smith' }, { actorId: 'USx', email: 'miltion@trystaffify.com', name: 'Milton' }];
+    assert.equal(findSeat(users, ['madison@gostaffify.com']).actorId, 'USM22VeXVa');
+    assert.equal(findSeat(users, ['hello@gostaffify.com']), null);
+    assert.deepEqual(loginAliases('madison@gostaffify.com'), ['madison@gostaffify.com'], 'never a login alias');
+});

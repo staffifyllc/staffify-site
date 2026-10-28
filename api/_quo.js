@@ -82,8 +82,13 @@ export async function listUsers() {
  * A rep's Quo seat, by any address they might be signed in as. Returns null rather than guessing:
  * attributing one person's calls to another is worse than reporting that the seat was not found.
  */
+// A Hub login whose Quo seat is registered under another address. Quo matching only: this never signs anyone in as
+// anyone (that is api/_login-aliases.js, kept for provisioning mistakes). Paul, 2026-10-28: "I do want my metrics to
+// also track on my end too". Madison dials from the seat registered as Molly Smith (the 561 line).
+export const QUO_SEAT_EMAILS = Object.freeze({ 'madison@gostaffify.com': 'molly@gostaffify.com' });
 export function findSeat(users, emails = []) {
-    const want = emails.map(e => String(e || '').trim().toLowerCase()).filter(Boolean);
+    const base = emails.map(e => String(e || '').trim().toLowerCase()).filter(Boolean);
+    const want = [...base, ...base.map(e => QUO_SEAT_EMAILS[e]).filter(Boolean)];
     for (const e of want) {
         const hit = users.find(u => u.email === e);
         if (hit) return { ...hit, matchedOn: e };
