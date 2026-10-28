@@ -10,7 +10,7 @@
 // contact (every field is sent each time, phone numbers included), GET ?externalIds= finds one.
 import { createHash } from 'node:crypto';
 import { quoKey } from './_quo.js';
-import { allRecords, tollFree } from './_hiring-intent.js';
+import { allRecords, tollFree, callerNumbers } from './_hiring-intent.js';
 import { spokenRole } from './_call-scripts.js';
 
 const BASE = 'https://api.quo.com/v1';
@@ -19,7 +19,7 @@ export const SOURCE = 'staffify-hub';
 
 /** The contact a card should have in Quo, or null when it has no number to call. */
 export function contactOf(rec) {
-    const ph = rec && rec.phone || {};
+    const ph = { ...(rec && rec.phone || {}), ...callerNumbers(rec) };
     const numbers = [ph.number, ...(ph.alternates || [])].filter((n, i, a) => n && /^\+1\d{10}$/.test(n) && !tollFree(n) && a.indexOf(n) === i).slice(0, 8);
     if (!numbers.length) return null;
     const c = rec.contact || {};

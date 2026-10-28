@@ -11,7 +11,7 @@
 //                          contact email go through optOutEverywhere: the global list every campaign
 //                          checks, plus the CRM contact's other address and number
 //   timing                 comes back on the date given. No nurture email: this campaign is call-first.
-import { HK, MAX_AGE_DAYS, tollFree, getRecord, putRecord, putBacklog, applyOutcome, callRow, boardKey, domainKey, companyKey, phoneKey, parseAts, hiringCallReady } from './_hiring-intent.js';
+import { HK, MAX_AGE_DAYS, tollFree, getRecord, putRecord, putBacklog, applyOutcome, callRow, callerNumbers, boardKey, domainKey, companyKey, phoneKey, parseAts, hiringCallReady } from './_hiring-intent.js';
 import { hiringCallScript } from './_call-scripts.js';
 import { scheduleCallbackTask } from './_callback-task.js';
 import { markBad } from './_bad-numbers.js';
@@ -123,8 +123,8 @@ export async function hiringBrief(kv, { id, caller, callerEmail, shiftGate }, de
         return { status: check.stop ? 409 : 503, body: { error: message, callable: false, hiring: true, recipient: rec.contact && rec.contact.email || null, company: co.name, website: co.website, source: { url: j.url, excerpt: rec.brief && rec.brief.summary }, events: [], callHistory: history(rec.callHistory), sentTouches: 0, syncedAt: j.checkedAt } };
     }
     const j = rec.job || {}, c = rec.contact || {}, co = rec.company || {};
-    // Never a toll-free line, not even as a backup (Paul, 2026-10-28).
-    const ph = { ...(rec.phone || {}), number: tollFree(rec.phone && rec.phone.number) ? null : rec.phone && rec.phone.number, alternates: ((rec.phone && rec.phone.alternates) || []).filter(n => !tollFree(n)) };
+    // Never a toll-free line, not even as a backup, and no number while a card waits on a main line (Paul, 2026-10-28).
+    const ph = { ...(rec.phone || {}), ...callerNumbers(rec) };
     const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'their website'; } };
     // A researched owner with no email yet ('named') is still the person to ask for.
     const named = c.name && ['verified', 'unconfirmed', 'named', 'given_on_call'].includes(c.status) ? c.name : null;

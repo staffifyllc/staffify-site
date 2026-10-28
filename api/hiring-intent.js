@@ -234,7 +234,7 @@ export default async function handler(req, res) {
             // Leads a person researched (Madison's list, 2026-10-28). Into the pending queue first, so none is lost;
             // each one meets every check a found posting meets when a run works it (api/_hiring-run.js processLead).
             if (body.action === 'import-leads') {
-                const FIELDS = ['owner_first', 'owner_last', 'owner_title', 'business', 'industry', 'city', 'state', 'website', 'owner_email', 'phone', 'role_posted', 'posting_url', 'posting_date', 'email_source_url', 'notes', 'vertical'];
+                const FIELDS = ['owner_first', 'owner_last', 'owner_title', 'business', 'industry', 'city', 'state', 'website', 'owner_email', 'phone', 'phone_type', 'role_posted', 'posting_url', 'posting_date', 'email_source_url', 'notes', 'vertical'];
                 const source = String(body.source || (rep && rep.name) || 'our team').trim().slice(0, 40);
                 const leads = (Array.isArray(body.leads) ? body.leads : []).slice(0, 500).map(x => Object.fromEntries(FIELDS.map(f => [f, x && x[f] != null ? String(x[f]).trim().slice(0, f === 'notes' ? 600 : 300) : null])));
                 const at = new Date().toISOString();

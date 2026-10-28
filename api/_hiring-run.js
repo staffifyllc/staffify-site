@@ -11,7 +11,7 @@ import { syncQuoContacts } from './_quo-contacts.js';
 import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
-    parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey, listingEvidence, remotePost,
+    parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey, listingEvidence, remotePost, MAIN_LINE, mainLabel, mainNumbers,
     ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel, hiringCallReady, tollFree, laneFor,
 } from './_hiring-intent.js';
 
@@ -438,6 +438,12 @@ export async function processPosting(p, provenance, deps, report) {
  * company verdict, the domain and the number already on a card, Staffify outreach, a booked call, a
  * client, the opt-out list, the CRM, bad numbers. The owner's name and email go on the card as the contact.
  */
+// Cards that wait for the owner's cell: a toll-free line (no number to call) or a main line (Paul: not called). MAIN_LINE
+// and mainNumbers live in _hiring-intent.js with the numbers a caller may see.
+export { MAIN_LINE };
+const HELD_FOR_CELL = new Set(['toll_free_only', 'main_line_only']);
+export const heldForCell = r => !!(r && r.status === 'research' && r.hold && HELD_FOR_CELL.has(r.hold.reason));
+
 export async function processLead(p, provenance, deps, report) {
     const { kv } = deps;
     const now = deps.now || Date.now();
@@ -450,6 +456,10 @@ export async function processLead(p, provenance, deps, report) {
     const mark = async (verdict, reason, extra = {}) => { await kv.hset(HK.seen, { [key]: JSON.stringify({ at: checkedAt, verdict, reason, company: l.business || null, title: l.role_posted || null, url: l.posting_url || null, source, ...extra }) }); };
     const q = qualifyLead(l, now);
     if (!q.ok) { await mark('excluded', q.reason, { detail: q.detail }); return { verdict: 'excluded', reason: q.reason, detail: q.detail }; }
+    // A lead whose number is labelled the company's main line. A card it merges into learns that line is a main line;
+    // refreshReady then takes it off that card (or holds the card for the owner's cell), under the card's lock.
+    const [leadMain] = mainNumbers({ lead: l });
+    const noteMain = card => { if (!leadMain || (card.mainLines || []).includes(leadMain)) return false; card.mainLines = [...(card.mainLines || []), leadMain]; return true; };
     const bk = companyKey(l.business, q.usState ? ', ' + q.usState : '');
     const id = idFor(bk);
     const via = (() => { try { return new URL(l.posting_url).hostname.replace(/^(www|app|jobs)\./, ''); } catch { return null; } })();
@@ -458,7 +468,9 @@ export async function processLead(p, provenance, deps, report) {
     if (known && ['client', 'in_outreach', 'suppressed', 'large'].includes(known.verdict)) { await mark('excluded', 'company_' + known.verdict); return { verdict: 'excluded', reason: 'company_' + known.verdict }; }
     const existing = await getRecord(kv, id);
     if (existing && !(existing.status === 'number_research' && provenance.retry)) {
-        if (!(existing.jobs || []).some(x => x.url === job.url && x.title === job.title)) { existing.jobs = [...(existing.jobs || []), job]; existing.brief = briefFor(existing); await putRecord(kv, existing); }
+        const newJob = !(existing.jobs || []).some(x => x.url === job.url && x.title === job.title);
+        if (newJob) existing.jobs = [...(existing.jobs || []), job];
+        if (noteMain(existing) || newJob) { existing.brief = briefFor(existing); await putRecord(kv, existing); }
         await mark('merged', 'same_company', { id });
         return { verdict: 'merged', id };
     }
@@ -477,7 +489,7 @@ export async function processLead(p, provenance, deps, report) {
     if (domain) {
         const byDomain = parseValue(await kv.hget(HK.companies, domainKey(domain)));
         if (byDomain && ['client', 'in_outreach', 'suppressed', 'large'].includes(byDomain.verdict)) { await mark('excluded', 'company_' + byDomain.verdict); return { verdict: 'excluded', reason: 'company_' + byDomain.verdict }; }
-        if (byDomain && byDomain.id && byDomain.id !== id) { const other = await getRecord(kv, byDomain.id); if (other) { if (!(other.jobs || []).some(x => x.url === job.url)) { other.jobs = [...(other.jobs || []), job]; other.brief = briefFor(other); await putRecord(kv, other); } await mark('merged', 'same_domain', { id: other.id }); return { verdict: 'merged', reason: 'same_domain', id: other.id }; } }
+        if (byDomain && byDomain.id && byDomain.id !== id) { const other = await getRecord(kv, byDomain.id); if (other) { const newJob = !(other.jobs || []).some(x => x.url === job.url); if (newJob) other.jobs = [...(other.jobs || []), job]; if (noteMain(other) || newJob) { other.brief = briefFor(other); await putRecord(kv, other); } await mark('merged', 'same_domain', { id: other.id }); return { verdict: 'merged', reason: 'same_domain', id: other.id }; } }
         if (deps.outreachDomains && deps.outreachDomains.has(domain)) { await mark('excluded', 'already_in_outreach'); return { verdict: 'excluded', reason: 'already_in_outreach' }; }
     }
     const email = String(l.owner_email || '').trim().toLowerCase() || null;
@@ -511,9 +523,12 @@ export async function processLead(p, provenance, deps, report) {
     if (domain && website) {
         const chk = await siteCheck({ website, domain, getPage: deps.getPage, findSitePhone: deps.findSitePhone });
         if (chk.moved) return toBacklog('website_unconfirmed', `Their website now goes to ${chk.moved}, not ${domain}, so the business cannot be confirmed.`, { missing: ['website'] });
-        if (phone && vendor) {
+        // A line we were told is the person's own (looked up, or labelled mobile, cell or direct) stays first. Behind a
+        // looked-up number the website's lines ride along; behind a labelled one they do not (Paul: no main lines).
+        const personal = !vendor && !leadMain && /\b(mobile|cell|direct)\b/i.test(String(l.phone_type || ''));
+        if (phone && (vendor || personal)) {
             const onSite = chk.unreadable ? [] : chk.numbers || [];
-            phone = { ...phone, alternates: [...phone.alternates, ...onSite].filter((n, i, a) => n !== phone.phone && a.indexOf(n) === i).slice(0, 4), ...(chk.unreadable ? {} : { siteCheck: { at: checkedAt, result: onSite.includes(phone.phone) ? 'confirmed' : onSite.length ? 'person_line' : 'none_published' } }) };
+            phone = { ...phone, alternates: [...phone.alternates, ...(vendor ? onSite : [])].filter((n, i, a) => n !== phone.phone && a.indexOf(n) === i).slice(0, 4), ...(chk.unreadable ? {} : { siteCheck: { at: checkedAt, result: onSite.includes(phone.phone) ? 'confirmed' : onSite.length ? 'person_line' : 'none_published' } }) };
         } else if (phone) {
             const a = alignNumbers(phone.phone, [], chk);
             phone = a.result === 'replaced' || a.result === 'alternate_on_site'
@@ -527,12 +542,13 @@ export async function processLead(p, provenance, deps, report) {
     if (!usable.length) return toBacklog('no_listed_phone', 'Every number on file was logged as wrong.');
     const tollOnly = usable.every(tollFree);
     if (!tollOnly) usable = usable.filter(n => !tollFree(n));
+    const mainOnly = !vendor && !!leadMain;
     for (const n of usable) if (await deps.isOptedOut({ phone: n })) { await mark('excluded', 'opted_out'); return { verdict: 'excluded', reason: 'opted_out' }; }
     const byPhone = parseValue(await kv.hget(HK.companies, phoneKey(usable[0])));
     if (byPhone && byPhone.id && byPhone.id !== id) {
         if (['client', 'in_outreach', 'suppressed'].includes(byPhone.verdict)) { await mark('excluded', 'company_' + byPhone.verdict); return { verdict: 'excluded', reason: 'company_' + byPhone.verdict }; }
         const other = await getRecord(kv, byPhone.id);
-        if (other) { if (!(other.jobs || []).some(x => x.url === job.url)) { other.jobs = [...(other.jobs || []), job]; other.brief = briefFor(other); await putRecord(kv, other); } await mark('merged', 'same_number', { id: other.id }); return { verdict: 'merged', reason: 'same_number', id: other.id }; }
+        if (other) { const newJob = !(other.jobs || []).some(x => x.url === job.url); if (newJob) other.jobs = [...(other.jobs || []), job]; if (noteMain(other) || newJob) { other.brief = briefFor(other); await putRecord(kv, other); } await mark('merged', 'same_number', { id: other.id }); return { verdict: 'merged', reason: 'same_number', id: other.id }; }
     }
     // The owner as the contact. A provided email is verified before it is shown as one to write to.
     const first = String(l.owner_first || '').trim(), last = String(l.owner_last || '').trim();
@@ -555,6 +571,7 @@ export async function processLead(p, provenance, deps, report) {
     if (existing) Object.assign(rec, { createdAt: existing.createdAt, callHistory: existing.callHistory || [], callOwner: existing.callOwner || null, callOwnerAt: existing.callOwnerAt || null, jobs: existing.jobs && existing.jobs.length ? existing.jobs : rec.jobs, provenance: existing.provenance || rec.provenance });
     rec.priority = priorityOf({ age: q.age, restrictions: q.restrictions, openRoles: null, contact });
     if (tollOnly) Object.assign(rec, { status: 'research', hold: { reason: 'toll_free_only', detail: 'The only number they publish is toll-free, a switchboard we do not call. The owner\'s cell is looked up next.', at: checkedAt, by: 'admission' } });
+    else if (mainOnly) Object.assign(rec, { status: 'research', hold: { reason: 'main_line_only', detail: 'The number we were given is the company\'s main line, which we do not call. The owner\'s cell is looked up next.', at: checkedAt, by: 'admission' } });
     rec.brief = briefFor(rec);
     if (existing) { const now2 = await getRecord(kv, id); if (now2 && (now2.booking || now2.status !== existing.status)) { await mark('merged', 'changed_meanwhile', { id }); return { verdict: 'merged', reason: 'changed_meanwhile', id }; } }
     await putRecord(kv, rec);
@@ -782,6 +799,27 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
             if (okNew) { out.siteNumbers = (out.siteNumbers || 0) + 1; await kv.hset(HK.companies, { [phoneKey(a.primary)]: JSON.stringify({ id: fresh.id, verdict: 'ready', at }) }); }
         } finally { await kv.del(lock).catch(() => {}); }
     }
+    // After the website check, so a line it publishes cannot ride back in. Paul, 2026-10-28: "we don't want "main" unless they are cell phones in our database". A line labelled a main line
+    // (by this card's lead, or by a later lead merged into it) leaves the card's backups; a card that rings it first with
+    // no cell of the owner's on it, and no one's callback or calls on it, waits in research while ownerCells looks for the
+    // cell. A card someone is already working keeps its line for that person.
+    for (const rec of live.filter(r => r.phone && mainNumbers(r).some(n => [r.phone.number, ...(r.phone.alternates || [])].includes(n)))) {
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (!fresh || fresh.status !== 'ready' || !fresh.phone) continue;
+            const at = new Date(now).toISOString(), mains = new Set(mainNumbers(fresh));
+            const alternates = (fresh.phone.alternates || []).filter(n => !mains.has(n));
+            const hold = mains.has(fresh.phone.number) && !ownsCell(fresh) && !fresh.booking && !fresh.callOwner && !(fresh.callHistory || []).length;
+            if (!hold && alternates.length === (fresh.phone.alternates || []).length) continue;
+            const next = { ...fresh, phone: { ...fresh.phone, alternates }, ...(hold ? { status: 'research', hold: { reason: 'main_line_only', detail: 'The number on the card is the company\'s main line, which we do not call. The owner\'s cell is looked up next.', at, by: 'rules re-check' } } : {}) };
+            next.brief = briefFor(next);
+            await putRecord(kv, next);
+            Object.assign(rec, { phone: next.phone, status: next.status });
+            out.mainLine = (out.mainLine || 0) + 1;
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
     for (const rec of recs) {
         // A Google Jobs or provided card has no posting API: it goes stale MAX_AGE_DAYS after it was posted.
         if (ageBased(rec.job.source)) {
@@ -862,8 +900,8 @@ export async function ownerLines(kv, { source, lines, write = false, by, now = D
             const rec = await getRecord(kv, id);
             if (!rec) { out.push({ id, done: false, why: 'not found' }); continue; }
             const base = { id, company: rec.company && rec.company.name || null, owner: rec.callOwner || null };
-            const tollHeld = rec.status === 'research' && rec.hold && rec.hold.reason === 'toll_free_only';
-            if (rec.booking || !(['ready', 'conversation'].includes(rec.status) || tollHeld)) { out.push({ ...base, done: false, why: rec.booking ? 'booked' : 'status ' + rec.status }); continue; }
+            const held = heldForCell(rec), mainHeld = held && rec.hold.reason === 'main_line_only';
+            if (rec.booking || !(['ready', 'conversation'].includes(rec.status) || held)) { out.push({ ...base, done: false, why: rec.booking ? 'booked' : 'status ' + rec.status }); continue; }
             const person = String(f.phone_person || '').trim();
             const nums = [f.phone, ...(f.phone_alternates || [])].map(digits10).filter((x, i, a) => x.length === 10 && a.indexOf(x) === i && !tollFree(x)).map(x => '+1' + x);
             if (!nums.length || !person) { out.push({ ...base, done: false, why: !person ? 'no person named' : 'no usable number' }); continue; }
@@ -876,15 +914,19 @@ export async function ownerLines(kv, { source, lines, write = false, by, now = D
             const old = rec.phone || {};
             const primary = usable[0];
             const lineType = primary === nums[0] ? String(f.phone_type || '').trim() || 'number' : 'other number';
+            if (mainHeld && !/\b(mobile|cell)/i.test(lineType)) { out.push({ ...base, done: false, why: 'a card held on a main line waits for the owner\'s mobile' }); continue; }
+            // Known main lines never come back as a backup: the held line, its backups, and any a lead labelled, even when
+            // the lookup itself lists one as a 'direct dial'. The primary may still be one, when the lookup says it is a mobile.
+            const mains = new Set([...mainNumbers(rec), ...(mainHeld ? [old.number, ...(old.alternates || [])] : [])]);
             const phone = {
-                number: primary, alternates: [...usable.slice(1, 3), old.number, ...(old.alternates || [])].filter((n, i, a) => n && n !== primary && !tollFree(n) && a.indexOf(n) === i).slice(0, 8),
+                number: primary, alternates: [...usable.slice(1, 3), ...(mainHeld ? [] : [old.number, ...(old.alternates || [])])].filter((n, i, a) => n && n !== primary && !tollFree(n) && !mains.has(n) && a.indexOf(n) === i).slice(0, 8),
                 source: 'vendor', vendor: source, foundBy: old.foundBy || (rec.job && rec.job.foundBy) || null, person, lineType, grade: primary === nums[0] ? f.phone_grade || null : null,
                 sourceUrl: null, context: `Looked up on ${source}`, checkedAt: f.checked_at || at, type: `${person}'s ${lineType} from ${source}`, owner: person,
                 localCheckedAt: old.localCheckedAt || at, previous: { number: old.number || null, source: old.source || null, type: old.type || null },
             };
             // A card with no named contact takes the person whose line this is.
             const contact = rec.contact && rec.contact.name ? rec.contact : { ...(rec.contact || {}), name: person, firstName: firstNameOf(person.split(/\s+/)[0]), role: String(f.owner_title || '').trim() || null, status: 'named', source: `${source} lookup`, checkedAt: at };
-            const next = { ...rec, phone, contact, updatedAt: at, ownerLine: { by: source, at, addedBy: by }, ...(f.ownerCell ? { ownerCell: f.ownerCell } : {}), ...(tollHeld ? { status: 'ready', hold: null, released: { from: 'toll_free_only', at, by } } : {}) };
+            const next = { ...rec, phone, contact, updatedAt: at, ownerLine: { by: source, at, addedBy: by }, ...(f.ownerCell ? { ownerCell: f.ownerCell } : {}), ...(held ? { status: 'ready', hold: null, released: { from: rec.hold.reason, at, by } } : {}) };
             next.brief = briefFor(next);
             if (write) {
                 await putRecord(kv, next);
@@ -963,7 +1005,7 @@ export function cellsOf(profile, current) {
     const rank = x => (GRADE[x.grade] ?? 3) * 2 + (x.recommended ? 0 : 1);
     const mobiles = ok.filter(x => /mobile/i.test(x.type || '')).sort((a, b) => rank(a) - rank(b));
     const direct = ok.filter(x => /direct/i.test(x.type || '')).sort((a, b) => rank(a) - rank(b));
-    return { mobile: mobiles[0] || null, others: [...mobiles.slice(1), ...direct].map(x => x.number).slice(0, 2) };
+    return { mobile: mobiles[0] || null, others: [...mobiles.slice(1), ...direct].map(x => x.number).filter(n => n !== current).slice(0, 2) };
 }
 // The attempts live in their own hash, written BEFORE any credit is spent, so a card is looked up once whatever
 // happens to the card's own lock; the card carries a copy (ownerCell) for people to read.
@@ -1001,8 +1043,8 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
     catch { out.skipped = 'the attempts could not be read'; return out; }
     const all = await allRecords(kv);
     const byId = new Map(all.map(r => [r.id, r]));
-    const tollHeld = r => r.status === 'research' && r.hold && r.hold.reason === 'toll_free_only' && jobCurrent(r, now);
-    const open = r => r && !r.booking && ((r.status === 'ready' && hiringCallReady(r, now)) || tollHeld(r));
+    const held = r => heldForCell(r) && jobCurrent(r, now);
+    const open = r => r && !r.booking && ((r.status === 'ready' && hiringCallReady(r, now)) || held(r));
     // Free work first: answers already paid for.
     for (const [id, t] of Object.entries(tried)) {
         if (!room()) break;
@@ -1024,7 +1066,7 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
     // The day counter is the authority: taken before each lookup, so two runs together never pass the cap.
     const take = async () => { const n = Number(await kv.incr(dayKey)); await kv.expire(dayKey, 3 * 86400).catch(() => {}); if (n > RR_DAILY_CAP) { out.skipped = `daily cap of ${RR_DAILY_CAP} reached`; return false; } out.lookups++; return true; };
     const cand = all.filter(r => open(r) && !tried[r.id] && !ownsCell(r))
-        .sort((a, b) => (tollHeld(b) - tollHeld(a)) || (Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0)));
+        .sort((a, b) => (held(b) - held(a)) || (Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0)));
     for (const rec of cand) {
         if (out.lookups >= cap || out.skipped || !room()) break;
         out.tried++;
