@@ -2016,8 +2016,7 @@
     </footer>
 
     <!-- CALENDLY POPUP WIDGET (intercepts all Calendly links on this page) -->
-    <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
-    <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
+    <!-- Booking assets load on intent, not during the first page render. -->
 
     <!-- STICKY FLOATING CTA -->
     <div class="sticky-cta" id="stickyCta" aria-hidden="true" inert>
@@ -2064,14 +2063,48 @@
             });
         })();
 
-        // ─── CALENDLY POPUP INTERCEPTOR ───
-        document.addEventListener('click', function(e) {
-            var a = e.target.closest && e.target.closest('a');
-            if (!a || !a.href) return;
-            if (a.href.indexOf('calendly.com/go-staffify') === -1) return;
-            if (typeof Calendly === 'undefined' || !Calendly.initPopupWidget) return;
+        // Load the booking popup on intent; direct navigation is the failure fallback.
+        let calendlyReady;
+        function prepareCalendly() {
+            if (calendlyReady) return calendlyReady;
+            calendlyReady = Promise.all([
+                new Promise((resolve, reject) => {
+                    const css = document.createElement('link');
+                    css.rel = 'stylesheet'; css.href = 'https://assets.calendly.com/assets/external/widget.css';
+                    css.onload = resolve; css.onerror = reject; document.head.appendChild(css);
+                }),
+                new Promise((resolve, reject) => {
+                    const script = document.createElement('script'); script.async = true;
+                    script.src = 'https://assets.calendly.com/assets/external/widget.js';
+                    script.onload = resolve; script.onerror = reject; document.head.appendChild(script);
+                })
+            ]);
+            return calendlyReady;
+        }
+        function calendlyLink(event) {
+            const a = event.target.closest && event.target.closest('a');
+            return a && a.href && a.href.indexOf('https://calendly.com/go-staffify/') === 0 ? a : null;
+        }
+        ['pointerover', 'focusin'].forEach(event => document.addEventListener(event, e => {
+            if (calendlyLink(e)) prepareCalendly().catch(() => {});
+        }, {passive:true}));
+        document.addEventListener('click', async function(e) {
+            const a = calendlyLink(e);
+            if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
             e.preventDefault();
-            Calendly.initPopupWidget({ url: a.href });
+            if (a.dataset.loading === 'true') return;
+            a.dataset.loading = 'true';
+            let timer;
+            try {
+                await Promise.race([prepareCalendly(), new Promise((_, reject) => {
+                    timer = setTimeout(() => reject(new Error('Booking widget timeout')), 8000);
+                })]);
+                Calendly.initPopupWidget({url:a.href});
+            } catch (_) {
+                window.location.assign(a.href);
+            } finally {
+                clearTimeout(timer); delete a.dataset.loading;
+            }
         });
 
         // ─── TRUST MARQUEE: duplicate track for seamless infinite loop ───
