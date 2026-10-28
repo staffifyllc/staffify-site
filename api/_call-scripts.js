@@ -294,8 +294,22 @@ const HIRING_WORK = { support: 'customer support', admin: 'admin and executive s
 // reason for the call; the offer is to run that hiring for them, this seat and the ones after it.
 /** A posted title as a caller says it: "Customer Service Representative - $40k-$60k/yr + commission" is "Customer Service Representative". */
 export function spokenRole(title) {
-    const t = String(title || '').split(/\s[-–—|]\s|\(|,|;|\s\$/)[0].replace(/\s*\/\s*/g, ' and ').replace(/\s+/g, ' ').replace(/[\s:.-]+$/, '').trim();
+    const t = String(title || '').split(/\s[-–—|]\s|\(|,|;|\s\$/)[0].replace(/\s*\/\s*/g, ' and ').replace(/\s+/g, ' ').replace(/[\s:.-]+$/, '')
+        .replace(/^(allstate|farmers(\s+insurance)?|state\s+farm)\s+/i, '').replace(/\s+(i{1,3}|iv|[1-4])$/i, '').trim();
     return t || String(title || '').trim().slice(0, 60);
+}
+// The people the seat is, in the plural, as Paul says it ("dedicated EAs"): seniority, carrier names and level
+// numbers dropped, each person-noun pluralised, "Customer Service and Retention Specialist" left grammatical.
+const PERSON_NOUN = /(er|or|ist|ant|ent|ive|rep|admin|manager|assistant|secretary|paralegal|agent|coordinator|setter|specialist|representative|associate|clerk|dispatcher|receptionist|officer|expert|consultant|producer|planner|closer|csr|sdr|bdr|va)$/i;
+const plural = w => (/[^s]s$/i.test(w) ? w : /[^aeiou]y$/i.test(w) ? w.slice(0, -1) + 'ies' : /(ss|x|ch|sh)$/i.test(w) ? w + 'es' : /^[A-Z0-9]+$/.test(w) ? w + 's' : w + 's');
+export function pluralRole(role) {
+    let r = String(role || '').replace(/\s+to\s+(the\s+)?\S.*$/i, '').trim();
+    for (let i = 0; i < 6; i++) r = r.replace(/^(remote|senior|sr\.?|junior|jr\.?|experienced|entry[- ]level|part[- ]time|full[- ]time|level|allstate|farmers(\s+insurance)?|state\s+farm)\s+/i, '');
+    r = r.replace(/\s+(i{1,3}|iv|\d+)$/i, '').trim();
+    if (/^executive\s+assistant$/i.test(r)) return 'EAs';
+    const parts = r.split(/\s+and\s+/i);
+    // "Customer Service" is the work, not the person: those are "Customer Service staff".
+    return parts.map((p, i) => { const ws = p.split(/\s+/), last = ws[ws.length - 1]; return PERSON_NOUN.test(last) ? [...ws.slice(0, -1), plural(last)].join(' ') : i === parts.length - 1 ? p + ' staff' : p; }).join(' and ');
 }
 /** "a" or "an" as it is said: an Account Manager, an L1 Technical Support Agent, an SDR, a Senior Paralegal. */
 export const articleFor = w => (/^[aeiou]/i.test(w) || /^[FHLMNRSX][A-Z0-9]*\b/.test(w) ? 'an' : 'a');
@@ -303,6 +317,8 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
     const who = company || 'your company';
     const role = jobTitle ? spokenRole(jobTitle) : 'that role';
     const aRole = articleFor(role) + ' ' + role;
+    // "hiring an Executive Assistant", but "hiring for a Customer Service role" when the title names the work.
+    const hiringWhat = PERSON_NOUN.test(role.replace(/\s+(to|for)\s+\S.*$/i, '').split(/\s+/).pop() || '') ? aRole : `for ${aRole} role`;
     const inCity = city ? ' in ' + city : '';
     const work = HIRING_WORK[family] || 'support';
     // Paul, 2026-10-28: "Can our script say I'm looking to speak with (prospect name i.e Eric) or the person in
@@ -313,14 +329,14 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
     // again, because the person put through has not heard the opener.
     // The owner's own cell: they answer it themselves, so greet them and say why, no front-desk ask.
     const opener = direct && firstName
-        ? `Hi, is this ${firstName}? This is ${caller} with Staffify.`
+        // Paul: "Hi, is this Shirley? then wait, then say Hi Fname.... This is Paul with Staffify."
+        ? `Hi, is this ${firstName}? (Wait for them.) Hi ${firstName}, this is ${caller} with Staffify.`
         : firstName
         ? `Hi, this is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}. I'm looking to speak with ${firstName}, or the person in charge of hiring. Is that you?`
         : `Hi, this is ${caller} with Staffify. I'm calling about the ${role} job you posted${inCity}. I'm looking to speak with the person in charge of hiring for it. Is that you, or could you point me to them?`;
     const intro = `Great, thanks. I'll be straight with you, this is a cold call. Do you have a quick second?`;
-    // Paul, 2026-10-28 evening, word for word with the role swapped in: "The reason I'm calling is we help companies
-    // hire remote customer service, sales, and admin staff ... I saw you're hiring an Executive Assistant ...".
-    const reason = `The reason I'm calling is we help companies hire remote customer service, sales, and admin staff from Latin America and the Philippines. We recruit, vet, and manage those team members, filling over 150 roles a month. I saw you're hiring ${aRole} and wanted to see if it would be helpful to put a few vetted candidates in front of you.`;
+    // Paul, 2026-10-28 evening, word for word with the role swapped in ("but of course reference the actual role").
+    const reason = `The reason I'm calling is I saw you're hiring ${hiringWhat}. We help companies hire dedicated ${pluralRole(role)} from Latin America and the Philippines, and we handle the recruiting, vetting, and ongoing management. I wanted to see if you'd be open to a quick conversation with our team so we can learn more about the role and see if we can put a few great candidates in front of you.`;
     const questions = [
         'How is the search going so far? Have you found the right person yet?',
         'What will that person spend most of their day on? Tickets, phones, chat, scheduling?',
@@ -330,8 +346,8 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
     const tree = {
         open: { choices: direct && firstName ? [["Yes, that's me", 'reason'], ["What's this about?", 'context'], ['Wrong person', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] : [["That's me / putting you through", 'intro'], ["What's this about?", 'context'], ['Not here / someone else', 'gate'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
         intro: { say: intro, choices: [['Go ahead', 'reason'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
-        reason: { say: reason, note: (offshore ? `Their post is open to candidates in ${offshore}: say so, it is exactly where our people are. ` : '') + 'Say it once and stop talking. Their answer decides the next step.', choices: [['Yes, that would help', 'dig'], ['How would it work? / tell me more', 'discover'], ['Already filled it', 'filled'], ['We only hire in-house', 'inhouse'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
-        context: { say: `Of course. ${reason}`, choices: [['Yes, that would help', 'dig'], ['How would it work? / tell me more', 'discover'], ['Not interested', 'stop']] },
+        reason: { say: reason, note: (offshore ? `Their post is open to candidates in ${offshore}: say so, it is exactly where our people are. ` : '') + 'Say it once and stop talking. Their answer decides the next step.', choices: [['Yes, open to it', 'close'], ['Tell me more first', 'discover'], ['Already filled it', 'filled'], ['We only hire in-house', 'inhouse'], ['Bad time', 'busy'], ['Not interested', 'stop']] },
+        context: { say: `Of course. ${reason}`, choices: [['Yes, open to it', 'close'], ['Tell me more first', 'discover'], ['Not interested', 'stop']] },
         discover: { say: questions[0], choices: [['Still looking', 'dig'], ['Filled it', 'filled'], ['We only hire in-house', 'inhouse']] },
         dig: { say: questions[1], note: 'Write down the work, the hours and the tools. It is what we match people to.', choices: [['They described it', 'offer']] },
         offer: { say: questions[2], choices: [['Yes', 'close'], ['Maybe, send something', 'sendinfo'], ['No', 'future']] },
@@ -360,7 +376,7 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
         opener, reason, questions,
         stages: STAGE_LABELS[4].map((label, i) => ({ label, say: questions[i] })),
         objections: objections.map(([label, say, note]) => ({ label, say, note })),
-        voicemail: `Hi${firstName ? ' ' + firstName : ''}, it's ${caller} at Staffify. I saw ${who} is hiring ${aRole}. We run hiring for remote customer service, sales and admin roles, and I can have a few vetted candidates in front of you this week if that helps. I'll try you again in a couple of days. Thanks.`,
+        voicemail: `Hi${firstName ? ' ' + firstName : ''}, it's ${caller} at Staffify. I saw ${who} is hiring ${hiringWhat}. We run hiring for remote customer service, sales and admin roles, and I can have a few vetted candidates in front of you this week if that helps. I'll try you again in a couple of days. Thanks.`,
         bookingUrl: bookingLinkFor(callerEmail),
         tree,
     };
