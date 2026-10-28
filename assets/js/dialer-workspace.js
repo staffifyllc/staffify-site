@@ -66,7 +66,7 @@ const rows=()=>!state?[]:orderCallQueue(pausedView?state.records.filter(r=>r.pau
 // card and both dial it. Now opening a card holds it, Call now holds it longer, a saved outcome marks
 // it called, and every dialer reads the holds every 30 seconds (api/_call-holds.js). Coordination,
 // not a gate: if holds cannot be read, the queue works as before.
-let holds={},holdId=null,holdKind='open';
+let holds={},holdId=null,holdKind='open',shownAt=0;
 const refused=new Set();   // cards a teammate had when this dialer tried to hold them, until the next poll
 const meEmail=()=>String(state&&state.viewer||'').toLowerCase();
 function heldByOther(id){const h=holds[id];return !!h&&String(h.by||'').toLowerCase()!==meEmail()&&(h.untilLocal||Date.parse(h.until))>Date.now();}
@@ -256,18 +256,22 @@ function backFromGoogle(row){try{const u=new URL(location.href);u.searchParams.d
 async function refresh(){stash();state=await api('/api/outreach-queue/?view=calls');loadSkips();await loadHolds();
  // A deep link from My Day or the follow-ups list opens that card first, filters or not.
  if(OPEN&&!opened){opened=true;const want=(state.records||[]).find(r=>r.id===OPEN);if(want){skipped.delete(want.id);saveSkips();await show(want);if(GMAIL)backFromGoogle(want);return;}toast('That prospect is not in the call view right now.',true);}
- const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row);await showNext();}
-async function showNext(){const list=rows(),row=list.find(r=>!skipped.has(r.id)&&!refused.has(r.id));if(row)return show(row,{auto:true});if(holdId&&holdKind==='open')releaseCard(holdId);holdId=null;
+ const row=rows().find(r=>r.id===(current?.id||remembered()));if(row)return show(row,{auto:!current});await showNext();}
+// Paul, 2026-10-28: "madison and I are cross polinating meaning she is seeing leads that I am seeing". A card picked for
+// you is held on the server BEFORE it is shown, so two reps never both have the same next card on screen: whoever
+// loses the hold goes straight to the next one. Your own follow-ups need no hold to be yours.
+async function showNext(){const list=rows();for(const row of list.filter(r=>!skipped.has(r.id)&&!refused.has(r.id))){if(row.mine)return show(row,{auto:true});const r=await holdCard(row.id,'open');if(r&&r.ok===false)continue;return show(row,{auto:true,held:!!(r&&r.ok)});}
+ if(holdId&&holdKind==='open')releaseCard(holdId);holdId=null;
  if(pausedView){current=null;brief=null;app.replaceChildren(bar());const e=el('section',null,'dw-pane dw-empty');e.append(el('h2','No paused callbacks'),el('p','Nothing of yours is on a paused campaign.'));app.append(e);return;}
  if(ownerView()&&!teamPool&&!PIN){current=null;brief=null;app.replaceChildren(bar());const pool=(state.records||[]).filter(r=>r.unclaimed&&!heldByOther(r.id)).length,others=othersWorking();const e=el('section',null,'dw-pane dw-empty');e.append(el('h2','No follow-ups of yours'),el('p',pool+' unclaimed in the team pool'+(others.length?'. In the dialer now: '+others.join(', ')+'.':'.')+' Your reps work those; nothing here is waiting on you. A caller\'s own list also has their follow-ups, so it reads higher.'),button('Open the team pool',()=>{teamPool=true;const u=new URL(location.href);u.searchParams.set('pool','team');history.replaceState(null,'',u);showNext();},'btn'));app.append(e);return;}current=null;brief=null;app.replaceChildren(bar());const empty=el('section',null,'dw-pane dw-empty');empty.append(el('h2',list.length?'You have reached the end':'You are caught up'),el('p',list.length?'Your skipped prospects stay out for the day. No call outcomes were changed.':research?'No prospects need number research in this view.':'No eligible prospects with a phone number are waiting in this view.'));if(list.length)empty.append(button('Show the '+list.filter(r=>skipped.has(r.id)).length+' skipped',()=>{skipped.clear();saveSkips();showNext();}));const fu=myFollowUps();if(followUpCount(fu))empty.append(button('Open your follow-ups ('+followUpCount(fu)+')',()=>openDrawer(),'btn btn-ghost'));app.append(empty);}
 
 // ---- one prospect -------------------------------------------------------------------------
-async function show(row,{auto=false}={}){
+async function show(row,{auto=false,held=false}={}){
  // Let go of the last card if it was only open; hold this one. Picked for you and somebody else got
  // there first: move on. Opened on purpose (search, a follow-up): say who has it, and stay.
  if(holdId&&holdId!==row.id&&holdKind==='open')releaseCard(holdId);
- holdId=row.id;holdKind='open';
- holdCard(row.id,'open').then(r=>{if(!r||r.ok!==false||!r.heldBy||!current||current.id!==row.id)return;
+ holdId=row.id;holdKind='open';shownAt=Date.now();
+ (held?Promise.resolve(null):holdCard(row.id,'open')).then(r=>{if(!r||r.ok!==false||!r.heldBy||!current||current.id!==row.id)return;
   if(holdId===row.id)holdId=null;
   if(auto){current=null;showNext();return;}
   toast(r.heldBy.kind==='called'?r.heldBy.name+' just called them.':r.heldBy.name+' has this card open right now. Pick another unless you two agreed.',true);});
@@ -835,6 +839,8 @@ checkRelease();setInterval(()=>{if(document.visibilityState!=='hidden')checkRele
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkRelease();});
 // Holds: read every 30 seconds so counts drop as teammates work; this rep's own hold renewed every 2 minutes.
 setInterval(async()=>{if(document.visibilityState==='hidden'||!state)return;await loadHolds();refreshBar();},30000);
-setInterval(()=>{if(document.visibilityState!=='hidden'&&holdId&&current&&current.id===holdId)holdCard(holdId,holdKind);},120000);
+// Dialling from the phone or Quo puts this tab in the background: the card stays held while it is still on screen
+// here, up to 20 minutes from opening it, so a teammate's dialer cannot pick it up mid-call.
+setInterval(()=>{if(holdId&&current&&current.id===holdId&&(document.visibilityState!=='hidden'||Date.now()-shownAt<20*60000))holdCard(holdId,holdKind);},120000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&holdId&&current&&current.id===holdId)holdCard(holdId,holdKind);});
 if(typeof window!=='undefined'&&typeof window.addEventListener==='function')window.addEventListener('pagehide',()=>{if(holdId&&holdKind==='open')holdPost({action:'release',id:holdId});});

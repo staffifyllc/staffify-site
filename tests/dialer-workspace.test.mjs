@@ -319,6 +319,10 @@ test('second review: two reps racing for the same next card never loop; the lose
     await tick(150);
     const holdsSent = api.calls.filter(c => c.url === '/api/call-hold/' && c.body && c.body.action === 'hold').length - before;
     assert.ok(holdsSent <= ids.length + 2, 'a bounded number of attempts, not a loop (' + holdsSent + ')');
+    // Paul, 2026-10-28: "madison and I are cross polinating". The hold is taken before a card is shown, so the loser
+    // moves past a teammate's card without it ever being shown, and is never told to pick another.
+    const toastNow = document.getElementById('toast');
+    assert.ok(!toastNow || !/has this card open/.test(toastNow.textContent), 'no "pick another" notice');
     REFUSE.clear();
     localStorage.setItem(skipKey, skipsBefore || '{}');   // only this test's skip is undone
     byText('button', 'Refresh queue').click(); await tick(80);
