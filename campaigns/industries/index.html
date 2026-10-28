@@ -357,7 +357,9 @@ function renderCampaign(d) {
   out.push(today);
 
   const stats = el('div', null, 'stats');
-  stats.append(stat(n(c.total), 'prospects'), stat(n(c.contacted), 'contacted'), stat(n(c.fourDone), 'got all four'), stat(n(c.replies), 'replied'), rateStat(c.replyRate, 'reply rate'), stat(n(c.connected), 'connected'), rateStat(c.connectRate, 'connect rate'), stat(n(c.won), 'won, not tracked here', { unknown: true }));
+  // A call-first campaign has no email sequence (Hiring now): no "got all four", no "0 of 4" (Paul, 2026-10-28).
+  const callFirst = c.motion === 'call';
+  stats.append(stat(n(c.total), 'prospects'), stat(n(c.contacted), 'contacted'), ...(callFirst ? [] : [stat(n(c.fourDone), 'got all four')]), stat(n(c.replies), 'replied'), rateStat(c.replyRate, 'reply rate'), stat(n(c.connected), 'connected'), rateStat(c.connectRate, 'connect rate'), stat(n(c.won), 'won, not tracked here', { unknown: true }));
   out.push(stats);
   if (c.evidenceNote) out.push(el('p', c.evidenceNote, 'note'));
   if (c.offTargetNote) out.push(el('p', c.offTargetNote, 'note'));
@@ -383,7 +385,7 @@ function renderCampaign(d) {
     for (const p of rows) {
       const r = el('tr');
       const td1 = el('td'); td1.append(el('strong', p.company || p.email)); td1.append(el('div', [p.name, p.email].filter(Boolean).join(' · '), 'who')); r.append(td1);
-      r.append(el('td', `${p.emails} of 4`));
+      r.append(el('td', callFirst ? 'Call first, no email' : `${p.emails} of 4`));
       r.append(el('td', p.lastTouch ? when(p.lastTouch) : '—'));
       const td4 = el('td'); const cls = ['reply', 'callback_due', 'ready', 'finding', 'wrong_number', 'stopped'].includes(p.state) ? p.state : 'other';
       td4.append(el('span', p.stateLabel + (p.state === 'callback' || p.state === 'callback_due' ? ' · ' + new Date(p.nextCallAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''), 'pill ' + cls));

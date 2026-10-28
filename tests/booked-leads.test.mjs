@@ -91,3 +91,8 @@ test('an uploaded snapshot keeps the booking mark', () => {
     const next = mergeSnapshot(prev, { records: [sent('a', 'pat@acme-media.com')], assignments: [] });
     assert.equal(next.records[0].booking.email, 'pat@acme-media.com'); assert.equal(callReady(next.records[0], NOW), false);
 });
+
+test('Hiring now cards the rules took off the list read as held, not "not yet contacted"', () => {
+    assert.equal(prospectState({ kind: 'hiring', status: 'excluded', exclusion: { reason: 'store_floor_role' } }, NOW).label, 'Excluded: store floor role');
+    assert.equal(prospectState({ kind: 'hiring', status: 'research', hold: { reason: 'no_employer_website' } }, NOW).key, 'held');
+});

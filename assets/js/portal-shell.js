@@ -13,11 +13,12 @@
  for(const args of [['My day','/my-day/','navDay'],['Campaigns (old view)','/campaigns/'],['Lost deals','/lost-deals/'],['Activity','/activity/'],['Enterprise accounts','/campaigns/enterprise/'],['Website signups','/website-leads/'],['Training','/training/sales/'],['Applicants','/careers/sales/inbox/'],['Talent Console ↗','https://recruiting.gostaffify.com/dashboard'],['Legacy campaign report','/campaigns/legacy/'],['Founder pilot','/pilot/','navPilot']])menu.append(make(...args));
  more.append(menu);nav.append(more);if(old)old.replaceWith(nav);else header.append(nav);
  // My inbox (assets/js/rep-inbox.js). Paul, 2026-10-27: "he should have an area where he can check his
- // inbox". A caller's Inbox is their own mailbox, with the unread count on it; an owner keeps the
- // outreach console there and gets "My mailbox" under More. Checked on load and every two minutes.
+ // inbox". Everyone's Inbox is their own mailbox, with a red count on it (Paul, 2026-10-28: "it should put
+ // a little 1 or 2 red notification above the inbox"); an owner's outreach reply console moves under More
+ // as "Outreach replies". Checked on load and every two minutes.
  let mineLink=null;
  async function inboxBadge(){try{const r=await fetch('/api/rep-inbox/?view=count',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const j=await r.json();if(!j||!j.mailbox)return;
-  if(!mineLink){if(j.owner){mineLink=make('My mailbox','/inbox/');menu.prepend(mineLink);}else{mineLink=[...nav.querySelectorAll('a')].find(a=>a.textContent==='Inbox')||null;if(mineLink){mineLink.href='/inbox/';if(current==='/inbox/'){mineLink.className='active';mineLink.setAttribute('aria-current','page');}else{mineLink.classList.remove('active');mineLink.removeAttribute('aria-current');}}}}
+  if(!mineLink){if(j.owner)menu.prepend(make('Outreach replies','/outreach-review/?view=replies'));{mineLink=[...nav.querySelectorAll('a')].find(a=>a.textContent==='Inbox')||null;if(mineLink){mineLink.href='/inbox/';if(current==='/inbox/'){mineLink.className='active';mineLink.setAttribute('aria-current','page');}else{mineLink.classList.remove('active');mineLink.removeAttribute('aria-current');}}}}
   if(!mineLink)return;let b=mineLink.querySelector('.portal-badge');
   if(j.unread){if(!b){b=document.createElement('span');b.className='portal-badge';mineLink.append(b);}b.textContent=j.unread>=50?'50+':String(j.unread);b.setAttribute('aria-label',j.unread+' unread');}else if(b)b.remove();
  }catch{}}

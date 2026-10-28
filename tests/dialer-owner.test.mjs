@@ -30,7 +30,7 @@ test('an owner with no follow-ups of their own is not handed the reps\' pool', a
     const dom = await boot([rec('p1'), rec('p2'), rec('p3')]);
     const text = dom.text(document.body);
     assert.match(text, /No follow-ups of yours/);
-    assert.match(text, /2 people are left in the team pool\. Milton working now\./, 'the pool, less the card Milton is on, and who is working');
+    assert.match(text, /2 unclaimed in the team pool\. In the dialer now: Milton\./, 'the pool, less the card Milton is on, and who is in the dialer');
     assert.equal(document.querySelectorAll('.dw-oc').length, 0, 'no card is put in front of him');
     document.querySelectorAll('button').find(b => dom.text(b) === 'Open the team pool').click();
     await tick(80);
@@ -43,7 +43,7 @@ test('an owner\'s own follow-up is what their dialer opens on', async () => {
     const dom = await boot([rec('p1'), rec('p2', { unclaimed: false, mine: true, dueForMe: true, callOwner: PAUL, callOutcome: 'callback', nextCallAt: due })]);
     assert.match(dom.text(document.querySelector('.dw-bar')), /Your follow-ups/);
     assert.match(dom.text(document.querySelector('.dw-bar')), /1 of 1/);
-    assert.match(dom.text(document.querySelector('#dw-pool')), /Team pool · 1 left/);
+    assert.match(dom.text(document.querySelector('#dw-pool')), /Team pool · 1 unclaimed/);
 });
 
 test('a caller\'s owned real estate media callback is in the Paused area, not tomorrow\'s worklist', async () => {

@@ -59,6 +59,9 @@ export const callbackSet = (r, now = Date.now()) => isCallback(r) && !!r.nextCal
 export function prospectState(r, now = Date.now()) {
     if (r.status === 'suppressed' || r.callOutcome === 'suppress') return { key: 'stopped', label: 'Asked us to stop' };
     if (r.booking) return { key: 'booked', label: 'Booked a call' };
+    // Hiring now cards taken off the list by the admission rules or held for research are not "not yet contacted".
+    if (r.kind === 'hiring' && r.status === 'excluded') return { key: 'held', label: 'Excluded: ' + String((r.exclusion && r.exclusion.reason) || 'rules').replace(/_/g, ' ') };
+    if (r.kind === 'hiring' && r.status === 'research') return { key: 'held', label: 'Held for research: ' + String((r.hold && r.hold.reason) || 'proof').replace(/_/g, ' ') };
     if (needsHuman(r)) return { key: 'reply', label: 'Replied, needs a human' };
     if (replied(r)) return { key: 'replied', label: 'Replied' };
     if (connected(r)) return { key: 'connected', label: 'Connected on a call' };

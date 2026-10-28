@@ -609,7 +609,7 @@ export function callRow(rec, viewer, now = Date.now()) {
         verifiedFirstName: rec.contact && rec.contact.firstName || '',
         website: rec.company && rec.company.website || null,
         owner: null, salesOwner: null, sender: null, threadId: null, sentTouches: 0, verifiedSentTouches: 0, lastSentAt: null,
-        status: rec.status, callReady: ready, callOutcome: rec.callOutcome || null, nextCallAt: rec.nextCallAt || null,
+        status: rec.status, exclusion: rec.exclusion ? { reason: rec.exclusion.reason } : null, hold: rec.hold ? { reason: rec.hold.reason } : null, callReady: ready, callOutcome: rec.callOutcome || null, nextCallAt: rec.nextCallAt || null,
         callOwner: owner, callOwnerAt: rec.callOwnerAt || null, callHistory: rec.callHistory || [],
         claimed: !!owner, mine, unclaimed: ready && !owner, dueForMe: ready && mine, pausedFollowUp: false,
         phone: p.number || null,

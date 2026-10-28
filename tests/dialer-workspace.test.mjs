@@ -291,18 +291,19 @@ test('a prospect the live check refuses renders as refused, with its history and
     assert.equal(document.getElementById('call-now'), null, 'no dial button on a refused card');
 });
 
-test('a card a teammate has open leaves this rep\'s queue and count, and the bar says who is working', async () => {
+test('a card a teammate has open leaves this rep\'s queue and count, and the bar names them only on that card', async () => {
     // Paul has every other card open: only the card on screen is left in this rep's queue.
     const until = new Date(Date.now() + 240000).toISOString();
     HOLDS = Object.fromEntries(api.state.records.map(r => [r.id, { by: 'hello@gostaffify.com', name: 'Paul', kind: 'open', until }]));
     byText('button', 'Refresh queue').click();
     await tick(80);
     assert.match(dom.text(document.querySelector('.dw-pos')), /^1 of 1(?!\d)/, 'teammates\' cards are out of the count; the card on screen stays');
-    assert.match(dom.text(document.querySelector('.dw-bar')), /Paul working now/);
+    assert.match(dom.text(document.querySelector('.dw-bar')), /Paul has this card open/, 'the name is about the card on screen');
     assert.ok(api.calls.some(c => c.url === '/api/call-hold/' && c.body && c.body.action === 'hold'), 'opening a card holds it');
     HOLDS = {};
     byText('button', 'Refresh queue').click();
     await tick(80);
+    assert.ok(!/has this card open|is calling them now/.test(dom.text(document.querySelector('.dw-bar'))), 'nobody on the card, nobody named');
 });
 
 test('second review: two reps racing for the same next card never loop; the loser moves on', async () => {
