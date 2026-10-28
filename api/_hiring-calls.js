@@ -26,6 +26,35 @@ import { recordActivity } from './_hub-activity.js';
 
 export const isHiringId = id => /^hire:[0-9a-f]{16}$/.test(String(id || ''));
 
+// Paul, 2026-10-28: "The call portal should be able to dispurse more emails and right now its not leaving a trail of
+// breadcrumbs". The address a prospect gives on the call goes on the card, so the rep can email them from the Hub
+// right away. Only from someone who called them, never for a closed or booked card, and never past a stop.
+export async function saveHiringContactEmail(kv, { rep, body }, deps = {}) {
+    const id = String(body.id || ''), email = String(body.email || '').trim().toLowerCase(), me = String(rep && rep.email || '').toLowerCase();
+    if (email.length > 120 || !/^[^\s@<>()",;:]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(email)) return { ok: false, status: 400, error: 'That does not look like an email address.' };
+    const lockKey = HK.recLock(id);
+    let locked = false;
+    for (let i = 0; i < 8 && !locked; i++) { locked = !!await kv.set(lockKey, '1', { nx: true, ex: 10 }); if (!locked) await new Promise(r => setTimeout(r, 150)); }
+    if (!locked) return { ok: false, status: 409, error: 'Someone is saving this card right now. Try again in a moment.' };
+    try {
+        const rec = await getRecord(kv, id);
+        if (!rec) return { ok: false, status: 409, error: 'This prospect is no longer in the call queue' };
+        if (rec.booking || ['excluded', 'suppressed'].includes(rec.status)) return { ok: false, status: 409, error: 'This card is closed, so no email goes to it.' };
+        let hold = null; try { const h = await kv.get('staffify:call-hold:' + id); hold = typeof h === 'string' ? JSON.parse(h) : h; } catch { hold = null; }
+        const called = (rec.callHistory || []).some(h => String(h.caller || '').toLowerCase() === me) || (hold && ['calling', 'called'].includes(hold.kind) && String(hold.by || '').toLowerCase() === me);
+        if (!called) return { ok: false, status: 409, error: 'Call them first: an address saved here is one they gave you on the call.' };
+        let stop;
+        try { stop = await (deps.isOptedOut || isOptedOut)({ email }); } catch { return { ok: false, status: 503, error: 'The do-not-contact list could not be read, so nothing was saved. Try again in a minute.' }; }
+        if (stop) return { ok: false, status: 409, error: 'That address is on the do-not-contact list.' };
+        const at = new Date().toISOString();
+        const c = rec.contact || {};
+        const contact = { ...c, email, candidateEmail: email, status: 'given_on_call', source: 'Given on the call to ' + (rep.name || me), checkedAt: at };
+        await putRecord(kv, { ...rec, contact, updatedAt: at });
+        await (deps.recordActivity || recordActivity)(kv, { email: me, kind: 'contact_email', page: '/dialer/', detail: rec.company && rec.company.name || id }).catch(() => {});
+        return { ok: true, email };
+    } finally { await kv.del(lockKey).catch(() => {}); }
+}
+
 export async function saveHiringOutcome(kv, { rep, body }, deps = {}) {
     const id = String(body.id || '');
     const outcome = body.action === 'suppress' ? 'suppress' : String(body.outcome || '');
@@ -98,7 +127,7 @@ export async function hiringBrief(kv, { id, caller, callerEmail, shiftGate }, de
     const ph = { ...(rec.phone || {}), number: tollFree(rec.phone && rec.phone.number) ? null : rec.phone && rec.phone.number, alternates: ((rec.phone && rec.phone.alternates) || []).filter(n => !tollFree(n)) };
     const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'their website'; } };
     // A researched owner with no email yet ('named') is still the person to ask for.
-    const named = c.name && ['verified', 'unconfirmed', 'named'].includes(c.status) ? c.name : null;
+    const named = c.name && ['verified', 'unconfirmed', 'named', 'given_on_call'].includes(c.status) ? c.name : null;
     // A looked-up line that is the person's own: they pick up, so the opener greets them by name (Paul, 2026-10-28,
     // "the folks I am hitting a gatekeeper each and every single time").
     const direct = ph.source === 'vendor' && !!ph.person;
@@ -115,7 +144,7 @@ export async function hiringBrief(kv, { id, caller, callerEmail, shiftGate }, de
         callable: hiringCallReady(rec), hiring: true, campaignId: rec.campaignId, callQueue: 'shared', callerName: caller,
         company: co.name, website: co.website, recipient: c.email || null,
         name: named, title: named ? c.role : null,
-        identity: named ? { status: 'researched', source: c.source + (c.status === 'verified' ? ', email verified' : c.status === 'named' ? ', no email yet' : ', email ' + c.status), checkedAt: c.checkedAt } : { status: 'unknown', reason: (c.status === 'lookup_failed' ? 'The contact lookup failed (' + (c.reason || 'error') + ').' : c.status === 'not_searched' ? 'Their Google listing names no website, so no contact search was run.' : 'Findymail found no named contact.') + ' Ask for ' + askFor + '.' },
+        identity: named ? { status: 'researched', source: c.source + (c.status === 'verified' ? ', email verified' : c.status === 'named' ? ', no email yet' : c.status === 'given_on_call' ? '' : ', email ' + c.status), checkedAt: c.checkedAt } : { status: 'unknown', reason: (c.status === 'lookup_failed' ? 'The contact lookup failed (' + (c.reason || 'error') + ').' : c.status === 'not_searched' ? 'Their Google listing names no website, so no contact search was run.' : 'Findymail found no named contact.') + ' Ask for ' + askFor + '.' },
         industry: { key: 'hiring', label: 'Hiring now', source: 'job post' },
         location: j.location || null, prospectTimezone: null,
         phone: allowed ? ph.number || null : null, dial: allowed ? dial : null,

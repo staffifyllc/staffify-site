@@ -11,7 +11,7 @@
 //
 // Pure apart from nothing: no Redis, no network. api/rep-email.js wires it to the world.
 import { emailMismatch } from './_caller-plan.js';
-import { bookingLinkFor } from './_call-scripts.js';
+import { bookingLinkFor, spokenRole, pluralRole } from './_call-scripts.js';
 
 const SITE = 'https://www.gostaffify.com';
 const IMG = SITE + '/assets/email';
@@ -171,7 +171,40 @@ export const TEMPLATES = Object.freeze([
         body: 'Hi {first},\n\nI tried calling today and missed you. I am with Staffify, and we have sent you a few notes about handing off recurring work at {company}.\n\nIf a short call makes sense, you can book a time here:\n\n{link}\n\nThanks,\n{me}',
     }),
 ]);
-export const templatesFor = mailbox => TEMPLATES.map(t => ({ ...t, link: bookingLinkFor(mailbox) }));
+// Hiring now is call first: nothing was emailed before the call, so these never say it was. Paul, 2026-10-28: "make sure
+// that button signifies the rep sending over an email summarizing us and sharing what we do too ... it's not leaving a
+// trail of breadcrumbs". {role} is the job they posted, as a person says it; {roles} the people we place for it.
+export const HIRING_TEMPLATES = Object.freeze([
+    Object.freeze({
+        id: 'hiring-stay-in-touch',
+        label: 'Filled the role: stay in touch',
+        subject: '{first}, good speaking with you',
+        subjectNoName: 'Good speaking with you',
+        body: 'Hi {first},\n\nThanks for taking my call today, and congratulations on filling the {role} role.\n\nAs promised, here is a quick summary of who we are. Staffify helps companies hire dedicated {roles} from Latin America and the Philippines, and we handle the recruiting, vetting, and ongoing management. Our team members typically cost 50% of what the advertised position pays.\n\nIf the new hire does not work out, or another seat opens up, I would be glad to put a few vetted candidates in front of you. I will check back in about a month, and you can always book a time with our team here:\n\n{link}\n\nTalk soon,\n{me}',
+    }),
+    Object.freeze({
+        id: 'hiring-thanks',
+        label: 'Thanks for your time, book a call',
+        subject: '{first}, thanks for your time today',
+        subjectNoName: 'Thanks for your time today',
+        body: 'Hi {first},\n\nThanks for taking my call today about the {role} role at {company}.\n\nAs a quick summary, Staffify helps companies hire dedicated {roles} from Latin America and the Philippines, and we handle the recruiting, vetting, and ongoing management. Here is the link to book a time with our team, so we can learn more about the role and put a few great candidates in front of you:\n\n{link}\n\nTalk soon,\n{me}',
+    }),
+    Object.freeze({
+        id: 'hiring-missed',
+        label: 'Sorry I missed you',
+        subject: 'Sorry I missed you, {first}',
+        subjectNoName: 'Sorry I missed you',
+        body: 'Hi {first},\n\nI just tried calling about the {role} role you posted.\n\nStaffify helps companies hire dedicated {roles} from Latin America and the Philippines, and we handle the recruiting, vetting, and ongoing management. If it would help to see a few vetted candidates, you can book a time with our team here:\n\n{link}\n\nThanks,\n{me}',
+    }),
+]);
+/** The templates for this prospect: the email campaigns' pair, or for a Hiring now card the call-first set with its role in. */
+export function templatesFor(mailbox, row = null) {
+    const link = bookingLinkFor(mailbox);
+    if (!row || row.kind !== 'hiring') return TEMPLATES.map(t => ({ ...t, link }));
+    const role = spokenRole(row.hiring && row.hiring.title) || 'open';
+    const put = x => String(x).replace(/\{role\}/g, role).replace(/\{roles\}/g, role === 'open' ? 'team members' : pluralRole(role));
+    return HIRING_TEMPLATES.map(t => ({ ...t, subject: put(t.subject), subjectNoName: put(t.subjectNoName), body: put(t.body), link }));
+}
 
 export function fillTemplate(t, { first, company, me, link }) {
     const v = { first: first || 'there', company: company || 'your business', me: me || '', link: link || '' };

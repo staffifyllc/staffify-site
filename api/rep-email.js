@@ -344,7 +344,7 @@ export async function repEmailStatus({ rep, email = '', kv = redis, line = quoLi
         photo,
         alternates: row && row.id ? ((await kv.smembers(K.alt(row.id)).catch(() => [])) || []) : [],
         domains: row ? companyDomains(row) : [],
-        templates: templatesFor(box),
+        templates: templatesFor(box, row),
         me: p.first,
         sentToday: Number(await kv.get(K.count(box, dayOf()))) || 0,
         perDay: LIMITS.perDay,

@@ -468,7 +468,7 @@ function newNonce(){try{return crypto.randomUUID();}catch{return Date.now().toSt
 /** A chosen picture, centre-cropped to a 240px square JPEG data URL. */
 function squarePhoto(f){return new Promise((ok,bad)=>{const url=URL.createObjectURL(f);const img=new Image();img.onload=()=>{try{const s=Math.min(img.naturalWidth,img.naturalHeight),c=document.createElement('canvas');c.width=c.height=240;c.getContext('2d').drawImage(img,(img.naturalWidth-s)/2,(img.naturalHeight-s)/2,s,s,0,0,240,240);URL.revokeObjectURL(url);ok(c.toDataURL('image/jpeg',0.86));}catch(e){bad(e);}};img.onerror=()=>{URL.revokeObjectURL(url);bad(Error('That file could not be read as a picture.'));};img.src=url;});}
 function closeMail(){if(mailBox){mailBox.remove();mailBox=null;}}
-async function openMail(row,p,{reconnect=false}={}){
+async function openMail(row,p,{reconnect=false,template=null}={}){
  closeMail();
  const box=el('div',null,'dw-mail');box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-labelledby','mail-title');
  const card=el('div',null,'dw-mail-card');box.append(card);
@@ -514,6 +514,8 @@ async function openMail(row,p,{reconnect=false}={}){
  const draft=readMailDraft(row.id);
  if(draft&&(draft.subject||draft.body)){subject.value=draft.subject||'';body.value=draft.body||'';}
  else body.value='Hi '+(who||'there')+',\n\n';
+ // Opened from a step that names its email (the summary after a filled role, the thanks after a good call): it is written in.
+ if(template&&!(draft&&(draft.subject||draft.body))){const t=(info.templates||[]).find(x=>x.id===template);if(t)fill(t);}
  // The signature exactly as it is added: the server's HTML, in a sandbox, nothing able to run.
  const sig=el('div',null,'dw-mail-sig');sig.append(el('span','Your signature goes under the message','dw-mail-label'));
  const frame=document.createElement('iframe');frame.title='Your email signature';frame.setAttribute('sandbox','');frame.srcdoc='<!doctype html><meta charset="utf-8"><body style="margin:10px;background:#fff">'+(info.signatureHtml||'')+'</body>';
@@ -601,6 +603,18 @@ function industryTag(ind){if(!ind||!ind.label)return null;const wrap=el('span',n
 // ---- the middle pane: the talk track -------------------------------------------------------
 const OBJECTIONS=[['Busy','Of course. Is there a better time for a quick call, or would you rather leave it here?'],['Already have help','That is great. What do they take care of, and is there anything that still ends up back on your plate?'],['Not hiring','Understood. I was more curious about the work that still lands on you. If everything is covered, no problem.'],['Send information','Happy to. Which part would actually be useful: customer support, account coordination, or something else?'],['How much?','It depends on the role, hours and scope. Let us work out what you need first so I can give you an accurate quote.'],['Wrong person / gatekeeper','Who handles the day-to-day operations for the business? Is there a better time to reach them?'],['Not interested / stop','Understood. Thanks for letting me know.']];
 const LOGLABEL=Object.fromEntries(OUTCOMES.map(o=>[o.value,o.label]));
+// Paul, 2026-10-28: "make sure that button signifies the rep sending over an email summarizing us and sharing what we do
+// too? The call portal should be able to dispurse more emails and right now its not leaving a trail of breadcrumbs".
+// A step that ends a good call opens the rep's composer with the email written for this job; with no address on the
+// card, the one they give on the call is saved first (api/_hiring-calls.js saveHiringContactEmail).
+function emailStep(row,b,tpl){const box=el('div',null,'dw-cbk');const open=()=>openMail(row,b||{},{template:tpl});
+ if(row.recipient){box.append(button('Send them the summary email',open,'btn dw-choice win'),el('p','It opens in your Gmail composer, written for this job. Read it, then send.','dw-note'));return box;}
+ box.append(el('div','Ask for their email so you can send the summary.','dw-step'));
+ const inp=el('input');inp.type='email';inp.id='given-email';inp.placeholder='Their email, from the call';inp.autocomplete='off';inp.setAttribute('aria-label','Their email');
+ const go=button('Save it and write the email',async()=>{const v=inp.value.trim().toLowerCase();if(!v){inp.focus();return;}go.disabled=true;
+  try{const j=await api('/api/outreach-queue/?view=calls',{action:'contact-email',id:row.id,email:v});if(j&&j.records)state=j;row.recipient=j&&j.contactEmail||v;if(current&&current.id===row.id)current.recipient=row.recipient;toast('Saved. Their email is on the card.');open();}
+  catch(e){toast((e.payload&&e.payload.error)||e.message||'Not saved.',true);go.disabled=false;}},'btn dw-choice win');
+ box.append(inp,go);return box;}
 function renderTalk(pane,row,b){
  pane.replaceChildren(heading('Talk track'));
  pane.append(el('div','Open','dw-step'),el('p',b.opener,'dw-say'));
@@ -616,6 +630,7 @@ function renderTalk(pane,row,b){
    parts.push(el('div',path.length===1?'They have heard the opener. What did they say?':'What did they say?','dw-step'));
    if(node.say)parts.push(el('p',node.say,'dw-say'));
    if(node.note)parts.push(el('p',node.note,'dw-note'));
+   if(node.email&&row.kind==='hiring')parts.push(emailStep(row,b,node.email));
    if(node.log){
     const row2=el('div',null,'dw-choices');
     row2.append(button('Log as '+(LOGLABEL[node.log]||node.log)+' →',()=>{selectOutcome(node.log);document.getElementById('call-notes')?.focus();},'btn dw-choice win'));
@@ -625,7 +640,10 @@ function renderTalk(pane,row,b){
      // reminds the sales person." The agreed time is picked here and the save is one click.
      const cb=el('div',null,'dw-cbk');cb.append(el('div','When should you call back?','dw-step'));
      const lt=localTime(b.prospectTimezone&&b.prospectTimezone.timeZone);if(lt)cb.append(el('p','It is '+lt.time+' their time. Times below are yours.','dw-note'));
-     const picks=el('div',null,'dw-picks');for(const q of quickPicks())picks.append(button(q.label,()=>{selectOutcome(node.log,q.at);const n=document.getElementById('call-notes');if(n&&!n.value.trim())n.value=(node.log==='gatekeeper'?'Gatekeeper answered. Ask for the owner '+q.at.toLocaleString()+'. Who answered: ':'Bad time. Agreed to call back '+q.at.toLocaleString()+'.');toast('Callback set for '+fmtWhen(q.at)+'. Save when you are ready, or ⌘↵.');},'btn dw-pick'));
+     // A node can name its own callback ("a month from now" after a filled role): it is chosen for the rep, first in the list.
+     let first=[];if(node.callbackDays){const d=new Date();d.setDate(d.getDate()+node.callbackDays);d.setHours(10,0,0,0);if(d.getDay()===6)d.setDate(d.getDate()+2);if(d.getDay()===0)d.setDate(d.getDate()+1);first=[{label:node.callbackDays>=28?'In a month':'In '+node.callbackDays+' days',at:d}];
+      selectOutcome(node.log,d);const n0=document.getElementById('call-notes');if(n0&&!n0.value.trim())n0.value='They filled the role. OK to stay in touch: check back '+d.toLocaleDateString()+' to see if the hire worked out.';}
+     const picks=el('div',null,'dw-picks');for(const q of [...first,...quickPicks()])picks.append(button(q.label,()=>{selectOutcome(node.log,q.at);const n=document.getElementById('call-notes');if(n&&!n.value.trim())n.value=(node.log==='gatekeeper'?'Gatekeeper answered. Ask for the owner '+q.at.toLocaleString()+'. Who answered: ':'Bad time. Agreed to call back '+q.at.toLocaleString()+'.');toast('Callback set for '+fmtWhen(q.at)+'. Save when you are ready, or ⌘↵.');},'btn dw-pick'));
      cb.append(picks);parts.push(cb);
     }
    }
@@ -740,7 +758,11 @@ function renderNextStep(box,value){
   if(value==='connected'){const sent=el('div',null,'dw-picks');for(const tag of ['Meeting booked','Interested','Referred me on','Not a fit']){sent.append(button(tag,()=>{const n=document.getElementById('call-notes');if(!n)return;n.value=n.value.replace(/^\[(Meeting booked|Interested|Referred me on|Not a fit)\]\s*/,'');n.value='['+tag+'] '+n.value;for(const x of sent.children)x.classList.toggle('on',x.textContent===tag);stash();},'btn dw-pick'));}box.append(sent);}
   box.append(el('p',value==='connected'?'Book the discovery call while you have them (link in the talk track), or send the overview below. Saving hands the thread to a human for the reply.':value==='wrong_number'?'That number is retired for this person and a different one is looked for. The lead is not lost.':'They are excluded from every Staffify campaign. Use this for a clear no or a request to stop.','dw-nexthint'));
  }
+ breadcrumb(box,value);
 }
+// After the call: a Hiring now outcome that should leave a trail offers the matching email, written for the job.
+function breadcrumb(box,value){const tpl=current&&current.kind==='hiring'&&current.recipient?({connected:'hiring-thanks',voicemail:'hiring-missed',no_answer:'hiring-missed'})[value]:null;
+ if(!tpl)return;const w=el('div',null,'dw-picks');w.append(button(value==='connected'?'Email them a summary and the booking link':'Email them: sorry I missed you',()=>openMail(current,brief||{},{template:tpl}),'btn dw-choice win'));box.append(w);}
 function refreshBar(){const old=app.querySelector('.dw-bar');if(!old)return;const typing=document.activeElement&&document.activeElement.id==='dw-search';old.replaceWith(bar());
  // A redraw (Quo counts every two minutes) must not throw away a search being typed.
  if(typing){const q=document.getElementById('dw-search');if(q)q.focus();}}

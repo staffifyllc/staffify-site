@@ -337,6 +337,9 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
     const intro = `Great, thanks. I'll be straight with you, this is a cold call. Do you have a quick second?`;
     // Paul, 2026-10-28 evening, word for word with the role swapped in ("but of course reference the actual role").
     const reason = `The reason I'm calling is I saw you're hiring ${hiringWhat}. We help companies hire dedicated ${pluralRole(role)} from Latin America and the Philippines, and we handle the recruiting, vetting, and ongoing management. I wanted to see if you'd be open to a quick conversation with our team so we can learn more about the role and see if we can put a few great candidates in front of you.`;
+    // Paul, 2026-10-28: "if they filled the role, one thing we want to be able to pivot to is ... Is it okay if I stay in
+    // touch with you ... And then we can schedule a callback for a month from now."
+    const filled = `Okay, and just wanted to let you know, the reason I'm calling is I work for a company called Staffify, and we fill these positions for people with remote offshore team members that typically cost 50% of what the advertised position pays. Is it okay if I stay in touch with you and see if there's a chance that this person doesn't work out, that we could connect in the future?`;
     const questions = [
         'How is the search going so far? Have you found the right person yet?',
         'What will that person spend most of their day on? Tickets, phones, chat, scheduling?',
@@ -351,11 +354,12 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
         discover: { say: questions[0], choices: [['Still looking', 'dig'], ['Filled it', 'filled'], ['We only hire in-house', 'inhouse']] },
         dig: { say: questions[1], note: 'Write down the work, the hours and the tools. It is what we match people to.', choices: [['They described it', 'offer']] },
         offer: { say: questions[2], choices: [['Yes', 'close'], ['Maybe, send something', 'sendinfo'], ['No', 'future']] },
-        filled: { say: "Good, congratulations. Is there more of that work coming, or another customer service, sales or admin seat you'll need soon? That's the hiring we take off your plate.", choices: [['Yes, more coming', 'dig'], ['No', 'future']] },
+        filled: { say: filled, note: 'A filled seat is not a no. A yes is a callback in a month, set for you on the next step.', choices: [['Yes, stay in touch', 'keepintouch'], ['They have another seat open', 'dig'], ['No thanks', 'stop']] },
+        keepintouch: { say: "Perfect. I'll send you a quick email with who we are, and check back in about a month to see how the new hire is working out. What's the best email to send that to?", note: 'Send the summary from the button below while you have them. The callback is set for a month from today; change it if they gave you a date, then save it as Callback.', log: 'callback', callbackDays: 30, email: 'hiring-stay-in-touch' },
         inhouse: { say: "Understood. Is that a set policy, or just how you've hired so far? A lot of teams try one remote seat first to see how it goes.", note: 'Do not argue. If it is a policy, log Not interested: timing and move on.', choices: [['Open to it', 'offer'], ["It's a policy", 'future']] },
         close: { say: questions[3], choices: [['Booked', 'booked'], ['Send something first', 'sendinfo']] },
-        booked: { say: 'Brilliant. Before I let you go, is there anything about the role you want covered so we turn up prepared?', note: 'Log Connected / interested. Put the booking and exactly what they asked for in the notes.', log: 'connected' },
-        sendinfo: { say: 'No problem. So I send something useful rather than a brochure, should I aim it at the role itself or at how a placement works?', note: 'Log Connected / interested with the specific ask and the best email for them. A person follows up. Do not promise a send you cannot make.', log: 'connected' },
+        booked: { say: 'Brilliant. Before I let you go, is there anything about the role you want covered so we turn up prepared?', note: 'Log Connected / interested. Put the booking and exactly what they asked for in the notes. Send the summary below so the booking link is in their inbox.', log: 'connected', email: 'hiring-thanks' },
+        sendinfo: { say: 'No problem. So I send something useful rather than a brochure, should I aim it at the role itself or at how a placement works?', note: 'Send it from the button below while you have them, written for this job. Then log Connected / interested with the specific ask.', log: 'connected', email: 'hiring-thanks' },
         future: { say: 'Understood. Would it be worth me checking back in a few months, or would you rather I left it?', note: 'If they give a window, log Not interested: timing with that date. Only use Not interested / stop if they want to be left alone.', log: 'timing' },
         busy: { say: "Totally fair, I've caught you cold. Is there a better time later this week, or would you rather I left you to it?", note: 'Log Callback with the time they give.', log: 'callback' },
         gate: { say: `No problem. Who is hiring for the ${role} role? And is there a decent time to catch them?`, note: 'Log Gatekeeper. Put who answered, who to ask for and the best time in the notes.', log: 'gatekeeper' },
@@ -363,7 +367,7 @@ export function hiringCallScript({ caller, callerEmail, company, firstName, jobT
     };
     const objections = [
         ['Busy', "Totally fair, I've caught you cold. Is there a better time later this week, or would you rather I left you to it?", 'If they offer a time, log it as a callback.'],
-        ['Already filled it', "Good, congratulations. Is there more of that work coming, or another seat like it you'll need soon?", 'A filled seat is not a no. Ask about the next one.'],
+        ['Already filled it', filled, 'A filled seat is not a no. If they say yes, log a Callback for a month out.'],
         ['We only hire in-house', "Understood. Is that a set policy, or just how you've hired so far? A lot of teams try one remote seat first to see how it goes.", 'If it is a policy, log Not interested: timing.'],
         ['We use an agency', 'Makes sense. Where we usually differ: we manage the person day to day, and if someone does not work out we replace them under our lifetime replacement guarantee.', 'Only the lifetime replacement guarantee. Never a time-limited one.'],
         ['How much?', "It depends on the role and the hours, and I'd rather give you a real number than a guess. Can I ask what the work would actually be first?", 'Use current approved pricing only. Onboarding is paid in full upfront. No financing, instalments or discounts.'],

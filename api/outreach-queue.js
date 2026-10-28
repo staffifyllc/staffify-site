@@ -14,7 +14,7 @@ import {gateFor,withheldNumbers} from './_shift.js';
 import {poolPaused} from './_campaign-pause.js';
 import {INDUSTRY_KEY} from './_campaign-industry.js';
 import {hiringCallRows} from './_hiring-intent.js';
-import {isHiringId,saveHiringOutcome} from './_hiring-calls.js';
+import {isHiringId,saveHiringOutcome,saveHiringContactEmail} from './_hiring-calls.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
@@ -70,12 +70,19 @@ export default async function handler(req,res) {
     const machine=adminAuthorized(req);
     if(!machine&&req.headers.origin!==SITE)return res.status(403).json({error:'Invalid origin'});
     const body=readBody(req);
-    if(calls&&!['call-outcome','suppress','task-add','task-done'].includes(body.action))return res.status(403).json({error:'Caller access is limited to call outcomes, exclusions and their own tasks'});
+    if(calls&&!['call-outcome','suppress','task-add','task-done','contact-email'].includes(body.action))return res.status(403).json({error:'Caller access is limited to call outcomes, exclusions, their own tasks and an email a prospect gave them'});
     // A rep's own tasks never touch the queue state, so they skip the revision dance below.
     if(body.action==='task-add'){const r=await addTask(redis,{rep,title:body.title,dueAt:body.dueAt,notes:body.notes,recordId:body.id||null,company:body.company||'',recipient:body.recipient||null,campaignId:body.campaignId||null,contactId:body.contactId||null});if(r.ok)await recordActivity(redis,{email:rep.email,kind:'task_added',page:'/dialer/',detail:r.task.company||null});return res.status(r.ok?200:400).json(r);}
     if(body.action==='task-done'){const r=await completeTask(redis,{email:rep.email,id:String(body.taskId||''),done:body.done!==false});if(r.ok&&body.done!==false)await recordActivity(redis,{email:rep.email,kind:'task_done',page:'/dialer/',detail:r.task&&r.task.company||null});return res.status(r.ok?200:404).json(r);}
     // A Hiring now card is saved to its own store (api/_hiring-calls.js), then the dialer gets the same
     // list view back that a reload would give it.
+    // An address a Hiring now prospect gave on the call (api/_hiring-calls.js saveHiringContactEmail).
+    if(calls&&body.action==='contact-email'){
+      if(!isHiringId(body.id))return res.status(400).json({error:'Only a Hiring now card takes an address here'});
+      const r=await saveHiringContactEmail(redis,{rep,body});
+      if(!r.ok)return res.status(r.status||409).json({error:r.error});
+      return res.status(200).json({...await listView(),contactEmail:r.email});
+    }
     if(calls&&['call-outcome','suppress'].includes(body.action)&&isHiringId(body.id)){
       const r=await saveHiringOutcome(redis,{rep,body});
       if(!r.ok)return res.status(r.status||409).json({error:r.error});

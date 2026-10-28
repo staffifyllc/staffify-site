@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { makeDom, install } from './helpers/fake-dom.mjs';
 import { callRow } from '../api/_hiring-intent.js';
 import { hiringCallScript } from '../api/_call-scripts.js';
+import { templatesFor } from '../api/_rep-email.js';
 
 const ME = 'milton@trystaffify.com';
 const NOW = Date.now();
@@ -83,4 +84,63 @@ test('a Hiring now card reads as a first touch about their job post, with the jo
     assert.ok(save, 'a suppress was posted');
     assert.equal(save.body.id, REC.id); assert.equal(save.body.email, 'harman@canarytechnologies.com');
     assert.ok(!/undefined|\[object/.test(text), 'nothing unrendered leaks into the page');
+});
+
+// Paul, 2026-10-28: "if they filled the role ... Is it okay if I stay in touch ... schedule a callback for a month from now",
+// then "make sure that button signifies the rep sending over an email summarizing us ... leaving a trail of breadcrumbs".
+async function walkToStayInTouch({ recipient }) {
+    const dom = makeDom(); install(dom);
+    globalThis.setInterval = () => 0;
+    globalThis.setTimeout = (fn, ms, ...a) => { const t = realTimeout(fn, ms, ...a); if (t.unref) t.unref(); return t; };
+    const app = document.createElement('div'); app.id = 'app'; app.className = 'wrap'; document.body.append(app);
+    const r = { ...row, recipient };
+    const posts = [];
+    globalThis.fetch = async (url, opts = {}) => {
+        const u = String(url), body = opts.body ? JSON.parse(opts.body) : null;
+        if (body) posts.push({ url: u, body });
+        const ok = (p, status = 200) => ({ ok: status < 400, status, json: async () => p });
+        if (u.startsWith('/api/outreach-queue/?view=calls') && body && body.action === 'contact-email') return ok({ revision: 2, viewer: ME, records: [{ ...r, recipient: body.email }], tasks: [], contactEmail: body.email });
+        if (u.startsWith('/api/outreach-queue/?view=calls')) return ok({ revision: 1, viewer: ME, viewerOwner: false, records: [r], tasks: [], shiftGate: { allowed: true, required: true } });
+        if (u.startsWith('/api/outreach-call-brief/?id=')) return ok({ ...BRIEF, recipient });
+        if (u.startsWith('/api/rep-email/?email=')) return ok({ mailbox: ME, name: 'Milton', me: 'Milton', connected: true, templates: templatesFor(ME, { kind: 'hiring', hiring: { title: REC.job.title } }), domains: ['canarytechnologies.com'], alternates: [], history: [] });
+        if (u.startsWith('/api/call-hold/')) return ok(body ? { ok: true, hold: { by: ME, kind: body.kind || 'open', until: new Date(NOW + 60000).toISOString() } } : { me: ME, holds: {} });
+        if (u.startsWith('/api/quo-activity/')) return ok({ reps: [] });
+        if (u.startsWith('/api/calendly-link/')) return ok({ events: [] });
+        if (u.startsWith('/api/prospect-names/')) return ok({ names: {} });
+        return ok({ error: 'unexpected ' + u }, 404);
+    };
+    await import('../assets/js/dialer-workspace.js?stay=' + Date.now() + (recipient ? 'e' : 'n'));
+    await tick(80);
+    const press = async label => { const b = dom.queryAll(document.body, 'button').find(x => dom.text(x) === label); assert.ok(b, 'a button "' + label + '"'); b.click(); await tick(20); };
+    await press("That's me / putting you through"); await press('Go ahead'); await press('Already filled it');
+    return { dom, posts, press };
+}
+test('filled the role: the pivot line, then a callback a month out and the summary email one click away', async () => {
+    const { dom, posts, press } = await walkToStayInTouch({ recipient: 'harman@canarytechnologies.com' });
+    let text = dom.text(document.body);
+    assert.match(text, /I work for a company called Staffify, and we fill these positions for people with remote offshore team members that typically cost 50% of what the advertised position pays/);
+    await press('Yes, stay in touch');
+    text = dom.text(document.body);
+    const due = document.getElementById('callback-at');
+    const days = (Date.parse(due.value) - Date.now()) / 864e5;
+    assert.ok(days > 28 && days < 34, 'the callback is set about a month out (' + days.toFixed(1) + ' days)');
+    assert.match(document.getElementById('call-notes').value, /They filled the role\. OK to stay in touch/);
+    await press('Send them the summary email');
+    await tick(60);
+    const body = document.getElementById('mail-body').value;
+    assert.match(body, /congratulations on filling the L1 Technical Support Agent role/);
+    assert.match(body, /Staffify helps companies hire dedicated L1 Technical Support Agents from Latin America and the Philippines/);
+    assert.ok(!/we have sent you|sent you a few notes/.test(body), 'never claims an earlier email');
+    assert.equal(posts.filter(p => p.body && p.body.action === 'contact-email').length, 0);
+});
+test('no email on the card: the one they give on the call is saved, then the summary opens', async () => {
+    const { dom, posts, press } = await walkToStayInTouch({ recipient: null });
+    await press('Yes, stay in touch');
+    assert.match(dom.text(document.body), /Ask for their email so you can send the summary/);
+    document.getElementById('given-email').value = 'Harman@CanaryTechnologies.com';
+    await press('Save it and write the email');
+    await tick(60);
+    const saved = posts.find(p => p.body && p.body.action === 'contact-email');
+    assert.deepEqual({ id: saved.body.id, email: saved.body.email }, { id: REC.id, email: 'harman@canarytechnologies.com' });
+    assert.match(document.getElementById('mail-body').value, /congratulations on filling/);
 });

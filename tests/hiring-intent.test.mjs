@@ -4,7 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
 import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED } from '../api/_hiring-run.js';
-import { saveHiringOutcome, hiringBrief, liveStops } from '../api/_hiring-calls.js';
+import { saveHiringOutcome, hiringBrief, liveStops, saveHiringContactEmail } from '../api/_hiring-calls.js';
+import { templatesFor, HIRING_TEMPLATES } from '../api/_rep-email.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript, spokenRole, articleFor } from '../api/_call-scripts.js';
 import { crmStop } from '../api/_rep-email-gates.js';
@@ -1228,4 +1229,38 @@ test('identity rules from the second review: trade words, carrier staff, bare ca
     assert.equal(m('Ware Insurance', 'Sidney S. Kellam II', 'Ware Insurance', 'VA'), true, 'suffixes and initials do not break a match');
     assert.equal(m('Sun Plumbing', null, 'Sun Valley Plumbing', 'AZ'), false, 'with no owner, only the same business name will do');
     assert.equal(m('Dental Care', 'Ann Smith', 'Pacific Dental Care', 'CA'), false);
+});
+
+// Paul, 2026-10-28: "The call portal should be able to dispurse more emails and right now its not leaving a trail of breadcrumbs".
+test('an email given on the call goes on the card for the rep who called; the Hiring now templates never claim an earlier email', async () => {
+    const w = jobsWorld();
+    await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Madison' }, w.deps);
+    const rec = (await allRecords(w.kv))[0];
+    const rep = { email: 'hello@gostaffify.com', name: 'Paul Chareth' };
+    const deps = { isOptedOut: async q => q.email === 'stop@x.com', recordActivity: async () => {} };
+    assert.equal((await saveHiringContactEmail(w.kv, { rep, body: { id: rec.id, email: 'zach@x.com' } }, deps)).status, 409, 'not before a call');
+    await putRecord(w.kv, { ...rec, callHistory: [{ at: 'x', caller: 'hello@gostaffify.com', outcome: 'connected' }] });
+    assert.equal((await saveHiringContactEmail(w.kv, { rep, body: { id: rec.id, email: 'not an email' } }, deps)).status, 400);
+    assert.match((await saveHiringContactEmail(w.kv, { rep, body: { id: rec.id, email: 'stop@x.com' } }, deps)).error, /do-not-contact/);
+    const ok = await saveHiringContactEmail(w.kv, { rep, body: { id: rec.id, email: ' Zach@RogersAgency.com ' } }, deps);
+    assert.equal(ok.ok, true);
+    const after = await getRecord(w.kv, rec.id);
+    assert.equal(after.contact.email, 'zach@rogersagency.com'); assert.equal(after.contact.status, 'given_on_call'); assert.equal(after.contact.name, 'Zachary Rogers', 'the name stays');
+    assert.equal(callRow(after, rep.email, NOW).recipient, 'zach@rogersagency.com', 'Email them works now');
+    // The opt-out list unreadable: nothing saved.
+    assert.equal((await saveHiringContactEmail(w.kv, { rep, body: { id: rec.id, email: 'a@b.com' } }, { isOptedOut: async () => { throw Error('down'); } })).status, 503);
+    // Templates: the call-first set only on a Hiring now card, with the role in, and never "we sent you".
+    const hiring = templatesFor('milton@trystaffify.com', { kind: 'hiring', hiring: { title: 'Customer Service Representative - $40k-$60k/yr' } });
+    assert.deepEqual(hiring.map(t => t.id), HIRING_TEMPLATES.map(t => t.id));
+    for (const t of hiring) { assert.ok(!/\{role\}|\{roles\}/.test(t.body)); assert.doesNotMatch(t.body, /we sent|sent you|our (e-?mails?|notes)|—/i); }
+    assert.match(hiring[0].body, /filling the Customer Service Representative role/); assert.match(hiring[0].body, /dedicated Customer Service Representatives/);
+    assert.deepEqual(templatesFor('milton@trystaffify.com', { kind: 'rep' }).map(t => t.id), ['thanks-book', 'missed-book']);
+});
+test('the filled-role branch: Paul\'s pivot, then stay in touch books a callback a month out with the summary email', () => {
+    const s = hiringCallScript({ caller: 'Paul', company: 'Acme', firstName: 'Shirley', jobTitle: 'Executive Assistant', family: 'admin', direct: true });
+    assert.match(s.tree.filled.say, /^Okay, and just wanted to let you know, the reason I'm calling is I work for a company called Staffify/);
+    assert.deepEqual(s.tree.filled.choices[0], ['Yes, stay in touch', 'keepintouch']);
+    assert.equal(s.tree.keepintouch.log, 'callback'); assert.equal(s.tree.keepintouch.callbackDays, 30); assert.equal(s.tree.keepintouch.email, 'hiring-stay-in-touch');
+    assert.equal(s.tree.booked.email, 'hiring-thanks'); assert.equal(s.tree.sendinfo.email, 'hiring-thanks');
+    assert.equal(s.objections.find(o => o.label === 'Already filled it').say, s.tree.filled.say);
 });
