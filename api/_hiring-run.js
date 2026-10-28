@@ -498,8 +498,10 @@ export async function processLead(p, provenance, deps, report) {
     const d = digits10(l.phone);
     const vendor = String(l.phone_source || '').trim() || null;
     const personNums = vendor ? [d, ...String(l.phone_alternates || '').split(/[,;\s]+/).map(digits10)].filter((x, i, a) => x.length === 10 && a.indexOf(x) === i).map(x => '+1' + x) : [];
+    // The business's own published line, seen by whoever checked the lookup, rides last as the company's.
+    const publicNum = vendor && digits10(l.public_phone).length === 10 ? '+1' + digits10(l.public_phone) : null;
     let phone = d.length !== 10 ? null
-        : vendor ? { phone: '+1' + d, alternates: personNums.slice(1), source: 'vendor', vendor, person: String(l.phone_person || '').trim() || null, lineType: String(l.phone_type || '').trim() || null, grade: String(l.phone_grade || '').trim() || null, sourceUrl: l.phone_source_url || null, context: `Looked up on ${vendor}`, checkedAt: l.phone_checked_at || checkedAt }
+        : vendor ? { phone: '+1' + d, alternates: [...personNums.slice(1), ...(publicNum && !personNums.includes(publicNum) ? [publicNum] : [])], source: 'vendor', vendor, person: String(l.phone_person || '').trim() || null, lineType: String(l.phone_type || '').trim() || null, grade: String(l.phone_grade || '').trim() || null, sourceUrl: l.phone_source_url || null, context: `Looked up on ${vendor}`, checkedAt: l.phone_checked_at || checkedAt }
         : { phone: '+1' + d, alternates: [], source: 'provided', sourceUrl: l.email_source_url || website || null, context: `From ${source}'s research`, checkedAt };
     if (domain && website) {
         const chk = await siteCheck({ website, domain, getPage: deps.getPage, findSitePhone: deps.findSitePhone });
@@ -533,12 +535,14 @@ export async function processLead(p, provenance, deps, report) {
         if (email && !FREE_MAIL.test(email) && deps.verifyEmail) v = await deps.verifyEmail(email).catch(() => ({ status: 'unavailable' }));
         contact = { name: [first, last].filter(Boolean).join(' ') || null, firstName: firstNameOf(first), role: String(l.owner_title || '').trim() || null, email: v.status === 'verified' ? email : null, candidateEmail: email, status: email ? v.status : 'named', provider: v.provider || null, source: l.contact_source ? `${l.contact_source} lookup` : `${source}'s research`, sourceUrl: l.email_source_url || null, verifiedBy: email ? 'Findymail verifier' : null, checkedAt: v.checkedAt || checkedAt };
     }
-    // A looked-up person's number logged as wrong leaves the next one up: say whose it is, or that it is the company's.
+    // A looked-up person's number logged as wrong leaves the next one up: another of theirs says so, and a line
+    // the business publishes (its website, or the page the checker saw) is labelled as the company's, from there.
     const isPerson = phone.source === 'vendor' && personNums.includes(usable[0]);
-    const lineType = phone.source !== 'vendor' ? null : usable[0] === phone.phone ? phone.lineType : isPerson ? 'other number' : 'company line';
+    const published = phone.source === 'vendor' && !isPerson;
+    const lineType = isPerson ? (usable[0] === phone.phone ? phone.lineType : 'other number') : null;
     const rec = {
         ...base, contact,
-        phone: { number: usable[0], alternates: usable.slice(1), source: phone.source, foundBy: source, ...(phone.source === 'vendor' ? { vendor: phone.vendor, person: isPerson ? phone.person : null, lineType, grade: usable[0] === phone.phone ? phone.grade : null } : {}), sourceUrl: phone.sourceUrl, context: phone.context || null, checkedAt: phone.checkedAt || checkedAt, type: phone.source === 'vendor' ? `${isPerson && phone.person ? phone.person + '\'s ' : ''}${lineType || 'number'} from ${phone.vendor}` : phone.source === 'provided' ? `number from ${source}'s research` : 'company line listed on their website', owner: isPerson && phone.person ? phone.person : 'the company, not a named person', localCheckedAt: checkedAt, ...(phone.siteCheck ? { siteCheck: phone.siteCheck } : {}), ...(phone.previous ? { previous: phone.previous } : {}) },
+        phone: { number: usable[0], alternates: usable.slice(1), source: published ? 'business website' : phone.source, foundBy: source, ...(isPerson ? { vendor: phone.vendor, person: phone.person, lineType, grade: usable[0] === phone.phone ? phone.grade : null } : {}), sourceUrl: published ? (usable[0] === publicNum ? l.public_phone_url || website || null : website) : phone.sourceUrl, context: published ? 'A line the business publishes' : phone.context || null, checkedAt: phone.checkedAt || checkedAt, type: isPerson ? `${phone.person ? phone.person + '\'s ' : ''}${lineType || 'number'} from ${phone.vendor}` : published ? 'company line the business publishes' : phone.source === 'provided' ? `number from ${source}'s research` : 'company line listed on their website', owner: isPerson && phone.person ? phone.person : 'the company, not a named person', localCheckedAt: checkedAt, ...(phone.siteCheck ? { siteCheck: phone.siteCheck } : {}), ...(phone.previous ? { previous: phone.previous } : {}) },
         status: 'ready', callOutcome: null, nextCallAt: null, callOwner: null, callHistory: [],
     };
     if (existing) Object.assign(rec, { createdAt: existing.createdAt, callHistory: existing.callHistory || [], callOwner: existing.callOwner || null, callOwnerAt: existing.callOwnerAt || null, jobs: existing.jobs && existing.jobs.length ? existing.jobs : rec.jobs, provenance: existing.provenance || rec.provenance });
@@ -795,7 +799,7 @@ export async function fillResearch(kv, { source, fills, write = false, by, now =
         if (b.state === 'closed') { out.push({ id, done: false, why: 'closed: ' + (b.closedReason || 'no reason') }); continue; }
         const d = digits10(f.phone);
         if (d.length !== 10) { out.push({ id, company: b.company && b.company.name, done: false, why: 'no usable number' }); continue; }
-        const lead = { ...b.lead, phone: d, phone_source: source, phone_type: f.phone_type || null, phone_person: f.phone_person || null, phone_grade: f.phone_grade || null, phone_alternates: (f.phone_alternates || []).map(digits10).filter(x => x.length === 10 && x !== d).slice(0, 3).join(','), phone_checked_at: f.checked_at || at, phone_source_url: f.source_url || null };
+        const lead = { ...b.lead, phone: d, phone_source: source, phone_type: f.phone_type || null, phone_person: f.phone_person || null, phone_grade: f.phone_grade || null, phone_alternates: (f.phone_alternates || []).map(digits10).filter(x => x.length === 10 && x !== d).slice(0, 3).join(','), phone_checked_at: f.checked_at || at, phone_source_url: f.source_url || null, public_phone: digits10(f.public_phone).length === 10 ? digits10(f.public_phone) : null, public_phone_url: f.public_phone_url || null };
         const added = ['phone'];
         for (const k of FILL_FIELDS) if (!String(b.lead[k] || '').trim() && String(f[k] || '').trim()) { lead[k] = String(f[k]).trim().slice(0, 300); added.push(k); }
         if (added.includes('owner_first') || added.includes('owner_email')) lead.contact_source = source;

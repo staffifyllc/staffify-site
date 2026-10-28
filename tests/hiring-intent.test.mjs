@@ -936,7 +936,7 @@ test('a number looked up for a research lead: dry first, blank fields only, then
     const first = await processLead({ kind: 'lead', key: leadKey(lead), lead }, { source: 'Madison', postingKey: leadKey(lead) }, w.deps);
     assert.equal(first.reason, 'no_listed_phone');
     const id = first.id;
-    const fill = { id, phone: '+1 714-345-6538', phone_type: 'mobile', phone_person: 'Glenn Park', phone_grade: 'A', phone_alternates: ['+19494613400'], owner_first: 'Glen', owner_email: 'glenn@parkconsulting.com' };
+    const fill = { id, phone: '+1 714-345-6538', phone_type: 'mobile', phone_person: 'Glenn Park', phone_grade: 'A', phone_alternates: ['+19494613400'], owner_first: 'Glen', owner_email: 'glenn@parkconsulting.com', public_phone: '(949) 753-1201' };
     const dry = await fillResearch(w.kv, { source: 'RocketReach', fills: [fill, { id: 'hire:0000000000000000', phone: '5551234567' }], by: 'test', now: NOW });
     assert.deepEqual(dry.map(x => x.done), [false, false]); assert.deepEqual(dry[0].added, ['phone', 'owner_email']); assert.equal(dry[1].why, 'not in research');
     assert.equal((await w.kv.hgetall(HK.pending)) || null, null, 'a dry run changes nothing');
@@ -952,7 +952,7 @@ test('a number looked up for a research lead: dry first, blank fields only, then
     const rec = await getRecord(w.kv, id);
     assert.equal(rec.phone.number, '+17143456538'); assert.equal(rec.phone.source, 'vendor'); assert.equal(rec.phone.vendor, 'RocketReach');
     assert.equal(rec.phone.person, 'Glenn Park'); assert.equal(rec.phone.lineType, 'mobile'); assert.equal(rec.phone.owner, 'Glenn Park');
-    assert.deepEqual(rec.phone.alternates, ['+19494613400', '+19497531200']); assert.equal(rec.phone.siteCheck.result, 'person_line');
+    assert.deepEqual(rec.phone.alternates, ['+19494613400', '+19497531201', '+19497531200'], 'the owner\'s numbers, then the business line a checker saw, then the website\'s'); assert.equal(rec.phone.siteCheck.result, 'person_line');
     assert.equal(rec.job.foundBy, 'Madison'); assert.equal(rec.contact.email, 'glenn@parkconsulting.com'); assert.equal(rec.contact.source, 'RocketReach lookup');
     const row = callRow(rec, MILTON.email, NOW);
     assert.equal(row.callContact.phoneStatus, 'vendor_direct'); assert.equal(row.callContact.phoneSource, 'RocketReach'); assert.match(row.callContact.phoneDetail, /Glenn Park's mobile from a RocketReach lookup \(grade A\), not published on their website/);
@@ -961,4 +961,22 @@ test('a number looked up for a research lead: dry first, blank fields only, then
     const brief = await hiringBrief(w.kv, { id, caller: 'Milton', callerEmail: MILTON.email, shiftGate: { allowed: true, required: true } }, base);
     assert.equal(brief.body.dial.label, "Glenn Park's mobile, from RocketReach"); assert.match(brief.body.dial.detail, /Madison found the lead\. Ask for Glenn Park\./);
     assert.equal((await allBacklog(w.kv)).some(x => x.id === id), false, 'the research entry is cleared once it is a card');
+});
+
+test('when the owner\'s looked-up number is logged wrong, the next one up says it is the company line, not theirs', async () => {
+    const w = jobsWorld();
+    const lead = LEAD({ business: 'Coleman Litigation', owner_first: 'Joseph', owner_last: 'Coleman', owner_title: 'Founder', phone: '239-248-9252', website: null, city: 'Naples', state: 'FL', role_posted: 'Paralegal (remote in Florida)', phone_source: 'RocketReach', phone_type: 'mobile', phone_person: 'Joseph Coleman', phone_grade: 'A', phone_alternates: '', public_phone: '2394351052' });
+    w.deps.loadBad = async () => new Set(['2392489252']);
+    w.deps.isBad = (bad, n) => bad.has(String(n).replace(/\D/g, '').slice(-10));
+    const r = await processLead({ kind: 'lead', key: leadKey(lead), lead }, { source: 'Madison' }, w.deps);
+    assert.equal(r.verdict, 'ready');
+    const lead2 = { ...lead, public_phone_url: 'https://www.floridabar.org/directories/find-mbr/profile/?num=1' };
+    const w2 = jobsWorld(); w2.deps.loadBad = w.deps.loadBad; w2.deps.isBad = w.deps.isBad;
+    const r2 = await processLead({ kind: 'lead', key: leadKey(lead2), lead: lead2 }, { source: 'Madison' }, w2.deps);
+    for (const x of [r, r2]) {
+        assert.equal(x.record.phone.number, '+12394351052'); assert.equal(x.record.phone.source, 'business website', 'not labelled as the vendor\'s');
+        assert.equal(x.record.phone.person, undefined); assert.equal(x.record.phone.owner, 'the company, not a named person'); assert.equal(x.record.phone.type, 'company line the business publishes');
+    }
+    assert.equal(r2.record.phone.sourceUrl, 'https://www.floridabar.org/directories/find-mbr/profile/?num=1');
+    assert.equal(callRow(r2.record, MILTON.email, NOW).callContact.phoneStatus, 'site_main');
 });
