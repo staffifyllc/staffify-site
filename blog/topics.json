@@ -523,6 +523,258 @@
       ],
       "status": "done",
       "published_iso": "2026-09-22T19:46:09Z"
+    },
+    {
+      "slug": "executive-assistant-vs-virtual-assistant",
+      "title": "Executive Assistant Or Virtual Assistant: Which One Your Business Actually Needs",
+      "intent": "Founder unsure whether to hire a high-level EA or a task-focused VA. Clarify the real difference, the price gap, and when each pays off. Position Staffify as the vetted option for both.",
+      "keywords": [
+        "executive assistant",
+        "virtual assistant",
+        "ea vs va",
+        "hiring an assistant"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "bookkeeping-va",
+      "title": "Should You Hire A Bookkeeping VA? What To Delegate And What To Keep In-House",
+      "intent": "Owner drowning in finance admin, nervous about handing money tasks offshore. Show the safe split between a bookkeeping VA and a CPA, and the controls that make it work.",
+      "keywords": [
+        "bookkeeping va",
+        "bookkeeping virtual assistant",
+        "delegate bookkeeping",
+        "service business finance"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "appointment-setter-roi",
+      "title": "The Appointment Setter ROI Math: When A Dedicated Setter Pays For Itself",
+      "intent": "Founder weighing whether a full-time appointment setter is worth it. Walk through the real numbers so they can calculate payback for their own pipeline.",
+      "keywords": [
+        "appointment setter",
+        "sales development rep",
+        "outbound setter",
+        "sales va roi"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "law-firm-va-tasks",
+      "title": "12 Tasks Every Small Law Firm Should Hand To A Virtual Assistant",
+      "intent": "Solo or small-firm attorney buried in intake and admin. Give a concrete delegation list that respects confidentiality and frees billable hours.",
+      "keywords": [
+        "law firm va",
+        "legal virtual assistant",
+        "paralegal support",
+        "law firm delegation"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "med-spa-front-desk",
+      "title": "How Med Spas Staff A Remote Front Desk Without Losing The Personal Touch",
+      "intent": "Med spa owner losing bookings to missed calls. Show how a remote coordinator handles scheduling and follow-up while keeping the experience warm.",
+      "keywords": [
+        "med spa va",
+        "remote front desk",
+        "patient coordinator",
+        "med spa reception"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "ecommerce-tasks-to-delegate",
+      "title": "The 14 E-Commerce Tasks Owners Should Delegate Before They Burn Out",
+      "intent": "DTC or e-commerce owner doing everything themselves. Prioritize which store, listing, and support tasks to hand off first for the fastest relief.",
+      "keywords": [
+        "ecommerce va",
+        "ecommerce delegation",
+        "shopify va",
+        "online store tasks"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "home-services-dispatcher",
+      "title": "The Remote Dispatcher Playbook For Home Services Businesses",
+      "intent": "HVAC, plumbing, or electrical owner missing calls while crews are in the field. Show how a remote dispatcher books more jobs and tightens scheduling.",
+      "keywords": [
+        "home services va",
+        "remote dispatcher",
+        "field service admin",
+        "hvac office help"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "async-communication-remote-team",
+      "title": "The Async Communication System That Keeps Remote Teams Out Of Endless Meetings",
+      "intent": "Owner whose remote team drowns in calls and Slack pings. Give a practical async operating system that protects focus and speeds decisions.",
+      "keywords": [
+        "async communication",
+        "remote team communication",
+        "fewer meetings",
+        "distributed team"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "time-zone-advantage",
+      "title": "How To Turn A 12-Hour Time Zone Gap Into An Operating Advantage",
+      "intent": "Skeptic who thinks offshore time zones are a problem. Reframe the overnight gap as a round-the-clock advantage with concrete handoff workflows.",
+      "keywords": [
+        "time zone management",
+        "offshore team hours",
+        "overnight work",
+        "follow the sun"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "quality-control-remote-work",
+      "title": "The Quality Control System For Remote Work That Doesn't Require Micromanaging",
+      "intent": "Owner afraid remote output will slip without hovering. Give a review and scorecard system that holds quality without micromanagement.",
+      "keywords": [
+        "remote work quality control",
+        "qa process",
+        "managing remote va",
+        "output review"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "ai-plus-va",
+      "title": "AI Plus A VA: The Operating Model That Beats Hiring Either One Alone",
+      "intent": "Owner wondering if AI replaces assistants. Show the human-in-the-loop model where a VA runs AI tools to do far more, which is how Staffify thinks.",
+      "keywords": [
+        "ai and virtual assistant",
+        "ai va workflow",
+        "human in the loop",
+        "ai delegation"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "social-media-manager-vs-va",
+      "title": "A Social Media Manager Or A VA Who Posts? What Small Brands Actually Need",
+      "intent": "Small brand confused about social roles and prices. Clarify strategy vs execution and when a capable content VA is the smarter buy.",
+      "keywords": [
+        "social media va",
+        "social media manager cost",
+        "content va",
+        "small business social"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "content-repurposing-system",
+      "title": "The Content Repurposing System That Turns One Video Into Fifteen Posts",
+      "intent": "Founder sitting on long videos with no time to clip them. Give a repeatable repurposing pipeline a VA or editor can run every week.",
+      "keywords": [
+        "content repurposing",
+        "video to posts",
+        "content va",
+        "repurpose content"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "cold-calling-still-works",
+      "title": "Cold Calling Still Works For Service Businesses. Here Is The 2026 Playbook",
+      "intent": "Owner who thinks cold calling is dead. Show the modern, list-plus-script approach a dedicated caller runs to book real meetings.",
+      "keywords": [
+        "cold calling",
+        "b2b outbound",
+        "sales calls",
+        "appointment setting"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "scaling-past-5m",
+      "title": "What Breaks When A Service Business Scales Past $5M, And How To Get Ahead Of It",
+      "intent": "Owner approaching or past $5M feeling the strain. Name the systems, roles, and layers that crack at that stage and how to build them early.",
+      "keywords": [
+        "scaling service business",
+        "past 5 million",
+        "growth bottlenecks",
+        "service business operations"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "property-management-va",
+      "title": "The Property Management Tasks You Should Delegate Before Adding More Doors",
+      "intent": "Property manager stretched thin on tenant comms and admin. Give the delegation list that lets them grow the portfolio without more chaos.",
+      "keywords": [
+        "property management va",
+        "real estate admin",
+        "tenant communication",
+        "pm delegation"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "insurance-agency-va",
+      "title": "How Independent Insurance Agencies Use VAs To Service More Policies",
+      "intent": "Independent agency owner stuck servicing instead of selling. Show which policy, renewal, and CSR tasks a trained VA can carry.",
+      "keywords": [
+        "insurance agency va",
+        "insurance virtual assistant",
+        "policy servicing",
+        "agency admin"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "customer-success-for-service",
+      "title": "Customer Success Isn't Just For SaaS: A Retention Model For Service Businesses",
+      "intent": "Service owner losing clients quietly. Adapt the SaaS customer-success playbook into a simple retention motion a VA can run.",
+      "keywords": [
+        "customer success",
+        "service business retention",
+        "account management",
+        "reduce churn"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "documentation-that-scales",
+      "title": "Document Once, Delegate Forever: The Knowledge Base Every Growing Team Needs",
+      "intent": "Owner whose processes live only in their head. Show how to build a lightweight knowledge base that makes every future hire faster.",
+      "keywords": [
+        "business documentation",
+        "knowledge base",
+        "sop library",
+        "process documentation"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "first-remote-hire-mistakes",
+      "title": "The Seven Mistakes Founders Make On Their First Remote Hire",
+      "intent": "Founder about to make their first offshore or remote hire. Warn them off the common traps and show how to set the role up to succeed.",
+      "keywords": [
+        "first remote hire",
+        "hiring mistakes",
+        "remote hiring",
+        "offshore hiring"
+      ],
+      "status": "pending"
+    },
+    {
+      "slug": "dental-practice-va",
+      "title": "How Dental Practices Fill The Front Office Gap With Remote Staff",
+      "intent": "Dental practice owner short-staffed at the front desk. Show how remote schedulers and coordinators cover calls, recalls, and insurance follow-up.",
+      "keywords": [
+        "dental va",
+        "dental front office",
+        "patient scheduling",
+        "dental practice admin"
+      ],
+      "status": "pending"
     }
   ]
 }
