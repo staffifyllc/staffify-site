@@ -17,6 +17,9 @@ import { stats } from '../api/_campaigns-model.js';
 import { orderCallQueue } from '../assets/js/call-queue-order.js';
 import { hubEntriesFrom } from '../api/_daily-report.js';
 import { calledFirst } from '../api/rep-email.js';
+import { findSitePhone as realSitePhone } from '../api/_site-phone.js';
+import { workableListing, workableDiscovery, listingPosting, profileIdentity } from '../api/_hiring-run.js';
+import { FEED_TERMS, jobKey, parseValue } from '../api/_hiring-intent.js';
 
 const NOW = Date.parse('2026-10-27T18:00:00Z');
 function fakeKv() {
@@ -506,7 +509,8 @@ test('listings beyond the run cap, or beyond the day\'s search budget, wait in p
     // A day with no searches left: nothing is processed, nothing is marked as a failed attempt.
     const broke = await runHiring({ ...w.deps, serpAccount: async () => ({ left: 250 }) }, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
     assert.equal(broke.searchBudget.allowedThisRun, 0);
-    assert.equal(broke.waitingForBudget, 1);
+    // Since 2026-10-30 the pass skips a listing with no budget and goes on: both wait, neither stops the other.
+    assert.equal(broke.waitingForBudget, 2);
     const pend = Object.values(await w.kv.hgetall(HK.pending)).map(JSON.parse);
     assert.equal(pend.length, 2); assert.ok(pend.every(e => e.attempts === 0));
 });
@@ -1667,4 +1671,154 @@ test('Not interested on a card with no email and no tapped number still closes i
     const lists2 = [];
     await saveHiringOutcome(w2.kv, { rep: MILTON, body: { action: 'suppress', id: w2.id } }, { optOut: async q => { lists2.push(q.phone); return { ok: true }; }, markCrm: async () => ({}), recordActivity: async () => {}, requestStop: async () => ({ ok: true }) });
     assert.deepEqual(lists2, ['5615550142'], 'the number of their last logged call');
+});
+
+// ---- the free feed: Workable (Paul, 2026-10-30: SerpApi is out of credits, the Hub stopped refilling) ------------------
+const WK_URL = 'https://jobs.workable.com/view/cdzG4iKHoUhk84CpToy8rH/dispatcher-in-dublin-at-apex-pros';
+const wkJob = (over = {}) => ({ id: '5ad6368d-4729-4311-9fd4-8db0816c43cf', title: 'Dispatcher', state: 'published',
+    description: '<h3><strong>About Us!</strong></h3><p>Apex Pros is a fast-growing residential plumbing, HVAC and electrical company in Dublin, Ohio.</p><p>Answer calls &amp; schedule service visits for our technicians.</p>',
+    requirementsSection: '<ul><li>Strong attention to detail</li></ul>', benefitsSection: '<p>Paid&nbsp;time off</p>',
+    url: WK_URL, location: { city: 'Dublin', subregion: 'Ohio', countryName: 'United States' }, created: new Date(NOW - 864e5).toISOString(),
+    company: { id: '1a146c24', title: 'Apex Pros Plumbing, Electrical, Heating and Air', website: 'https://apexpros.com/' }, workplace: 'on_site', ...over });
+const APEX = { 'https://apexpros.com/': { url: 'https://apexpros.com/', html: '<a href="/contact">Contact</a>', text: 'Apex Pros' }, 'https://apexpros.com/contact': { url: 'https://apexpros.com/contact', html: '', text: 'Dublin office (614) 763-0142' } };
+/** The stub world with every SerpApi call counted, the real site-phone reader, and a Workable search that answers once. */
+function workableWorld(jobs = [wkJob()]) {
+    const w = world({ pages: APEX });
+    const serp = { searches: 0, profiles: 0 };
+    const asked = [];
+    Object.assign(w.deps, {
+        serpAccount: async () => { throw Error('SerpApi out of credits'); },
+        serpJobs: async () => { serp.searches++; return { jobs: [] }; },
+        serpSearch: async () => { serp.searches++; return { links: [] }; },
+        businessProfile: async (c, l, budget) => { serp.profiles++; if (!budget || !await budget.take()) return { error: 'no budget', noBudget: true }; return {}; },
+        findSitePhone: realSitePhone, findContact: async () => ({}),
+        workableJobs: async q => { asked.push(q); return { jobs: asked.length === 1 ? jobs : [], nextPageToken: null }; },
+    });
+    return { ...w, serp, asked };
+}
+
+test('a Workable job becomes a listing in the Google shape: its own date, the employer website, never a Workable apply link', () => {
+    const l = workableListing(wkJob(), NOW);
+    assert.equal(l.posted_at, new Date(NOW - 864e5).toISOString()); assert.equal(l.found_at, new Date(NOW).toISOString());
+    assert.equal(l.job_id, 'workable:5ad6368d-4729-4311-9fd4-8db0816c43cf');
+    assert.equal(l.company_name, 'Apex Pros Plumbing, Electrical, Heating and Air'); assert.equal(l.company_website, 'https://apexpros.com/');
+    assert.equal(l.location, 'Dublin, OH'); assert.equal(l.via, 'Workable'); assert.equal(l.feed, 'Workable');
+    assert.deepEqual(l.extensions, []); assert.deepEqual(l.apply_options, []); assert.equal(l.share_link, WK_URL);
+    assert.doesNotMatch(l.description, /<|&amp;|&nbsp;/); assert.match(l.description, /Answer calls & schedule service visits/); assert.match(l.description, /Paid time off/);
+    assert.equal(qualifyJob(l, NOW).ok, true);
+    assert.equal(qualifyJob({ ...l, apply_options: [{ link: WK_URL }] }, NOW).reason, 'large_employer', 'why no Workable link is kept: it reads as their own careers site');
+    const remote = workableListing(wkJob({ workplace: 'remote', location: { city: '', subregion: 'Georgia', countryName: 'United States' } }), NOW);
+    assert.deepEqual(remote.extensions, ['Work from home']); assert.equal(remote.location, 'Georgia'); assert.equal(stateOf(remote.location), 'GA');
+    assert.equal(listingPosting(compactListing(remote, NOW), NOW).workplace, 'remote');
+    assert.equal(workableListing(wkJob({ workplace: 'remote', location: { city: null, subregion: null, countryName: 'United States' } }), NOW).location, 'United States');
+    assert.equal(workableListing(wkJob({ location: { city: 'Toronto', subregion: 'Ontario', countryName: 'Canada' } }), NOW), null, 'US jobs only');
+    assert.equal(workableListing(wkJob({ company: { title: 'X Co', website: 'xco.com' } }), NOW).company_website, 'https://xco.com');
+    assert.ok(workableListing(wkJob({ description: '<p>' + 'word '.repeat(2000) + '</p>' }), NOW).description.length <= 3000);
+});
+
+test('compactListing keeps a date the feed gives and the employer website, so a fresh listing is never undated later', () => {
+    const l = workableListing(wkJob(), NOW);
+    const kept = compactListing(l, NOW + 3600e3);
+    assert.equal(kept.posted_at, l.posted_at); assert.equal(kept.company_website, 'https://apexpros.com/'); assert.equal(kept.feed, 'Workable');
+    assert.equal(qualifyJob(kept, NOW + 2 * 864e5).ok, true, 'still dated, two days on');
+    assert.equal(qualifyJob(kept, NOW + 8 * 864e5).reason, 'stale_post', 'and it ages from the real date');
+    // A Google listing is as before: the date its label implies, and no website or feed of its own.
+    const g = compactListing(listing(), NOW);
+    assert.equal(g.posted_at, new Date(NOW - 2 * 864e5).toISOString()); assert.equal('company_website' in g, false); assert.equal('feed' in g, false);
+});
+
+test('a listing that names its own website is proven by it with no Google lookup; a shared host still goes to Google', async () => {
+    let lookups = 0;
+    const deps = { businessProfile: async () => { lookups++; return ROYAL; }, searchBudget: { take: async () => true } };
+    const l = compactListing(workableListing(wkJob(), NOW), NOW);
+    assert.deepEqual(await profileIdentity(listingPosting(l, NOW), deps), { ok: true, how: 'listing_website', website: 'https://apexpros.com/', domain: 'apexpros.com', evidenceUrl: WK_URL });
+    assert.equal(lookups, 0, 'businessProfile (SerpApi) is never called');
+    const agent = compactListing(workableListing(wkJob({ company: { title: 'Jane Doe State Farm', website: 'https://www.statefarm.com/agent/us/oh/dublin/jane-doe' } }), NOW), NOW);
+    await profileIdentity(listingPosting(agent, NOW), deps);
+    assert.equal(lookups, 1, 'a State Farm agent page ties the job to nobody: Google\'s listing is still the proof');
+    await profileIdentity(listingPosting(compactListing(listing(), NOW), NOW), deps);
+    assert.equal(lookups, 2, 'a Google listing is unchanged');
+});
+
+test('a listing waiting for search budget no longer stops the pass: the free listing behind it becomes a card', async () => {
+    const w = workableWorld();
+    const g = compactListing(listing(), NOW);
+    await addPending(w.kv, { kind: 'gjob', key: jobKey(g), listing: g }, { discoveredBy: 'SerpApi Google Jobs' }, NOW - 3600e3);
+    const wl = compactListing(workableListing(wkJob(), NOW), NOW);
+    await addPending(w.kv, { kind: 'gjob', key: jobKey(wl), listing: wl }, { discoveredBy: 'Workable' }, NOW);
+    const r = await runHiring({ ...w.deps, serpAccount: async () => ({ left: 250 }) }, { discover: false, free: false, refresh: 0, cells: 0 });
+    assert.equal(r.waitingForBudget, 1); assert.equal(r.verdicts.ready, 1, JSON.stringify(r.reasons));
+    const pend = Object.values(await w.kv.hgetall(HK.pending)).map(JSON.parse);
+    assert.equal(pend.length, 1); assert.equal(pend[0].listing.company_name, 'Royal Electric'); assert.equal(pend[0].attempts, 0, 'waiting is not a failed attempt');
+    assert.equal(w.serp.profiles, 1, 'only the Google listing asked for a lookup');
+});
+
+test('the free search drops a company posting one title in three cities, reads two pages a title, and never sticks on a bad page', async () => {
+    const at = (city, subregion) => ({ city, subregion, countryName: 'United States' });
+    const firstMate = { title: 'First Mate Heating & Cooling', website: 'https://firstmatehvac.com' };
+    const pages = {
+        none: { jobs: [wkJob({ id: 'a1' }), wkJob({ id: 'a2', location: at('Columbus', 'Ohio') })], nextPageToken: 'p2' },
+        p2: { jobs: [wkJob({ id: 'a3', location: at('Akron', 'Ohio') }), wkJob({ id: 'b1', title: 'Receptionist', company: { title: 'Smoker & Company CPA', website: 'https://smokercpa.com' }, location: at('Dayton', 'Ohio') }), wkJob({ id: 'c1', company: firstMate, location: at('Tampa', 'Florida') }), wkJob({ id: 'c2', company: firstMate, location: at('Orlando', 'Florida') }), wkJob({ id: 'x1', location: { city: 'Toronto', subregion: 'Ontario', countryName: 'Canada' } })], nextPageToken: 'p3' },
+    };
+    const w = world();
+    const asked = [];
+    w.deps.workableJobs = async q => { asked.push(q); if (q.pageToken === 'old') throw Error('Workable search answered 400'); return asked.length > 2 ? { jobs: [], nextPageToken: null } : pages[q.pageToken || 'none']; };
+    const out = await workableDiscovery(w.deps, { now: NOW, maxRequests: 3 });
+    assert.deepEqual(asked.map(q => [q.query, q.pageToken || null, q.dayRange]), [[FEED_TERMS[0][1], null, 1], [FEED_TERMS[0][1], 'p2', 1], [FEED_TERMS[1][1], null, 1]], 'two pages of a title, then the next title');
+    assert.deepEqual(out.dropped, { multi_city: 3, outside_us: 1 }, 'Apex in three Ohio cities across both pages is dropped; First Mate in two is kept');
+    assert.equal(out.queued, 3); assert.equal(out.fetched, 7); assert.equal(out.requests, 3);
+    const pend = Object.values(await w.kv.hgetall(HK.pending)).map(JSON.parse);
+    assert.deepEqual(pend.map(e => e.listing.company_name).sort(), ['First Mate Heating & Cooling', 'First Mate Heating & Cooling', 'Smoker & Company CPA']);
+    assert.ok(pend.every(e => e.kind === 'gjob' && e.provenance.discoveredBy === 'Workable' && !e.provenance.seed));
+    assert.deepEqual(parseValue(await w.kv.get(HK.feedCursor)), { term: 2, page: 0, token: null });
+    // Already waiting, or seen in the last two weeks: not queued again. Seen longer ago, it is a re-list worth a look.
+    const recent = wkJob({ id: 'd1', title: 'Office Administrator', company: { title: 'Strauss Attorneys', website: 'https://straussattorneys.com' } });
+    const old = wkJob({ id: 'e1', title: 'Office Administrator', company: { title: 'Almstead Tree and Shrub Care', website: 'https://almstead.com' } });
+    await w.kv.hset(HK.seen, { [jobKey(workableListing(recent, NOW))]: JSON.stringify({ at: new Date(NOW - 3 * 864e5).toISOString(), verdict: 'excluded' }), [jobKey(workableListing(old, NOW))]: JSON.stringify({ at: new Date(NOW - 20 * 864e5).toISOString(), verdict: 'ready' }) });
+    const again = await workableDiscovery({ ...w.deps, workableJobs: async () => ({ jobs: [...pages.p2.jobs.slice(1, 4), recent, old], nextPageToken: null }) }, { now: NOW, maxRequests: 1 });
+    assert.deepEqual([again.alreadyWaiting, again.alreadySeen, again.queued], [3, 1, 1]);
+    // A title cut off by the run's cap is read again from its first page next run, never split across two runs.
+    await w.kv.set(HK.feedCursor, JSON.stringify({ term: 0, page: 0, token: null }));
+    await workableDiscovery({ ...w.deps, workableJobs: async () => pages.none }, { now: NOW, maxRequests: 1 });
+    assert.deepEqual(parseValue(await w.kv.get(HK.feedCursor)), { term: 0, page: 0, token: null });
+    // A page token that went bad is an error on that search, and the cursor moves on to the next title.
+    await w.kv.set(HK.feedCursor, JSON.stringify({ term: 5, page: 1, token: 'old' }));
+    const bad = await workableDiscovery(w.deps, { now: NOW, maxRequests: 1 });
+    assert.match(bad.searches[0].error, /400/); assert.deepEqual(parseValue(await w.kv.get(HK.feedCursor)), { term: 6, page: 0, token: null });
+});
+
+test('size gaps a free feed opens: a DA\'s office, and an employer whose own website is .edu, .gov or .mil', () => {
+    for (const c of ["Middlesex County DA's Office", 'Middlesex County D.A.’s Office', 'Kings County District Attorney']) assert.equal(qualifyJob(listing({ company_name: c }), NOW).reason, 'institution', c);
+    for (const site of ['https://www.fvi.edu/', 'https://wsutech.edu', 'https://www.dublinohiousa.gov/', 'https://www.army.mil/']) assert.equal(qualifyJob(listing({ company_name: 'Acme Learning', company_website: site }), NOW).reason, 'institution', site);
+    for (const c of ['Dana Office Solutions', "Linda's Office Cleaning", 'Panda Office Supply']) assert.equal(qualifyJob(listing({ company_name: c }), NOW).ok, true, c);
+    assert.equal(qualifyJob(listing({ company_website: 'https://educationfirst.com' }), NOW).ok, true, 'a .com is not a school');
+    assert.equal(qualifyJob(workableListing(wkJob({ company: { title: 'FVI School of Nursing', website: 'https://www.fvi.edu/' } }), NOW), NOW).reason, 'institution');
+});
+
+test('end to end: a Workable job becomes a pending listing, then a card with the site\'s number, with no SerpApi search at all', async () => {
+    const w = workableWorld();
+    // Run 1: SerpApi cannot even be read. The free search still runs; the card waits in pending (no slots this run).
+    const r1 = await runHiring(w.deps, { maxCandidates: 0, refresh: 0, cells: 0 });
+    assert.equal(r1.searchBudget.allowedThisRun, 0); assert.equal(r1.workable.requests, 8); assert.equal(r1.workable.queued, 1);
+    const key = jobKey(workableListing(wkJob(), NOW));
+    const entry = parseValue(await w.kv.hget(HK.pending, key));
+    assert.equal(entry.kind, 'gjob'); assert.equal(entry.listing.feed, 'Workable'); assert.equal(entry.listing.company_website, 'https://apexpros.com/');
+    assert.equal(entry.provenance.discoveredBy, 'Workable'); assert.ok(!entry.provenance.seed);
+    // Run 2: plenty of budget this time, and still not one search or lookup is spent on it.
+    const r2 = await runHiring({ ...w.deps, serpAccount: async () => ({ left: 900 }) }, { discover: false, free: false, maxCandidates: 5, refresh: 0, cells: 0 });
+    assert.equal(r2.verdicts.ready, 1, JSON.stringify(r2.reasons)); assert.equal(r2.searchBudget.used, 0);
+    const rec = (await allRecords(w.kv))[0];
+    assert.equal(rec.job.source, 'google_jobs', 'every date rule still applies'); assert.equal(rec.job.feed, 'Workable'); assert.equal(rec.job.via, 'Workable');
+    assert.equal(rec.job.city, 'Dublin'); assert.equal(rec.job.usState, 'OH'); assert.equal(rec.job.postedAt, new Date(NOW - 864e5).toISOString()); assert.equal(rec.job.ageDays, 1);
+    assert.equal(rec.company.identity.how, 'listing_website'); assert.equal(rec.company.identity.evidenceUrl, WK_URL); assert.equal(rec.company.domain, 'apexpros.com');
+    assert.equal(rec.phone.number, '+16147630142'); assert.equal(rec.phone.source, 'business website'); assert.equal(rec.phone.sourceUrl, 'https://apexpros.com/contact'); assert.equal(rec.phone.siteCheck.result, 'local_number');
+    assert.match(rec.provenance.verifiedVia, /^Workable listing, 1 day\(s\) old/); assert.equal(rec.provenance.discoveredBy, 'Workable');
+    assert.match(rec.brief.summary, /went up yesterday on Workable\./); assert.doesNotMatch(JSON.stringify(rec.brief), /Google/);
+    assert.equal(hiringCallReady(rec, NOW), true);
+    assert.equal(w.serp.searches, 0); assert.equal(w.serp.profiles, 0);
+    const b = await hiringBrief(w.kv, { id: rec.id, caller: 'Milton', callerEmail: MILTON.email, shiftGate: { allowed: true, required: true } }, { kv: w.kv, isOptedOut: async () => false, clientCheck: async () => ({ status: 'clear' }), crmContact: async () => { throw Error('CRM contact missing'); }, crmStop, loadBad, isBad, queueState: async () => ({ records: [] }) });
+    assert.match(b.body.why, /listed on Workable around/); assert.doesNotMatch(b.body.why, /Google/); assert.equal(b.body.job.feed, 'Workable');
+    // The hourly re-check holds it to the current rules for free and leaves it on the list.
+    const out = await refreshReady(w.deps, { limit: 5 });
+    assert.equal(out.excluded, 0); assert.equal((await getRecord(w.kv, rec.id)).status, 'ready'); assert.equal(w.serp.profiles, 0);
 });

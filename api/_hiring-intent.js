@@ -49,6 +49,7 @@ export const HK = {
     lock: 'staffify:hiring:lock',
     cursor: 'staffify:hiring:cursor',
     jobsCursor: 'staffify:hiring:jobs-cursor', // position in JOB_QUERIES (role x city)
+    feedCursor: 'staffify:hiring:workable-cursor', // { term, page, token } in FEED_TERMS: the free Workable search
     profile: key => 'staffify:hiring:profile:' + key, // Google business listing per employer, misses too, 30 days
     serpDay: day => 'staffify:hiring:serp:' + day,
     rrDay: day => 'staffify:hiring:rr:' + day,  // RocketReach person lookups made that day (owner cells)
@@ -277,6 +278,9 @@ export const METROS = [
     'Fresno, California', 'Omaha, Nebraska', 'Colorado Springs, Colorado', 'Virginia Beach, Virginia', 'Tulsa, Oklahoma', 'New Orleans, Louisiana',
     'Birmingham, Alabama', 'Buffalo, New York', 'Greenville, South Carolina', 'Boise, Idaho', 'Des Moines, Iowa', 'Knoxville, Tennessee',
 ];
+// The free Workable search (2026-10-30) runs the same titles nationwide, plus the video seat Google Jobs never searched
+// for (Paul, 2026-10-28: "I specifically want to see the wedding video editor, where is that").
+export const FEED_TERMS = [...JOB_TERMS, ['video', 'video editor']];
 /** The (role, city) pairs in rotation order: every role in one city, then the next city. */
 export const JOB_QUERIES = (() => {
     const out = [];
@@ -313,7 +317,7 @@ const BRAND_CAREERS = /^(jobs|careers|career|work|join)\.[a-z0-9-]+\.[a-z]+$|\.j
 const ENTERPRISE_ATS = /(myworkdayjobs\.com|wd\d+\.myworkday|oraclecloud\.com|taleo\.net|icims\.com|avature\.net|successfactors|brassring|ultipro|ukg\.net|phenompeople|dayforcehcm\.com|jobs\.jobvite\.com|smartrecruiters\.com\/[A-Z]|eightfold\.ai)/i;
 // Public bodies by their form, not by a word that a small business can carry ("Lakewood Animal Hospital",
 // "Orange County Plumbing", "University Park Dental", "The Roofing Authority").
-const INSTITUTION = /^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b|\b(state'?s?|district|county|city|u\.?s\.?)\s+attorney|attorney'?s?\s+office\b|\b(circuit|superior|district|municipal|county)\s+court\b|\bpublic\s+defender\b|\bboard\s+of\s+(education|supervisors|commissioners)\b|\bisd\b|\bindependent\s+school\b|\btax\s+board\b|\bfranchise\s+tax\b/i;
+const INSTITUTION = /^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b|\b(state'?s?|district|county|city|u\.?s\.?)\s+attorney|attorney'?s?\s+office\b|\bdistrict\s+attorney\b|\bd\.?a\.?['’]s\s+office\b|\b(circuit|superior|district|municipal|county)\s+court\b|\bpublic\s+defender\b|\bboard\s+of\s+(education|supervisors|commissioners)\b|\bisd\b|\bindependent\s+school\b|\btax\s+board\b|\bfranchise\s+tax\b/i;
 /** A staffing firm or a public body, by its name alone. The refresh pass re-applies this to cards already made. */
 // Law firms and insurance agencies are Milton's (Paul, 2026-10-28: "we do want the insurance and law firms, but those
 // should specifically go to Milton not madison and I"). Read from the business name, the industry a researcher wrote
@@ -489,7 +493,10 @@ export function listingEvidence({ company, website, domain, listingName, listing
     return null;
 }
 // A Google Jobs listing and a lead someone researched have no posting API to re-read: they age out by date.
+// A free board's listing (Workable) keeps the 'google_jobs' source so every date rule holds for it too; job.feed names it.
 export const ageBased = source => source === 'google_jobs' || source === 'provided';
+/** Where a dated listing was found, as a caller reads it: the free board itself ("Workable"), or "Google Jobs (Indeed)". */
+export const listedOn = j => (j && j.feed ? j.via || j.feed : 'Google Jobs' + (j && j.via ? ' (' + j.via + ')' : ''));
 
 // ---- leads a person researched (Madison, 2026-10-28) -------------------------------------------
 // Paul: "we just want to be able to give you data on top of what you find on your own". A provided lead
@@ -617,7 +624,10 @@ export function qualifyJob(j, now = Date.now()) {
     const links = (j.apply_options || []).map(a => a && a.link).filter(Boolean);
     const hosts = links.map(l => { try { return new URL(l).hostname.toLowerCase(); } catch { return ''; } });
     if (KNOWN_LARGE.test(company)) return { ok: false, reason: 'large_employer', detail: `${company} is a large employer with its own recruiting team.` };
-    if (INSTITUTION.test(company) || hosts.some(h => /\.(edu|gov|mil)$/.test(h))) return { ok: false, reason: 'institution', detail: `${company} is a public body, school or hospital system.` };
+    // The employer's own website too, when the listing names one (Workable does): a school's or an agency's (FVI School
+    // of Nursing at fvi.edu, 2026-10-30) is a public body whatever its name says.
+    const site = j.company_website ? hostOf(j.company_website) : null;
+    if (INSTITUTION.test(company) || [...hosts, site].some(h => h && /\.(edu|gov|mil)$/.test(h))) return { ok: false, reason: 'institution', detail: `${company} is a public body, school or hospital system.` };
     const big = links.find(l => ENTERPRISE_ATS.test(l));
     if (big) return { ok: false, reason: 'large_employer', detail: 'They hire through an enterprise system (' + (big.match(ENTERPRISE_ATS) || [''])[0] + '), a sign of a large employer.' };
     // "Columbus, OH (+7 others)": one job posted across many cities is a large employer's.
@@ -763,7 +773,7 @@ export function briefFor(rec) {
         summary: j.source === 'provided'
             ? `${c.name} is hiring a ${j.title}${j.city ? ' in ' + j.city : ''}. ${j.postedLabel ? 'Post: ' + j.postedLabel.replace(/\.$/, '') + '.' : 'The post ' + when + '.'}${j.via ? ' Listed on ' + j.via + '.' : ''} Found by ${j.foundBy || 'our team'}.${where}${more} The seat is one a remote person can do, so offer to fill it and run their hiring for roles like it.`
             : j.source === 'google_jobs'
-            ? `${c.name} is hiring a ${j.title}${j.city ? ' in ' + j.city : ''}. The listing ${when} on Google Jobs${j.via ? ' (' + j.via + ')' : ''}.${where}${more} The seat is one a remote person can do, so offer to fill it and run their hiring for roles like it.`
+            ? `${c.name} is hiring a ${j.title}${j.city ? ' in ' + j.city : ''}. The listing ${when} on ${listedOn(j)}.${where}${more} The seat is one a remote person can do, so offer to fill it and run their hiring for roles like it.`
             : `${c.name} is hiring a ${j.title}. The post ${when} and was still open on their careers page when we checked.${where}${more}`,
         need: `A ${familyWords(rec.family)} hire: ${j.title}${j.location ? ' (' + j.location + ')' : ''}.${caveat}${ageBased(j.source) && j.workplace !== 'remote' ? ' They posted it as an in-office job, not a remote opening: offer a remote person for the seat and let them decide.' : ''}`,
         nextStep: 'Book a short call with Paul to scope the role and how we would run their remote hiring for customer service, sales and admin.',

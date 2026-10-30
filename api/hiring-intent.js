@@ -2,7 +2,8 @@
 // ------------------------------------------------------------------
 //   GET  (cron, Bearer CRON_SECRET)          one run: re-check ready cards, work the pending queue and
 //                                            due research, then discovery. ?discover=0
-//                                            skips the paid search; ?searches= and ?candidates= cap it.
+//                                            skips the paid search; ?searches= and ?candidates= cap it;
+//                                            ?free=0 skips the free Workable search.
 //   GET  ?view=status (owner)                counts, the research backlog, the last runs, credits
 //   GET  ?view=records (owner)               every card with its evidence, for read-back
 //   POST {action:'seed', urls:[...]}         owner or machine: official job URLs to qualify next run
@@ -73,6 +74,18 @@ async function serpJobs(q, location) {
     if (!r.ok || (j.error && !/hasn't returned any results/i.test(j.error))) throw Error('SerpApi Google Jobs failed (' + r.status + ')');
     return { jobs: j.jobs_results || [] };
 }
+// Workable's public job search (Paul, 2026-10-30: SerpApi is out of credits, so the Hub's refill had stopped). Free and
+// keyless: one title, US postings from the last dayRange days, 20 a page. Every job names the employer's own website.
+// The endpoint is undocumented: a non-200 answer throws, so a change on their side is an error, never "no jobs".
+const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+async function workableJobs({ query, dayRange = 1, pageToken } = {}) {
+    const u = 'https://jobs.workable.com/api/v1/jobs?query=' + encodeURIComponent(String(query || '')) + '&location=' + encodeURIComponent('United States') + '&day_range=' + encodeURIComponent(String(dayRange)) + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : '');
+    const r = await fetch(u, { headers: { Accept: 'application/json', 'User-Agent': BROWSER_UA }, signal: AbortSignal.timeout(10000) });
+    if (r.status !== 200) throw Error('Workable search answered ' + r.status);
+    const j = await r.json();
+    if (!j || !Array.isArray(j.jobs)) throw Error('Workable search answered without a job list');
+    return { jobs: j.jobs, nextPageToken: j.nextPageToken || null };
+}
 // The employer's Google business listing (name, website, phone, address), one search per employer and
 // state, remembered 30 days including a miss, so an employer is never paid for twice.
 async function businessProfile(company, location, budget) {
@@ -133,7 +146,7 @@ async function outreachDomains() {
 }
 
 export function deps() {
-    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, optedOutSet: () => optedOutSet({ strict: true }), clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null, quoContacts: quoConfigured() ? quoContactsApi : null };
+    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, workableJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, optedOutSet: () => optedOutSet({ strict: true }), clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null, quoContacts: quoConfigured() ? quoContactsApi : null };
 }
 
 export default async function handler(req, res) {
@@ -149,7 +162,7 @@ export default async function handler(req, res) {
                 const d = { ...deps(), outreachDomains: await outreachDomains() };
                 const cap = (v, max, dflt) => Math.max(0, Math.min(max, Number.isFinite(Number(v)) && v !== undefined && v !== '' ? Number(v) : dflt));
                 const leadsOnly = req.query?.leads === 'only';
-                const report = await runHiring(d, { maxSearches: leadsOnly ? 0 : cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 40, 25), discover: !leadsOnly && req.query?.discover !== '0', leadsOnly, cells: leadsOnly && req.query?.cells == null ? 0 : cap(req.query?.cells, 20, 6), rrDailyCap: cap(req.query?.rrcap, RR_DAILY_MAX, RR_DAILY_CAP) });
+                const report = await runHiring(d, { maxSearches: leadsOnly ? 0 : cap(req.query?.searches, 8, 5), maxCandidates: cap(req.query?.candidates, 40, 25), discover: !leadsOnly && req.query?.discover !== '0', free: !leadsOnly && req.query?.free !== '0', leadsOnly, cells: leadsOnly && req.query?.cells == null ? 0 : cap(req.query?.cells, 20, 6), rrDailyCap: cap(req.query?.rrcap, RR_DAILY_MAX, RR_DAILY_CAP) });
                 return res.status(200).json({ status: 'complete', report });
             } finally { if (await redis.get(HK.lock) === nonce) await redis.del(HK.lock); }
         }
