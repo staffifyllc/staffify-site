@@ -363,6 +363,9 @@
     },
     "api/unsubscribe.js": {
       "maxDuration": 30
+    },
+    "api/lead-agent.js": {
+      "maxDuration": 60
     }
   }
 }
