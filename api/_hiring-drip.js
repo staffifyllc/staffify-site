@@ -4,7 +4,7 @@
 //   * the owner's machine action (api/hiring-intent.js drip-enroll): a batch, dry unless write, under the worker's lock;
 //   * the worker itself (api/outreach-worker.js hiringSupply): a few new cards a tick, so a card that gets an
 //     email address later is picked up without anyone running anything.
-import { HIRING_DRIP_ID, dripCandidates, dripRow, dripSender, hiringDripCopy } from './_hiring-drip-copy.js';
+import { HIRING_DRIP_ID, SENDERS, dripCandidates, dripRow, dripSender, hiringDripCopy, rebalanceDripRows } from './_hiring-drip-copy.js';
 
 const LOCK = 'outreach:cloud:lock';
 const CAS = "local s=redis.call('GET',KEYS[1]); if not s or cjson.decode(s).revision~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1";
@@ -40,7 +40,8 @@ export async function prepareDripRows({ state, cfg, cards, crm, block, limit = 2
             if (found.length > 1) { out.result = 'skipped'; out.why = 'Two CRM contacts share this address'; continue; }
             const p = (found[0] && found[0].properties) || {};
             if (p.rep_email_verified && p.rep_email_verified !== 'verified') { out.result = 'skipped'; out.why = 'The CRM marks this address ' + p.rep_email_verified; continue; }
-            const row = dripRow(card, { sender: dripSender(cfg.accounts, [...state.records, ...rows]), now });
+            const owner = ((state.assignments || []).find(a => a.email === email) || {}).owner;
+            const row = dripRow(card, { account: dripSender(cfg.accounts, [...state.records, ...rows], { owner: SENDERS.includes(owner) ? owner : null }), now });
             if (!write) {
                 const why = found.length ? await block(row, { created: false }) : null;
                 if (why) { out.result = 'skipped'; out.why = why; continue; }
@@ -71,14 +72,15 @@ export function addDripRows(state, rows) {
  * The machine action: a batch, under the worker's lock. deps: { redis, queueKey, config(), stored(), saveConfig(cfg), records(), crm, block, sleep, now }.
  * allow: also add the campaign to the worker's allowlist, which is what starts drafting and sending.
  */
-export async function enrollHiringDrip(deps, { write = false, limit = 25, allow = false } = {}) {
+export async function enrollHiringDrip(deps, { write = false, limit = 25, allow = false, rebalance = true } = {}) {
     const { redis, queueKey, now = Date.now(), sleep = ms => new Promise(r => setTimeout(r, ms)) } = deps;
     const cfg = await deps.config();
     const state = await redis.get(queueKey);
     if (!state) throw Error('Queue unavailable');
-    const prep = await prepareDripRows({ state, cfg, cards: await deps.records(), crm: deps.crm, block: deps.block, limit, write, now });
+    const cards = await deps.records();
+    const prep = await prepareDripRows({ state, cfg, cards, crm: deps.crm, block: deps.block, limit, write, now });
     const summary = { candidates: prep.results.length, enrolled: 0, skipped: prep.skipped };
-    if (!write || (!prep.rows.length && !allow)) return { write, summary, results: prep.results, skippedCards: prep.skippedCards };
+    if (!write || (!prep.rows.length && !allow && !rebalance)) return { write, summary, results: prep.results, skippedCards: prep.skippedCards };
 
     // The worker holds its lock for each tick (about a minute apart); wait for a gap rather than race it.
     const nonce = 'hiring-drip-' + now + '-' + Math.random().toString(36).slice(2);
@@ -89,12 +91,17 @@ export async function enrollHiringDrip(deps, { write = false, limit = 25, allow 
         const live = await redis.get(queueKey);
         const rev = live.revision;
         const fresh = addDripRows(live, prep.rows);
-        if (fresh.length) {
+        // New and not-yet-started rows are spread over every inbox together, so one batch never lands on a few.
+        const moved = rebalance ? rebalanceDripRows(live, new Map(cards.map(c => [c.id, c])), cfg.accounts, now) : 0;
+        summary.rebalanced = moved;
+        if (fresh.length || moved) {
             const next = { ...live, revision: rev + 1, queueUpdatedAt: new Date(now).toISOString() };
             if (Number(await redis.eval(CAS, [queueKey], [String(rev), JSON.stringify(next)])) !== 1) throw Error('The queue changed during enrolment; run again');
         }
-        for (const r of prep.results) if (r.result === 'enroll') r.result = fresh.some(x => x.hiringId === r.id) ? 'enrolled' : 'skipped';
+        const byCard = new Map(live.records.filter(x => x.hiringId).map(x => [x.hiringId, x]));
+        for (const r of prep.results) if (r.result === 'enroll') { r.result = fresh.some(x => x.hiringId === r.id) ? 'enrolled' : 'skipped'; if (byCard.has(r.id)) r.sender = byCard.get(r.id).sender; }
         summary.enrolled = fresh.length;
+        summary.waitingByInbox = live.records.filter(x => x.campaignId === HIRING_DRIP_ID && x.status === 'prepared').reduce((m, x) => (m[x.sender] = (m[x.sender] || 0) + 1, m), {});
         if (allow) {
             const stored = await deps.stored();
             const ids = Array.isArray(stored.allowedCampaignIds) ? stored.allowedCampaignIds : null;

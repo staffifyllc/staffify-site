@@ -4,7 +4,7 @@
 process.env.KV_REST_API_URL ||= 'https://example.invalid'; process.env.KV_REST_API_TOKEN ||= 'x';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HIRING_DRIP_ID, hiringDripStop, postedPay, payPhrase, hourlyOf, dripRole, dripCompany, hiringDripCopy, dripCandidates, dripSender, dripRow } from '../api/_hiring-drip-copy.js';
+import { HIRING_DRIP_ID, hiringDripStop, postedPay, payPhrase, hourlyOf, dripRole, dripCompany, hiringDripCopy, dripCandidates, dripSender, dripRow, rebalanceDripRows } from '../api/_hiring-drip-copy.js';
 import { hiringDripFollowup } from '../api/_hiring-drip-campaign.js';
 import { prepareDripRows, addDripRows, enrollHiringDrip, hiringSupply, contactProps, dripAllowed } from '../api/_hiring-drip.js';
 import { inCampaign, tagCampaign } from '../api/_outreach-campaign.js';
@@ -114,7 +114,7 @@ test('the card stops the drip: a conversation, a booking, a closed card or posti
 });
 
 test('candidates: callable first, one per person and per company, never someone the queue already tracks', () => {
-    const state = { ...emptyState(), records: [{ id: 'x', recipient: 'denise@tracked.com', campaignId: 'staffify-talent-network-outreach' }, { id: 'y', hiringId: 'hire:done000000000000', recipient: 'z@z.com' }], suppressions: ['denise@stop.com'], assignments: [{ email: 'denise@mad.com', owner: 'Madison' }] };
+    const state = { ...emptyState(), records: [{ id: 'x', recipient: 'denise@tracked.com', campaignId: 'staffify-talent-network-outreach' }, { id: 'y', hiringId: 'hire:done000000000000', recipient: 'z@z.com' }], suppressions: ['denise@stop.com'], assignments: [{ email: 'denise@mad.com', owner: 'Trey' }] };
     const cards = [
         card('held', { status: 'research', hold: { reason: 'toll_free_only' }, createdAt: '2026-10-30T00:00:00Z' }), card('ok'), card('tracked'), card('stop'), card('mad'), card('done'),
         card('dupe', { company: { name: 'Same', domain: 'ok.com' } }), card('call', { callOutcome: 'connected', status: 'conversation' }),
@@ -126,11 +126,17 @@ test('candidates: callable first, one per person and per company, never someone 
     assert.equal(dripCandidates(cards, state, { limit: 1 }).cards.length, 1);
 });
 
-test('the queue row: Paul’s least-loaded inbox, prepared and approved, and the engine treats it as its own campaign', () => {
-    const records = [{ sender: 'paul@hirestaffify.com', recipient: 'a@a.com', status: 'prepared' }, { sender: 'paul@hirestaffify.com', recipient: 'b@b.com', status: 'sent' }, { sender: 'paul@staffifyhq.com', recipient: 'c@c.com', status: 'suppressed' }];
-    assert.equal(dripSender(CFG.accounts, records), 'paul@staffifyhq.com');
-    assert.throws(() => dripSender([acct('madison@staffifyhq.com', 'Madison')], []), /No Paul outreach inbox/);
-    const row = dripRow(card('a'), { sender: 'paul@staffifyhq.com', now: Date.parse('2026-10-30T15:00:00Z') });
+test('the queue row: the least-loaded Staffify inbox, Paul’s or Madison’s, prepared and approved, its own campaign', () => {
+    const records = [{ sender: 'paul@hirestaffify.com', recipient: 'a@a.com', status: 'prepared' }, { sender: 'paul@hirestaffify.com', recipient: 'b@b.com', status: 'sent' }, { sender: 'paul@staffifyhq.com', recipient: 'c@c.com', status: 'suppressed' }, { sender: 'madison@staffifyhq.com', recipient: 'd@d.com', status: 'prepared' }];
+    assert.equal(dripSender(CFG.accounts, records).email, 'paul@staffifyhq.com');
+    assert.equal(dripSender(CFG.accounts, []).email, 'madison@staffifyhq.com', 'ties go alphabetically');
+    assert.equal(dripSender(CFG.accounts, [], { owner: 'Paul' }).email, 'paul@hirestaffify.com');
+    assert.throws(() => dripSender([acct('madison@staffifyhq.com', 'Madison')], [], { owner: 'Paul' }), /No Paul outreach inbox/);
+    assert.throws(() => dripSender([{ ...acct('paul@tryfoundryhq.com'), brand: 'Foundry' }], []), /No Staffify outreach inbox/);
+    const mad = dripRow(card('m'), { account: acct('madison@staffifyhq.com', 'Madison') });
+    assert.equal(mad.owner, 'Madison'); assert.equal(mad.sender, 'madison@staffifyhq.com');
+    for (const t of [mad.bodyText, mad.followupBodies[2], mad.followupBodies[3], mad.followupBodies[4]]) { assert.match(t, /\n\nMadison\nStaffify/); assert.doesNotMatch(t, /\bPaul\b/); }
+    const row = dripRow(card('a'), { account: acct('paul@staffifyhq.com'), now: Date.parse('2026-10-30T15:00:00Z') });
     assert.equal(row.campaignId, HIRING_DRIP_ID); assert.equal(row.id, 'hiring-drip-a000000000000000'); assert.equal(row.hiringId, 'hire:a000000000000000');
     assert.equal(row.recipient, 'denise@a.com'); assert.equal(row.agencyKey, 'a.com'); assert.equal(row.owner, 'Paul'); assert.equal(row.status, 'prepared');
     assert.ok(inCampaign(row));
@@ -171,7 +177,7 @@ test('prepare: dry writes nothing; write makes the contact, then checks the stop
     assert.deepEqual(crm.calls.filter(c => c[0] === 'create').map(c => c[1]), ['denise@new.com', 'denise@client.com']);
     assert.deepEqual(crm.calls.find(c => c[0] === 'patch'), ['patch', '7', { rep_email_verified: 'verified' }]);
     assert.deepEqual(blocks.filter(b => ['denise@new.com', 'denise@old.com'].includes(b[0])), [['denise@new.com', true], ['denise@old.com', false]], 'a new contact gets the checks that do not need it; an existing one the full CRM check');
-    assert.deepEqual(new Set(wet.rows.map(r => r.sender)).size, 2, 'spread across Paul’s inboxes');
+    assert.deepEqual(new Set(wet.rows.map(r => r.sender)).size, 2, 'spread across the inboxes');
 });
 
 function fakeRedis(state, stored) {
@@ -204,7 +210,7 @@ test('enrol: under the worker lock, appended with a new revision, and allow adds
 
 test('addDripRows drops anyone tracked or suppressed since the rows were prepared', () => {
     const state = { ...emptyState(), records: [{ recipient: 'denise@one.com' }], suppressions: ['denise@two.com'] };
-    const rows = ['one', 'two', 'three'].map(id => dripRow(card(id), { sender: 'paul@staffifyhq.com' }));
+    const rows = ['one', 'two', 'three'].map(id => dripRow(card(id), { account: acct('paul@staffifyhq.com') }));
     assert.deepEqual(addDripRows(state, rows).map(r => r.recipient), ['denise@three.com']);
     assert.equal(state.records.length, 2);
 });
@@ -226,4 +232,22 @@ test('the worker tops itself up only when switched on, a few at a time, every te
 test('a contractor’s remote Emergency CSR / Job Dispatcher is a seat; public-safety dispatch is not', () => {
     assert.equal(roleFamily('Emergency CSR / Job Dispatcher (Remote) - $15-$21/hr'), 'support');
     for (const t of ['Emergency Dispatcher', '911 Dispatcher', 'Emergency Medical Dispatcher']) assert.equal(roleFamily(t), null, t);
+});
+
+test('rebalance: unstarted introductions spread over every inbox, signed by its owner; anything started stays put', () => {
+    const accounts = [acct('paul@staffifyhq.com'), acct('paul@hirestaffify.com'), acct('madison@staffifyhq.com', 'Madison')];
+    const ids = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'];
+    const cards = new Map(ids.concat('dr').map(id => [card(id).id, card(id)]));
+    const rows = ids.map(id => dripRow(card(id), { account: acct('paul@hirestaffify.com'), now: Date.parse('2026-10-30T16:00:00Z') }));
+    const drafted = { ...dripRow(card('dr'), { account: acct('paul@hirestaffify.com') }), status: 'draft_saved', draftId: 'd1' };
+    const state = { ...emptyState(), records: [{ id: 'talent', recipient: 'x@x.com', sender: 'paul@staffifyhq.com', status: 'prepared' }, drafted, ...rows], assignments: [{ email: 'denise@r6.com', owner: 'Paul' }] };
+    const moved = rebalanceDripRows(state, cards, accounts, Date.parse('2026-10-30T17:00:00Z'));
+    const by = state.records.reduce((m, r) => (m[r.sender] = (m[r.sender] || 0) + 1, m), {});
+    assert.deepEqual(Object.keys(by).sort(), ['madison@staffifyhq.com', 'paul@hirestaffify.com', 'paul@staffifyhq.com']);
+    assert.ok(Math.max(...Object.values(by)) - Math.min(...Object.values(by)) <= 1, 'within one of each other: ' + JSON.stringify(by));
+    assert.ok(moved >= 3);
+    assert.equal(state.records.find(r => r.id === drafted.id).sender, 'paul@hirestaffify.com', 'a drafted row never moves');
+    assert.equal(state.records.find(r => r.recipient === 'denise@r6.com').owner, 'Paul', 'someone assigned to Paul stays with Paul');
+    for (const r of state.records.filter(r => r.sender === 'madison@staffifyhq.com')) { assert.equal(r.owner, 'Madison'); assert.match(r.bodyText, /Madison\nStaffify/); assert.ok(r.id.startsWith('hiring-drip-')); assert.equal(r.createdAt, '2026-10-30T16:00:00.000Z'); }
+    assert.deepEqual(state.records.map(r => r.id), ['talent', drafted.id, ...rows.map(r => r.id)], 'order kept');
 });

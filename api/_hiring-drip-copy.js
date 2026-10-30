@@ -93,13 +93,13 @@ export function dripCompany(name) {
     return calm(n);
 }
 
-const SIGN = 'Paul\nStaffify';
 const OUT = "If you'd rather I not follow up, just let me know.";
 /**
  * The four emails for one card. Email 1 asks if the role is still open, quotes their posted rate back when it is
  * well above ours, and asks for the appointment. Nothing promises an outcome.
  */
-export function hiringDripCopy(card, { link = DISCOVERY_LINK } = {}) {
+export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul' } = {}) {
+    const SIGN = signer + '\nStaffify';
     const c = card.contact || {}, first = c.firstName;
     const title = (card.job && card.job.title) || (card.lead && card.lead.role_posted) || '';
     const role = dripRole(title), company = dripCompany(card.company && card.company.name);
@@ -139,7 +139,7 @@ export function dripCandidates(cards, state, { limit = 25 } = {}) {
     const cardsDone = new Set((state.records || []).map(r => r.hiringId).filter(Boolean));
     const domains = new Set((state.records || []).filter(r => r.campaignId === HIRING_DRIP_ID && r.agencyKey).map(r => key(r.agencyKey)));
     const suppressed = new Set((state.suppressions || []).map(key));
-    const taken = new Set((state.assignments || []).filter(a => a.owner !== 'Paul').map(a => key(a.email)));
+    const taken = new Set((state.assignments || []).filter(a => !SENDERS.includes(a.owner)).map(a => key(a.email)));
     const out = [], skipped = {};
     const skip = (why, card) => { (skipped[why] ||= []).push(card.company && card.company.name || card.id); };
     const order = c => (c.status === 'ready' ? 0 : 1);
@@ -158,24 +158,50 @@ export function dripCandidates(cards, state, { limit = 25 } = {}) {
     return { cards: out, skipped };
 }
 
-/** Paul's mailbox with the fewest live rows, so new introductions spread across his inboxes. */
-export function dripSender(accounts, records) {
-    const choices = (accounts || []).filter(a => a.brand === 'Staffify' && a.owner === 'Paul' && a.draftEnabled && /^paul@/.test(a.email));
-    if (!choices.length) throw Error('No Paul outreach inbox available');
-    const load = email => records.filter(r => r.sender === email && r.recipient && !['sequence_complete_hold', 'suppressed', 'bounce_hold', 'sender_retired_hold'].includes(r.status)).length;
-    return choices.sort((a, b) => load(a.email) - load(b.email) || a.email.localeCompare(b.email))[0].email;
+// Paul, 2026-10-30: "can we send from every account please? we have more than 2 inboxes". Every Staffify inbox the
+// worker drafts from sends, each email signed by that inbox's owner.
+export const SENDERS = ['Paul', 'Madison'];
+const DONE = ['sequence_complete_hold', 'suppressed', 'bounce_hold', 'sender_retired_hold'];
+/** The Staffify inbox with the fewest live rows (only the assigned owner's, when someone owns this person). */
+export function dripSender(accounts, records, { owner = null } = {}) {
+    const choices = (accounts || []).filter(a => a.brand === 'Staffify' && a.draftEnabled && SENDERS.includes(a.owner) && (!owner || a.owner === owner));
+    if (!choices.length) throw Error(owner ? 'No ' + owner + ' outreach inbox available' : 'No Staffify outreach inbox available');
+    const load = email => records.filter(r => r.sender === email && r.recipient && !DONE.includes(r.status)).length;
+    return choices.sort((a, b) => load(a.email) - load(b.email) || a.email.localeCompare(b.email))[0];
 }
 
 /** The queue row for one card: prepared, approved, and carrying its own follow-ups. */
-export function dripRow(card, { sender, now = Date.now() }) {
-    const copy = hiringDripCopy(card);
+export function dripRow(card, { account, now = Date.now() }) {
+    const copy = hiringDripCopy(card, { signer: account.owner });
     const at = new Date(now).toISOString();
     return {
-        id: 'hiring-drip-' + String(card.id).replace(/^hire:/, ''), campaignId: HIRING_DRIP_ID, lane: 'hiring_now', owner: 'Paul', sender,
+        id: 'hiring-drip-' + String(card.id).replace(/^hire:/, ''), campaignId: HIRING_DRIP_ID, lane: 'hiring_now', owner: account.owner, sender: account.email,
         recipient: key(card.contact.email), company: (card.company && card.company.name) || '', agencyKey: domainOf(card), website: (card.company && card.company.website) || null,
         verifiedFirstName: card.contact.firstName, hiringId: card.id, roleName: copy.role,
         subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies, copyVersion: 'hiring-now-2026-10-30',
         source: { label: 'Hiring now card', id: card.id, job: (card.job && card.job.title) || null, url: (card.job && card.job.url) || null },
         status: 'prepared', sentTouches: 0, verifiedSentTouches: 0, qualificationApproved: true, createdAt: at, enrichedAt: at,
     };
+}
+
+/**
+ * Spread the introductions nobody has started yet across every inbox again (new inboxes, or a batch that landed on a
+ * few). Only prepared rows with no draft, thread or send move; the copy is rebuilt so the signature matches the inbox.
+ * The caller holds the worker's lock. Returns how many rows changed inbox.
+ */
+export function rebalanceDripRows(state, cardsById, accounts, now = Date.now()) {
+    const movable = new Set(state.records.filter(r => r.campaignId === HIRING_DRIP_ID && r.status === 'prepared' && !r.sentTouches && !r.draftId && !r.threadId && cardsById.has(r.hiringId)).map(r => r.id));
+    const placed = state.records.filter(r => !movable.has(r.id));
+    const next = new Map();
+    let moved = 0;
+    for (const r of state.records.filter(x => movable.has(x.id))) {
+        const owner = ((state.assignments || []).find(a => a.email === r.recipient) || {}).owner || null;
+        let account;
+        try { account = dripSender(accounts, placed, { owner: SENDERS.includes(owner) ? owner : null }); } catch { placed.push(r); continue; }
+        const row = account.email === r.sender ? r : { ...dripRow(cardsById.get(r.hiringId), { account, now }), id: r.id, createdAt: r.createdAt, enrichedAt: r.enrichedAt };
+        if (row !== r) { moved++; next.set(r.id, row); }
+        placed.push(row);
+    }
+    state.records = state.records.map(r => next.get(r.id) || r);
+    return moved;
 }
