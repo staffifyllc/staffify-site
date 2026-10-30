@@ -3,7 +3,7 @@
 process.env.KV_REST_API_URL ||= 'https://example.invalid'; process.env.KV_REST_API_TOKEN ||= 'x'; process.env.CRON_SECRET ||= 'test-secret';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { KICK_LINES, SEQUENCE_LINES, REP_LINES, kickLine, asksToStop, withoutOurLines } from '../api/_kick-rocks.js';
+import { KICK_LINES, SEQUENCE_LINES, REP_LINES, kickLine, kickStart, kicksRocks, asksToStop, withoutOurLines } from '../api/_kick-rocks.js';
 import { classify, replyText } from '../api/_outreach-policy.js';
 import { hiringDripCopy, refreshDripCopy, COPY_VERSION, HIRING_DRIP_ID } from '../api/_hiring-drip-copy.js';
 import { sweepRepInboxes, LOG } from '../api/_rep-optout-sweep.js';
@@ -44,6 +44,18 @@ test('a plain ask to be left alone is heard; a friendly "stop by" and our own qu
     for (const l of REP_LINES) assert.doesNotMatch(l, /not interested|\bstop\b/i, 'a quoted copy of ours never reads as a stop to the worker');
 });
 
+test('"kick rocks" as their answer: under a long signature, after a greeting, or after the "yes" our line invites', () => {
+    // Review, 2026-10-30: the reply is now the only way out shown, so the one phrase we ask for must always stop.
+    const sig = '\n\nJane Doe\nOwner | Acme Insurance Agency\n123 Main St, Austin, TX 78701\nCall or text (512) 555-1234';
+    for (const yes of ['Kick rocks.' + sig, 'kick rocks' + sig, 'Kick rocks please' + sig, 'Hi Paul,\nKick rocks.' + sig, 'Yes, kick rocks', 'Yep. Kick rocks', 'Rather not. Kick rocks.', 'No, kick rocks', 'Hi Paul, kick rocks']) {
+        assert.equal(kicksRocks(yes), true, yes); assert.equal(asksToStop(yes), true, yes);
+    }
+    for (const warm of ['Kick rocks!! Just kidding, call me Tuesday', 'Hi Paul,\nYes, still open. Send the profiles.' + sig, 'Sure, send them', 'Open', 'Filled', 'Yes it is open. Love the kick rocks line'])
+        assert.equal(kicksRocks(warm), false, warm);
+    for (const line of KICK_LINES) assert.doesNotMatch(line, /had enough/i, 'every line reads right on a first, cold email');
+    assert.ok(KICK_LINES.every((_, i) => kickLine('x' + i + '@a.com', 0) === KICK_LINES[kickStart('x' + i + '@a.com')]));
+});
+
 test('the email worker lets go of anyone who answers "kick rocks", and not of someone whose reply only quotes our line', () => {
     const me = 'paul@staffifyhq.com', them = 'jjohnson10@farmersagent.com';
     const reply = text => [{ id: 'r', from: them, to: [me], text, sent: false }];
@@ -54,6 +66,8 @@ test('the email worker lets go of anyone who answers "kick rocks", and not of so
     for (const warm of ["Don't call me before 2, I'm in court", 'no need to kick rocks, call me', 'Leave me alone till Monday', 'I would say no\nThanks, Bob', "You don't have to kick rocks, send me pricing", "You don't need to kick rocks, I'm interested", "I don't want you to kick rocks, let's talk Tuesday", 'No kicking rocks needed, call me', 'Haha no need for you to kick rocks. When can we talk?', 'Ha, love the kick rocks line. Yes it is still open, call me Tuesday.',
         'Thanks.\n' + SEQUENCE_LINES[0] + '\nOne click works too: https://www.gostaffify.com/kick-rocks/?e=stop.now%40acme.com&t=abc', ...KICK_LINES.map(l => 'Yes, send the profiles.\n\n' + l)])
         assert.equal(classify(reply(warm), them, [me]).status, 'human_reply_hold', warm);
+    assert.equal(classify(reply('Kick rocks.\n\nJane Doe\nOwner | Acme Insurance Agency\n123 Main St, Austin, TX 78701\nCall or text (512) 555-1234'), them, [me]).status, 'suppressed', 'a signature never hides the answer');
+    assert.equal(classify(reply('Yes, kick rocks'), them, [me]).status, 'suppressed');
     assert.equal(replyText('Hi\n________________________________\nFrom: Paul'), 'Hi');
 });
 
@@ -64,6 +78,19 @@ test('each email of the Hiring now sequence ends with its own way out: a reply, 
     bodies.forEach((b, i) => assert.ok(b.endsWith('Paul\nStaffify\n\n' + kickLine('dana@acme.com', i)), 'touch ' + (i + 1)));
     assert.equal(new Set(bodies.map(b => b.split('\n\n').at(-1))).size, 4);
     for (const b of bodies) { assert.doesNotMatch(b, /kick-rocks\/|One click|unsubscribe/i); assert.equal(asksToStop(b.split('\n\n').at(-1)), false, 'our own line, quoted back, never reads as a stop'); }
+});
+
+test('a row moved from the older lines never hears the line it just got again', () => {
+    for (const email of ['pat@b.com', 'dana@acme.com', 'a1@x.com', 'a2@x.com', 'a3@x.com', 'a4@x.com', 'a5@x.com', 'a6@x.com']) {
+        const card = { id: 'hire:cccccccccccccccc', company: { name: 'Acme', domain: 'x.com' }, job: { title: 'Scheduler' }, contact: { firstName: 'Pat', email, status: 'verified' } };
+        for (const after of [1, 2]) {
+            const c = hiringDripCopy(card, { after });
+            const lines = [2, 3, 4].filter(n => n > after).map(n => c.followupBodies[n].split('\n\n').at(-1));
+            const sent = SEQUENCE_LINES.slice(0, after).map(l => l.slice(0, 12));
+            for (const l of lines) assert.ok(!sent.some(x => KICK_LINES.find(k => k === l) && (l.slice(0, 12) === x || (x === 'Still not fo' && l.startsWith('Not for you')))), email + ' after ' + after + ': ' + l);
+            assert.equal(new Set(lines).size, lines.length);
+        }
+    }
 });
 
 test('rows written with the older copy take the new lines for every email not yet written', () => {

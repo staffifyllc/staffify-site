@@ -4,7 +4,7 @@
 process.env.KV_REST_API_URL ||= 'https://example.invalid'; process.env.KV_REST_API_TOKEN ||= 'x';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HIRING_DRIP_ID, hiringDripStop, dripWait, postedPay, payPhrase, hourlyOf, dripRole, dripCompany, postedDay, hiringDripCopy, dripCandidates, dripSender, dripRow, rebalanceDripRows } from '../api/_hiring-drip-copy.js';
+import { HIRING_DRIP_ID, hiringDripStop, dripWait, sendWait, refreshDripCopy, COPY_VERSION, postedPay, payPhrase, hourlyOf, dripRole, dripCompany, postedDay, hiringDripCopy, dripCandidates, dripSender, dripRow, rebalanceDripRows } from '../api/_hiring-drip-copy.js';
 import { hiringDripFollowup } from '../api/_hiring-drip-campaign.js';
 import { prepareDripRows, addDripRows, enrollHiringDrip, hiringSupply, contactProps, dripAllowed } from '../api/_hiring-drip.js';
 import { inCampaign, tagCampaign } from '../api/_outreach-campaign.js';
@@ -177,6 +177,58 @@ test('the first email waits a day after a call; follow-ups and drafted emails do
     assert.equal(dripWait(called, { sentTouches: 1 }, now), null, 'a follow-up is not held');
     assert.equal(dripWait(called, { sentTouches: 0, draftId: 'd' }, now), null, 'a saved draft is never stranded in a hold');
     assert.equal(dripWait(card('b'), { sentTouches: 0 }, now), null, 'never called');
+});
+
+test('review fixes, 2026-10-30: dates, cities, offshore, part-time, legal seats, bonuses, role names, US-only posts', () => {
+    const at = (posting_date, source = 'provided') => postedDay(card('a', { job: { source, postedAt: '2026-10-30T15:00:00Z' }, lead: { posting_date } }));
+    assert.equal(at('Posted 2026-10-26'), 'Oct 26');
+    for (const seen of ['Active on Indeed as of 2026-10-26', 'No post date shown on IdealTraits; live/accepting applications 2026-10-27', 'Posted within 3 days (Indeed, pulled 2026-10-28)', "~2026-10-24 (Remote Rocketship: '2 days ago')", 'Not displayed (live on Indeed search 2026-10-26)'])
+        assert.equal(at(seen), null, 'a date our researcher saw it live is not the date they posted it: ' + seen);
+    const body = over => hiringDripCopy(card('z', { company: { name: 'Bayside HVAC', domain: 'z.com' }, family: 'support', ...over })).bodyText;
+    assert.match(body({ job: { title: 'CSR', city: 'Calabasas (role based in Fresno)', workplace: 'remote' } }), /I saw the CSR job you posted in Calabasas\. Is it still open\?/);
+    assert.match(body({ job: { title: 'CSR', city: 'Austin/Dallas', workplace: 'remote' } }), /you posted in Austin\. /);
+    assert.match(body({ job: { title: 'CSR', city: 'Remote (US)', workplace: 'remote' } }), /I saw the CSR job you posted\. /);
+    for (const t of ['Legal Executive Assistant, Mandarin/English - fully remote (Asia)', 'Intake Specialist, Bilingual English-Arabic - remote (Egypt/Lebanon)'])
+        assert.doesNotMatch(body({ job: { title: t, workplace: 'remote' } }), /\$1[24]/, 'an offshore post never hears our price: ' + t);
+    assert.match(body({ job: { title: 'Office Manager - Albuquerque, New Mexico', workplace: 'remote' } }), /\$12 to \$14/, 'New Mexico is in the US');
+    const PART = /You listed it as part-time/;
+    assert.match(body({ job: { title: 'Customer Service Rep (PT)', workplace: 'remote' } }), PART);
+    for (const t of ['Customer Service Rep (FT/PT)', 'Customer Service Rep (full or part time)', 'Part-Time to Full-Time CSR']) assert.doesNotMatch(body({ job: { title: t, workplace: 'remote' } }), PART, t);
+    const legal = hiringDripCopy(card('l', { job: { title: 'Paralegal - $28/hr', workplace: 'onsite' } }));
+    assert.match(legal.followupBodies[2], /We place legal admins, not paralegals, and here's how we screen them\./, 'a thread moved from the older copy still hears it');
+    assert.match(legal.followupBodies[2], /If you're still filling the Paralegal job, would you mind/);
+    assert.match(legal.followupBodies[3], /If you're still filling the Paralegal job, pick a time and I'll walk you through what a legal admin could take off it\./);
+    assert.equal(postedPay('Executive Assistant - $500 sign-on bonus'), null);
+    assert.equal(payPhrase(postedPay('CSR - $18/hr + $500 bonus')), '$18 an hour');
+    assert.doesNotMatch(body({ job: { title: 'Executive Assistant - $500 sign-on bonus', workplace: 'remote' } }), /listed at/);
+    for (const [t, r] of [['Customer Support Representative- Mandarin Speaking', 'Customer Support Representative'], ['Telemarketer w/career growth opportunities! - $40,000 a year', 'Telemarketer'], ['Bilingual Telemarketer: English-Spanish - $15 - $16 an hour', 'Bilingual Telemarketer'], ['Work from Home Customer Service Coordinator-Card Account Servicing', 'Customer Service Coordinator'], ['Medical College of Wisconsin is hiring: Senior Administrative Assistant', 'Senior Administrative Assistant'], ['Home Care Case Coordinator / Scheduler Portuguese Speaking', 'Home Care Case Coordinator and Scheduler'], ['Front-Desk Receptionist', 'Front-Desk Receptionist'], ['Remote Legal Assistant / Entry-Level Paralegal - Remote in Florida, $20-$30/hr', 'Legal Assistant and Entry-Level Paralegal']])
+        assert.equal(dripRole(t), r, t);
+    for (const t of ['Foreclosure Litigation Paralegal (100% remote, FL/IL residents, part-time 20 hrs/wk, $24-$32/hr)', 'Social Security Disability Case Manager Paralegal - fully remote (anywhere US), $44k-$46k', 'Part-Time Intake Specialist (remote in Texas, $25-$30/hr)', 'Paralegal (Remote in Pennsylvania)', 'Legal Assistant (remote, Texas)', 'CSR - US only'])
+        assert.match(hiringDripStop(card('u', { job: { title: t } })), /US-based/, t);
+    for (const t of ['Customer Service Rep (Remote)', 'Executive Assistant - remote, $25/hr', 'Virtual Receptionist']) assert.equal(hiringDripStop(card('u', { job: { title: t } })), null, t);
+    assert.match(hiringDripStop(card('k', { job: { title: 'Front Desk - $37k-$55k/yr', workplace: 'remote' }, lead: { notes: 'Role not confirmed remote (Remote Type: No)' } })), /front desk/, 'the doubted remote tag is doubted here too');
+});
+
+test('the call gap: a call in progress counts, and a first email drafted before a call waits at the send', () => {
+    const now = Date.parse('2026-11-02T14:00:00Z');
+    const fresh = card('a');
+    assert.equal(dripWait(fresh, { sentTouches: 0 }, now), null);
+    assert.match(dripWait(fresh, { sentTouches: 0 }, now, { heldAt: now - 2 * 60000 }), /waits/, 'Call now tapped two minutes ago');
+    const called = card('b', { callHistory: [{ outcome: 'voicemail', at: '2026-11-02T13:02:00Z' }] });
+    assert.match(sendWait(called, { sentTouches: 0, draftId: 'd' }, now), /waits/, 'drafted overnight, called at 9:02');
+    assert.equal(sendWait(called, { sentTouches: 1, draftId: 'd' }, now), null, 'follow-ups are not held');
+    assert.equal(sendWait(called, { sentTouches: 0, draftId: 'd' }, now + 24 * 3600e3), null, 'a day later it goes');
+});
+
+test('older copy is never drafted: a held row with nothing written gets the whole new sequence', () => {
+    const c = card('h', { company: { name: 'Bayside HVAC', domain: 'h.com' }, family: 'support', job: { title: 'CSR - $20/hr', workplace: 'remote' } });
+    const old = { campaignId: HIRING_DRIP_ID, hiringId: c.id, owner: 'Paul', copyVersion: 'hiring-now-2026-10-30-kick-rocks-link', subject: 'Is the CSR role still open?', bodyText: 'someone amazing for $14 an hour\nOne click works too: https://www.gostaffify.com/kick-rocks/?t=x', followupBodies: { 2: 'o2', 3: 'o3', 4: 'o4' } };
+    const state = { records: [{ ...old, id: 'held', status: 'crm_hold', sentTouches: 0 }, { ...old, id: 'creating', status: 'draft_creation_pending', sentTouches: 0 }, { ...old, id: 'uncertain', status: 'draft_creation_uncertain_hold', sentTouches: 0 }] };
+    assert.equal(refreshDripCopy(state, new Map([[c.id, c]])), 3);
+    const by = id => state.records.find(r => r.id === id);
+    assert.equal(by('held').subject, 'Your CSR hire'); assert.match(by('held').bodyText, /\$12 to \$14 an hour/); assert.doesNotMatch(by('held').bodyText, /One click|kick-rocks\//);
+    for (const id of ['creating', 'uncertain']) assert.equal(by(id).bodyText, old.bodyText, 'a Gmail draft may already exist: ' + id);
+    for (const r of state.records) assert.equal(r.copyVersion, COPY_VERSION);
 });
 
 test('candidates: callable first, one per person and per company, never someone the queue already tracks', () => {

@@ -18,7 +18,7 @@ export const KICK_LINES = Object.freeze([
     "P.S. Not the right fit? Just reply \"kick rocks\" and I'll leave you alone.",
     "If this isn't for you, reply \"kick rocks\" and you won't hear from me again.",
     "Not for you? A quick \"kick rocks\" takes you off my list, no hard feelings.",
-    "Had enough of me? Reply \"kick rocks\" and I'm gone.",
+    "Got it covered already? Reply \"kick rocks\" and I'm gone.",
     "Wrong person or wrong time? Tell me to kick rocks and I'll take the hint.",
     "Rather not hear from me? Two words, \"kick rocks,\" and you're off my list.",
 ]);
@@ -28,6 +28,8 @@ const seedOf = email => [...String(email || '').trim().toLowerCase()].reduce((h,
  * on with every email, so nobody reads the same line twice in a row and two owners on the same day rarely read the same one.
  */
 export const kickLine = (email, n) => KICK_LINES[(seedOf(email) + Math.max(0, Number(n) || 0)) % KICK_LINES.length];
+/** Where one person starts in KICK_LINES (kickLine(email, n) is KICK_LINES[(kickStart(email) + n) % length]). */
+export const kickStart = email => seedOf(email) % KICK_LINES.length;
 
 // Lines already sent, earlier versions: a reply can still quote them, so they stay in OURS.
 export const SEQUENCE_LINES = Object.freeze([
@@ -66,9 +68,16 @@ const authored = text => withoutOurLines(text).replace(FOOTERS, ' ');
 
 // "Kick rocks" counts only as their whole answer: a short reply, no question, nothing warm or negated in it. "Ha, love the
 // kick rocks line, call me Tuesday" and "you don't have to kick rocks, send pricing" go to a person.
+// "Kick rocks." alone on the first line they wrote (under a greeting at most) is the answer, whatever signature a mail app
+// puts under it; so is "Yes, kick rocks" to a line that asked "Not for you?".
+const GREETING = /^(?:hi|hello|hey|dear|good (?:morning|afternoon|evening))\b[\w .'-]{0,30},?$/i;
+const FIRST_KICK = /^(?:(?:yes|yeah|yep|yup|ok|okay|sure|no|nope|please|rather not|i'?d rather not)[\s,.!-]+)?(?:please\s+)?kick(?:ing)?\s+rocks(?:\s+please)?[\s.!]*$/i;
 const WARM = /\b(?:yes|yeah|yep|sure|call|send|interested|open|pricing|price|rate|cost|when|schedule|meet|talk|love|great|before|don'?t|do not|not|no need|won'?t|never|have to|need to|want you to|needed)\b/i;
 export function kicksRocks(text) {
-    const t = authored(text).replace(/\s+/g, ' ').trim();
+    const all = authored(text);
+    const lines = all.split('\n').map(l => l.trim()).filter(Boolean);
+    if (FIRST_KICK.test((lines.length > 1 && GREETING.test(lines[0]) ? lines[1] : lines[0]) || '')) return true;
+    const t = all.replace(/\s+/g, ' ').trim();
     if (!/\bkick(?:ing)? rocks\b/i.test(t) || /\?/.test(t) || WARM.test(t)) return false;
     return t.replace(/[^a-z' ]+/gi, ' ').trim().split(/\s+/).filter(Boolean).length <= 8;
 }

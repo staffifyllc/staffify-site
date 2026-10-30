@@ -58,7 +58,7 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(!sendingWindow(row,Date.now(),current.sendWindow).allowed)continue;
   const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before send');
   // A stop saved outside this queue (a Hiring now card's Not interested) does not move the revision: read it last.
-  if(lastCheck&&!await lastCheck(row)){row.status='crm_hold';state=await save(state);continue;}
+  if(lastCheck){const ok=await lastCheck(row);if(ok==='wait'){report.callGapWait=(report.callGapWait||0)+1;continue;}if(!ok){row.status='crm_hold';state=await save(state);continue;}}
   const id=row.id+':'+(row.sentTouches+1),key='outreach:cloud:send:'+id;
   if(!await redis.set(key,{id,status:'reserved',at:Date.now()},{nx:true}))continue;
   state.sends.push({id,day:dayKey(Date.now()),sender:row.sender,owner:row.owner,touch:row.sentTouches+1,status:'reserved'});row.sendOperationId=id;row.status='auto_send_pending';state=await save(state);
