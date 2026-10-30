@@ -24,7 +24,7 @@ export function sendDecision(row,state,messages,senders,now=Date.now()) {
  return null;
 }
 export function locationRefreshDeferred(row,now){return row.prospectTimezone?.timeZone===null&&now-Date.parse(row.prospectTimezone.checkedAt)<15*60000;}
-export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report,now=Date.now(),verify=verificationGate}) {
+export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,lastCheck,config,started,report,now=Date.now(),verify=verificationGate}) {
  if(!cfg.sendingEnabled)return state;
  state.sends ||= [];
  // A request with an uncertain outcome is never retried automatically.
@@ -57,6 +57,8 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
   if(!campaignAllowed(row,current))continue;
   if(!sendingWindow(row,Date.now(),current.sendWindow).allowed)continue;
   const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before send');
+  // A stop saved outside this queue (a Hiring now card's Not interested) does not move the revision: read it last.
+  if(lastCheck&&!await lastCheck(row)){row.status='crm_hold';state=await save(state);continue;}
   const id=row.id+':'+(row.sentTouches+1),key='outreach:cloud:send:'+id;
   if(!await redis.set(key,{id,status:'reserved',at:Date.now()},{nx:true}))continue;
   state.sends.push({id,day:dayKey(Date.now()),sender:row.sender,owner:row.owner,touch:row.sentTouches+1,status:'reserved'});row.sendOperationId=id;row.status='auto_send_pending';state=await save(state);
@@ -70,4 +72,4 @@ export async function sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,his
  }
  return state;
 }
-function applySent(row,state,m,id){const at=new Date(m.date).toISOString();const entry=state.sends.find(s=>s.id===id);if(entry)Object.assign(entry,{status:'verified',messageId:m.id,day:dayKey(m.date),at});row.events ||= [];if(!row.events.some(e=>e.id===m.id))row.events.push({id:m.id,kind:'sent',at,subject:m.subject,body:m.text,from:m.from,to:m.to});Object.assign(row,{status:'sent',sentTouches:Math.max(row.sentTouches,entry?.touch||row.sentTouches+1),verifiedSentTouches:Math.max(row.verifiedSentTouches||0,entry?.touch||row.sentTouches+1),lastSentAt:at,nextEligibleAt:new Date(m.date+48*3600000).toISOString(),threadId:m.threadId,replyId:m.replyId,draftId:null,messageId:null,verifiedAt:new Date().toISOString(),autoSentAt:at,holdError:null});}
+function applySent(row,state,m,id){const at=new Date(m.date).toISOString();const entry=state.sends.find(s=>s.id===id);if(entry)Object.assign(entry,{status:'verified',messageId:m.id,day:dayKey(m.date),at});row.events ||= [];if(!row.events.some(e=>e.id===m.id))row.events.push({id:m.id,kind:'sent',at,subject:m.subject,body:m.text,from:m.from,to:m.to});Object.assign(row,{lastSentCopied:Array.isArray(row.draftReplyTo)&&row.draftReplyTo.length>1,status:'sent',sentTouches:Math.max(row.sentTouches,entry?.touch||row.sentTouches+1),verifiedSentTouches:Math.max(row.verifiedSentTouches||0,entry?.touch||row.sentTouches+1),lastSentAt:at,nextEligibleAt:new Date(m.date+48*3600000).toISOString(),threadId:m.threadId,replyId:m.replyId,draftId:null,messageId:null,verifiedAt:new Date().toISOString(),autoSentAt:at,holdError:null});}

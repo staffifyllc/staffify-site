@@ -103,6 +103,8 @@ export async function textStop(id, { kv = redis } = {}) {
     const state = await kv.get(QUEUE_KEY);
     const r = state && (state.records || []).find(x => x.id === id);
     if (!r) return 'not_found';
+    // "Not interested / stop" on an email-campaign card marks the row and the queue's suppressions, not always a number.
+    if (r.status === 'suppressed' || (state.suppressions || []).includes(String(r.recipient || '').toLowerCase())) return 'suppressed';
     if (campaignPaused(r)) return 'campaign_paused';
     if (r.booking) return 'booked';
     // The industry pause too (real estate media on any campaign), classified the way the call view does.

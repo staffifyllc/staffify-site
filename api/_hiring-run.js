@@ -693,14 +693,36 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
             await putRecord(kv, next);
         } finally { await kv.del(lock).catch(() => {}); }
     }
+    // Paul, 2026-10-30: "not only being removed from our view, but removed from any automated contact as well". Someone
+    // on the global stop list (a STOP text, an unsubscribe, a "remove me" to a rep, a no on another card) leaves the call
+    // list on this run, not when somebody next opens their card. Owner and history are kept; the reason is on the card.
+    // An unreadable stop list changes nothing here (and blocks no card): each card is still checked when it opens.
+    let stops = null;
+    if (deps.optedOutSet) { try { stops = await deps.optedOutSet(); } catch { stops = null; } }
+    const tenOf = n => String(n || '').replace(/\D/g, '').slice(-10);
+    // The person's address, or the number the card rings. Not its backups: an old listing line there may be shared.
+    const onStopList = r => !!stops && (!!(r.contact && [r.contact.email, r.contact.candidateEmail].some(e => e && stops.emails.has(String(e).toLowerCase())))
+        || !!(r.phone && r.phone.number && stops.numbers.has(tenOf(r.phone.number))));
+    const OPEN = ['ready', 'research', 'number_research', 'conversation'];
+    if (stops) for (const rec of (await allRecords(kv)).filter(r => OPEN.includes(r.status) && onStopList(r))) {
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (!fresh || !OPEN.includes(fresh.status) || !onStopList(fresh)) continue;
+            const at = new Date(now).toISOString();
+            await putRecord(kv, { ...fresh, status: 'suppressed', exclusion: { reason: 'On the do-not-contact list: they asked us to stop', at, by: 'rules re-check' }, updatedAt: at });
+            out.optedOut = (out.optedOut || 0) + 1;
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
     // 2026-10-30: in the first hour of the Hiring now emails, opening a card closed it when its only "email thread" was its
     // own drip (companyThread now leaves drip rows out). A card closed for a thread comes back when no thread but a drip
-    // remains at the company; its owner and history are kept.
+    // remains at the company and nobody asked to stop; its owner and history are kept.
     const threadClosed = (await allRecords(kv)).filter(r => r.status === 'excluded' && r.exclusion && /already in a Staffify email thread/.test(r.exclusion.reason || ''));
     if (threadClosed.length) {
         const queue = await kv.get(QUEUE_KEY).catch(() => null);
         for (const rec of queue && Array.isArray(queue.records) ? threadClosed : []) {
-            if (companyThread(rec, queue.records)) continue;
+            if (companyThread(rec, queue.records) || onStopList(rec) || queue.records.some(r => r.hiringId === rec.id && r.status === 'suppressed')) continue;
             const lock = HK.recLock(rec.id);
             if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
             try {

@@ -17,7 +17,8 @@ function e164(p) { const d = digits(p); return d.length === 10 ? '+1' + d : ''; 
 async function hs(path, opts = {}, tries = 2) {
     for (let i = 0; i < tries; i++) {
         try {
-            const r = await fetch(HS + path, { ...opts, headers: headers() });
+            // A bounded wait: these calls now run inside card locks and timed cron runs.
+            const r = await fetch(HS + path, { ...opts, headers: headers(), signal: AbortSignal.timeout(10000) });
             if (r.status === 429 && i < tries - 1) { await new Promise(s => setTimeout(s, 400)); continue; }
             const text = await r.text().catch(() => '');
             let body = null; try { body = text ? JSON.parse(text) : null; } catch { body = null; }
@@ -122,6 +123,26 @@ export async function lookupContact({ phone, email }) {
         if (hit) return { status: 'found', id: hit.id, properties: hit.properties || {} };
     }
     return { status: 'absent' };
+}
+
+/**
+ * Someone who asked to stop, marked in the CRM so whatever reads it leaves them alone: the email worker's gates read
+ * rep_lifecycle_state and rep_terminal_state, campaign-dashboard's senders read do_not_contact. Found by email only: an
+ * address names a person, while a number is often a shared front desk, and marking whoever else has it would stop the
+ * wrong person. Returns the contact's own email and mobile, so the caller can stop those as well.
+ */
+export async function markDoNotContact({ email }) {
+    if (!token()) return { ok: false, reason: 'no_token' };
+    if (!email) return { ok: true, reason: 'no_email' };
+    const found = await lookupContact({ email });
+    if (found.status !== 'found') return { ok: found.status === 'absent', reason: found.status, why: found.why || null };
+    const read = await hs(`/crm/v3/objects/contacts/${found.id}?properties=email,phone,mobilephone`, { method: 'GET' });
+    const props = (read.ok && read.body && read.body.properties) || found.properties || {};
+    const core = await hs(`/crm/v3/objects/contacts/${found.id}`, { method: 'PATCH', body: JSON.stringify({ properties: { rep_lifecycle_state: 'DNC', rep_terminal_state: 'DNC', rep_in_campaign: 'false' } }) });
+    // On its own write: a portal without this custom property refuses the whole PATCH it is in.
+    const dnc = await hs(`/crm/v3/objects/contacts/${found.id}`, { method: 'PATCH', body: JSON.stringify({ properties: { do_not_contact: 'true' } }) });
+    // The mobile only: the contact's 'phone' is usually the company line, and the whole office answers it.
+    return { ok: !!core.ok, id: found.id, doNotContact: !!dnc.ok, email: props.email || null, phones: [props.mobilephone].filter(Boolean) };
 }
 
 /** Read the fields we must never trample: who owns them, what they already are, and their status. */

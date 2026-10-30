@@ -324,18 +324,19 @@ export const encodeHeader = s => (/^[\x20-\x7e]*$/.test(s) ? s : '=?UTF-8?B?' + 
 const quoteName = n => (/^[\w .'-]*$/.test(n) ? `"${n}"` : encodeHeader(n));
 
 /** The message body as HTML: the rep's text, escaped, with links made clickable, then the signature. */
-export function bodyHtml(text, signature) {
+export function bodyHtml(text, signature, footer = null, footerLink = null) {
     const paras = String(text).replace(/\r\n/g, '\n').split(/\n{2,}/).map(p => {
         const safe = esc(p).replace(/(https:\/\/[^\s<]+[^\s<.,;:!?)'"])/g, '<a href="$1">$1</a>').replace(/\n/g, '<br>');
         return `<p style="margin:0 0 14px;">${safe}</p>`;
     });
     return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#111;">${paras.join('')}</div>`
-        + (signature ? `<br><div>${signature}</div>` : '');
+        + (signature ? `<br><div>${signature}</div>` : '')
+        + (footer ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#6b6b6b;margin:18px 0 0;">${esc(footer)}${footerLink ? ` <a href="${esc(footerLink)}" style="color:#6b6b6b;">One click works too.</a>` : ''}</p>` : '');
 }
 
 /** multipart/alternative, base64 parts, CRLF line endings. Throws on a header that could inject. */
-export function buildMime({ from, fromName, to, subject, text, html, boundary, inReplyTo = '', references = '', bcc = '', replyTo = '' }) {
-    for (const h of [from, fromName || '', to, subject, inReplyTo, references, bcc, replyTo]) if (/[\r\n]/.test(h)) throw Error('Invalid mail header');
+export function buildMime({ from, fromName, to, subject, text, html, boundary, inReplyTo = '', references = '', bcc = '', replyTo = '', unsubscribe = '' }) {
+    for (const h of [from, fromName || '', to, subject, inReplyTo, references, bcc, replyTo, unsubscribe]) if (/[\r\n]/.test(h)) throw Error('Invalid mail header');
     const b = boundary || 'sfy-' + Buffer.from(from + to + subject).toString('hex').slice(0, 24);
     return [
         'From: ' + (fromName ? quoteName(fromName) + ' <' + from + '>' : from),
@@ -346,6 +347,8 @@ export function buildMime({ from, fromName, to, subject, text, html, boundary, i
         // A reply names the message it answers, so every mail client keeps it in the conversation.
         ...(inReplyTo ? ['In-Reply-To: ' + inReplyTo] : []),
         ...(references ? ['References: ' + references] : []),
+        // The mail client's own Unsubscribe link (RFC 8058 one-click), to the same /kick-rocks/ address as the footer.
+        ...(unsubscribe ? ['List-Unsubscribe: <' + unsubscribe + '>', 'List-Unsubscribe-Post: List-Unsubscribe=One-Click'] : []),
         'MIME-Version: 1.0',
         'Content-Type: multipart/alternative; boundary="' + b + '"',
         '',

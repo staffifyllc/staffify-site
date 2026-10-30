@@ -74,9 +74,17 @@
     {
       "path": "/api/booked-leads/",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/rep-optout-sweep/",
+      "schedule": "*/2 * * * *"
     }
   ],
   "rewrites": [
+    {
+      "source": "/kick-rocks/",
+      "destination": "/api/unsubscribe/?style=kick"
+    },
     {
       "source": "/pilot/",
       "destination": "/hub/"
@@ -349,6 +357,12 @@
     },
     "api/booked-leads.js": {
       "maxDuration": 120
+    },
+    "api/rep-optout-sweep.js": {
+      "maxDuration": 60
+    },
+    "api/unsubscribe.js": {
+      "maxDuration": 30
     }
   }
 }

@@ -11,6 +11,8 @@
 // they read, and when a card's own state stops the sequence (a caller reached them, a booking, a closed posting).
 import { spokenRole, DISCOVERY_LINK } from './_call-scripts.js';
 import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
+import { sequenceLine } from './_kick-rocks.js';
+import { kickLink } from '../lib/unsubscribe-token.js';
 
 export { HIRING_DRIP_ID };
 export const OUR_RATE = 14;
@@ -93,13 +95,16 @@ export function dripCompany(name) {
     return calm(n);
 }
 
-const OUT = "If you'd rather I not follow up, just let me know.";
 /**
  * The four emails for one card. Email 1 asks if the role is still open, quotes their posted rate back when it is
  * well above ours, and asks for the appointment. Nothing promises an outcome.
  */
-export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul' } = {}) {
+export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', unsubscribe = kickLink } = {}) {
     const SIGN = signer + '\nStaffify';
+    // Each email's own way out, and the one-click link to /kick-rocks/ under it (Paul: "should it be a link, but make it funny?").
+    let kick = '';
+    try { kick = unsubscribe((card.contact || {}).email) || ''; } catch { kick = ''; }
+    const out = n => sequenceLine(n) + (kick ? '\nOne click works too: ' + kick : '');
     const c = card.contact || {}, first = c.firstName;
     const title = (card.job && card.job.title) || (card.lead && card.lead.role_posted) || '';
     const role = dripRole(title), company = dripCompany(card.company && card.company.name);
@@ -116,14 +121,14 @@ export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul' } 
         : `We can fill it with someone amazing for $${OUR_RATE} an hour${yearNote}. They work only for you, and we handle the recruiting and vetting.`;
     const ask = `Is ${roleRef}${at} still open?` + (quote ? ` I see you have it listed at ${payPhrase(pay)}.` : '');
     const subject = role === 'open' ? `${first}, is the role still open?` : `Is the ${role} role still open?`;
-    const bodyText = [`Hi ${first},`, ask, offer, `Do you have 15 minutes this week? I'll show you how it works. Grab a time here:\n${link}`, SIGN, OUT].join('\n\n');
+    const bodyText = [`Hi ${first},`, ask, offer, `Do you have 15 minutes this week? I'll show you how it works. Grab a time here:\n${link}`, SIGN, out(1)].join('\n\n');
     const followupBodies = {
-        2: [`Hi ${first},`, `Following up on ${roleRef}. Every hire comes with our lifetime replacement guarantee: if the fit is ever wrong, we find you someone new.`, `Worth 15 minutes to see how it works?\n${link}`, SIGN, OUT].join('\n\n'),
+        2: [`Hi ${first},`, `Following up on ${roleRef}. Every hire comes with our lifetime replacement guarantee: if the fit is ever wrong, we find you someone new.`, `Worth 15 minutes to see how it works?\n${link}`, SIGN, out(2)].join('\n\n'),
         3: [`Hi ${first},`, below
             ? `If ${roleRef} is still open, we can take the recruiting off your plate: a vetted, dedicated hire who works only for you.`
             : `If ${roleRef} is still open, the offer stands: someone great at $${OUR_RATE} an hour, recruited and vetted by our team, working only for you.`,
-            `Want me to walk you through it? 15 minutes:\n${link}`, SIGN, OUT].join('\n\n'),
-        4: [`Hi ${first},`, `I'll close the loop here. If you've filled ${roleRef}, congratulations. If it opens up again, or you need a second person, reply here and we'll pick it up.`, SIGN].join('\n\n'),
+            `Want me to walk you through it? 15 minutes:\n${link}`, SIGN, out(3)].join('\n\n'),
+        4: [`Hi ${first},`, `I'll close the loop here. If you've filled ${roleRef}, congratulations. If it opens up again, or you need a second person, reply here and we'll pick it up.`, SIGN, out(4)].join('\n\n'),
     };
     return { subject, bodyText, followupBodies, role, payText: payPhrase(pay), quoted: quote };
 }
@@ -174,6 +179,10 @@ export function dripSender(accounts, records, { owner = null } = {}) {
     return choices.sort((a, b) => load(a.email) - load(b.email) || a.email.localeCompare(b.email))[0];
 }
 
+// Paul, 2026-10-30: every email ends with its own "kick rocks" way out (api/_kick-rocks.js). Rows written before carry the
+// older version and get the new lines through refreshDripCopy.
+export const COPY_VERSION = 'hiring-now-2026-10-30-kick-rocks-link';
+
 /** The queue row for one card: prepared, approved, and carrying its own follow-ups. */
 export function dripRow(card, { account, now = Date.now() }) {
     const copy = hiringDripCopy(card, { signer: account.owner });
@@ -182,7 +191,7 @@ export function dripRow(card, { account, now = Date.now() }) {
         id: 'hiring-drip-' + String(card.id).replace(/^hire:/, ''), campaignId: HIRING_DRIP_ID, lane: 'hiring_now', owner: account.owner, sender: account.email,
         recipient: key(card.contact.email), company: (card.company && card.company.name) || '', agencyKey: domainOf(card), website: (card.company && card.company.website) || null,
         verifiedFirstName: card.contact.firstName, hiringId: card.id, roleName: copy.role,
-        subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies, copyVersion: 'hiring-now-2026-10-30',
+        subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies, copyVersion: COPY_VERSION,
         source: { label: 'Hiring now card', id: card.id, job: (card.job && card.job.title) || null, url: (card.job && card.job.url) || null },
         status: 'prepared', sentTouches: 0, verifiedSentTouches: 0, qualificationApproved: true, createdAt: at, enrichedAt: at,
     };
@@ -208,4 +217,26 @@ export function rebalanceDripRows(state, cardsById, accounts, now = Date.now()) 
     }
     state.records = state.records.map(r => next.get(r.id) || r);
     return moved;
+}
+
+/**
+ * Rows written with older copy take the current copy for every email not yet written: all of it before the first
+ * draft, otherwise only the follow-ups after the one already drafted (a saved Gmail draft is never rewritten here, and
+ * the send checks the draft against its stored text). The caller holds the worker's lock. Returns rows changed.
+ */
+export function refreshDripCopy(state, cardsById) {
+    let changed = 0;
+    for (const r of state.records) {
+        if (r.campaignId !== HIRING_DRIP_ID || r.copyVersion === COPY_VERSION || !cardsById.has(r.hiringId)) continue;
+        const copy = hiringDripCopy(cardsById.get(r.hiringId), { signer: r.owner });
+        const sent = Number(r.sentTouches) || 0;
+        if (r.status === 'prepared' && !sent && !r.draftId && !r.threadId) Object.assign(r, { subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies });
+        else {
+            const firstFree = sent + (r.draftId ? 2 : 1);
+            r.followupBodies = { ...(r.followupBodies || {}), ...Object.fromEntries(Object.entries(copy.followupBodies).filter(([k]) => Number(k) >= firstFree)) };
+        }
+        r.copyVersion = COPY_VERSION;
+        changed++;
+    }
+    return changed;
 }

@@ -11,6 +11,8 @@
 import { adminAuthorized, currentRep, readBody, redis } from './_auth.js';
 import { optOut, optOutEverywhere, isOptedOut, optOutList, looksLikeOptOut, last10 } from './_optout.js';
 import { listMessages, quoConfigured } from './_quo.js';
+import { requestStop } from './_outreach-stops.js';
+import { stopHiringCards } from './_hiring-calls.js';
 
 // How far back the first sweep looks, and the watermark it keeps afterwards. A date is a far
 // better bookmark than a per-thread "have I read this" map: it cannot drift, and widening it is one
@@ -64,6 +66,8 @@ export async function scanOpenPhone(limit, debug) {
         const already = await isOptedOut({ phone: f.phone });
         const r = await optOutEverywhere({ phone: f.phone, reason: 'replied stop', source: 'quo scan', text: f.text });
         if (!r.ok) { failed.push({ phone: f.phone, reason: r.reason }); continue; }
+        // Off the call list too: the Hiring now card that rings this number (api/_hiring-calls.js).
+        await stopHiringCards(redis, { phone: f.phone }, { why: 'Replied STOP to a text', by: 'quo scan' }).catch(() => {});
         if (!already) added.push({ phone: r.phone, text: f.text, at: f.at });
     }
 
@@ -101,6 +105,11 @@ export default async function handler(req, res) {
             return res.status(200).json({ ok: true, restored: d || b.email });
         }
         const r = await optOutEverywhere({ phone: b.phone, email: b.email, reason: b.reason || 'manual', source: 'manual' });
+        if (r.ok) {
+            // Every email-queue row for the address, and the Hiring now card, stop too (api/_outreach-stops.js).
+            if (b.email) await requestStop(redis, { email: b.email, by: 'manual', why: b.reason || 'manual' }).catch(() => {});
+            await stopHiringCards(redis, { email: b.email || null, phone: b.email ? null : b.phone || null }, { why: b.reason || 'Opted out', by: 'manual' }).catch(() => {});
+        }
         return res.status(r.ok ? 200 : 400).json(r);
     }
 

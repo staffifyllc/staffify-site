@@ -3,7 +3,8 @@ import {tagCampaign,CAMPAIGN_ID} from './_outreach-campaign.js';
 import {copyIssue} from './_outreach-copy.js';
 import {fairCandidates} from './_outreach-fairness.js';
 import {sendOne} from './_outreach-send.js';
-export function makeWorker({hiringSupply,dealSupply,maintain,redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
+import {applyStops} from './_outreach-stops.js';
+export function makeWorker({unsubscribeLink,lastCheck,stops,hiringSupply,dealSupply,maintain,redis,KEY,config,access,gmail,history,headers,messageText,mime,compactMessage,assertDraft,supply,canDraft,suppress,eligible,quota,dayKey,classify,followup,reconcileThread,callReady,randomUUID,cronSecret}){
 const LOCK='outreach:cloud:lock';
 const CAS=`local s=redis.call('GET',KEYS[1]); if not s or cjson.decode(s).revision~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 async function save(state){const rev=state.revision;const next={...state,revision:rev+1,queueUpdatedAt:new Date().toISOString()};if(Number(await redis.eval(CAS,[KEY],[String(rev),JSON.stringify(next)]))!==1)throw Error('Concurrent control change; retry next tick');return next;}
@@ -13,6 +14,10 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
  const started=Date.now();let report={startedAt:new Date().toISOString(),trigger:String(req.headers['user-agent']||'').startsWith('vercel-cron')?'schedule':'manual',created:0,checked:0,status:'blocked'};
  async function finish(code){report.finishedAt=new Date().toISOString();try{await redis.set('outreach:cloud:last-run',report);}finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",[LOCK],[nonce]);}return res.status(code).json(report);} 
  try{
+  // "Not interested" pressed outside this worker (api/_outreach-stops.js): applied first, even while sending is paused, so
+  // every row for the person is suppressed before anything else runs; the sync below writes the CRM. A request leaves
+  // the list only after the save that applied it landed.
+  if(stops){const reqs=await stops.take();if(reqs.length){const st=await redis.get(KEY);if(st){const applied=applyStops(st,reqs);await save(st);await stops.done(reqs.length);report.stops={requests:reqs.length,rows:applied.rows};}}}
   const cfg=await config();if(req.query?.validate==='1'){cfg.draftingEnabled=true;report.validation=true;}if(!cfg.enabled){report.reason='Hosted draft worker paused; enable after validation';return await finish(200);}
   if(maintain)report.clientSources=await maintain();
   cfg.accounts=cfg.accounts.filter(a=>a.brand==='Staffify'&&a.draftEnabled);
@@ -53,7 +58,8 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    const raw=mime({sender:row.sender,to:'',subject:'DO NOT SEND - '+row.status,body:row.bodyText||'',id:'hold-'+row.id});
    try{await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(row.draftId),{message:{raw,threadId:draft.message.threadId}},'PUT');}catch(e){if(/Message not a draft/.test(e.message)){row.previousDraftId=row.draftId;row.draftId=null;row.messageId=null;row.holdError='Draft was sent or removed during reconciliation';state=await save(state);continue;}throw e;}assertDraft(await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(row.draftId)),null);row.cloudHeld=true;state=await save(state);
   }
-  for(const row of state.records.filter(r=>r.status==='suppressed'&&!r.globalSuppressionSynced)){if(Date.now()-started>120000)break;await suppress(row,'Email opt-out recorded by hosted outreach worker');row.globalSuppressionSynced=true;state=await save(state);}
+  // A CRM that is briefly unavailable is tried again later (crmRetryAt); only a contact that is not there counts as done.
+  for(const row of state.records.filter(r=>r.status==='suppressed'&&!r.globalSuppressionSynced&&!(r.crmRetryAt&&Date.parse(r.crmRetryAt)>Date.now()))){if(Date.now()-started>120000)break;const synced=await suppress(row,'Email opt-out recorded by hosted outreach worker');if(!(synced&&synced.retry))row.globalSuppressionSynced=true;state=await save(state);}
   if(Date.now()-started>120000){report.status='reconciled';return await finish(200);}
   // Refresh a bounded rotating batch, including held conversations, to retain the complete paper trail.
   const tracked=state.records.filter(r=>r.threadId&&tokens[r.sender]);const offset=Number(await redis.get('outreach:cloud:thread-index')||0);
@@ -77,8 +83,8 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
   if(!cfg.allowedCampaignIds&&dealSupply&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000){try{report.dealFollowups=await dealSupply(state,cfg,tokens);state=await save(state);}catch(e){report.dealFollowupError=String(e.message).slice(0,120);}}
   if(!cfg.allowedCampaignIds&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000&&state.records.filter(r=>r.status==='prepared').length<30){report.qualified=await supply(state,cfg);state=await save(state);}
   // The Hiring now drip tops itself up from the cards; a failure is reported, never fatal to the tick.
-  if(hiringSupply&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000){let hs=null;try{hs=await hiringSupply(state,cfg);report.hiringSupply=hs;}catch(e){report.hiringSupplyError=String(e.message).slice(0,120);}if(hs?.added)state=await save(state);}
-  if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,config,started,report});
+  if(hiringSupply&&cfg.draftingEnabled!==false&&historyComplete&&Date.now()-started<45000){let hs=null;try{hs=await hiringSupply(state,cfg);report.hiringSupply=hs;}catch(e){report.hiringSupplyError=String(e.message).slice(0,120);}if(hs?.added||hs?.recopied)state=await save(state);}
+  if(historyComplete)state=await sendOne({state,cfg,tokens,senders,redis,KEY,save,gmail,history,compactMessage,assertDraft,messageText,canDraft,lastCheck,config,started,report});
   const candidates=fairCandidates(state.records.filter(r=>campaignAllowed(r,cfg)&&eligible(r,state)&&cfg.draftingEnabled!==false&&historyComplete),state.creations);
   const draftedMailboxes=new Set();
   for(const row of candidates){
@@ -101,12 +107,12 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before draft creation');
    if(!await redis.set('outreach:cloud:operation:'+operation,{status:'reserved',at:Date.now()},{nx:true}))continue;
    state.creations.push({id:operation,day:dayKey(Date.now()),owner:row.owner,sender:row.sender,touch:row.sentTouches+1,status:'reserved'});row.status='draft_creation_pending';state=await save(state);
-   try{const raw=mime({sender:row.sender,to:row.recipient,subject:row.sentTouches?'Re: '+String(row.subject||'Your agency workflow').replace(/^Re:\s*/i,''):row.subject,body,id:'staffify-'+operation.replace(/[^a-z0-9-]/gi,'-'),replyId:row.sentTouches?row.replyId:undefined});
+   try{const raw=mime({sender:row.sender,to:row.recipient,subject:row.sentTouches?'Re: '+String(row.subject||'Your agency workflow').replace(/^Re:\s*/i,''):row.subject,body,id:'staffify-'+operation.replace(/[^a-z0-9-]/gi,'-'),replyId:row.sentTouches?row.replyId:undefined,replyTo:row.replyTo,unsubscribe:unsubscribeLink?unsubscribeLink(row):undefined});
     const draft=await gmail(tokens[row.sender],'drafts',{message:{raw,...(row.sentTouches?{threadId:row.threadId}:{})}});
     assertDraft(await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(draft.id)),row.recipient);
     await redis.set('outreach:cloud:operation:'+operation,{status:'saved',draft,at:Date.now()});
     state.creations.find(c=>c.id===operation).status='verified';
-    Object.assign(row,{draftId:draft.id,messageId:draft.message.id,threadId:draft.message.threadId,status:'draft_saved',bodyText:body,draftCreatedAt:new Date().toISOString()});state=await save(state);report.created++;draftedMailboxes.add(row.sender);
+    Object.assign(row,{draftId:draft.id,messageId:draft.message.id,threadId:draft.message.threadId,status:'draft_saved',bodyText:body,draftCreatedAt:new Date().toISOString(),draftReplyTo:row.replyTo||null});state=await save(state);report.created++;draftedMailboxes.add(row.sender);
    }catch(e){await redis.set('outreach:cloud:operation:'+operation,{status:'uncertain',at:Date.now(),error:'Inspect Gmail before any retry'});throw e;}
   }
   report.status=historyComplete?'complete':'partial';if(!historyComplete)report.reason='One or more mailbox histories are unavailable; new drafts paused to prevent duplicate outreach';return await finish(200);

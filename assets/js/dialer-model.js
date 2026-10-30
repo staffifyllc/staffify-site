@@ -93,14 +93,18 @@ export function followUps({ records = [], tasks = [], me = '', now = Date.now() 
   for (const r of records) {
     if (!r || !r.nextCallAt || !NEEDS_TIME.includes(r.callOutcome)) continue;
     if (String(r.callOwner || '').toLowerCase() !== mine) continue;
-    if (r.status === 'suppressed') continue;
+    if (r.status === 'suppressed' || r.status === 'excluded') continue;   // a no, or a card closed by a stop: nobody to call back
     if (r.pausedFollowUp) continue;   // a paused campaign's callback is in the Paused area, not due work
     const last = (r.callHistory || []).slice(-1)[0] || {};
     items.push({ kind: 'callback', id: 'cb:' + r.id, recordId: r.id, company: r.company || r.recipient, who: r.verifiedFirstName || '', recipient: r.recipient,
       at: r.nextCallAt, outcome: r.callOutcome, note: last.notes || '', phone: r.callContact && r.callContact.phone || null, campaignId: r.campaignId || null });
   }
+  // A task for a card that is gone from the list (a no, a stop) is not work any more either.
+  const live = new Set(records.filter(r => r && r.status !== 'suppressed' && r.status !== 'excluded').map(r => r.id));
+  const known = new Set(records.filter(Boolean).map(r => r.id));
   for (const t of tasks) {
     if (!t || t.doneAt) continue;
+    if (t.recordId && known.has(t.recordId) && !live.has(t.recordId)) continue;
     items.push({ kind: 'task', id: 'task:' + t.id, taskId: t.id, recordId: t.recordId || null, company: t.company || '', who: '', recipient: t.recipient || null,
       at: t.dueAt, outcome: null, note: t.title + (t.notes ? ' · ' + t.notes : ''), title: t.title, phone: null, campaignId: t.campaignId || null, hubspot: t.hubspot || null });
   }
@@ -176,4 +180,24 @@ export function numberTrust(dial) {
   if (l.startsWith('direct dial')) return { tone: 'ok', word: 'Direct dial', detail: dial.detail || '' };
   if (l.startsWith('main line')) return { tone: 'ok', word: 'Main line', detail: dial.detail || '' };
   return { tone: 'warn', word: 'CRM, unconfirmed', detail: dial.detail || '' };
+}
+
+// Paul, 2026-10-30: reps should "see any email efforts that are going in case they need to help work some of those
+// leads". A Hiring now card carries its drip row's state (api/outreach-queue.js); this is the line the card shows.
+const REPLIED = ['human_reply_hold', 'held_reply'];
+const AUTO = ['auto_reply_hold', 'held_out_of_office'];
+export function dripLine(drip, now = Date.now()) {
+  if (!drip) return null;
+  const sent = Math.min(4, Number(drip.sentTouches) || 0);
+  const day = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const last = drip.lastSentAt ? ', last ' + day(drip.lastSentAt) : '';
+  // Only an email sent with the rep on Reply-To put the answer in their inbox; older ones answered the sending inbox alone.
+  if (REPLIED.includes(drip.status)) return { tone: 'good', text: 'Replied to our email' + (drip.replyReceivedAt ? ' ' + day(drip.replyReceivedAt) : '') + (drip.copied ? '. Read it in your inbox or hello@ before you call.' : '. The reply is in ' + (drip.sender || 'the sending inbox') + '; ask Paul for it before you call.') };
+  if (AUTO.includes(drip.status)) return { tone: 'muted', text: 'Auto-reply (out of office)' + (drip.replyReceivedAt ? ' ' + day(drip.replyReceivedAt) : '') + '; emails paused.' };
+  if (drip.status === 'suppressed') return { tone: 'bad', text: 'Emails stopped: they opted out or said no.' };
+  if (drip.status === 'bounce_hold') return { tone: 'bad', text: 'Our email to them bounced.' };
+  if (sent >= 4 || drip.status === 'sequence_complete_hold') return { tone: 'muted', text: '4 of 4 emails sent' + last + '.' };
+  if (drip.status === 'sent' && sent) return { tone: 'muted', text: sent + ' of 4 emails sent' + last + (drip.nextEligibleAt && Date.parse(drip.nextEligibleAt) > now ? ', next ' + day(drip.nextEligibleAt) : '') + '.' };
+  if (['prepared', 'draft_saved', 'draft_creation_pending', 'auto_send_pending'].includes(drip.status)) return { tone: 'muted', text: sent ? sent + ' of 4 emails sent' + last + ', the next is queued.' : 'First email queued.' };
+  return { tone: 'muted', text: (sent ? sent + ' of 4 emails sent' + last + '. ' : '') + 'Emails paused.' };
 }

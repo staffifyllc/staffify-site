@@ -7,7 +7,7 @@ import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMP
 import { profileOf } from '../api/_rocketreach.js';
 import { mainLabel, mainNumbers, callerNumbers } from '../api/_hiring-intent.js';
 import { contactOf } from '../api/_quo-contacts.js';
-import { saveHiringOutcome, hiringBrief, liveStops, saveHiringContactEmail } from '../api/_hiring-calls.js';
+import { saveHiringOutcome, hiringBrief, liveStops, saveHiringContactEmail, stopHiringCards } from '../api/_hiring-calls.js';
 import { templatesFor, HIRING_TEMPLATES } from '../api/_rep-email.js';
 import { putBacklog as putBacklogStore } from '../api/_hiring-intent.js';
 import { hiringCallScript, spokenRole, articleFor } from '../api/_call-scripts.js';
@@ -259,7 +259,15 @@ test('a seed survives a run that crashes mid-posting, and is worked by the next 
 });
 
 // ---- the caller's side -------------------------------------------------------------------------
-async function readyCard(over) { const w = world(over); const r = await processPosting(lever, {}, w.deps, null); return { ...w, id: r.id }; }
+// The world builds cards at NOW, but saving an outcome and opening a brief read the real clock. A card checked at a fixed
+// NOW stopped being fresh (FRESH_MS) 72 hours later, on 2026-10-30, and every outcome test failed with "no longer due".
+// So a ready card is stamped as checked at the real now.
+async function readyCard(over) {
+    const w = world(over); const r = await processPosting(lever, {}, w.deps, null);
+    const rec = await getRecord(w.kv, r.id);
+    if (rec && rec.job) await putRecord(w.kv, { ...rec, job: { ...rec.job, checkedAt: new Date().toISOString() } });
+    return { ...w, id: r.id };
+}
 const MILTON = { email: 'milton@trystaffify.com', name: 'Milton Hodgson' };
 
 test('STOP on a phone-only card writes the number to the global stop list and closes the company', async () => {
@@ -1537,4 +1545,126 @@ test('cards the drip closed by mistake come back on the next run; one with a rea
     assert.equal(back.status, 'ready'); assert.equal(back.exclusion, null); assert.equal(back.restored.from, 'email_thread'); assert.equal(back.callOwner, MILTON.email, 'owner kept');
     assert.equal((await getRecord(w.kv, 'hire:00000000000000d2')).status, 'excluded', 'someone else at the company replied in another campaign');
     assert.ok(out.restored >= 1);
+});
+
+// Paul, 2026-10-30: "when my sales person, Madison or Milton ... are hitting not interested, that person is not getting
+// removed from our system ... removed from any automated contact as well".
+test('Not interested always lands: on a callback not due yet, after a conversation, on a held card, on a stale post', async () => {
+    const w = await readyCard();
+    const rec = await getRecord(w.kv, w.id);
+    const later = new Date(Date.now() + 864e5).toISOString();
+    const cases = [
+        { ...rec, callOutcome: 'callback', nextCallAt: later, callOwner: MILTON.email },
+        { ...rec, status: 'conversation', callOutcome: 'connected' },
+        { ...rec, status: 'research', hold: { reason: 'main_line_only' } },
+        { ...rec, job: { ...rec.job, state: 'stale' } },
+    ];
+    for (const c of cases) {
+        const next = applyOutcome(c, { outcome: 'suppress', notes: 'No thanks' }, 'madison@gostaffify.com');
+        assert.equal(next.status, 'suppressed'); assert.equal(next.callHistory.at(-1).outcome, 'suppress');
+    }
+    assert.throws(() => applyOutcome(cases[0], { outcome: 'no_answer', nextCallAt: later }, 'madison@gostaffify.com'), /no longer due/, 'other outcomes still wait for the card to be due');
+});
+
+test('Not interested on a card asks the email worker to stop every row for the person', async () => {
+    const w = await readyCard();
+    const rec = await getRecord(w.kv, w.id);
+    await putRecord(w.kv, { ...rec, contact: { ...rec.contact, email: 'Ravi@RoverPass.com', status: 'verified' } });
+    const stops = [];
+    const r = await saveHiringOutcome(w.kv, { rep: MILTON, body: { action: 'suppress', id: w.id, notes: 'Not a fit' } }, { optOut: async () => ({ ok: true }), recordActivity: async () => {}, requestStop: async (kv, q) => { stops.push(q); return { ok: true }; } });
+    assert.equal(r.ok, true); assert.deepEqual(r.engineStop, { ok: true });
+    assert.deepEqual(stops, [{ email: 'Ravi@RoverPass.com', hiringId: w.id, by: MILTON.email, why: 'Not interested / stop on a call' }]);
+    const real = await readyCard();
+    await saveHiringOutcome(real.kv, { rep: MILTON, body: { action: 'suppress', id: real.id } }, { optOut: async () => ({ ok: true }), recordActivity: async () => {} });
+    assert.equal(real.kv.lists.get('staffify:outreach:stop-requests').length, 1, 'the default writes the request to the shared list');
+    const nothing = await saveHiringOutcome(real.kv, { rep: MILTON, body: { action: 'call-outcome', id: real.id, outcome: 'no_answer', nextCallAt: new Date(Date.now() + 3600e3).toISOString() } }, { recordActivity: async () => {} });
+    assert.equal(nothing.ok, false, 'a closed card takes no more outcomes');
+});
+
+test('someone the email worker stopped leaves the call list: by their drip row’s card, or by the address on a card', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const base = (await allRecords(w.kv))[0];
+    const a = { ...base, id: 'hire:00000000000000f1', contact: { ...base.contact, email: 'ravi@roverpass.com' }, callOwner: MILTON.email, callHistory: [{ outcome: 'no_answer' }] };
+    const b = { ...base, id: 'hire:00000000000000f2', contact: { ...base.contact, email: 'joel@coalition.com' } };
+    await putRecord(w.kv, a); await putRecord(w.kv, b);
+    assert.deepEqual(await stopHiringCards(w.kv, { id: a.id }, { why: 'They replied to our email asking to stop', by: 'email worker' }), [a.id]);
+    const ga = await getRecord(w.kv, a.id);
+    assert.equal(ga.status, 'suppressed'); assert.equal(ga.exclusion.reason, 'They replied to our email asking to stop'); assert.equal(ga.callOwner, MILTON.email); assert.equal(ga.callHistory.length, 1, 'history kept');
+    assert.deepEqual(await stopHiringCards(w.kv, { id: a.id }, { why: 'again' }), [], 'already stopped: nothing changes');
+    assert.deepEqual(await stopHiringCards(w.kv, { email: 'JOEL@coalition.com' }, { why: 'Excluded in the email queue' }), [b.id]);
+    assert.deepEqual(await stopHiringCards(w.kv, { email: 'nobody@nowhere.com' }, { why: 'x' }), []);
+    assert.equal((await getRecord(w.kv, base.id)).status, 'ready', 'nobody else is touched');
+});
+
+test('Not interested writes the stop list before the card: a failed write saves nothing, and every card number is stopped', async () => {
+    const w = await readyCard();
+    const rec = await getRecord(w.kv, w.id);
+    await putRecord(w.kv, { ...rec, phone: { ...rec.phone, number: '+13056360188', source: 'vendor', lineType: 'mobile', alternates: ['+15615550123', '+15615550999'] } });
+    const failed = await saveHiringOutcome(w.kv, { rep: MILTON, body: { action: 'suppress', id: w.id, dialled: '+15615550123' } }, { optOut: async () => ({ ok: false, reason: 'store_failed' }), recordActivity: async () => {} });
+    assert.equal(failed.ok, false); assert.equal(failed.status, 503); assert.match(failed.error, /nothing was saved/);
+    assert.equal((await getRecord(w.kv, w.id)).status, 'ready', 'the card stays as it was, so the press can be repeated');
+    const main = [], extra = [];
+    const crm = [];
+    const ok = await saveHiringOutcome(w.kv, { rep: MILTON, body: { action: 'suppress', id: w.id, dialled: '+15615550123' } }, { optOut: async q => { main.push(q); return { ok: true }; }, optOutNumber: async q => { extra.push(q.phone); return { ok: true }; }, markCrm: async q => { crm.push(q); return { ok: true, crm: { ok: true, id: '9' } }; }, recordActivity: async () => {}, requestStop: async () => ({ ok: true }) });
+    assert.equal(ok.ok, true); assert.equal(main[0].phone, '+15615550123', 'the line they answered on goes first');
+    assert.deepEqual(extra, ['3056360188'], 'and the owner\'s own looked-up cell; never the card\'s backups (a listing line may be shared)');
+    assert.deepEqual(ok.crm, { ok: true, id: '9' }); assert.equal(crm.length, 1, 'the CRM is marked after the card is saved');
+    assert.equal((await getRecord(w.kv, w.id)).status, 'suppressed');
+});
+
+test('a card someone asked by email to stop gives up its numbers too, and leaves every caller list', async () => {
+    const { hiringCallRows } = await import('../api/_hiring-intent.js');
+    const w = await readyCard();
+    const rec = await getRecord(w.kv, w.id);
+    await putRecord(w.kv, { ...rec, callOwner: MILTON.email, contact: { ...rec.contact, email: 'dana@acme.com' }, phone: { ...rec.phone, source: 'vendor', lineType: 'mobile', alternates: ['+15615550123'] } });
+    const stopped = [];
+    assert.deepEqual(await stopHiringCards(w.kv, { email: 'dana@acme.com' }, { why: 'Asked by email to be removed', by: 'milton@trystaffify.com' }, { optOutNumber: async q => { stopped.push(q.phone); return { ok: true }; } }), [w.id]);
+    assert.deepEqual(stopped, ['3056360188'], 'their own cell, not the backup line');
+    assert.equal((await hiringCallRows(w.kv, MILTON.email)).length, 0, 'not in the list, the search or the follow-ups, though Milton owns it');
+});
+
+test('the hourly re-check takes anyone on the stop list off the call list, and never reopens them', async () => {
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const base = (await allRecords(w.kv))[0];
+    const card = (id, over) => ({ ...base, id, ...over });
+    await putRecord(w.kv, card('hire:00000000000000a7', { contact: { ...base.contact, email: 'gone@stop.com' } }));
+    await putRecord(w.kv, card('hire:00000000000000a8', { status: 'research', hold: { reason: 'main_line_only' }, phone: { number: '+1 (507) 287-3276', alternates: [] } }));
+    await putRecord(w.kv, card('hire:00000000000000a6', { phone: { number: '+15615550000', alternates: ['+15072873276'] } }));
+    await putRecord(w.kv, card('hire:00000000000000a9', { status: 'excluded', exclusion: { reason: 'someone at this company is already in a Staffify email thread (sent). Work it there.' }, contact: { ...base.contact, email: 'gone@stop.com' } }));
+    const deps = { ...w.deps, optedOutSet: async () => ({ emails: new Set(['gone@stop.com']), numbers: new Set(['5072873276']) }) };
+    const out = await refreshReady(deps, { limit: 5 });
+    assert.equal(out.optedOut, 2);
+    for (const id of ['hire:00000000000000a7', 'hire:00000000000000a8']) { const r = await getRecord(w.kv, id); assert.equal(r.status, 'suppressed'); assert.match(r.exclusion.reason, /do-not-contact/); }
+    assert.equal((await getRecord(w.kv, 'hire:00000000000000a9')).status, 'excluded', 'a card closed for a thread is not reopened for someone who asked to stop');
+    assert.equal((await getRecord(w.kv, base.id)).status, 'ready');
+    assert.equal((await getRecord(w.kv, 'hire:00000000000000a6')).status, 'ready', 'a stopped number among the backups does not close a card');
+    const broken = await refreshReady({ ...w.deps, optedOutSet: async () => { throw Error('down'); } }, { limit: 5 });
+    assert.equal(broken.optedOut, undefined, 'an unreadable list changes nothing');
+});
+
+test('a STOP text reaches the card that rings that number', async () => {
+    const w = await readyCard();
+    const rec = await getRecord(w.kv, w.id);
+    assert.deepEqual(await stopHiringCards(w.kv, { phone: '(305) 636-0188' }, { why: 'Replied STOP to a text' }, { optOutNumber: async () => ({ ok: true }) }), [w.id]);
+    assert.equal((await getRecord(w.kv, w.id)).status, 'suppressed');
+    assert.deepEqual(await stopHiringCards(w.kv, { phone: '123' }, { why: 'x' }), []);
+    void rec;
+});
+
+test('Not interested on a card with no email and no tapped number still closes it; the last dialled number is stopped', async () => {
+    const w = await readyCard({ contact: {} });
+    const rec = await getRecord(w.kv, w.id);
+    await putRecord(w.kv, { ...rec, phone: { ...rec.phone, source: 'business website' }, contact: {} });
+    const lists = [];
+    const r = await saveHiringOutcome(w.kv, { rep: MILTON, body: { action: 'suppress', id: w.id } }, { optOut: async q => { lists.push(q); return { ok: true }; }, markCrm: async () => ({}), recordActivity: async () => {}, requestStop: async () => ({ ok: true }) });
+    assert.equal(r.ok, true); assert.equal((await getRecord(w.kv, w.id)).status, 'suppressed');
+    assert.equal(lists.length, 0, 'a website line nobody answered is not put on the person\'s list');
+    const w2 = await readyCard({ contact: {} });
+    const rec2 = await getRecord(w2.kv, w2.id);
+    await putRecord(w2.kv, { ...rec2, contact: {}, phone: { ...rec2.phone, source: 'business website' }, callHistory: [{ outcome: 'no_answer', dialled: '+15615550142', at: 'x' }] });
+    const lists2 = [];
+    await saveHiringOutcome(w2.kv, { rep: MILTON, body: { action: 'suppress', id: w2.id } }, { optOut: async q => { lists2.push(q.phone); return { ok: true }; }, markCrm: async () => ({}), recordActivity: async () => {}, requestStop: async () => ({ ok: true }) });
+    assert.deepEqual(lists2, ['5615550142'], 'the number of their last logged call');
 });

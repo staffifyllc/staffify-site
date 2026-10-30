@@ -129,3 +129,31 @@ test('number trust reads the brief\'s label, and no number is said plainly', () 
     assert.equal(numberTrust({ label: 'From the CRM, not corroborated' }).tone, 'warn');
     assert.equal(numberTrust(null).word, 'No number');
 });
+
+// Paul, 2026-10-30: reps should "see any email efforts that are going in case they need to help work some of those leads".
+test('a Hiring now card says where its emails stand', async () => {
+  const { dripLine } = await import('../assets/js/dialer-model.js');
+  const now = Date.parse('2026-10-30T18:00:00Z');
+  assert.equal(dripLine(null), null);
+  assert.deepEqual(dripLine({ status: 'prepared', sentTouches: 0 }, now), { tone: 'muted', text: 'First email queued.' });
+  assert.deepEqual(dripLine({ status: 'sent', sentTouches: 2, lastSentAt: '2026-10-30T16:30:00Z', nextEligibleAt: '2026-11-01T16:30:00Z' }, now), { tone: 'muted', text: '2 of 4 emails sent, last Oct 30, next Nov 1.' });
+  assert.deepEqual(dripLine({ status: 'draft_saved', sentTouches: 1, lastSentAt: '2026-10-28T16:30:00Z' }, now), { tone: 'muted', text: '1 of 4 emails sent, last Oct 28, the next is queued.' });
+  assert.equal(dripLine({ status: 'human_reply_hold', sentTouches: 1, replyReceivedAt: '2026-10-31T14:00:00Z' }, now).tone, 'good');
+  assert.match(dripLine({ status: 'human_reply_hold', sentTouches: 1, copied: true }, now).text, /^Replied to our email\. Read it in your inbox or hello@ before you call\.$/);
+  assert.equal(dripLine({ status: 'human_reply_hold', sentTouches: 1, sender: 'paul@hirestaffify.com' }, now).text, 'Replied to our email. The reply is in paul@hirestaffify.com; ask Paul for it before you call.', 'sent before reps were copied');
+  assert.deepEqual(dripLine({ status: 'auto_reply_hold', sentTouches: 1, replyReceivedAt: '2026-10-31T14:00:00Z' }, now), { tone: 'muted', text: 'Auto-reply (out of office) Oct 31; emails paused.' });
+  assert.deepEqual(dripLine({ status: 'suppressed', sentTouches: 1 }, now), { tone: 'bad', text: 'Emails stopped: they opted out or said no.' });
+  assert.equal(dripLine({ status: 'bounce_hold' }, now).text, 'Our email to them bounced.');
+  assert.equal(dripLine({ status: 'sent', sentTouches: 4, lastSentAt: '2026-10-30T16:30:00Z' }, now).text, '4 of 4 emails sent, last Oct 30.');
+  assert.equal(dripLine({ status: 'crm_hold', sentTouches: 0 }, now).text, 'Emails paused.');
+  for (const d of [{ status: 'sent', sentTouches: 3 }, { status: 'crm_hold', sentTouches: 2 }]) assert.doesNotMatch(dripLine(d, now).text, /—|–|\bi\b/);
+});
+
+test('a closed card is nobody\'s follow-up: no callback and no task for it', async () => {
+  const { followUps, followUpCount } = await import('../assets/js/dialer-model.js');
+  const now = Date.parse('2026-10-30T18:00:00Z'), at = '2026-10-30T19:00:00Z', me = 'milton@trystaffify.com';
+  const rec = (id, status) => ({ id, status, callOwner: me, callOutcome: 'callback', nextCallAt: at });
+  const g = followUps({ me, now, records: [rec('live', 'ready'), rec('no', 'suppressed'), rec('stop', 'excluded')], tasks: [{ id: 't1', recordId: 'no', dueAt: at, title: 'Call back' }, { id: 't2', recordId: 'live', dueAt: at, title: 'Send info' }, { id: 't3', recordId: 'elsewhere', dueAt: at, title: 'Other page' }] });
+  assert.equal(followUpCount(g), 3);
+  assert.deepEqual(g.today.map(i => i.recordId).sort(), ['elsewhere', 'live', 'live']);
+});

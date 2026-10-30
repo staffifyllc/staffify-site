@@ -65,8 +65,9 @@ export async function isOptedOut({ phone, email }) {
     } catch (e) { return true; }
 }
 
-// Bulk check, so a queue of leads can be filtered in one round trip rather than one call per lead.
-export async function optedOutSet() {
+// Bulk check, so a queue of leads can be filtered in one round trip rather than one call per lead. A sender passes
+// strict: an unreadable list then throws instead of reading as "nobody opted out" (fail closed, like isOptedOut).
+export async function optedOutSet({ strict = false } = {}) {
     try {
         const [nums, mails, legacy] = await Promise.all([
             redis.smembers(NUMS), redis.smembers(MAILS), redis.smembers(LEGACY_MAILS),
@@ -78,36 +79,39 @@ export async function optedOutSet() {
             numbers: new Set((nums || []).map(n => last10(n)).filter(Boolean)),
             emails: new Set([...(mails || []), ...(legacy || [])].map(normEmail)),
         };
-    } catch (e) { return { numbers: new Set(), emails: new Set() }; }
+    } catch (e) { if (strict) throw Error('The do-not-contact list could not be read'); return { numbers: new Set(), emails: new Set() }; }
 }
 
 // A STOP arrives on one channel but withdraws consent for all of them. The text gives us a phone
 // number and nothing else, so we look the person up in HubSpot and suppress their email address at the
 // same time. Without this step "unsubscribe from all comms" would still leave the nurture emails running.
-export async function optOutEverywhere({ phone, email, reason, source, text }) {
+// The CRM contact is marked do not contact as well (api/_hubspot.js markDoNotContact). Until 2026-10-30 this read
+// properties from findContact, which returns none, so no linked address or number was ever stopped.
+export async function optOutEverywhere({ phone, email, reason, source, text }, deps = {}) {
     const first = await optOut({ phone, email, reason, source, text });
     if (!first.ok) return first;
 
     const alsoSuppressed = [];
+    let crm = null;
     try {
-        const hs = await import('./_hubspot.js');
+        const hs = deps.hubspot || await import('./_hubspot.js');
         if (hs.configured && hs.configured()) {
-            const contact = await hs.findContact({ phone, email });
-            const props = (contact && contact.properties) || {};
-            const otherMail = normEmail(props.email);
-            const otherPhone = last10(props.phone || props.mobilephone);
+            crm = await hs.markDoNotContact({ email });
+            const otherMail = normEmail(crm && crm.email);
             if (otherMail && otherMail !== normEmail(email)) {
                 await optOut({ email: otherMail, reason, source: (source || '') + ' (linked contact)', text });
                 alsoSuppressed.push(otherMail);
             }
-            if (otherPhone && otherPhone !== last10(phone)) {
-                await optOut({ phone: otherPhone, reason, source: (source || '') + ' (linked contact)', text });
-                alsoSuppressed.push(otherPhone);
+            for (const n of (crm && crm.phones) || []) {
+                const d = last10(n);
+                if (!d || d === last10(phone) || alsoSuppressed.includes(d)) continue;
+                await optOut({ phone: d, reason, source: (source || '') + ' (linked contact)', text });
+                alsoSuppressed.push(d);
             }
         }
     } catch (e) { /* the primary suppression already landed; linking is best effort */ }
 
-    return { ...first, alsoSuppressed };
+    return { ...first, alsoSuppressed, crm: crm ? { ok: !!crm.ok, id: crm.id || null, reason: crm.reason || null } : null };
 }
 
 export async function optOutList() {

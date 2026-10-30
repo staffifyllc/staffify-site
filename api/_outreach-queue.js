@@ -91,8 +91,9 @@ export function sharedCallState(state, viewer=null) {
   const s=visibleState(state,'all');
   const me=String(viewer||'').toLowerCase();
   return {revision:s.revision,updatedAt:s.updatedAt,workerFresh:s.workerFresh,viewer:me||null,
-    // A lead who booked a call is off every list, owned or not (api/_booked-leads.js); the record stays.
-    records:s.records.filter(r=>(r.callReady||r.callOwner)&&!r.booking).map(r=>{
+    // A lead who booked a call is off every list, owned or not (api/_booked-leads.js); the record stays. So is a person
+    // who said no or opted out (Paul, 2026-10-30: "not only being removed from our view").
+    records:s.records.filter(r=>(r.callReady||r.callOwner)&&!r.booking&&r.status!=='suppressed'&&!(s.suppressions||[]).includes(r.recipient)).map(r=>{
       const callOwner=r.callOwner||null;
       const mine=!!callOwner&&String(callOwner).toLowerCase()===me;
       return {...r,callQueue:'shared',salesOwner:r.owner,callOwner,callOwnerAt:r.callOwnerAt||null,

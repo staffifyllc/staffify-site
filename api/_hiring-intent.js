@@ -824,8 +824,10 @@ export function applyOutcome(rec, { outcome, notes, nextCallAt, dialled }, calle
     if (!rec) throw Error('This prospect is no longer in the call queue');
     const valid = ['connected', 'no_answer', 'voicemail', 'callback', 'gatekeeper', 'timing', 'wrong_number', 'suppress'];
     if (!valid.includes(outcome)) throw Error('Invalid outcome');
-    // An owned callback can be covered by anyone; a card nobody can call is refused.
-    if (!hiringCallReady(rec, now)) throw Error('Call is no longer due');
+    // An owned callback can be covered by anyone; a card nobody can call is refused. "Not interested / stop" always
+    // lands: a no on a callback that is not due yet, after a conversation, or on a post gone stale is still a no, and
+    // refusing it left the person contactable (Paul, 2026-10-30: "that person is not getting removed from our system").
+    if (outcome !== 'suppress' && !hiringCallReady(rec, now)) throw Error('Call is no longer due');
     if (RETRY.includes(outcome) && !(Date.parse(nextCallAt) > now)) throw Error('Choose a future callback time');
     const at = new Date(now).toISOString();
     const d = String(dialled || '').replace(/\D/g, '').slice(-10);
@@ -875,6 +877,7 @@ export async function hiringReportRows(kv, now = Date.now()) {
 /** Every hiring card for the dialer, in the shared call view's shape. A store that fails gives none. */
 export async function hiringCallRows(kv, viewer, now = Date.now()) {
     const recs = await allRecords(kv);
-    // A card whose employer booked a call is off the list, owned or not (api/_booked-leads.js).
-    return recs.filter(r => (r.status === 'ready' || r.callOwner) && r.status !== 'booked' && !r.booking).map(r => callRow(r, viewer, now));
+    // A card whose employer booked a call is off the list, owned or not (api/_booked-leads.js). So is a person who said
+    // no: Paul, 2026-10-30, "not only being removed from our view, but removed from any automated contact as well".
+    return recs.filter(r => (r.status === 'ready' || r.callOwner) && r.status !== 'booked' && r.status !== 'suppressed' && !r.booking).map(r => callRow(r, viewer, now));
 }

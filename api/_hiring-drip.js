@@ -4,7 +4,7 @@
 //   * the owner's machine action (api/hiring-intent.js drip-enroll): a batch, dry unless write, under the worker's lock;
 //   * the worker itself (api/outreach-worker.js hiringSupply): a few new cards a tick, so a card that gets an
 //     email address later is picked up without anyone running anything.
-import { HIRING_DRIP_ID, SENDERS, dripCandidates, dripRow, dripSender, hiringDripCopy, rebalanceDripRows } from './_hiring-drip-copy.js';
+import { HIRING_DRIP_ID, SENDERS, COPY_VERSION, dripCandidates, dripRow, dripSender, hiringDripCopy, rebalanceDripRows, refreshDripCopy } from './_hiring-drip-copy.js';
 
 const LOCK = 'outreach:cloud:lock';
 const CAS = "local s=redis.call('GET',KEYS[1]); if not s or cjson.decode(s).revision~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1";
@@ -92,9 +92,13 @@ export async function enrollHiringDrip(deps, { write = false, limit = 25, allow 
         const rev = live.revision;
         const fresh = addDripRows(live, prep.rows);
         // New and not-yet-started rows are spread over every inbox together, so one batch never lands on a few.
-        const moved = rebalance ? rebalanceDripRows(live, new Map(cards.map(c => [c.id, c])), cfg.accounts, now) : 0;
+        const byId = new Map(cards.map(c => [c.id, c]));
+        const moved = rebalance ? rebalanceDripRows(live, byId, cfg.accounts, now) : 0;
         summary.rebalanced = moved;
-        if (fresh.length || moved) {
+        // Older rows take the current copy for the emails not yet written (refreshDripCopy).
+        const recopied = refreshDripCopy(live, byId);
+        summary.recopied = recopied;
+        if (fresh.length || moved || recopied) {
             const next = { ...live, revision: rev + 1, queueUpdatedAt: new Date(now).toISOString() };
             if (Number(await redis.eval(CAS, [queueKey], [String(rev), JSON.stringify(next)])) !== 1) throw Error('The queue changed during enrolment; run again');
         }
@@ -119,9 +123,13 @@ export async function enrollHiringDrip(deps, { write = false, limit = 25, allow 
  */
 export async function hiringSupply({ state, cfg, redis, records, crm, block, limit = 5, now = Date.now() }) {
     if (!dripAllowed(cfg)) return { skipped: 'not allowed' };
+    // Rows written with older copy take the current lines for the emails not yet written (refreshDripCopy), here too, so
+    // nobody has to run the enrolment action for them. Cards are read only while such a row exists.
+    let recopied = 0;
+    if (state.records.some(r => r.campaignId === HIRING_DRIP_ID && r.copyVersion !== COPY_VERSION)) recopied = refreshDripCopy(state, new Map((await records()).map(c => [c.id, c])));
     const waiting = state.records.filter(r => r.campaignId === HIRING_DRIP_ID && r.status === 'prepared').length;
-    if (waiting >= 10) return { waiting };
-    if (!await redis.set('staffify:hiring-drip:supply', String(now), { nx: true, ex: 600 })) return { waiting, rested: true };
+    if (waiting >= 10) return { waiting, recopied };
+    if (!await redis.set('staffify:hiring-drip:supply', String(now), { nx: true, ex: 600 })) return { waiting, rested: true, recopied };
     const prep = await prepareDripRows({ state, cfg, cards: await records(), crm, block, limit, write: true, now });
-    return { waiting, added: addDripRows(state, prep.rows).length, skipped: prep.skipped };
+    return { waiting, added: addDripRows(state, prep.rows).length, skipped: prep.skipped, recopied };
 }

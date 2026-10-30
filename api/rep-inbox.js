@@ -93,7 +93,8 @@ export function threadRow(thread, box, records) {
         unread: msgs.some(m => (m.labelIds || []).includes('UNREAD')),
         count: msgs.length,
         lastFromMe: addrOf(h.from) === box,
-        prospect: rec ? { recordId: rec.id, company: rec.company || rec.recipient } : null,
+        // A reply to a Hiring now email opens its card (hire:...), not the email row behind it, which the dialer never lists.
+        prospect: rec ? { recordId: rec.hiringId || rec.id, company: rec.company || rec.recipient } : null,
     };
 }
 

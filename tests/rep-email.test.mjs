@@ -536,3 +536,24 @@ test('the headshot: a real JPEG or PNG only, small, versioned, and in the signat
     const html = R.signatureHtml('milton@trystaffify.com', { photo: r.url });
     assert.match(html, /border-radius:50%/); assert.ok(html.includes(r.url.replace('&', '&amp;')), 'the address is in the src, escaped as HTML');
 });
+
+// Paul, 2026-10-30, after "Your email is missing an unsubscribe option": "have them tell me to kick rocks, and make each
+// different for the sequence".
+test('every Hub email offers a way out under the signature, a different line each time the same person hears from us', async () => {
+    const { REP_LINES } = await import('../api/_kick-rocks.js');
+    const { deps, g, kv } = setup();
+    kv.llen = async k => (kv.lists.get(k) || []).length;
+    const c = await cleaned(deps);
+    await sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c }, deps, now: Date.parse('2026-10-27T21:30:00Z') });
+    const first = decode(g.calls[0].body.message.raw);
+    const [text1, html1] = [parts(first).find(p => p[0] === 'text/plain')[1], parts(first).find(p => p[0] === 'text/html')[1]];
+    assert.match(text1, new RegExp(REP_LINES[0].replace(/[.?"']/g, '.') + '\\nOne click works too: https://www\\.gostaffify\\.com/kick-rocks/\\?e=support%40realkit\\.com&t=[A-Za-z0-9_-]+$'), 'below the signature in the text part, with the link');
+    assert.doesNotMatch(first, /List-Unsubscribe/, 'no one-click header: the Bcc copy to hello@ would carry it');
+    assert.match(html1, /<a href="https:\/\/www\.gostaffify\.com\/kick-rocks\/\?e=support%40realkit\.com&amp;t=[A-Za-z0-9_-]+" style="color:#6b6b6b;">One click works too\.<\/a>/);
+    assert.ok(text1.indexOf('-- \n') < text1.indexOf(REP_LINES[0]));
+    assert.match(html1, /Just tell me to kick rocks and I&#39;ll take you off my list\.|Just tell me to kick rocks and I'll take you off my list\./);
+    g.calls.length = 0;
+    await sendRepEmail({ rep: MILTON, input: { ...DRAFT, ...c, nonce: 'nonce-0002' }, deps, now: Date.parse('2026-10-28T21:30:00Z') });
+    const second = parts(decode(g.calls[0].body.message.raw)).find(p => p[0] === 'text/plain')[1];
+    assert.ok(second.includes(REP_LINES[1] + '\nOne click works too: '), 'the second email to them says it another way');
+});

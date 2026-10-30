@@ -14,7 +14,7 @@ import {emailCompose} from './dialer-email.js';
 // caller's tasks), /api/outreach-call-brief/ for one card, POST call-outcome / suppress / task-add /
 // task-done to save. Nothing here invents a number, a date or a claim.
 import {orderCallQueue,queueMix,searchRecords} from './call-queue-order.js';
-import {OUTCOMES,NEEDS_TIME,outcome as outcomeOf,quickPicks,defaultNext,toLocalInput,fmtWhen,localTime,followUps,followUpCount,timeline,lastTouch,shortcut,SHORTCUTS,numberTrust} from './dialer-model.js';
+import {OUTCOMES,NEEDS_TIME,outcome as outcomeOf,quickPicks,defaultNext,toLocalInput,fmtWhen,localTime,followUps,followUpCount,timeline,lastTouch,shortcut,SHORTCUTS,numberTrust,dripLine} from './dialer-model.js';
 
 const app=document.getElementById('app');
 const params=new URLSearchParams(location.search);
@@ -33,6 +33,8 @@ const pausedCount=()=>(state&&state.records||[]).filter(r=>r.pausedFollowUp).len
 const ownerView=()=>!!(state&&state.viewerOwner);
 let names={};                                              // record id -> contact name from HubSpot, for search
 const skipped=new Set(), dialled=new Set();
+// The number the rep last tapped on each card, so an outcome (a stop above all) is recorded on the line they spoke on.
+const tapped=new Map();
 const session={started:Date.now(),saved:{},texts:0,tasks:0};
 
 // ---- small helpers ------------------------------------------------------------------------
@@ -335,9 +337,11 @@ function renderWho(pane,row,b){quickRow=null;
  const meta=el('div',null,'dw-meta');
  const tag=industryTag(p.industry);if(tag)meta.append(tag);
  if(p.location)meta.append(el('span',p.location));
- // Hiring now cards are call-first: no emails were sent, so the line says what the card is instead.
+ // A Hiring now card says what the card is; its emails, when the Hiring now drip writes to them, get their own line.
  meta.append(el('span',row.kind==='hiring'?'Hiring: '+((row.hiring&&row.hiring.title)||'open role'):row.sentTouches+' emails · last '+new Date(row.lastSentAt).toLocaleDateString()));
  head.append(meta);
+ const drip=row.kind==='hiring'?dripLine(row.drip):null;
+ if(drip)head.append(el('div',drip.text,'dw-drip dw-drip-'+drip.tone));
  pane.append(head);
  // Their clock, from a zone the CRM gave us. Nothing is guessed from a city name.
  const lt=localTime(p.prospectTimezone&&p.prospectTimezone.timeZone);
@@ -353,7 +357,7 @@ function renderWho(pane,row,b){quickRow=null;
  else if(p.phone&&shiftBlocked(b)){cardGated=true;num.append(shiftGateBlock(row,b));}                                  // the shift paused or ended after this card loaded
  else if(p.phone){cardGated=false;
   const trust=numberTrust(p.dial);
-  const dialing=()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');refreshBar();if(quickRow)quickRow.hidden=false;};
+  const dialing=()=>{dialled.add(row.id);tapped.set(row.id,p.phone);holdKind='calling';holdCard(row.id,'calling');refreshBar();if(quickRow)quickRow.hidden=false;};
   const big=link(p.phone,dialHref(p.phone),'dw-num');big.addEventListener('click',dialing);num.append(big);
   num.append(el('span',trust.word,'dw-trust '+trust.tone));
   if(trust.detail)num.append(el('p',trust.detail,'dw-numdetail'));
@@ -364,7 +368,7 @@ function renderWho(pane,row,b){quickRow=null;
   // shows no button, and the server refuses a paused or no-longer-listed card whatever this page sends.
   if(!row.pausedFollowUp&&!row.pausedFromPool)acts.append(textButton(row,p));
   num.append(acts);
-  if(p.dial&&p.dial.alternates&&p.dial.alternates.length){const alts=el('div',null,'dw-alts');alts.append(el('span','Also on file:'));for(const a of p.dial.alternates){const t=link(a,dialHref(a));t.addEventListener('click',()=>{dialled.add(row.id);holdKind='calling';holdCard(row.id,'calling');});alts.append(t);}num.append(alts);}
+  if(p.dial&&p.dial.alternates&&p.dial.alternates.length){const alts=el('div',null,'dw-alts');alts.append(el('span','Also on file:'));for(const a of p.dial.alternates){const t=link(a,dialHref(a));t.addEventListener('click',()=>{dialled.add(row.id);tapped.set(row.id,a);holdKind='calling';holdCard(row.id,'calling');});alts.append(t);}num.append(alts);}
   if(p.dial&&p.dial.sourceUrl){const w=el('p',null,'dw-small');w.append(link('Where this number is published',p.dial.sourceUrl));num.append(w);}
   let quoSet=false;try{quoSet=localStorage.getItem(QUO_KEY)==='1';}catch{}
   if(PHONE_UA)num.append(el('p','Tapping the number opens Quo and dials from your Quo line. Log the outcome here when you hang up.','dw-small'));
@@ -795,17 +799,19 @@ function refreshBar(){const old=app.querySelector('.dw-bar');if(!old)return;cons
 
 // Saving. Same contract as before: re-read the queue for the revision and the latest numbers,
 // post the outcome, say what the server did about the callback task, the nurture and the number.
-async function saveOutcome(row,b,status,save){
+async function saveOutcome(row,b,status,save,notesEl=null){
  if(busy)return;
  if(!choice){status.textContent='Choose an outcome first.';status.className='dw-status';return;}
- const due=document.getElementById('callback-at'),notes=document.getElementById('call-notes');
+ const due=document.getElementById('callback-at'),notes=notesEl||document.getElementById('call-notes');
  if(NEEDS_TIME.includes(choice)&&!(Date.parse(due.value)>Date.now())){status.textContent='Choose a time in the future.';status.className='dw-status';due.focus();return;}
  if(!b&&choice!=='suppress'){status.textContent='The live check has not finished. Wait a moment, or skip.';status.className='dw-status';return;}
  busy=true;save.disabled=true;status.textContent='Saving…';status.className='dw-status ok';stash();refreshBar();
  try{
   const latest=await api('/api/outreach-queue/?view=calls');
   // The number on screen travels with every outcome, so the daily report can pair it with Quo's record of the call.
-  const dialled=b&&b.phone?{dialled:b.phone}:{};
+  // A stop names only a number the rep actually tapped: the on-screen line may be one the person never answered.
+  const number=tapped.get(row.id)||(choice==='suppress'?null:(b&&b.phone))||null;
+  const dialled=number?{dialled:number}:{};
   const body=choice==='suppress'?{action:'suppress',email:row.recipient,notes:notes.value,...(row.kind==='hiring'?{id:row.id}:{}),...dialled}:{action:'call-outcome',id:row.id,outcome:choice,notes:notes.value,nextCallAt:NEEDS_TIME.includes(choice)?new Date(due.value).toISOString():null,...dialled};
   const next=await api('/api/outreach-queue/?view=calls',{...body,expectedRevision:latest.revision});
   const tasks=state.tasks;state=next;state.tasks=next.tasks||tasks||[];
@@ -840,7 +846,12 @@ function renderBlocked(who,talk,log,hist,row,p,message){
  const alert=el('div',null,'dw-due dw-alert');alert.append(el('b','Not callable right now. '),document.createTextNode(message+' Everything on this card is from the last queue sync'+(p.syncedAt?' at '+new Date(p.syncedAt).toLocaleString():'')+'.'));
  who.prepend(alert);
  talk.replaceChildren(heading('Talk track'),el('p','No script until the live check passes. Reply, opt-out and client exclusions could not be re-checked.','dw-small'),button('Retry this prospect',()=>show(row)),button('Skip to next',()=>{skipNow(row.id);showNext();},'btn btn-ghost'));
- log.replaceChildren(heading('How did it go?'),el('p','Outcomes are off for a prospect we are not calling.','dw-small'));
+ // A no is always taken, callable or not (Paul, 2026-10-30): someone who calls back early, or after Connected, and says
+ // "take me off" is taken off every list here.
+ const stopNotes=el('textarea',null,'dw-notes');stopNotes.id='stop-notes';stopNotes.placeholder='What they said (optional)';stopNotes.rows=2;
+ const stopStatus=el('p','','dw-status');
+ const stopBtn=button('Not interested / stop',()=>{choice='suppress';saveOutcome(row,null,stopStatus,stopBtn,stopNotes);},'btn dw-stop');
+ log.replaceChildren(heading('How did it go?'),el('p','Outcomes are off for a prospect we are not calling. If they asked to be left alone, record it here: they come off every list and every email.','dw-small'),stopNotes,stopBtn,stopStatus);
  renderHistory(hist,row,{events:p.events||[]});
 }
 

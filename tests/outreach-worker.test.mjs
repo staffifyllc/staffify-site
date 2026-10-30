@@ -18,3 +18,44 @@ test('a stale sent draft pointer is archived without trying to modify sent mail'
 test('missing mailbox access fails closed without any Gmail mutation',async()=>{const h=harness({record:base,mailboxFailed:true});assert.equal((await h.run()).code,503);assert.equal(h.calls.length,0);});
 
 test('an untracked pending Gmail draft prevents a duplicate follow-up',async()=>{const h=harness({record:base});h.d.history=async()=>[{id:'other',draft:true,mailbox:base.sender,to:[base.recipient]}];await h.run();assert.equal(h.state().records[0].status,'existing_draft_hold');assert.equal(h.calls.filter(c=>c.path==='drafts').length,0);});
+
+// Paul, 2026-10-30: "not only being removed from our view, but removed from any automated contact as well".
+test('a Not interested pressed in the Hub stops the person here before anything is drafted, and the CRM is told',async()=>{
+ const h=harness({record:base});const synced=[];let done=0;
+ h.d.stops={take:async()=>[{email:'Prospect@Example.com',hiringId:null,by:'madison@gostaffify.com',why:'Not interested / stop on a call',at:'2026-10-30T17:39:00Z'},{email:'nobody@else.com',hiringId:'hire:1',by:'madison@gostaffify.com',why:'Not interested / stop on a call'}],done:async n=>{done=n;}};
+ h.d.suppress=async row=>{synced.push(row.recipient);};
+ const r=await h.run();
+ const row=h.state().records[0];
+ assert.equal(row.status,'suppressed');assert.equal(row.stopped.by,'madison@gostaffify.com');assert.equal(row.globalSuppressionSynced,true);
+ assert.deepEqual(h.state().suppressions.sort(),['nobody@else.com','prospect@example.com']);
+ assert.equal(done,2,'both requests removed after the save');
+ assert.deepEqual(synced,['prospect@example.com'],'the CRM write runs for the row (a person with no row was marked by the Hub press itself)');
+ assert.equal(h.calls.filter(c=>c.path==='drafts'&&c.body).length,0,'nothing drafted for them');
+ assert.deepEqual(r.body.stops,{requests:2,rows:1});
+});
+
+test('a failed save keeps the stop requests for the next run',async()=>{
+ const h=harness({record:base});let done=0;
+ h.d.stops={take:async()=>[{email:'prospect@example.com'}],done:async n=>{done=n;}};
+ const realEval=h.d.redis.eval;h.d.redis.eval=async(script,keys,args)=>script.includes('cjson.decode')?0:realEval(script,keys,args);
+ await h.run();
+ assert.equal(done,0);assert.equal(h.state().records[0].status,'sent');
+});
+
+test('a row may carry a Reply-To, which reaches the draft',async()=>{
+ const h=harness({record:{...base,replyTo:['paul@trystaffify.com','hello@gostaffify.com','milton@trystaffify.com']}});
+ await h.run();
+ const create=h.calls.find(c=>c.path==='drafts'&&c.body);
+ assert.deepEqual(JSON.parse(create.body.message.raw).replyTo,['paul@trystaffify.com','hello@gostaffify.com','milton@trystaffify.com']);
+});
+
+test('stop requests are applied even while the hosted worker is paused',async()=>{
+ const h=harness({record:base});let done=0;h.d.config=async()=>({enabled:false,accounts:[]});
+ h.d.stops={take:async()=>[{email:'prospect@example.com',by:'madison@gostaffify.com'}],done:async n=>{done=n;}};
+ await h.run();assert.equal(h.state().records[0].status,'suppressed');assert.equal(done,1);
+});
+test('a CRM that is briefly down is tried again later; a missing contact counts as done',async()=>{
+ const h=harness({record:{...base,status:'suppressed'}});let calls=0;h.d.suppress=async row=>{calls++;row.crmRetryAt=new Date(Date.now()+15*60000).toISOString();return {retry:true};};
+ await h.run();const row=h.state().records[0];assert.equal(row.globalSuppressionSynced,undefined);assert.ok(row.crmRetryAt);
+ await h.run();assert.equal(calls,1,'not retried before its time');
+});

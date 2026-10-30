@@ -42,3 +42,12 @@ test('the endpoint refuses anyone who is not signed in to the Hub', async () => 
     await handler({ method: 'POST', headers: {}, query: {}, body: { phone: '+15125550100', first: 'Pat', role: 'Receptionist', rep: 'Milton' } }, res);
     assert.equal(res.code, 401); assert.equal(res.body.error, 'sign_in');
 });
+
+// Paul, 2026-10-30: "removed from any automated contact as well". A Not interested on an email-campaign card marks the row.
+test('a person marked Not interested in the email queue is not texted', async () => {
+    const q = { ...QUEUE, records: [...QUEUE.records, { id: 'tn3', campaignId: 'staffify-talent-network-outreach', recipient: 'd@co.com', status: 'suppressed' }, { id: 'tn4', campaignId: 'staffify-talent-network-outreach', recipient: 'e@co.com', status: 'sent' }], suppressions: ['e@co.com'] };
+    const k = kv(HIRE, q);
+    assert.equal(await textStop('tn3', { kv: k }), 'suppressed');
+    assert.equal(await textStop('tn4', { kv: k }), 'suppressed');
+    assert.equal(await textStop('tn1', { kv: k }), null);
+});

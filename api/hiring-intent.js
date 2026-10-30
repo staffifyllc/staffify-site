@@ -25,7 +25,7 @@ import { bookedIdentity } from './_booked-leads.js';
 import { site } from './_outreach-supply.js';
 import { findSitePhone } from './_site-phone.js';
 import { verifyEmail } from './_outreach-verification.js';
-import { isOptedOut } from './_optout.js';
+import { isOptedOut, optedOutSet } from './_optout.js';
 import { clientCheck } from './_client-guard.js';
 import { contact as crmContact } from './_outreach-crm.js';
 import { crmStop } from './_rep-email-gates.js';
@@ -133,7 +133,7 @@ async function outreachDomains() {
 }
 
 export function deps() {
-    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null, quoContacts: quoConfigured() ? quoContactsApi : null };
+    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, optedOutSet: () => optedOutSet({ strict: true }), clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null, quoContacts: quoConfigured() ? quoContactsApi : null };
 }
 
 export default async function handler(req, res) {

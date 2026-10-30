@@ -3,6 +3,7 @@ import {TOBIT_ID,tobitFollowup} from './_tobit-campaign.js';
 import {HIRING_DRIP_ID,hiringDripFollowup} from './_hiring-drip-campaign.js';
 import {inCampaign} from './_outreach-campaign.js';
 import {dealEmail} from './_deal-followup-policy.js';
+import {withoutOurLines,kicksRocks} from './_kick-rocks.js';
 export function automatedModeAllowed(mode){return !mode||mode==='AUTOMATED';}
 export const FOUR_TOUCHES=4;
 export const dayKey=(now)=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
@@ -26,7 +27,11 @@ export function classify(messages,recipient,senders) {
  const seen=new Set();const sent=messages.filter(m=>{if(!m.sent||!m.to.includes(recipient))return false;const key=m.replyId||m.id;if(seen.has(key))return false;seen.add(key);return true;});
  if(messages.some(m=>/mailer-daemon|postmaster/i.test(m.from||'')&&String(m.text||'').toLowerCase().includes(recipient.toLowerCase())))return {status:'bounce_hold',sent};
  const incoming=messages.filter(m=>m.from===recipient&&!senders.includes(m.from));
- if(incoming.some(m=>/\b(stop|unsubscribe|remove me|do not (?:email|contact|reach out)|don['’]?t (?:email|contact)|not interested|no thanks|no thank you|take me off|remove (?:us|my email)|not (?:a good fit|for us)|not looking (?:for|to))\b/i.test(replyText(m.text))))return {status:'suppressed',sent};
+ // Their own words only: quoted history and our own sign-offs are taken out first (api/_kick-rocks.js), so a quoted
+ // "kick rocks" offer never reads as their answer. The one new stop here is their "kick rocks"; anything broader would
+ // re-judge every stored thread (reconcileThread runs this on history) and turn old warm replies into permanent stops.
+ const said=m=>withoutOurLines(replyText(m.text));
+ if(incoming.some(m=>/\b(stop|unsubscribe|remove me|do not (?:email|contact|reach out)|don['’]?t (?:email|contact)|not interested|no thanks|no thank you|take me off|remove (?:us|my email)|not (?:a good fit|for us)|not looking (?:for|to))\b/i.test(said(m))||kicksRocks(said(m))))return {status:'suppressed',sent};
  // All other inbound messages, including automatic responses, hold until reviewed.
  if(incoming.length){const human=incoming.filter(m=>!m.automatic);return {status:human.length?'human_reply_hold':'auto_reply_hold',sent};}
  return {status:null,sent};
@@ -64,7 +69,7 @@ export function followup(record) {
 }
 
 // Only the newly authored reply is evidence of refusal, never quoted campaign copy.
-export function replyText(text){return String(text||'').split(/<blockquote\b|<div[^>]*class=["']gmail_quote|\nOn .{0,200}wrote:|-----Original Message-----|\nFrom:\s/mi)[0].split('\n').filter(l=>!/^\s*>/.test(l)).join('\n').replace(/<[^>]*>/g,' ');}
+export function replyText(text){return String(text||'').split(/<blockquote\b|<div[^>]*class=["']gmail_quote|\nOn .{0,200}wrote:|-{2,}\s*Original Message\s*-{2,}|\n_{10,}|\nFrom:\s/mi)[0].split('\n').filter(l=>!/^\s*>/.test(l)).join('\n').replace(/<[^>]*>/g,' ');}
 // A Hiring now drip row is called from its own card (on the owner's cell), never from this queue's phone ladder,
 // which can land on a company main line (Paul, 2026-10-30: "never put in data for Main Line").
 export function callReady(r,now=Date.now()){return inCampaign(r)&&r.campaignId!==HIRING_DRIP_ID&&!r.booking&&( !r.callOutcome||(['no_answer','voicemail','callback','gatekeeper','timing'].includes(r.callOutcome)&&!!r.nextCallAt&&Date.parse(r.nextCallAt)<=now))&&r.status==='sent'&&r.sentTouches>=4&&r.verifiedSentTouches>=4&&!!r.lastSentAt&&now-Date.parse(r.lastSentAt)>=48*3600000;}

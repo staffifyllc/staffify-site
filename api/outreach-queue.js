@@ -13,8 +13,10 @@ import {recordActivity} from './_hub-activity.js';
 import {gateFor,withheldNumbers} from './_shift.js';
 import {poolPaused} from './_campaign-pause.js';
 import {INDUSTRY_KEY} from './_campaign-industry.js';
-import {hiringCallRows} from './_hiring-intent.js';
-import {isHiringId,saveHiringOutcome,saveHiringContactEmail} from './_hiring-calls.js';
+import {hiringCallRows,getRecord} from './_hiring-intent.js';
+import {HIRING_DRIP_ID} from './_hiring-drip-campaign.js';
+import {isHiringId,saveHiringOutcome,saveHiringContactEmail,stopHiringCards} from './_hiring-calls.js';
+import {optOutEverywhere} from './_optout.js';
 const CAS = `local raw=redis.call('GET',KEYS[1]); local rev=0; if raw then rev=cjson.decode(raw).revision or 0 end; if rev~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1`;
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store');
@@ -26,8 +28,8 @@ export default async function handler(req,res) {
     const crm=async(path,body)=>{const response=await hubspotRequest('https://api.hubapi.com'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+process.env.HUBSPOT_TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined},{redis});if(!response.ok)throw Error('CRM unavailable');return response.json();};
     // The list a page reads: the queue for this viewer and, on the calls view, the caller's tasks,
     // the Hiring now cards and the shift gate. The dialer gets this same answer back after a save.
-    const listView=async()=>{
-      const decorated=await withCallPhones(view(state),{redis,crm});
+    const listView=async(s=state)=>{
+      const decorated=await withCallPhones(view(s),{redis,crm});
       // view=slim: the same rows and the same callReady, without the mail bodies. See slimState.
       const out=slim?slimState(decorated):decorated;
       // The caller's own tasks ride along with the call view, so the dialer's follow-up list is
@@ -43,8 +45,14 @@ export default async function handler(req,res) {
        // Hiring now (api/_hiring-intent.js): call-first cards from their own store, in the same shape, so
        // the shift gate below, the holds, the search and the outcome buttons treat them like any card.
        // A hiring store that cannot be read costs the hiring cards, never the rest of the queue.
-       out.records=[...await hiringCallRows(redis,rep.email).catch(()=>[]),...out.records];
-       out.tasks=await listTasks(redis,rep.email);
+       // Each card carries its Hiring now drip row's state, so the caller sees the emails going out (api/_hiring-drip-copy.js).
+       const drips=new Map(((s&&s.records)||[]).filter(r=>r.campaignId===HIRING_DRIP_ID&&r.hiringId).map(r=>[r.hiringId,{status:r.status,sentTouches:r.sentTouches||0,lastSentAt:r.lastSentAt||null,nextEligibleAt:r.nextEligibleAt||null,replyReceivedAt:r.replyReceivedAt||null,sender:r.sender||null,copied:!!r.lastSentCopied}]));
+       out.records=[...(await hiringCallRows(redis,rep.email).catch(()=>[])).map(r=>drips.has(r.id)?{...r,drip:drips.get(r.id)}:r),...out.records];
+       // A task for someone who said no is not work any more: their card left the list, so the task goes with it.
+       const closed=async t=>{if(!t||!t.recordId)return false;if(isHiringId(t.recordId)){const c=await getRecord(redis,t.recordId).catch(()=>null);return !!c&&['suppressed','excluded'].includes(c.status);}
+        const row=((s&&s.records)||[]).find(x=>x.id===t.recordId);return !!row&&(row.status==='suppressed'||((s&&s.suppressions)||[]).includes(row.recipient));};
+       const tasks=await listTasks(redis,rep.email);
+       out.tasks=(await Promise.all(tasks.map(async t=>(await closed(t))?null:t))).filter(Boolean);
        // An owner (Paul) is not a caller: the dialer opens on their own follow-ups and keeps the team's pool
        // one click away (Paul, 2026-10-27: "if my guys are already doing it I shouldn't be").
        out.viewerOwner=!!ownerFor(rep);
@@ -88,7 +96,9 @@ export default async function handler(req,res) {
       if(!r.ok)return res.status(r.status||409).json({error:r.error});
       return res.status(200).json({...await listView(),...(r.callbackTask?{callbackTask:r.callbackTask}:{}),...(r.wrongNumber?{wrongNumber:r.wrongNumber}:{})});
     }
-    if(calls&&!sharedCallState(state,rep.email).records.some(r=>body.action==='suppress'?r.recipient===String(body.email||'').toLowerCase():r.id===body.id))return res.status(409).json({error:'This prospect is no longer in the call queue'});
+    // A stop is taken on anyone in the queue a caller can find, not only a card that is due: a no on an early callback,
+    // after Connected, or on a finished sequence is still a no (Paul, 2026-10-30).
+    if(calls&&!(body.action==='suppress'?(state?.records||[]).some(r=>r.recipient===String(body.email||'').toLowerCase()):sharedCallState(state,rep.email).records.some(r=>r.id===body.id)))return res.status(409).json({error:'This prospect is no longer in the call queue'});
     // A caller action is the one write a HUMAN makes here, and typing call notes takes longer than
     // a minute. The outreach worker rewrites this key every minute and saves up to sixteen times a
     // run, so a whole-queue revision check guaranteed the caller lost the race and could never
@@ -135,6 +145,12 @@ export default async function handler(req,res) {
            if(String(body.notes||'').trim())await recordActivity(redis,{email:rep.email,kind:'note_saved',page:'/dialer/',detail:co});
            if(body.outcome==='callback'&&body.nextCallAt)await recordActivity(redis,{email:rep.email,kind:'callback_set',page:'/dialer/',detail:co});}
           if(body.action==='suppress')await recordActivity(redis,{email:rep.email,kind:'suppress',page:'/dialer/',detail:null});
+          // Straight onto the global stop list (email and the number they answered on, with the CRM marked do not contact),
+          // not a minute later from the worker, and off the call list as a Hiring now card too. Never fails the save.
+          let stopped=null;
+          if(body.action==='suppress'){const email=String(body.email||'').toLowerCase();
+           stopped=await optOutEverywhere({email,phone:String(body.dialled||'').replace(/\D/g,'').length>=10?body.dialled:null,reason:'Not interested / stop on a call',source:'hub-dialer',text:String(body.notes||'').slice(0,200)}).catch(()=>({ok:false}));
+           await stopHiringCards(redis,{email},{why:'Not interested / stop on a call',by:rep.email}).catch(()=>{});}
           let nurture=null;
           if(body.action==='call-outcome'&&body.outcome==='timing') {
             const row=(fresh?.records||[]).find(r=>r.id===body.id);
@@ -162,7 +178,9 @@ export default async function handler(req,res) {
               if(wrongNumber.ok)await redis.del(ATTEMPTS(e)).catch(()=>{});
             }
           }
-          return res.status(200).json({...(slim?slimState(view(candidate)):view(candidate)),...(nurture?{nurture}:{}),...(callbackTask?{callbackTask}:{}),...(wrongNumber?{wrongNumber}:{})});
+          // The dialer's whole list comes back, Hiring now cards and shift gate included, as a reload would give it.
+          const listed=calls?await listView(candidate):(slim?slimState(view(candidate)):view(candidate));
+          return res.status(200).json({...listed,...(nurture?{nurture}:{}),...(callbackTask?{callbackTask}:{}),...(wrongNumber?{wrongNumber}:{}),...(stopped?{optOut:stopped}:{})});
         }
       }
       return res.status(409).json({error:'The queue is busy right now. Your notes are still here; press save again.'});

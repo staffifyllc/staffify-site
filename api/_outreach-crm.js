@@ -46,4 +46,6 @@ export async function draftBlockReason(row,{requireVerified=true}={}){
 }
 export async function canDraft(row){return !await draftBlockReason(row);}
 
-export async function suppress(row,reason){const result=await optOut({email:row.recipient,reason,source:'hosted-outreach',text:reason});if(!result.ok)throw Error('Global suppression write failed');const c=await contact(row.recipient);await hs('/crm/v3/objects/contacts/'+c.id,{properties:{rep_in_campaign:'false',rep_terminal_state:'DNC',rep_lifecycle_state:'DNC'}},'PATCH');}
+export async function suppress(row,reason){const result=await optOut({email:row.recipient,reason,source:'hosted-outreach',text:reason});if(!result.ok)throw Error('Global suppression write failed');const c=await contact(row.recipient);await hs('/crm/v3/objects/contacts/'+c.id,{properties:{rep_in_campaign:'false',rep_terminal_state:'DNC',rep_lifecycle_state:'DNC'}},'PATCH');
+ // do_not_contact on its own write, as in api/_hubspot.js markDoNotContact: a portal without it refuses the whole PATCH.
+ try{await hs('/crm/v3/objects/contacts/'+c.id,{properties:{do_not_contact:'true'}},'PATCH');}catch{}}

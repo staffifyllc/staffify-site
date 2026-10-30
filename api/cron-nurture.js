@@ -233,7 +233,8 @@ export default async function handler(req, res) {
         // Anyone who has opted out is dropped before a single send is attempted. This covers people who
         // replied STOP to a text as well as one-click email unsubscribes, because withdrawing consent
         // applies to every channel and not just the one they happened to use.
-        const suppressed = await optedOutSet();
+        // Strict: if the list cannot be read, nothing is sent this run (it used to read as empty and send to everyone).
+        const suppressed = await optedOutSet({ strict: true });
         const emails = await redis.zrange('nurture:active', 0, -1);
         for (const email of emails) {
             result.processed++;
