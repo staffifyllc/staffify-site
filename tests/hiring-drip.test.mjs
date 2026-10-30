@@ -127,8 +127,10 @@ test('candidates: callable first, one per person and per company, never someone 
 });
 
 test('the queue row: the least-loaded Staffify inbox, Paul’s or Madison’s, prepared and approved, its own campaign', () => {
-    const records = [{ sender: 'paul@hirestaffify.com', recipient: 'a@a.com', status: 'prepared' }, { sender: 'paul@hirestaffify.com', recipient: 'b@b.com', status: 'sent' }, { sender: 'paul@staffifyhq.com', recipient: 'c@c.com', status: 'suppressed' }, { sender: 'madison@staffifyhq.com', recipient: 'd@d.com', status: 'prepared' }];
-    assert.equal(dripSender(CFG.accounts, records).email, 'paul@staffifyhq.com');
+    const drip = (sender, status, n) => ({ campaignId: HIRING_DRIP_ID, sender, recipient: n + '@x.com', status });
+    const records = [drip('paul@hirestaffify.com', 'prepared', 'a'), drip('paul@hirestaffify.com', 'sent', 'b'), drip('paul@staffifyhq.com', 'suppressed', 'c'), { sender: 'madison@staffifyhq.com', recipient: 'd@d.com', status: 'prepared' },
+        ...Array.from({ length: 30 }, (_, i) => ({ sender: 'paul@staffifyhq.com', recipient: i + '@old.com', status: 'sent', sentTouches: 2 }))];
+    assert.equal(dripSender(CFG.accounts, records).email, 'paul@staffifyhq.com', 'another campaign’s sequences under way are not load; its waiting introductions are');
     assert.equal(dripSender(CFG.accounts, []).email, 'madison@staffifyhq.com', 'ties go alphabetically');
     assert.equal(dripSender(CFG.accounts, [], { owner: 'Paul' }).email, 'paul@hirestaffify.com');
     assert.throws(() => dripSender([acct('madison@staffifyhq.com', 'Madison')], [], { owner: 'Paul' }), /No Paul outreach inbox/);
@@ -240,14 +242,14 @@ test('rebalance: unstarted introductions spread over every inbox, signed by its 
     const cards = new Map(ids.concat('dr').map(id => [card(id).id, card(id)]));
     const rows = ids.map(id => dripRow(card(id), { account: acct('paul@hirestaffify.com'), now: Date.parse('2026-10-30T16:00:00Z') }));
     const drafted = { ...dripRow(card('dr'), { account: acct('paul@hirestaffify.com') }), status: 'draft_saved', draftId: 'd1' };
-    const state = { ...emptyState(), records: [{ id: 'talent', recipient: 'x@x.com', sender: 'paul@staffifyhq.com', status: 'prepared' }, drafted, ...rows], assignments: [{ email: 'denise@r6.com', owner: 'Paul' }] };
+    const state = { ...emptyState(), records: [{ id: 'talent', recipient: 'x@x.com', sender: 'paul@staffifyhq.com', status: 'prepared' }, { id: 'old', recipient: 'o@o.com', sender: 'madison@staffifyhq.com', status: 'sent', sentTouches: 3 }, drafted, ...rows], assignments: [{ email: 'denise@r6.com', owner: 'Paul' }] };
     const moved = rebalanceDripRows(state, cards, accounts, Date.parse('2026-10-30T17:00:00Z'));
-    const by = state.records.reduce((m, r) => (m[r.sender] = (m[r.sender] || 0) + 1, m), {});
+    const by = state.records.filter(r => r.id !== 'old').reduce((m, r) => (m[r.sender] = (m[r.sender] || 0) + 1, m), {});
     assert.deepEqual(Object.keys(by).sort(), ['madison@staffifyhq.com', 'paul@hirestaffify.com', 'paul@staffifyhq.com']);
     assert.ok(Math.max(...Object.values(by)) - Math.min(...Object.values(by)) <= 1, 'within one of each other: ' + JSON.stringify(by));
     assert.ok(moved >= 3);
     assert.equal(state.records.find(r => r.id === drafted.id).sender, 'paul@hirestaffify.com', 'a drafted row never moves');
     assert.equal(state.records.find(r => r.recipient === 'denise@r6.com').owner, 'Paul', 'someone assigned to Paul stays with Paul');
-    for (const r of state.records.filter(r => r.sender === 'madison@staffifyhq.com')) { assert.equal(r.owner, 'Madison'); assert.match(r.bodyText, /Madison\nStaffify/); assert.ok(r.id.startsWith('hiring-drip-')); assert.equal(r.createdAt, '2026-10-30T16:00:00.000Z'); }
-    assert.deepEqual(state.records.map(r => r.id), ['talent', drafted.id, ...rows.map(r => r.id)], 'order kept');
+    for (const r of state.records.filter(r => r.sender === 'madison@staffifyhq.com' && r.id !== 'old')) { assert.equal(r.owner, 'Madison'); assert.match(r.bodyText, /Madison\nStaffify/); assert.ok(r.id.startsWith('hiring-drip-')); assert.equal(r.createdAt, '2026-10-30T16:00:00.000Z'); }
+    assert.deepEqual(state.records.map(r => r.id), ['talent', 'old', drafted.id, ...rows.map(r => r.id)], 'order kept');
 });

@@ -162,11 +162,15 @@ export function dripCandidates(cards, state, { limit = 25 } = {}) {
 // worker drafts from sends, each email signed by that inbox's owner.
 export const SENDERS = ['Paul', 'Madison'];
 const DONE = ['sequence_complete_hold', 'suppressed', 'bounce_hold', 'sender_retired_hold'];
-/** The Staffify inbox with the fewest live rows (only the assigned owner's, when someone owns this person). */
+/**
+ * The Staffify inbox with the least drip work (only the assigned owner's, when someone owns this person). Load is this
+ * campaign's live rows plus any introduction still waiting in another campaign: those share the inbox's daily cap of new
+ * introductions. An inbox's years of finished agency history is not load.
+ */
 export function dripSender(accounts, records, { owner = null } = {}) {
     const choices = (accounts || []).filter(a => a.brand === 'Staffify' && a.draftEnabled && SENDERS.includes(a.owner) && (!owner || a.owner === owner));
     if (!choices.length) throw Error(owner ? 'No ' + owner + ' outreach inbox available' : 'No Staffify outreach inbox available');
-    const load = email => records.filter(r => r.sender === email && r.recipient && !DONE.includes(r.status)).length;
+    const load = email => records.filter(r => r.sender === email && r.recipient && (r.campaignId === HIRING_DRIP_ID ? !DONE.includes(r.status) : r.status === 'prepared')).length;
     return choices.sort((a, b) => load(a.email) - load(b.email) || a.email.localeCompare(b.email))[0];
 }
 
