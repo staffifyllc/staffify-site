@@ -15,13 +15,28 @@ import { addPending, cellMatch } from './_hiring-run.js';
 import { optedOutSet } from './_optout.js';
 import { rrConfigured, account, lookupPerson, checkStatus, searchPeople, profileOf } from './_rocketreach.js';
 import { dayKey } from './_outreach-policy.js';
-import { agentAuthorized, knownIndex, knownWhy, leadProblem, capLookup, agentProfile, remember, phoneCheck, rememberLines, lineProof, provenPhone, carrierLookup, carrierConfigured, LEAD_FIELDS, LOOKUPS_PER_DAY, CHECKS_PER_DAY, LEAD_AGENT_KEYS as K } from './_lead-agent.js';
+import { agentAuthorized, knownIndex, knownWhy, leadProblem, capLookup, agentProfile, remember, phoneCheck, rememberLines, lineProof, provenPhone, carrierLookup, carrierConfigured, freeCellsOn, LEAD_FIELDS, LOOKUPS_PER_DAY, CHECKS_PER_DAY, LEAD_AGENT_KEYS as K } from './_lead-agent.js';
 
 // The Hub's own test for a RocketReach profile (api/_hiring-run.js cellMatch): this lead's owner, at this business, in its
 // state. The domain is the Hub's (a shared host like statefarm.com or facebook.com ties nobody), and a profile with no
 // state is refused, as the Hub does for ids found by a people search.
-export const ownerMatch = (l, proof) => cellMatch({ company: { name: l.business, domain: l.website ? leadDomain(l.website) : null }, contact: { name: [l.owner_first, l.owner_last].filter(Boolean).join(' ') }, job: { usState: l.state || null } },
-    { name: proof.person, employer: proof.employer, employerDomain: proof.employerDomain, title: proof.title, region: proof.region, location: proof.location }, { strictState: true });
+// The state is the one the Hub files the card under (qualifyLead), never the raw field. When the tie is not the
+// business's own domain (a carrier agency, a franchise, a shared host, no website), the person must also hold an owner's
+// or agent's title and be in the business's city: another State Farm agent named John Smith in Houston is not this one.
+const OWNERISH = /\b(owner|co-?owner|founder|co-?founder|president|principal|ceo|proprietor|managing|partner|agent|agency|broker|attorney|lawyer|esq|member|director|operator|franchisee)\b/i;
+export const ownerMatch = (l, proof, now = Date.now()) => {
+    const dom = l.website ? leadDomain(l.website) : null;
+    const usState = ((qualifyLead(l, now) || {}).usState) || (/^[A-Za-z]{2}$/.test(String(l.state || '').trim()) ? String(l.state).trim().toUpperCase() : null);
+    const m = cellMatch({ company: { name: l.business, domain: dom }, contact: { name: [l.owner_first, l.owner_last].filter(Boolean).join(' ') }, job: { usState } },
+        { name: proof.person, employer: proof.employer, employerDomain: proof.employerDomain, title: proof.title, region: proof.region, location: proof.location }, { strictState: true });
+    if (!m.ok) return m;
+    const ownDomain = !!(dom && proof.employerDomain && String(proof.employerDomain).toLowerCase().replace(/^www\./, '') === dom);
+    if (ownDomain) return m;
+    if (!OWNERISH.test(String(proof.title || ''))) return { ok: false, why: `${proof.person} is listed as ${proof.title || 'no title'} at ${proof.employer || 'an unknown employer'}, not as its owner` };
+    const city = String(l.city || '').split(',')[0].trim().toLowerCase();
+    if (city && !String(proof.location || '').toLowerCase().includes(city)) return { ok: false, why: `${proof.person} is in ${proof.location || 'an unknown city'}, the business is in ${l.city}` };
+    return m;
+};
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
@@ -35,7 +50,7 @@ export default async function handler(req, res) {
             const [used, submitted, checked] = await Promise.all([redis.get(K.lookups(day)), redis.get(K.submitted(day)), redis.get(K.checks(day))]);
             const cap = LOOKUPS_PER_DAY(), ccap = CHECKS_PER_DAY();
             return res.status(200).json({ day, lookups_used: Number(used) || 0, lookups_cap: cap, lookups_left: Math.max(0, cap - (Number(used) || 0)), submitted_today: Number(submitted) || 0, rocketreach: rrConfigured(),
-                carrier_check: carrierConfigured(), phone_checks_used: Number(checked) || 0, phone_checks_left: carrierConfigured() ? Math.max(0, ccap - (Number(checked) || 0)) : 0 });
+                carrier_check: carrierConfigured(), free_cells: freeCellsOn(), phone_checks_used: Number(checked) || 0, phone_checks_left: carrierConfigured() ? Math.max(0, ccap - (Number(checked) || 0)) : 0 });
         }
         if (action === 'check') {
             const items = (Array.isArray(body.items) ? body.items : []).slice(0, 100);
@@ -71,14 +86,14 @@ export default async function handler(req, res) {
             return res.status(200).json({ results: await phoneCheck({ kv: redis, day, lookup: d => carrierLookup(d), tollFree }, numbers, now) });
         }
         if (action === 'submit') {
-            const leads = (Array.isArray(body.leads) ? body.leads : []).slice(0, 25).map(x => Object.fromEntries(LEAD_FIELDS.map(f => [f, x && x[f] != null ? String(x[f]).trim().slice(0, f === 'notes' ? 600 : 300) : null])));
+            const leads = (Array.isArray(body.leads) ? body.leads : []).slice(0, 25).map(x => Object.fromEntries(LEAD_FIELDS.map(f => [f, x && x[f] != null ? String(x[f]).trim().slice(0, f === 'notes' || f === 'phone_evidence' ? 600 : 300) : null])));
             if (!leads.length) return res.status(400).json({ error: 'leads: [...] (up to 25)' });
             const idx = await index();
             const at = new Date(now).toISOString(), results = [];
             let accepted = 0;
             for (const [i, l] of leads.entries()) {
                 const proof = await lineProof(redis, l.phone);
-                const problem = leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: ownerMatch, now });
+                const problem = leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: (lead, p) => ownerMatch(lead, p, now), freeCells: freeCellsOn(), now });
                 if (problem) { results.push({ i, business: l.business, accepted: false, why: problem }); continue; }
                 Object.assign(l, provenPhone(l, proof));
                 const key = leadKey(l);

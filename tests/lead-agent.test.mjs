@@ -45,13 +45,17 @@ test('submit refuses what the agent was told never to send: no cell, a main line
     const now = Date.parse('2026-10-30T18:00:00Z');
     const RR = { by: 'rocketreach', type: 'mobile', grade: 'A', valid: true, person: 'Dana Reyes', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: 'TN' };
     const ownerMatch = (l, p) => cellMatch({ company: { name: l.business, domain: 'newplumbing.com' }, contact: { name: [l.owner_first, l.owner_last].join(' ') }, job: { usState: l.state } }, { name: p.person, employer: p.employer, employerDomain: p.employerDomain, title: p.title, region: p.region, location: p.location });
-    const why = (l, proof = RR) => leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: ownerMatch, now });
+    const why = (l, proof = RR, freeCells = true) => leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: ownerMatch, freeCells, now });
     const CAR = { by: 'carrier', type: 'mobile', carrier: 'Verizon Wireless', at: '2026-10-30T17:00:00Z' };
     const site = { phone_source_url: 'https://newplumbing.com/about', phone_evidence: 'Call or text Dana Reyes, owner: (615) 555-0100' };
     assert.equal(why(lead()), null);
     // The agent's word is not proof, and its own main-line label always stands (Paul: never a main line).
     assert.match(why(lead(), null), /not proven a cell/);
-    assert.match(why(lead({ phone_type: 'main business line' })), /main line, front desk or office line/);
+    assert.match(why(lead({ phone_type: 'main business line' })), /phone_type must say mobile or cell/);
+    assert.equal(why(lead({ phone_type: "mobile (owner's own cell, not the main line)" })), null, 'a cell label that mentions the main line only to deny it');
+    assert.equal(why(lead({ phone_type: 'cellphone' })), null);
+    // The free path stays off until switched on: a carrier's answer alone proves nothing at the door.
+    assert.match(why(lead({ phone_source_url: 'https://newplumbing.com/about', phone_evidence: 'Call or text Dana Reyes, owner: (615) 555-0100' }), { by: 'carrier', type: 'mobile', carrier: 'Verizon Wireless', at: '2026-10-30T17:00:00Z' }, false), /free path is off/);
     assert.match(why(lead({ phone: '615-555-0100 (front desk)' })), /main line/);
     assert.match(why(lead({ ...site, phone_evidence: 'Office line: 615-555-0100 (Dana Reyes)' }), CAR), /main line/);
     assert.match(why(lead({ phone_type: 'mobile' }), { by: 'carrier', type: 'landline', carrier: 'AT&T', at: CAR.at }), /the carrier says this number is landline \(AT&T\), not a proven cell/);
@@ -91,7 +95,7 @@ test('third check: whole names, the very number, plain office wording, the Hub\'
     const idx = await knownIndex(deps);
     const now = Date.parse('2026-10-30T18:00:00Z');
     const CAR = { by: 'carrier', type: 'mobile', carrier: 'Verizon Wireless', at: '2026-10-30T17:00:00Z' };
-    const why = (l, proof) => leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: ownerMatch, now });
+    const why = (l, proof) => leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: (x, p) => ownerMatch(x, p, now), freeCells: true, now });
     const page = (over) => lead({ phone_source_url: 'https://newplumbing.com/about', ...over });
     // The owner's name as a whole word, the last name when there is one.
     assert.match(why(page({ owner_first: 'Pat', owner_last: 'Quinlan', phone_evidence: 'New patients: text Sarah at (615) 555-0100' }), CAR), /phone_evidence/);
@@ -103,7 +107,7 @@ test('third check: whole names, the very number, plain office wording, the Hub\'
     assert.equal(why(page({ phone_evidence: 'Dana Reyes, 210 Main St. Cell: (615) 555-0100' }), CAR), null, 'a street called Main is not a main line');
     // Plain office wording, and a label that is not a cell.
     assert.match(why(page({ phone_evidence: 'Dana Reyes, Owner | Office: (615) 555-0100' }), CAR), /main line/);
-    for (const t of ['office', 'business', 'work']) assert.match(why(page({ phone_type: t, phone_evidence: 'Cell: Dana Reyes (615) 555-0100' }), CAR), /not as a cell/, t);
+    for (const t of ['office', 'business', 'work']) assert.match(why(page({ phone_type: t, phone_evidence: 'Cell: Dana Reyes (615) 555-0100' }), CAR), /must say mobile or cell/, t);
     // RocketReach: the Hub's own owner test, with the state and the Hub's domain rules.
     const kv = lineKv();
     const lookup = async (profile) => capLookup({ kv, rr: { account: acct(500), lookupPerson: async () => ({ found: true, profile }) }, day: 'd' }, { id: 1 });
@@ -132,6 +136,36 @@ test('third check: whole names, the very number, plain office wording, the Hub\'
     assert.equal(r.mobile, true);
     assert.equal(why(lead({ phone: '+16155550104' }), await lineProof(kv, '6155550104')), null);
     delete process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY;
+});
+
+test('fourth check: the card\'s own state, shared hosts, brand-only ties, accents and suffixes, stale carrier answers', async () => {
+    const { ownerMatch } = await import('../api/lead-agent.js');
+    const { stateOf } = await import('../api/_hiring-intent.js');
+    const now = Date.parse('2026-10-30T18:00:00Z');
+    assert.equal(stateOf('Charleston, West Virginia, United States'), 'WV');
+    assert.equal(stateOf('Kansas City, Missouri, United States'), 'MO');
+    assert.equal(stateOf('Richmond, Virginia'), 'VA');
+    const P = over => ({ by: 'rocketreach', type: 'mobile', valid: true, person: 'Dana Reyes', title: 'Owner', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: 'TN', location: 'Nashville, Tennessee', ...over });
+    const m = (l, p) => ownerMatch(lead(l), P(p), now);
+    assert.equal(m({}, {}).ok, true);
+    // The state the Hub files the card under, even when the lead wrote it only in the city.
+    assert.match(m({ state: null, city: 'Nashville, TN' }, { region: 'CA', location: 'Fresno, California' }).why, /is in CA/);
+    assert.equal(m({ state: 'tn' }, {}).ok, true);
+    // Accents, curly apostrophes and suffixes on either side.
+    assert.equal(m({ owner_first: 'Ana', owner_last: 'García' }, { person: 'Ana Garcia' }).ok, true);
+    assert.equal(m({ owner_first: 'Sean', owner_last: "O'Brien" }, { person: 'Sean O’Brien' }).ok, true);
+    // A shared host ties nobody, and a brand-only tie needs an owner's title and the business's city.
+    const sf = { owner_first: 'John', owner_last: 'Smith', business: 'John Smith - State Farm Insurance Agent', website: 'https://www.statefarm.com/agent/us/tx/austin/john-smith-abc123', state: 'TX', city: 'Austin' };
+    assert.equal(ownerMatch(lead(sf), P({ person: 'John Smith', title: 'Claims Adjuster', employer: 'State Farm', employerDomain: 'statefarm.com', region: 'TX', location: 'Houston, Texas' }), now).ok, false);
+    assert.match(ownerMatch(lead(sf), P({ person: 'John Smith', title: 'Agent', employer: 'State Farm', employerDomain: 'statefarm.com', region: 'TX', location: 'Houston, Texas' }), now).why, /is in Houston, Texas, the business is in Austin/);
+    assert.equal(ownerMatch(lead(sf), P({ person: 'John Smith', title: 'Agent', employer: 'State Farm', employerDomain: 'statefarm.com', region: 'TX', location: 'Austin, Texas Metropolitan Area' }), now).ok, true);
+    const am = { owner_first: 'John', owner_last: 'Smith', business: 'John Smith Agency - American Family Insurance', website: 'https://www.amfam.com/agents/texas/austin/john-smith', state: 'TX', city: 'Austin' };
+    assert.equal(ownerMatch(lead(am), P({ person: 'John Smith', title: 'Claims Adjuster', employer: 'American Family Insurance', employerDomain: 'amfam.com', region: 'TX', location: 'Houston, Texas' }), now).ok, false);
+    // RocketReach's own label is not mobile: only a recent carrier answer proves it.
+    const idx = await knownIndex(deps);
+    const why = (l, proof) => leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: (x, p) => ownerMatch(x, p, now), now });
+    assert.match(why(lead(), P({ type: 'professional', carrierType: 'mobile', carrier: 'Verizon', carrierAt: '2026-09-20T12:00:00Z' })), /over 30 days ago/);
+    assert.equal(why(lead(), P({ type: 'professional', carrierType: 'mobile', carrier: 'Verizon', carrierAt: '2026-10-30T12:00:00Z' })), null);
 });
 
 test('the carrier check: cached per number, inside the day\'s cap, refunded when the carrier does not answer', async () => {

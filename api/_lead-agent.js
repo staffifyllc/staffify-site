@@ -21,6 +21,12 @@ const setting = (v, fallback) => { const n = Number(String(v == null ? '' : v).r
 export const LOOKUPS_PER_DAY = () => setting(process.env.LEAD_AGENT_LOOKUPS_PER_DAY, 30);
 export const CHECKS_PER_DAY = () => setting(process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY, 150);
 export const carrierConfigured = (env = process.env) => !!(env.TWILIO_SID && env.TWILIO_AUTH);
+/**
+ * The free path (a number found on a public page, proven a cell by the carrier) stays off until it is switched on with
+ * LEAD_AGENT_FREE_CELLS=on: a carrier proves the line is a cell, but four rounds of checks (2026-10-30) showed a quote the
+ * agent writes itself cannot reliably prove WHOSE cell it is. Until then only an owner-matched lookup proves a number.
+ */
+export const freeCellsOn = (env = process.env) => carrierConfigured(env) && String(env.LEAD_AGENT_FREE_CELLS || '').toLowerCase() === 'on';
 export const RESERVE = 100;   // the same monthly reserve as the Hub's own lookups (api/_hiring-run.js RR_RESERVE)
 const K = {
     lookups: day => 'staffify:lead-agent:lookups:' + day,
@@ -101,9 +107,10 @@ const fresh = (at, now) => now - (Date.parse(at || '') || 0) < FRESH_MS;
 // A number the agent itself calls the main line, front desk or reception is never the owner's cell, whatever the carrier.
 const MAIN_WORDS = /\b(main(?!\s+(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|hwy|highway)\b)(\s*-?\s*line)?|mainline|switchboard|front[\s-]?(desk|office)|reception(ist)?|headquarters|hq|office|business\s+(line|number|phone)|work\s+(line|number|phone)|toll[\s-]?free)\b/i;
 // The agent's own label for the number may only say it is a cell (or say nothing).
-const CELL_LABEL = /^\s*(?:mobile|cell|cellular|wireless)\b/i;
+const CELL_LABEL = /^\s*(?:mobile|cell(?:ular|[\s-]?phone)?|wireless)\b/i;
 // Phone-shaped runs in a quote: "(615) 555-0100", "615.555.0100", "+1 615 555 0100".
-const PHONES_IN = /(?:\+?1[\s.-]*)?\(?\d{3}\)?[\s.-]*\d{3}[\s.-]*\d{4}\b/g;
+// Not a foreign number's last ten digits ("+52 656 612 3456") or a bare ID; any dash the page used.
+const PHONES_IN = /(?<![\d+])(?<!\+(?:[02-9]\d{0,2}|1\d{1,2})[\s.\-‐-―]*)(?:\+?1[\s.\-‐-―]*)?(?:\(\d{3}\)[\s.\-‐-―]*|\d{3}[\s.\-‐-―]+)\d{3}[\s.\-‐-―]+\d{4}(?!\d)/g;
 const wordIn = (text, w) => new RegExp('(?:^|[^a-z])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:[^a-z]|$)', 'i').test(text);
 
 /** Twilio's line type for one US number: { type, carrier }. Throws when Twilio does not answer. */
@@ -147,6 +154,8 @@ export async function phoneCheck(deps, numbers, now = Date.now()) {
             const rec = known && known.by === 'rocketreach' && r.type === 'mobile' && named ? { ...known, carrier: r.carrier, carrierType: r.type, carrierAt: at }
                 : { by: 'carrier', type: r.type, carrier: r.carrier || null, at };
             if (r.type !== 'unknown' && named) await kv.set(K.line(d), rec, { ex: LINE_TTL });
+            const stored = r.type !== 'unknown' && named;
+            if (!stored && known && known.by === 'rocketreach') { out.push({ number: d, type: r.type, carrier: r.carrier || null, mobile: provenCell(known), looked_up: true, note: 'The carrier gave no usable answer; your lookup still stands for this number.' }); continue; }
             out.push({ number: d, type: r.type, carrier: r.carrier || null, mobile: provenCell(rec), ...(named ? {} : { note: 'The carrier did not name itself, so this proves nothing. Look the owner up instead.' }), ...(rec.by === 'rocketreach' ? { looked_up: true } : {}) });
         } catch (e) {
             await kv.decr(K.checks(day)).catch(() => {});
@@ -190,7 +199,7 @@ export function provenPhone(l, proof) {
  * Why a submitted lead is refused, or null. The same rules the agent was given, checked again here: the owner's own
  * mobile and an email, a seat we fill, a post we may still call about (qualifyLead), and nobody we already know.
  */
-export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = null, now = Date.now() }) {
+export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = null, freeCells = false, now = Date.now() }) {
     if (!l.business || !l.role_posted) return 'business and role_posted are required';
     if (!/^https:\/\//i.test(String(l.posting_url || ''))) return 'posting_url must be the https link to the posting';
     if (!l.owner_first) return 'owner_first is required: a lead is a named owner';
@@ -198,11 +207,15 @@ export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = n
     const p = ten(l.phone);
     if (p.length !== 10) return 'phone must be a 10-digit US number';
     if (tollFree(p)) return 'a toll-free number is never a lead';
-    if ((l.phone_type && !CELL_LABEL.test(String(l.phone_type))) || MAIN_WORDS.test(String(l.phone_type || '')) || MAIN_WORDS.test(String(l.phone || '').replace(/[\d\s()+.-]/g, ' ')) || MAIN_WORDS.test(String(l.phone_evidence || '')))
-        return 'this number is described as a main line, front desk or office line (or not as a cell): only the owner\'s own cell, never a main line';
+    if (l.phone_type && !CELL_LABEL.test(String(l.phone_type))) return 'phone_type must say mobile or cell: only the owner\'s own cell, never a main line';
+    if (MAIN_WORDS.test(String(l.phone || '').replace(/[\d\s()+.-]/g, ' ')) || (proof && proof.by === 'carrier' && MAIN_WORDS.test(String(l.phone_evidence || ''))))
+        return 'this number is described as a main line, front desk or office line: only the owner\'s own cell, never a main line';
     if (!proof) return 'phone is not proven a cell: ask the carrier (action phone) or look the owner up first. Never a main line.';
     if (!provenCell(proof)) return proof.by === 'carrier' ? `the carrier says this number is ${proof.type || 'unknown'}${proof.carrier ? ' (' + proof.carrier + ')' : ' and did not name itself'}, not a proven cell: never a main line`
-        : proof.valid === false ? 'RocketReach marks this number invalid' : proof.carrierType ? `the carrier says this number is ${proof.carrierType}, not a cell` : 'RocketReach did not list this number as a mobile: never a main line';
+        : proof.valid === false ? 'RocketReach marks this number invalid' : proof.carrierType ? `the carrier says this number is ${proof.carrierType}, not a cell` : 'RocketReach did not list this number as a mobile. Ask the carrier (action phone): a named carrier saying mobile proves it.';
+    // RocketReach's own label is not mobile and only the carrier says it is: that answer must be recent.
+    if (proof.by === 'rocketreach' && !MOBILE.test(String(proof.type || '')) && !fresh(proof.carrierAt, now)) return 'the carrier was asked over 30 days ago: ask again (action phone)';
+    if (proof.by === 'carrier' && !freeCells) return 'numbers found on public pages are not accepted yet (the free path is off): look the owner up instead';
     if (proof.by === 'carrier') {
         // A carrier proves the line is a cell, not whose: the page must put the number beside the owner's name.
         if (!fresh(proof.at, now)) return 'the carrier was asked over 30 days ago: ask again (action phone)';

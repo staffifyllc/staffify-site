@@ -1001,7 +1001,8 @@ const RR_GENERIC = new Set(['dental', 'dentistry', 'plumbing', 'roofing', 'techn
 const HONORIFIC = /^(dr|mr|mrs|ms|miss|jr|sr|ii|iii|iv|cpa|esq|md|dds|dmd|chfc|clu|cfp|phd|jd|mba|rn|np|lmhc|lcsw)$/;
 /** A person's name as two comparable tokens: honorifics, suffixes, credentials and initials dropped. */
 export function nameKey(n) {
-    const t = String(n || '').toLowerCase().replace(/[.,()]/g, ' ').split(/\s+/).filter(w => w && w.length > 1 && !HONORIFIC.test(w.replace(/[^a-z]/g, '')));
+    // "García" is "Garcia" and "O’Brien" is "O'Brien" on either side.
+    const t = String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[‘’]/g, "'").toLowerCase().replace(/[.,()]/g, ' ').split(/\s+/).filter(w => w && w.length > 1 && !HONORIFIC.test(w.replace(/[^a-z]/g, '')));
     return t.length ? { first: t[0], last: t[t.length - 1], clean: t.join(' ') } : null;
 }
 const AGENT_TITLE = /\b(agent|agency|owner|principal|president|founder|ceo|producer|proprietor)\b/i;

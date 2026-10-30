@@ -497,7 +497,9 @@ export const ageBased = source => source === 'google_jobs' || source === 'provid
 // through the same role, employer, opt-out, client, booking and duplicate checks, and the owner's name and
 // email ride on the card. The person who found it is credited on the card.
 export const leadKey = l => 'lead:' + createHash('sha256').update([l.business, l.role_posted, l.state || l.city].map(x => String(x || '').trim().toLowerCase()).join('|')).digest('hex').slice(0, 20);
-const SHARED_HOSTS = /(^|\.)(farmers\.com|farmersagent\.com|statefarm\.com|allstate\.com|nationwide\.com|libertymutual\.com|indeed\.com|linkedin\.com|ziprecruiter\.com|glassdoor\.com|simplyhired\.com|facebook\.com|google\.com|yelp\.com|idealtraits\.com|careerplug\.com|wizehire\.com|gusto\.com)$/i;
+// Hosts that many unrelated businesses share (carrier and brokerage agent pages, franchises, directories, social
+// sites): a domain here ties a business to nobody.
+const SHARED_HOSTS = /(^|\.)(farmers\.com|farmersagent\.com|statefarm\.com|allstate\.com|nationwide\.com|libertymutual\.com|amfam\.com|countryfinancial\.com|edwardjones\.com|kw\.com|kellerwilliams\.com|remax\.com|century21\.com|coldwellbanker\.com|exprealty\.com|compass\.com|servpro\.com|indeed\.com|linkedin\.com|ziprecruiter\.com|glassdoor\.com|simplyhired\.com|facebook\.com|instagram\.com|tiktok\.com|x\.com|twitter\.com|youtube\.com|linktr\.ee|nextdoor\.com|google\.com|yelp\.com|bbb\.org|yellowpages\.com|angi\.com|thumbtack\.com|homeadvisor\.com|houzz\.com|idealtraits\.com|careerplug\.com|wizehire\.com|gusto\.com)$/i;
 /** A lead's own website domain, or null when the link is a franchise, job-board or social host shared by many businesses. */
 export function leadDomain(url) {
     let h; try { h = new URL(/^https?:/i.test(url) ? url : 'https://' + url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return null; }
@@ -584,9 +586,17 @@ export function stateOf(text) {
     const t = String(text || '');
     const m = t.match(/,\s*([A-Z]{2})(?:\s+\d{5}(?:-\d{4})?)?\s*(?:,|$|\()/);
     if (m && Object.values(STATES).includes(m[1])) return m[1];
+    // The state named last wins, and the longer name on a tie: "Charleston, West Virginia" is WV, not VA, and
+    // "Kansas City, Missouri" is MO, not KS.
     const low = t.toLowerCase();
-    for (const [name, code] of Object.entries(STATES)) if (new RegExp('\\b' + name + '\\b').test(low)) return code;
-    return null;
+    let best = null;
+    for (const [name, code] of Object.entries(STATES)) {
+        for (const m of low.matchAll(new RegExp('\\b' + name + '\\b', 'g'))) {
+            const end = m.index + name.length;
+            if (!best || end > best.end || (end === best.end && name.length > best.len)) best = { code, end, len: name.length };
+        }
+    }
+    return best ? best.code : null;
 }
 export const cityOf = text => { const m = String(text || '').match(/^\s*([^,(]+?)\s*,/); return m ? m[1] : null; };
 
