@@ -155,17 +155,17 @@ test('the kick-rocks link: opening it only asks, the button stops them everywher
     const stop = async (e, src) => { stopped.push([e, src]); };
     const open = call('GET', path);
     await unsubscribe(open.req, open.res, { stop });
-    assert.equal(open.res.code, 200); assert.match(open.res.body, /Ready to tell us to kick rocks\?/); assert.match(open.res.body, /<form method="post" action="\/kick-rocks\/\?e=dana%40acme\.com&amp;t=/);
-    assert.match(open.res.body, /No rocks were harmed/); assert.equal(stopped.length, 0, 'a mail scanner that opens the link unsubscribes nobody');
+    assert.equal(open.res.code, 200); assert.match(open.res.body, /Unsubscribe dana@acme\.com from all Staffify emails, texts and calls\?/); assert.match(open.res.body, /<form method="post" action="\/kick-rocks\/\?e=dana%40acme\.com&amp;t=/);
+    assert.match(open.res.body, /Yes, kick rocks/); assert.equal(stopped.length, 0, 'a mail scanner that opens the link unsubscribes nobody');
     const press = call('POST', path);
     await unsubscribe(press.req, press.res, { stop });
-    assert.match(press.res.body, /Rocks: kicked\./); assert.deepEqual(stopped, [['dana@acme.com', 'kick-rocks-link']]);
+    assert.match(press.res.body, /Done\. You are unsubscribed\. Rocks: kicked\./); assert.deepEqual(stopped, [['dana@acme.com', 'kick-rocks-link']]);
     const forged = call('POST', '/kick-rocks/?e=boss%40acme.com&t=' + sign('dana@acme.com') + '&style=kick');
     await unsubscribe(forged.req, forged.res, { stop });
-    assert.equal(forged.res.code, 400); assert.match(forged.res.body, /That rock didn&#39;t budge|didn't budge/); assert.equal(stopped.length, 1);
+    assert.equal(forged.res.code, 400); assert.match(forged.res.body, /That link did not work/); assert.equal(stopped.length, 1);
     const broken = call('POST', path);
     await unsubscribe(broken.req, broken.res, { stop: async () => { throw Error('store down'); } });
-    assert.equal(broken.res.code, 500); assert.match(broken.res.body, /Kick the rocks/, 'the button stays, so they can press again');
+    assert.equal(broken.res.code, 500); assert.match(broken.res.body, /Yes, kick rocks/, 'the button stays, so they can press again');
     for (const r of [open, press, forged]) assert.doesNotMatch(r.res.body, /—/);
 });
 
@@ -177,7 +177,7 @@ test('a mail client\'s one-click Unsubscribe (List-Unsubscribe-Post) stops them 
     // The website drips' older link asks first too: a scanner opening it takes nobody off.
     const legacy = call('GET', '/api/unsubscribe/?e=dana%40acme.com&t=' + sign('dana@acme.com'));
     await unsubscribe(legacy.req, legacy.res, { stop: async (e, s) => stopped.push([e, s]) });
-    assert.equal(legacy.res.code, 200); assert.equal(stopped.length, 1); assert.match(legacy.res.body, /Kick the rocks/);
+    assert.equal(legacy.res.code, 200); assert.equal(stopped.length, 1); assert.match(legacy.res.body, /Yes, kick rocks/);
     assert.doesNotMatch(legacy.res.body, /—/);
     const evil = call('GET', '/api/unsubscribe/?e=%3Csvg%2Fonload%3Dalert(1)%3E%40x.co&t=abc');
     await unsubscribe(evil.req, evil.res, { stop: async () => {} });

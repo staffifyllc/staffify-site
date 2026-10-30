@@ -30,47 +30,32 @@ function isValidEmail(s) {
 // link only asks; a scanner that opens every link in an email never unsubscribes anyone. The button (or a mail client's
 // one-click POST) does it, everywhere.
 const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+// Paul, 2026-10-30, of the first version: "this is too much, its just at the bottom of the email". One line and one button.
 function kickPage({ stage, email, action }) {
-    const copy = {
-        ask: { title: 'Kick rocks?', h1: 'Ready to tell us to kick rocks?', p: "One click and you're off every Staffify list. No more emails, texts or calls from anyone on our team." },
-        done: { title: 'Rocks: kicked', h1: 'Rocks: kicked.', p: "You're off every Staffify list. No more emails, texts or calls from us. Sorry for the bother, and good luck out there." },
-        err: { title: 'That rock did not budge', h1: "That rock didn't budge.", p: 'This link looks broken. Reply "kick rocks" to any of our emails and we will take you off by hand.' },
-        fail: { title: 'That rock did not budge', h1: "That rock didn't budge.", p: 'Something broke on our side, so nothing changed yet. Press the button again, or reply "kick rocks" to any of our emails and we will take you off by hand.' },
+    const line = {
+        ask: `Unsubscribe ${esc(email)} from all Staffify emails, texts and calls?`,
+        done: 'Done. You are unsubscribed. Rocks: kicked.',
+        err: 'That link did not work. Reply "kick rocks" to any of our emails and we will take you off by hand.',
+        fail: 'Something went wrong, so nothing changed yet. Try again, or reply "kick rocks" to any of our emails.',
     }[stage];
-    const button = (stage === 'ask' || stage === 'fail') && action
-        ? `<form method="post" action="${esc(action)}"><button type="submit">Kick the rocks</button></form><p class="small">Changed your mind? Just close this tab. No rocks were harmed.</p>` : '';
+    const button = (stage === 'ask' || stage === 'fail') && action ? `<form method="post" action="${esc(action)}"><button type="submit">Yes, kick rocks</button></form>` : '';
     return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<title>${esc(copy.title)} | Staffify</title>
+<title>Unsubscribe | Staffify</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <style>
-  :root{--ground:#f4f6f9;--card:#ffffff;--ink:#0c1118;--muted:#5b6472;--accent:#0d82b8;--accent-ink:#ffffff;--chip:#eef2f6;}
-  @media (prefers-color-scheme: dark){:root{--ground:#0d0f14;--card:#171a21;--ink:#eef1f6;--muted:#a3abb8;--accent:#38b6e8;--accent-ink:#06121a;--chip:#232833;}}
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--ground);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;}
-  .card{max-width:500px;width:100%;background:var(--card);border-radius:18px;padding:44px 36px 36px;box-shadow:0 18px 50px rgba(0,0,0,0.12);}
-  .rock{font-size:44px;line-height:1;margin-bottom:18px;}
-  .brand{font-size:12px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
-  h1{font-size:26px;font-weight:800;letter-spacing:-0.02em;line-height:1.2;margin-bottom:12px;text-wrap:balance;}
-  p{font-size:15px;line-height:1.6;color:var(--muted);margin-bottom:16px;}
-  .email{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;background:var(--chip);padding:6px 12px;border-radius:8px;color:var(--ink);margin-bottom:20px;word-break:break-all;}
-  button{font:inherit;font-size:16px;font-weight:700;background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:14px 22px;cursor:pointer;}
-  button:focus-visible{outline:3px solid var(--ink);outline-offset:2px;}
-  .small{font-size:13px;margin:14px 0 0;}
-  a{color:var(--accent);font-weight:600;text-decoration:none;}
+  :root{--ground:#ffffff;--ink:#1f2328;--button:#1f2328;--button-ink:#ffffff;}
+  @media (prefers-color-scheme: dark){:root{--ground:#16181d;--ink:#e6e8eb;--button:#e6e8eb;--button-ink:#16181d;}}
+  body{margin:0;padding:48px 16px;background:var(--ground);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;}
+  main{max-width:480px;margin:0 auto;}
+  p{margin:0 0 16px;word-break:break-word;}
+  button{font:inherit;font-weight:600;background:var(--button);color:var(--button-ink);border:0;border-radius:8px;padding:9px 16px;cursor:pointer;}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
 </style>
 </head><body>
-<main class="card">
-  <div class="rock" aria-hidden="true">🪨</div>
-  <div class="brand">Staffify</div>
-  <h1>${esc(copy.h1)}</h1>
-  <p>${esc(copy.p)}</p>
-  ${email ? `<div class="email">${esc(email)}</div>` : ''}
-  ${button}
-  ${stage === 'done' ? '<p class="small">Want us back someday? Write to <a href="mailto:hello@gostaffify.com">hello@gostaffify.com</a>.</p>' : ''}
-</main>
+<main><p>${line}</p>${button}</main>
 </body></html>`;
 }
 
