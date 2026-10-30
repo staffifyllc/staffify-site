@@ -3,7 +3,7 @@
 process.env.KV_REST_API_URL ||= 'https://example.invalid'; process.env.KV_REST_API_TOKEN ||= 'x'; process.env.CRON_SECRET ||= 'test-secret';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SEQUENCE_LINES, REP_LINES, sequenceLine, repLine, asksToStop, withoutOurLines } from '../api/_kick-rocks.js';
+import { KICK_LINES, SEQUENCE_LINES, REP_LINES, kickLine, asksToStop, withoutOurLines } from '../api/_kick-rocks.js';
 import { classify, replyText } from '../api/_outreach-policy.js';
 import { hiringDripCopy, refreshDripCopy, COPY_VERSION, HIRING_DRIP_ID } from '../api/_hiring-drip-copy.js';
 import { sweepRepInboxes, LOG } from '../api/_rep-optout-sweep.js';
@@ -11,13 +11,19 @@ import { sign, kickLink } from '../lib/unsubscribe-token.js';
 import { unsubscribe } from '../api/unsubscribe.js';
 import { mime } from '../api/_outreach-gmail.js';
 
-test('the lines: four for a sequence and four for a rep, all different, in Paul\'s rules', () => {
-    for (const set of [SEQUENCE_LINES, REP_LINES]) {
-        assert.equal(new Set(set).size, set.length);
-        for (const l of set) { assert.match(l, /kick rocks/); assert.doesNotMatch(l, /—|–|[“”’]|\bi\b/); }
+test('the lines: a pool of six, all different, no link, in Paul\'s rules; each person moves one on per email', () => {
+    // Paul, 2026-10-30: "do no link, but just tell them to respond with like the kick rocks ... like 5 different versions".
+    assert.ok(KICK_LINES.length >= 5);
+    assert.equal(new Set(KICK_LINES).size, KICK_LINES.length);
+    for (const l of [...KICK_LINES, ...SEQUENCE_LINES, ...REP_LINES]) { assert.match(l, /kick rocks/); assert.doesNotMatch(l, /—|–|[“”’]|\bi\b|https?:/); }
+    for (const l of KICK_LINES) assert.doesNotMatch(l, /not interested|\bstop\b|\bremove\b|unsubscribe|leave (me|us) alone|no more/i, 'a quoted copy of ours never reads as a stop to the worker');
+    for (const who of ['dana@acme.com', 'nate@korrect.com', 'x@y.co']) {
+        const seq = [0, 1, 2, 3, 4, 5].map(n => kickLine(who, n));
+        assert.equal(new Set(seq).size, 6, 'six emails to one person, six different lines');
+        assert.equal(kickLine(who.toUpperCase(), 2), seq[2], 'the same person however the address is typed');
     }
-    assert.equal(sequenceLine(1), SEQUENCE_LINES[0]); assert.equal(sequenceLine(4), SEQUENCE_LINES[3]); assert.equal(sequenceLine(9), SEQUENCE_LINES[3]); assert.equal(sequenceLine(0), SEQUENCE_LINES[0]);
-    assert.equal(repLine(0), REP_LINES[0]); assert.equal(repLine(5), REP_LINES[1]); assert.equal(repLine(-1), REP_LINES[3]);
+    assert.ok(new Set(['a@a.com', 'b@b.com', 'c@c.com', 'd@d.com', 'e@e.com', 'f@f.com', 'g@g.com'].map(e => kickLine(e, 0))).size >= 3, 'owners on the same day see different first lines');
+    assert.equal(kickLine('a@a.com', -3), kickLine('a@a.com', 0));
 });
 
 test('a plain ask to be left alone is heard; a friendly "stop by" and our own quoted line are not', () => {
@@ -29,9 +35,11 @@ test('a plain ask to be left alone is heard; a friendly "stop by" and our own qu
         // Round two of the review: warm replies the first matcher read as a stop.
         'Did you lose my number? Call me tomorrow, I am interested.', 'Sounds interesting. Can we opt out anytime if it is not working out?', 'Is there an opt-out clause in the contract?', "Please don't call me, I prefer email. Send pricing.", 'You never call me back! Still want to talk.', "We're not interested right now, but feel free to check back in the spring.",
         'Ha, love the kick rocks line. Yes it is still open, call me Tuesday.', "You don't have to kick rocks! Send me pricing.", "I'm not telling you to kick rocks, the role is open.", "Before you kick rocks, what's the rate?", 'No kicking rocks needed, call me',
-        'Thanks.\n' + SEQUENCE_LINES[0] + '\nOne click works too: https://www.gostaffify.com/kick-rocks/?e=stop.now%40acme.com&t=abc'])
+        'Thanks.\n' + SEQUENCE_LINES[0] + '\nOne click works too: https://www.gostaffify.com/kick-rocks/?e=stop.now%40acme.com&t=abc',
+        ...KICK_LINES.map(l => 'Sounds good, call me.\n\n' + l), ...KICK_LINES])
         assert.equal(asksToStop(no), false, no);
     assert.doesNotMatch(withoutOurLines('ok ' + SEQUENCE_LINES[1]), /kick rocks/);
+    for (const l of KICK_LINES) assert.doesNotMatch(withoutOurLines('ok\n' + l.replace(/"/g, '“').replace(/'/g, '’').replace(/ /g, '\n')), /kick/i, 'rewrapped, curly-quoted copies of ours are ours');
     assert.equal(withoutOurLines('line one\nline two'), 'line one\nline two', 'their line breaks are kept');
     for (const l of REP_LINES) assert.doesNotMatch(l, /not interested|\bstop\b/i, 'a quoted copy of ours never reads as a stop to the worker');
 });
@@ -44,21 +52,18 @@ test('the email worker lets go of anyone who answers "kick rocks", and not of so
     assert.equal(classify(reply('Interested, call me.\n-------- Original message --------\nP.S. tell me to kick rocks'), them, [me]).status, 'human_reply_hold');
     // Only "kick rocks" is new to the worker: it re-reads stored threads, so a warm reply must never become a stop.
     for (const warm of ["Don't call me before 2, I'm in court", 'no need to kick rocks, call me', 'Leave me alone till Monday', 'I would say no\nThanks, Bob', "You don't have to kick rocks, send me pricing", "You don't need to kick rocks, I'm interested", "I don't want you to kick rocks, let's talk Tuesday", 'No kicking rocks needed, call me', 'Haha no need for you to kick rocks. When can we talk?', 'Ha, love the kick rocks line. Yes it is still open, call me Tuesday.',
-        'Thanks.\n' + SEQUENCE_LINES[0] + '\nOne click works too: https://www.gostaffify.com/kick-rocks/?e=stop.now%40acme.com&t=abc'])
+        'Thanks.\n' + SEQUENCE_LINES[0] + '\nOne click works too: https://www.gostaffify.com/kick-rocks/?e=stop.now%40acme.com&t=abc', ...KICK_LINES.map(l => 'Yes, send the profiles.\n\n' + l)])
         assert.equal(classify(reply(warm), them, [me]).status, 'human_reply_hold', warm);
     assert.equal(replyText('Hi\n________________________________\nFrom: Paul'), 'Hi');
 });
 
-test('each email of the Hiring now sequence ends with its own way out', () => {
+test('each email of the Hiring now sequence ends with its own way out: a reply, never a link', () => {
     const card = { id: 'hire:aaaaaaaaaaaaaaaa', company: { name: 'Acme', domain: 'acme.com' }, job: { title: 'Scheduler - $23/hr' }, contact: { firstName: 'Dana', email: 'dana@acme.com', status: 'verified' } };
     const c = hiringDripCopy(card);
     const bodies = [c.bodyText, c.followupBodies[2], c.followupBodies[3], c.followupBodies[4]];
-    const link = 'https://www.gostaffify.com/kick-rocks/?e=dana%40acme.com&t=' + sign('dana@acme.com');
-    bodies.forEach((b, i) => assert.ok(b.endsWith(SEQUENCE_LINES[i] + '\nOne click works too: ' + link), 'touch ' + (i + 1)));
+    bodies.forEach((b, i) => assert.ok(b.endsWith('Paul\nStaffify\n\n' + kickLine('dana@acme.com', i)), 'touch ' + (i + 1)));
     assert.equal(new Set(bodies.map(b => b.split('\n\n').at(-1))).size, 4);
-    assert.equal(asksToStop(bodies[0].split('\n\n').at(-1)), false, 'our own line and link, quoted back, never read as a stop');
-    assert.ok(hiringDripCopy(card, { unsubscribe: () => { throw Error('no secret'); } }).bodyText.endsWith(SEQUENCE_LINES[0]), 'without a link the line still stands');
-    for (const b of bodies) assert.doesNotMatch(b, /rather I not follow up/);
+    for (const b of bodies) { assert.doesNotMatch(b, /kick-rocks\/|One click|unsubscribe/i); assert.equal(asksToStop(b.split('\n\n').at(-1)), false, 'our own line, quoted back, never reads as a stop'); }
 });
 
 test('rows written with the older copy take the new lines for every email not yet written', () => {
@@ -75,9 +80,9 @@ test('rows written with the older copy take the new lines for every email not ye
     ] };
     assert.equal(refreshDripCopy(state, new Map([[card.id, card]])), 3);
     const by = id => state.records.find(r => r.id === id);
-    assert.match(by('fresh').bodyText, /kick rocks and I'll leave you alone\.\nOne click works too: https:\/\/www\.gostaffify\.com\/kick-rocks\//); assert.match(by('fresh').bodyText, /Madison\nStaffify/);
-    assert.equal(by('sent1').bodyText, 'old 1', 'a sent email is history'); assert.ok(by('sent1').followupBodies[2].includes(SEQUENCE_LINES[1]));
-    assert.equal(by('drafted2').followupBodies[2], 'old 2', 'the saved Gmail draft is never rewritten'); assert.ok(by('drafted2').followupBodies[3].includes(SEQUENCE_LINES[2]));
+    assert.ok(by('fresh').bodyText.endsWith('Madison\nStaffify\n\n' + kickLine('dana@acme.com', 0))); assert.doesNotMatch(by('fresh').bodyText, /One click/);
+    assert.equal(by('sent1').bodyText, 'old 1', 'a sent email is history'); assert.ok(by('sent1').followupBodies[2].endsWith(kickLine('dana@acme.com', 1)));
+    assert.equal(by('drafted2').followupBodies[2], 'old 2', 'the saved Gmail draft is never rewritten'); assert.ok(by('drafted2').followupBodies[3].endsWith(kickLine('dana@acme.com', 2)));
     assert.equal(by('current').bodyText, 'old 1'); assert.equal(by('nocard').bodyText, 'old 1');
     for (const id of ['fresh', 'sent1', 'drafted2']) assert.equal(by(id).copyVersion, COPY_VERSION);
 });

@@ -10,34 +10,48 @@
 // permanent and everywhere, so a warm reply ("don't call before 2", "take me off the cc", "leave me alone till Monday")
 // must never read as one: those go to a person.
 
-/** One per touch of a four-email sequence, so no two emails in a row say it the same way. */
+// Paul, 2026-10-30, a day later: "do no link, but just tell them to respond with like the kick rocks ... like 5 different
+// versions ... So it's not the same thing every single time". The way out is a reply, never a link in the email.
+// None of these uses a word the worker reads as a stop ("not interested", "stop", "remove", "unsubscribe"), so a quoted
+// copy can never trip it, and each is stripped from a reply before it is read anyway (OURS below).
+export const KICK_LINES = Object.freeze([
+    "P.S. Not the right fit? Just reply \"kick rocks\" and I'll leave you alone.",
+    "If this isn't for you, reply \"kick rocks\" and you won't hear from me again.",
+    "Not for you? A quick \"kick rocks\" takes you off my list, no hard feelings.",
+    "Had enough of me? Reply \"kick rocks\" and I'm gone.",
+    "Wrong person or wrong time? Tell me to kick rocks and I'll take the hint.",
+    "Rather not hear from me? Two words, \"kick rocks,\" and you're off my list.",
+]);
+const seedOf = email => [...String(email || '').trim().toLowerCase()].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+/**
+ * The line for the nth email (from 0) one person gets. Each person starts somewhere different in the list and moves one
+ * on with every email, so nobody reads the same line twice in a row and two owners on the same day rarely read the same one.
+ */
+export const kickLine = (email, n) => KICK_LINES[(seedOf(email) + Math.max(0, Number(n) || 0)) % KICK_LINES.length];
+
+// Lines already sent, earlier versions: a reply can still quote them, so they stay in OURS.
 export const SEQUENCE_LINES = Object.freeze([
     "P.S. Not the right fit? Just tell me to kick rocks and I'll leave you alone.",
     "If this isn't for you, reply \"kick rocks\" and you won't hear from me again.",
     "Still not for you? A quick \"kick rocks\" takes you off my list, no hard feelings.",
     "This is my last note. If you want off my list for good, just say \"kick rocks.\"",
 ]);
-export const sequenceLine = touch => SEQUENCE_LINES[Math.min(Math.max(Number(touch) || 1, 1), SEQUENCE_LINES.length) - 1];
-
-/** Under a rep's signature in the Hub: a different one each time the same person hears from us. None of them uses a word
- * the worker reads as a stop ("not interested", "stop"), so a quoted copy can never trip it. */
 export const REP_LINES = Object.freeze([
     "Not a fit? Just tell me to kick rocks and I'll take you off my list.",
     "If I'm bugging you, reply \"kick rocks\" and you won't hear from me again.",
     "Had enough of me? A quick \"kick rocks\" does it, no hard feelings.",
     "Rather not hear from me? Tell me to kick rocks and I'll leave you alone.",
 ]);
-export const repLine = n => REP_LINES[((Number(n) || 0) % REP_LINES.length + REP_LINES.length) % REP_LINES.length];
 
 // The older sign-offs that name a way out are here too: quoted under a reply they would read as a request to stop.
-const OURS = [...SEQUENCE_LINES, ...REP_LINES, 'Not interested? Just tell me to kick rocks and I\'ll take you off my list.', 'Want me to stop reaching out? A quick "kick rocks" does it, no hard feelings.', "Not the right time? Tell me to kick rocks and I'll leave you alone.",
+const OURS = [...KICK_LINES, ...SEQUENCE_LINES, ...REP_LINES, 'Not interested? Just tell me to kick rocks and I\'ll take you off my list.', 'Want me to stop reaching out? A quick "kick rocks" does it, no hard feelings.', "Not the right time? Tell me to kick rocks and I'll leave you alone.",
     "If you'd like me to kick rocks and leave you alone, just say so :)", "If you'd prefer no more emails, just let me know.", 'If you would prefer no more emails, just let me know.', "If you'd rather I not follow up, just let me know."];
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Each line as a pattern that survives a mail client's rewrapping and curly quotes: spaces match any whitespace, quotes
 // and apostrophes match either kind. Line breaks elsewhere in their text are kept, so "no" at the end of one line and
 // "Thanks" on the next never read as "no thanks".
 const OURS_RE = OURS.map(line => new RegExp(escapeRe(line).replace(/\\?["']/g, m => (m.includes('"') ? '["“”]' : "['‘’]")).replace(/ +/g, '\\s+'), 'gi'));
-// Our own one-click line and links, quoted back, never count either (the link carries their own address, which can hold
+// Our older one-click line and links, quoted back, never count either (the link carries their own address, which can hold
 // a word like "stop").
 const OUR_LINKS = [/One\s+click\s+works\s+too[.:]?/gi, /https?:\/\/(?:www\.)?gostaffify\.com\/(?:kick-rocks\/?|api\/unsubscribe\/?)\?\S*/gi];
 // What a mail app adds under a message. A bare "STOP" sent from a phone is still a bare "STOP".

@@ -324,14 +324,14 @@ export const encodeHeader = s => (/^[\x20-\x7e]*$/.test(s) ? s : '=?UTF-8?B?' + 
 const quoteName = n => (/^[\w .'-]*$/.test(n) ? `"${n}"` : encodeHeader(n));
 
 /** The message body as HTML: the rep's text, escaped, with links made clickable, then the signature. */
-export function bodyHtml(text, signature, footer = null, footerLink = null) {
+export function bodyHtml(text, signature, footer = null) {
     const paras = String(text).replace(/\r\n/g, '\n').split(/\n{2,}/).map(p => {
         const safe = esc(p).replace(/(https:\/\/[^\s<]+[^\s<.,;:!?)'"])/g, '<a href="$1">$1</a>').replace(/\n/g, '<br>');
         return `<p style="margin:0 0 14px;">${safe}</p>`;
     });
     return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#111;">${paras.join('')}</div>`
         + (signature ? `<br><div>${signature}</div>` : '')
-        + (footer ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#6b6b6b;margin:18px 0 0;">${esc(footer)}${footerLink ? ` <a href="${esc(footerLink)}" style="color:#6b6b6b;">One click works too.</a>` : ''}</p>` : '');
+        + (footer ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#6b6b6b;margin:18px 0 0;">${esc(footer)}</p>` : '');
 }
 
 /** multipart/alternative, base64 parts, CRLF line endings. Throws on a header that could inject. */

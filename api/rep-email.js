@@ -41,8 +41,7 @@ import { createHash } from 'node:crypto';
 import { hiringReportRows } from './_hiring-intent.js';
 import { HK as HOLDS } from './_call-holds.js';
 import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
-import { repLine } from './_kick-rocks.js';
-import { kickLink } from '../lib/unsubscribe-token.js';
+import { kickLine } from './_kick-rocks.js';
 
 const CALLBACK = SITE + '/api/outreach-connect/?action=callback';   // the redirect URI Google already knows
 export const K = {
@@ -262,14 +261,13 @@ export async function sendRepEmail({ rep, input, deps, now = Date.now() }) {
     }
     const line = await deps.line(box, rep).catch(() => null);
     const signed = { phone: line, photo: deps.photo ? await deps.photo(box).catch(() => null) : null };
-    // Paul, 2026-10-30: every email offers a plain way out ("tell me to kick rocks"), under the signature, a different
-    // line each time the same person hears from us (api/_kick-rocks.js). A reply that takes it is honoured by the reps'
+    // Paul, 2026-10-30: every email offers a plain way out, a reply ("kick rocks", never a link), under the signature and
+    // a different line each time the same person hears from us (api/_kick-rocks.js). Their drip emails used the first
+    // four steps from the same start, so a rep's emails begin after them. A reply that takes it is honoured by the reps'
     // inbox sweep (api/_rep-optout-sweep.js).
     const before = await Promise.resolve().then(() => kv.llen(K.sent(to))).catch(() => 0);
-    const out_ = repLine(Number(before) || 0);
-    let kick = '';
-    try { kick = kickLink(to); } catch { kick = ''; }
-    const mime = buildMime({ from: box, fromName: profile.name, to, subject, text: body + '\n\n-- \n' + signatureText(box, signed) + '\n\n' + out_ + (kick ? '\nOne click works too: ' + kick : ''), html: bodyHtml(body, signatureHtml(box, signed), out_, kick || null), ...routeCopy(box, profile.name) });
+    const out_ = kickLine(to, 4 + (Number(before) || 0));
+    const mime = buildMime({ from: box, fromName: profile.name, to, subject, text: body + '\n\n-- \n' + signatureText(box, signed) + '\n\n' + out_, html: bodyHtml(body, signatureHtml(box, signed), out_), ...routeCopy(box, profile.name) });
     // No List-Unsubscribe header here: the Bcc copy to hello@ would carry it, and someone tidying hello@ could stop the prospect.
 
     let draft;

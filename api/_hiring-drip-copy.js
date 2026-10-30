@@ -11,11 +11,12 @@
 // they read, and when a card's own state stops the sequence (a caller reached them, a booking, a closed posting).
 import { spokenRole, DISCOVERY_LINK } from './_call-scripts.js';
 import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
-import { sequenceLine } from './_kick-rocks.js';
-import { kickLink } from '../lib/unsubscribe-token.js';
+import { kickLine } from './_kick-rocks.js';
 import { leadStatedDate, sectorOf } from './_hiring-intent.js';
 
 export { HIRING_DRIP_ID };
+// Paul, 2026-10-30: "we should say 12-14 an hour". The top of the range decides who hears a price at all.
+export const OUR_LOW = 12;
 export const OUR_RATE = 14;
 // A posted rate this far above ours is worth quoting back; closer than that, the comparison is no argument.
 const QUOTE_FROM = 16;
@@ -117,8 +118,8 @@ export function dripCompany(name) {
 // very little value in this message". The rewrite rests on what owners told us (59 of the 66 caller stops were "this is
 // not a remote job", and 165 of the first 176 emails never said remote), on what owners fear in a remote hire (a bad
 // pick, then ending up as its manager), and only on claims the site already makes. Email 1 says remote next to the price,
-// names the work the hire takes over and asks for a one-word answer; email 2 answers the bad pick (how we screen),
-// email 3 the managing (and the replacement guarantee), email 4 is a short close.
+// names the work the hire takes over and asks for a one-word answer; email 2 answers the bad pick (how we screen) and
+// offers profiles of recent hires; email 3 the managing (and the replacement guarantee); email 4 is a short close.
 
 // The work a hire takes over, by the card's role family. Law firms get the law page's own list.
 const VALUE = {
@@ -141,12 +142,10 @@ export function postedDay(card) {
 }
 
 /** The four emails for one card. Nothing promises an outcome, a timeline or a number the site does not publish. */
-export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', unsubscribe = kickLink } = {}) {
+export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul' } = {}) {
     const SIGN = signer + '\nStaffify';
-    // Each email's own way out, and the one-click link to /kick-rocks/ under it (Paul: "should it be a link, but make it funny?").
-    let kick = '';
-    try { kick = unsubscribe((card.contact || {}).email) || ''; } catch { kick = ''; }
-    const out = n => sequenceLine(n) + (kick ? '\nOne click works too: ' + kick : '');
+    // Each email's own way out: a reply, a different line each time (api/_kick-rocks.js).
+    const out = n => kickLine((card.contact || {}).email, n - 1);
     const c = card.contact || {}, first = c.firstName, j = card.job || {};
     const title = j.title || (card.lead && card.lead.role_posted) || '';
     const role = dripRole(title);
@@ -163,7 +162,8 @@ export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', u
     // number goes next to it only when the gap is worth reading (QUOTE_FROM), and never on a video seat (copy rule 7).
     const priced = !offshore && !(hourly != null && hourly <= OUR_RATE);
     const quote = priced && hourly != null && hourly >= QUOTE_FROM && card.family !== 'video';
-    const price = priced ? ` for $${OUR_RATE} an hour` + (pay && pay.unit === 'year' ? `, about $${Math.round(OUR_RATE * 2080 / 1000)}K a year` : '') : '';
+    const k = n => Math.round(n * 2080 / 1000);
+    const price = priced ? ` for $${OUR_LOW} to $${OUR_RATE} an hour` + (pay && pay.unit === 'year' ? `, about $${k(OUR_LOW)}K to $${k(OUR_RATE)}K a year` : '') : '';
     const day = postedDay(card), city = j.city;
     const seen = `I saw ${role === 'open' ? 'the job' : job} you posted${city ? ' in ' + city : ''}${day ? ' on ' + day : ''}${quote ? ', listed at ' + payPhrase(pay) : ''}. Is it still open?`;
     const work = value ? `They'd work only for you, on your hours, and take over ${value}.` : "They'd work only for you, on your hours.";
@@ -186,14 +186,16 @@ export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', u
             'Every candidate does a written screen, a live video interview and a paid skills test, and we call their references. For seats that talk to customers or clients, we test their spoken and written English. We check their computer and internet speed too.'
                 + (law ? ' They sign a confidentiality agreement, work under your data policies and see only the systems you give them access to.' : ''),
             'The finalists then do a test task modeled on your work, so you see what they can do before anyone starts.',
-            `Is ${job} still open? "Open" or "filled" is all I need.`, SIGN, out(2)].join('\n\n'),
+            // Paul, 2026-10-30: "would you mind if I send you ... some profiles of some recent hires we made so you can take
+            // a look and see the type or caliber of employee that we are hiring". A yes is a reply, and a person answers it.
+            `If ${job} is still open, would you mind if I sent you a few profiles of recent hires we've made? You'd see the caliber of people we're hiring.`, SIGN, out(2)].join('\n\n'),
         3: [`Hi ${first},`, 'If the worry with a remote hire is ending up as their manager, that part is ours.',
             "You direct the work. We run their payroll, HR and time tracking, and our managers handle the check-ins and corrections, so you aren't chasing anyone. They're never shared with another business.",
             "If they leave or it isn't working, we find and place someone new at no additional cost, for as long as you're with us. That's our lifetime replacement guarantee. It's month to month, with no long-term contract.",
             `If ${job} is still open, pick a time and I'll walk you through it. If we're not a fit, I'll say so.\n${link}`, SIGN, out(3)].join('\n\n'),
         4: [`Hi ${first},`, `Did ${role === 'open' ? 'the job you posted' : `your ${role} job`} get filled? If it did, congrats.`,
             `If it's still open, or another seat opens up later, we'll run the search for a full-time remote ${legalSeat ? 'legal admin' : 'hire'} and you'll pick from the finalists.`,
-            'Either way, one word back is plenty: "filled" or "open."', SIGN, out(4)].join('\n\n'),
+            'This is my last note, so one word back is plenty: "filled" or "open."', SIGN, out(4)].join('\n\n'),
     };
     return { subject, bodyText, followupBodies, role, payText: payPhrase(pay), quoted: quote };
 }
