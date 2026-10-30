@@ -18,7 +18,7 @@ export const KICK_LINES = Object.freeze([
     "P.S. Not the right fit? Just reply \"kick rocks\" and I'll leave you alone.",
     "If this isn't for you, reply \"kick rocks\" and you won't hear from me again.",
     "Not for you? A quick \"kick rocks\" takes you off my list, no hard feelings.",
-    "Got it covered already? Reply \"kick rocks\" and I'm gone.",
+    "Remote help not your thing? Reply \"kick rocks\" and I'm gone.",
     "Wrong person or wrong time? Tell me to kick rocks and I'll take the hint.",
     "Rather not hear from me? Two words, \"kick rocks,\" and you're off my list.",
 ]);
@@ -66,17 +66,41 @@ export function withoutOurLines(text) {
 }
 const authored = text => withoutOurLines(text).replace(FOOTERS, ' ');
 
+/**
+ * "Kick rocks" on the first line they wrote (under a greeting at most) is the answer, whatever signature a mail app puts
+ * under it, unless the rest takes it back: a "?", a "just kidding", or anything warm in the same paragraph ("Kick rocks!
+ * \nJust kidding, call me Tuesday" goes to a person). A signature sits after a blank line.
+ */
+function firstLineKick(all) {
+    const raw = all.split('\n').map(l => l.trim());
+    let i = raw.findIndex(Boolean);
+    if (i < 0) return false;
+    if ((GREETING.test(raw[i]) || GREETING_I.test(raw[i])) && raw.slice(i + 1).some(Boolean)) i = raw.findIndex((l, j) => j > i && l);
+    if (!FIRST_KICK.test(unquote(raw[i]))) return false;
+    const rest = raw.slice(i + 1).join('\n');
+    if (/\?/.test(rest) || JEST.test(rest)) return false;
+    const end = raw.findIndex((l, j) => j > i && !l);
+    const paragraph = raw.slice(i + 1, end < 0 ? raw.length : end).join(' ');
+    return !WARM.test(paragraph);
+}
+
 // "Kick rocks" counts only as their whole answer: a short reply, no question, nothing warm or negated in it. "Ha, love the
 // kick rocks line, call me Tuesday" and "you don't have to kick rocks, send pricing" go to a person.
 // "Kick rocks." alone on the first line they wrote (under a greeting at most) is the answer, whatever signature a mail app
 // puts under it; so is "Yes, kick rocks" to a line that asked "Not for you?".
-const GREETING = /^(?:hi|hello|hey|dear|good (?:morning|afternoon|evening))\b[\w .'-]{0,30},?$/i;
-const FIRST_KICK = /^(?:(?:yes|yeah|yep|yup|ok|okay|sure|no|nope|please|rather not|i'?d rather not)[\s,.!-]+)?(?:please\s+)?kick(?:ing)?\s+rocks(?:\s+please)?[\s.!]*$/i;
+// A greeting is "Hi Paul," / "Morning Paul," / a bare "Paul,". Their answer may be quoted back as we wrote it ("kick
+// rocks", or with an iPhone's curly quotes) and may end ", thanks" or with an emoji.
+const GREETING = /^(?:(?:hi|hello|hey|dear|good (?:morning|afternoon|evening)|morning|afternoon|evening)\b[\w .'-]{0,30}|[A-Z][a-z]{1,20}),?$/;
+const GREETING_I = /^(?:hi|hello|hey|dear|good (?:morning|afternoon|evening)|morning|afternoon|evening)\b[\w .'-]{0,30},?$/i;
+// "Yes, kick rocks" answers a line that asked "Not for you?"; a "no" or "rather not" counts only with a stop after it
+// ("No. Kick rocks"), never "No kick rocks needed" or "I'd rather not kick rocks".
+const FIRST_KICK = /^(?:(?:(?:yes|yeah|yep|yup|ok|okay|sure|please)[\s,.!-]+)|(?:(?:no|nope|rather not)[,.!]+\s*))?(?:please\s+)?kick(?:ing)?\s+rocks(?:\s+please)?(?:,?\s*(?:thanks|thank you|thx|ty))?[\s.!]*$/i;
+const JEST = /\b(?:kidding|jk|j\/k|joking|joke|lol|haha+|lmao)\b/i;
+const unquote = l => l.replace(/^["“”'‘’]+|["“”'‘’]+(?=[\s.!,]*$)/g, '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]+/gu, '').trim();
 const WARM = /\b(?:yes|yeah|yep|sure|call|send|interested|open|pricing|price|rate|cost|when|schedule|meet|talk|love|great|before|don'?t|do not|not|no need|won'?t|never|have to|need to|want you to|needed)\b/i;
 export function kicksRocks(text) {
     const all = authored(text);
-    const lines = all.split('\n').map(l => l.trim()).filter(Boolean);
-    if (FIRST_KICK.test((lines.length > 1 && GREETING.test(lines[0]) ? lines[1] : lines[0]) || '')) return true;
+    if (firstLineKick(all)) return true;
     const t = all.replace(/\s+/g, ' ').trim();
     if (!/\bkick(?:ing)? rocks\b/i.test(t) || /\?/.test(t) || WARM.test(t)) return false;
     return t.replace(/[^a-z' ]+/gi, ' ').trim().split(/\s+/).filter(Boolean).length <= 8;
@@ -102,12 +126,14 @@ const DONT_BUT = /\b(?:back|prefer|instead|rather|only|but|before|after|until|ti
 // "Not interested" is a no, unless it is "not yet", "right now, but", "check back", "maybe later".
 const NOT_INT = /\bnot interested\b/i;
 const NOT_INT_BUT = /\b(?:yet|but|check back|later|maybe|circle back|reach out again|follow up in|next (?:year|quarter|month)|in the (?:spring|summer|fall|winter|new year))\b/i;
-const ALONE = /^(?:please )?(?:stop|stop all|unsubscribe|remove|remove me|end|quit|opt out|kick rocks)(?: please)?$/i;
+// "kick rocks" is read by kicksRocks, which checks what follows it; a first line asked as a question is never a stop here.
+const ALONE = /^(?:please )?(?:stop|stop all|unsubscribe|remove|remove me|end|quit|opt out)(?: please)?$/i;
 /** True when a reply asks us to stop. The caller has already removed quoted history (replyText). */
 export function asksToStop(text) {
     const t = authored(text);
     const first = (t.split('\n').map(l => l.replace(/[^a-z ]+/gi, ' ').replace(/\s+/g, ' ').trim()).find(Boolean)) || '';
-    if (ALONE.test(first)) return true;
+    const rawFirst = (t.split('\n').map(l => l.trim()).find(Boolean)) || '';
+    if (ALONE.test(first) && !/\?/.test(rawFirst)) return true;
     if (kicksRocks(t)) return true;
     const dont = t.match(DONT);
     if (dont && !DONT_BUT.test(dont[1])) return true;

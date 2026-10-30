@@ -195,9 +195,9 @@ test('review fixes, 2026-10-30: dates, cities, offshore, part-time, legal seats,
     assert.match(body({ job: { title: 'Customer Service Rep (PT)', workplace: 'remote' } }), PART);
     for (const t of ['Customer Service Rep (FT/PT)', 'Customer Service Rep (full or part time)', 'Part-Time to Full-Time CSR']) assert.doesNotMatch(body({ job: { title: t, workplace: 'remote' } }), PART, t);
     const legal = hiringDripCopy(card('l', { job: { title: 'Paralegal - $28/hr', workplace: 'onsite' } }));
-    assert.match(legal.followupBodies[2], /We place legal admins, not paralegals, and here's how we screen them\./, 'a thread moved from the older copy still hears it');
+    assert.match(legal.followupBodies[2], /We place legal admins, not paralegals, from Latin America and the Philippines, and here's how we screen them\./, 'a thread moved from the older copy still hears it');
     assert.match(legal.followupBodies[2], /If you're still filling the Paralegal job, would you mind/);
-    assert.match(legal.followupBodies[3], /If you're still filling the Paralegal job, pick a time and I'll walk you through what a legal admin could take off it\./);
+    assert.match(legal.followupBodies[3], /If you're still filling the Paralegal job, pick a time and I'll walk you through what a legal admin could take off your plate\./);
     assert.equal(postedPay('Executive Assistant - $500 sign-on bonus'), null);
     assert.equal(payPhrase(postedPay('CSR - $18/hr + $500 bonus')), '$18 an hour');
     assert.doesNotMatch(body({ job: { title: 'Executive Assistant - $500 sign-on bonus', workplace: 'remote' } }), /listed at/);
@@ -207,6 +207,28 @@ test('review fixes, 2026-10-30: dates, cities, offshore, part-time, legal seats,
         assert.match(hiringDripStop(card('u', { job: { title: t } })), /US-based/, t);
     for (const t of ['Customer Service Rep (Remote)', 'Executive Assistant - remote, $25/hr', 'Virtual Receptionist']) assert.equal(hiringDripStop(card('u', { job: { title: t } })), null, t);
     assert.match(hiringDripStop(card('k', { job: { title: 'Front Desk - $37k-$55k/yr', workplace: 'remote' }, lead: { notes: 'Role not confirmed remote (Remote Type: No)' } })), /front desk/, 'the doubted remote tag is doubted here too');
+});
+
+test('second review: US-only titles both ways, colon titles, PT and offshore words, bonuses, and email 2 for moved threads', () => {
+    const stop = t => hiringDripStop(card('u', { job: { title: t } }));
+    for (const t of ['Booking Specialist (fully remote within U.S., $20-$24/hr)', 'Admin Assistant - US remote, $20-$35/hr', 'Legal Assistant - New Jersey, Remote', 'Paralegal (remote in TX, $10-$20/hr)', 'CSR - Florida-based remote'])
+        assert.match(stop(t), /US-based/, t);
+    for (const t of ['Customer Service Rep (Remote, US hours)', 'Appointment Setter - Remote (US time zones)', 'Scheduler (remote, New York hours)', 'Resident Services Coordinator - Remote', 'Leasing Agent - Resident Relations', 'Remote Receptionist - join us based in Miami'])
+        assert.equal(stop(t), null, t);
+    for (const [t, r] of [['Now Hiring: Legal Assistant', 'Legal Assistant'], ['Paralegal: Family Law', 'Paralegal'], ['Receptionist: Dental Office', 'Receptionist'], ['Dispatcher: HVAC', 'Dispatcher'], ['Work From Home: Customer Service Rep', 'Customer Service Rep']])
+        assert.equal(dripRole(t), r, t);
+    const body = (t, over = {}) => hiringDripCopy(card('z', { company: { name: 'Bayside HVAC', domain: 'z.com' }, family: 'support', job: { title: t, workplace: 'remote' }, ...over })).bodyText;
+    for (const t of ['International Logistics Customer Service Rep - $22/hr', 'Sales Representative - Worldwide Express - $50K']) assert.match(body(t), /\$12 to \$14/, t);
+    for (const t of ['Scheduling Coordinator - PT Clinic - $18/hr', 'Patient Care Coordinator (Outpatient PT)']) assert.doesNotMatch(body(t), /part-time/, t);
+    assert.match(body('CSR (PT 25 hrs)'), /You listed it as part-time/);
+    assert.equal(payPhrase(postedPay('Telemarketer - $12 + bonus')), '$12 an hour');
+    assert.equal(payPhrase(postedPay('CSR - $13, bonus eligible')), '$13 an hour');
+    assert.equal(payPhrase(postedPay('EA ($50K-$70K + bonus)')), '$50K to $70K a year');
+    assert.doesNotMatch(body('Telemarketer - $12 + bonus'), /\$12 to \$14/, 'a post paying $12 never hears our price');
+    const moved = hiringDripCopy(card('m', { company: { name: 'Bayside HVAC', domain: 'm.com' }, family: 'support', job: { title: 'Part-Time CSR - $18/hr', workplace: 'onsite' } }), { after: 1 });
+    assert.match(moved.followupBodies[2], /Here's how we screen our remote candidates in Latin America and the Philippines\. One thing up front: our hires are full-time, so this fits if there's a full week of work to give them\./);
+    const fresh = hiringDripCopy(card('n', { company: { name: 'Bayside HVAC', domain: 'n.com' }, family: 'support', job: { title: 'Part-Time CSR - $18/hr', workplace: 'onsite' } }));
+    assert.doesNotMatch(fresh.followupBodies[2], /One thing up front/, 'a new thread heard it in email 1');
 });
 
 test('the call gap: a call in progress counts, and a first email drafted before a call waits at the send', () => {

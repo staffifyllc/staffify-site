@@ -11,7 +11,7 @@
 // they read, and when a card's own state stops the sequence (a caller reached them, a booking, a closed posting).
 import { spokenRole, DISCOVERY_LINK } from './_call-scripts.js';
 import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
-import { KICK_LINES, kickStart } from './_kick-rocks.js';
+import { KICK_LINES, SEQUENCE_LINES, kickStart } from './_kick-rocks.js';
 import { leadStatedDate, sectorOf } from './_hiring-intent.js';
 
 export { HIRING_DRIP_ID };
@@ -28,9 +28,22 @@ const PHONE_HOLDS = ['main_line_only', 'toll_free_only', 'owner_cell_unconfirmed
 const SPOKE = ['connected', 'callback', 'timing', 'suppress'];
 const EMAIL_OK = ['verified', 'named'];
 const FRONT_DESK = /\b(front[\s-]*desk|receptionist)\b/i;
-// A title that keeps the seat in the US or one state: "(anywhere US)", "FL/IL residents", "remote in Florida", "remote, Texas".
+// A title that keeps the seat in the US or one state: "(anywhere US)", "within U.S.", "US remote", "FL/IL residents",
+// "remote in Florida", "remote in TX", "New Jersey, Remote", "Florida-based". Never "US hours" or "US time zones" (a
+// schedule, not a place), the job noun "Resident Services", or the pronoun "us" ("join us based in Miami").
 const STATES = 'alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming';
-const US_ONLY = new RegExp('\\b(?:u\\.?s\\.?a?|united states)[- ]?(?:based|only|residents?)\\b|\\banywhere\\s+(?:in\\s+(?:the\\s+)?)?(?:u\\.?s\\.?a?|united states)\\b|\\bresidents?\\b|\\bremote\\s*(?:\\(|,|-|in\\b)\\s*(?:the\\s+)?(?:u\\.?s\\.?a?|united states|' + STATES + ')\\b', 'i');
+const CODES = 'AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY';
+const US = '(?:U\\.S\\.A?\\.?|USA|US|United States)';
+const NOT_SCHEDULE = '(?!\\s*(?:hours|time|business hours|time ?zones?|shift)\\b)';
+const US_ONLY = [
+    new RegExp('\\b' + US + '(?:[- ](?:[Bb]ased|[Oo]nly|ONLY|[Rr]esidents?)\\b|\\s+[Rr]emote\\b)'),
+    new RegExp('\\b(?:[Aa]nywhere\\s+(?:in\\s+(?:the\\s+)?)?|[Ww]ithin\\s+(?:the\\s+)?)' + US + NOT_SCHEDULE),
+    new RegExp('\\b[Rr]emote\\s*(?:\\(|,|-|\\s)\\s*(?:in\\s+)?(?:the\\s+)?' + US + '\\b' + NOT_SCHEDULE),
+    new RegExp('\\b(?:' + STATES + ')(?:[- ]based|\\s+residents?|,\\s*remote)\\b' + NOT_SCHEDULE, 'i'),
+    new RegExp('\\bremote\\s*(?:\\(|,|-|\\s)\\s*(?:in\\s+)?(?:' + STATES + ')\\b' + NOT_SCHEDULE, 'i'),
+    new RegExp('\\b(?:[Rr]emote\\s+in\\s+(?:' + CODES + ')|(?:' + CODES + ')(?:\\s*\\/\\s*(?:' + CODES + '))*\\s+[Rr]esidents?|(?:' + CODES + ')-[Bb]ased)\\b'),
+];
+const usOnly = title => US_ONLY.some(re => re.test(String(title || '')));
 /** The post is remote, and our researcher did not doubt it (the tag is wrong in both directions: Mad River). */
 const remoteOf = card => !!(card && card.job && card.job.workplace === 'remote') && !/not\s+confirmed\s+remote/i.test(String(card.lead && card.lead.notes || ''));
 
@@ -45,7 +58,7 @@ export function hiringDripStop(card) {
     // no to ours before we write (research, 2026-10-30). The callers can still try them; the emails don't.
     const j = card.job || {};
     if (FRONT_DESK.test(j.title || '') && !/\b(virtual|remote)\b/i.test(j.title || '') && !remoteOf(card)) return 'A front desk seat: the callers work it, not email';
-    if (((j.restrictions || {}).soft || []).some(x => /US-based/.test(x)) || US_ONLY.test(j.title || '')) return 'The post asks for US-based applicants';
+    if (((j.restrictions || {}).soft || []).some(x => /US-based/.test(x)) || usOnly(j.title)) return 'The post asks for US-based applicants';
     if (SPOKE.includes(card.callOutcome) || (card.callHistory || []).some(h => h && SPOKE.includes(h.outcome))) return 'A caller already spoke with them';
     const c = card.contact || {};
     if (!c.email || !c.firstName || !EMAIL_OK.includes(c.status)) return 'No verified owner email';
@@ -75,10 +88,11 @@ const num = s => Number(String(s).replace(/,/g, ''));
 /** The pay a posting states, read from its title: { low, high, unit, from } or null. Only dollar amounts count. */
 const AMOUNTS = new RegExp(AMOUNT.source, 'gi');
 // "$500 sign-on bonus", "$250 referral bonus", "$100 stipend" are not pay.
-const NOT_PAY = /^\W*(?:(?:sign[\s-]*on|signing|referral|retention|relocation|hiring)\s+)?(?:bonus|stipend)\b/i;
+const NOT_PAY = /^\s*(?:(?:sign[\s-]*on|signing|referral|retention|relocation|hiring)\s+)?(?:bonus|stipend)\b/i;
 export function postedPay(title) {
     const t = String(title || '');
-    const m = [...t.matchAll(AMOUNTS)].find(x => !NOT_PAY.test(t.slice(x.index + x[0].length, x.index + x[0].length + 30)));
+    // ("$13, bonus eligible": the amount's own trailing comma belongs to what follows.)
+    const m = [...t.matchAll(AMOUNTS)].find(x => { const end = x.index + x[0].replace(/[\s,]+$/, '').length; return !NOT_PAY.test(t.slice(end, end + 30)); });
     if (!m) return null;
     const k = !!(m[2] || m[4]);
     // "$50–60K": the K on the top of the range covers the bottom too.
@@ -113,9 +127,10 @@ export function payPhrase(pay) {
 /** The seat as it reads in a sentence: "Paralegal", "Executive Assistant", "Customer Service Rep". */
 export function dripRole(title) {
     // "Medical College is hiring: Senior Admin", "Telemarketer w/ career growth!", "Bilingual Telemarketer: English-Spanish".
-    let t = String(title || '').replace(/^.*?\bis\s+hiring\s*:\s*/i, '').replace(/\s+w\/.*$/i, '').replace(/^work\s+from\s+home\s+/i, '');
+    let t = String(title || '').replace(/^.*?\bis\s+hiring\s*:\s*/i, '').replace(/^(?:now\s+hiring|hiring\s+now|urgently\s+hiring|we'?re\s+hiring|work\s+from\s+home)\s*[:!-]?\s*/i, '').replace(/\s+w\/.*$/i, '');
+    // "<role>: <specialty>" keeps the role ("Paralegal: Family Law"); "<label>: <role>" keeps the role on the right.
     const colon = t.split(':');
-    if (colon.length > 1) t = colon[0].trim().split(/\s+/).length >= 2 ? colon[0] : colon.slice(1).join(':');
+    if (colon.length > 1) { const left = colon[0].trim(), right = colon.slice(1).join(':').trim(); t = ROLE_END.test(left) || !ROLE_IN.test(right) ? left : right; }
     let r = spokenRole(t).replace(/\s+(to|for)\s+(the\s+)?\S.*$/i, '');
     // "Representative- Mandarin Speaking", "Coordinator-Card Account Servicing", "Scheduler Portuguese Speaking".
     r = r.split(/\s*[-–]\s+|\s+[-–]\s*/)[0].replace(/\s+[A-Z][a-z]+\s+speaking$/i, '');
@@ -159,7 +174,13 @@ const VALUE = {
 const LAW_VALUE = 'intake calls on your script, court dates and deadlines on your calendar, and time entry for billing';
 // The site says we do no paralegal work: these seats hear that first.
 const LEGAL_SEAT = /\b(paralegal|legal\s+assistant)\b/i;
-const OFFSHORE_TITLE = /\b(latam|latin america|philippines|asia|india|pakistan|egypt|lebanon|colombia|(?<!new\s)mexico|international|worldwide|offshore|overseas)\b|\bPH[\s-]based\b/i;
+const ROLE_WORDS = '(?:assistant|associate|agent|admin|administrator|coordinator|representative|rep|csr|specialist|receptionist|dispatcher|scheduler|setter|telemarketer|caller|secretary|paralegal|clerk|editor|manager|sdr|bdr|va|processor|biller|closer|consultant|advisor|officer|liaison|operator)';
+const ROLE_END = new RegExp('\\b' + ROLE_WORDS + 's?\\s*$', 'i');
+const ROLE_IN = new RegExp('\\b' + ROLE_WORDS + 's?\\b', 'i');
+const OFFSHORE_TITLE = /\b(latam|latin america|philippines|asia|india|pakistan|egypt|lebanon|colombia|(?<!new\s)mexico|offshore|overseas)\b|\bPH[\s-]based\b/i;
+// Part-time as posted: "Part-Time", "(PT)", "PT 25 hrs", "PT only". Never "PT Clinic" or "Outpatient PT" (physical
+// therapy), and not when the post also offers full time ("FT/PT", "full or part time", "Part-Time to Full-Time").
+const partTimeOf = t => (/\bpart[\s-]*time\b/i.test(t) || /\(PT\)|\bPT\s*(?:\d|hrs?\b|hours?\b|only\b)/.test(t)) && !/\bfull[\s-]*time\b|\bfull or part\b/i.test(t) && !/\bFT\b/.test(t);
 // "Calabasas (role based in Fresno)" or "Austin/Dallas" reads like our notes: the first city alone, or none.
 const cityOf = c => { const s = String(c || '').replace(/\(.*?\)/g, ' ').split('/')[0].replace(/\s+/g, ' ').trim(); return /^[A-Za-z][A-Za-z .'-]*$/.test(s) && !/^remote\b/i.test(s) ? s : null; };
 
@@ -177,12 +198,12 @@ export function postedDay(card) {
 }
 
 /** The four emails for one card. Nothing promises an outcome, a timeline or a number the site does not publish. */
-export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', after = 0 } = {}) {
+export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', after = 0, usedLines = [] } = {}) {
     const SIGN = signer + '\nStaffify';
-    // Each email's own way out: a reply, a different line each time (api/_kick-rocks.js). A row moved from older copy
-    // after `after` emails went out skips the pool lines that match the older ones it already sent (their first three).
+    // Each email's own way out: a reply, a different line each time (api/_kick-rocks.js). A row moved from older copy,
+    // with `after` emails already written, skips the pool lines it already carried (`used`, read from those emails).
     const L = KICK_LINES.length, start = kickStart((card.contact || {}).email);
-    const used = new Set(Array.from({ length: Math.min(Number(after) || 0, 3) }, (_, i) => i));
+    const used = new Set(usedLines);
     let shift = 0;
     while (shift < L && [2, 3, 4].filter(n => n > after).some(n => used.has((start + n - 1 + shift) % L))) shift++;
     const out = n => KICK_LINES[(start + n - 1 + (n > 1 && shift < L ? shift : 0)) % L];
@@ -215,14 +236,18 @@ export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', a
         ? `One thing up front: our hires work remotely from Latin America or the Philippines. If the work can be done remotely, we can put a full-time person on it${price}. ${work}`
         : `If so, we can fill it with a full-time remote hire from Latin America or the Philippines${price}. ${work}`;
     // A part-time post is told plainly that ours are full-time (AlestaCare said no to a pitch that hid it).
-    if ((/\bpart[\s-]*time\b/i.test(title) || /\bPT\b/.test(title)) && !/\bfull[\s-]*time\b|\bfull or part\b/i.test(title) && !/\bFT\b/.test(title)) offer += " You listed it as part-time, and our hires are full-time, so this fits if there's a full week of work to give them.";
+    const partTime = partTimeOf(title);
+    if (partTime) offer += " You listed it as part-time, and our hires are full-time, so this fits if there's a full week of work to give them.";
     const subject = role === 'open' ? 'Your open role' : `Your ${role} hire`;
     const bodyText = [`Hi ${first},`, seen, offer,
         'You skip the applicant pile. We find and screen candidates, you interview the finalists and pick one, and we run their payroll and HR.',
         `Reply "open" or "filled." If it's open, grab a time and I'll show you ${remote ? "who we'd look for" : 'which parts could go remote'}:\n${link}`,
         SIGN, out(1)].join('\n\n');
     const followupBodies = {
-        2: [`Hi ${first},`, "The risk with any hire is someone who interviews well and then can't do the job. " + (legalSeat ? "We place legal admins, not paralegals, and here's how we screen them." : "Here's how we screen remote candidates."),
+        // Email 2 names where our hires work for everyone: a thread moved from the older copy never heard it in email 1,
+        // nor the part-time note.
+        2: [`Hi ${first},`, "The risk with any hire is someone who interviews well and then can't do the job. " + (legalSeat ? "We place legal admins, not paralegals, from Latin America and the Philippines, and here's how we screen them." : "Here's how we screen our remote candidates in Latin America and the Philippines.")
+                + (partTime && after >= 1 ? " One thing up front: our hires are full-time, so this fits if there's a full week of work to give them." : ''),
             'Every candidate does a written screen, a live video interview and a paid skills test, and we call their references. For seats that talk to customers or clients, we test their spoken and written English. We check their computer and internet speed too.'
                 + (law ? ' They sign a confidentiality agreement, work under your data policies and see only the systems you give them access to.' : ''),
             'The finalists then do a test task modeled on your work, so you see what they can do before anyone starts.',
@@ -232,7 +257,7 @@ export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', a
         3: [`Hi ${first},`, 'If the worry with a remote hire is ending up as their manager, that part is ours.',
             "You direct the work. We run their payroll, HR and time tracking, and our managers handle the check-ins and corrections, so you aren't chasing anyone. They're never shared with another business.",
             "If they leave or it isn't working, we find and place someone new at no additional cost, for as long as you're with us. That's our lifetime replacement guarantee. It's month to month, with no long-term contract.",
-            `${legalSeat ? `If you're still filling ${job}, pick a time and I'll walk you through what a legal admin could take off it.` : `If ${job} is still open, pick a time and I'll walk you through it.`} If we're not a fit, I'll say so.\n${link}`, SIGN, out(3)].join('\n\n'),
+            `${legalSeat ? `If you're still filling ${job}, pick a time and I'll walk you through what a legal admin could take off your plate.` : `If ${job} is still open, pick a time and I'll walk you through it.`} If we're not a fit, I'll say so.\n${link}`, SIGN, out(3)].join('\n\n'),
         4: [`Hi ${first},`, `Did ${role === 'open' ? 'the job you posted' : `your ${role} job`} get filled? If it did, congrats.`,
             `If it's still open, or another seat opens up later, we'll run the search for a full-time remote ${legalSeat ? 'legal admin' : 'hire'} and you'll pick from the finalists.`,
             'This is my last note, so one word back is plenty: "filled" or "open."', SIGN, out(4)].join('\n\n'),
@@ -326,6 +351,10 @@ export function rebalanceDripRows(state, cardsById, accounts, now = Date.now()) 
     return moved;
 }
 
+// The pool lines an email already carried: a pool line itself, or the older line it was written from (the first three
+// older lines became the first three of the pool).
+const linesIn = bodies => [...new Set(bodies.flatMap(b => KICK_LINES.map((l, i) => (b.includes(l) || (i < 3 && b.includes(SEQUENCE_LINES[i])) ? i : -1)).filter(i => i >= 0)))];
+
 /**
  * Rows written with older copy take the current copy for every email not yet written: all of it before the first
  * draft, otherwise only the follow-ups after the one already drafted (a saved Gmail draft is never rewritten here, and
@@ -338,7 +367,10 @@ export function refreshDripCopy(state, cardsById) {
         const sent = Number(r.sentTouches) || 0;
         // Nothing written yet, whatever the status (a held row too): the whole sequence. A draft being created may exist.
         const unwritten = !sent && !r.draftId && !r.threadId && !/^draft_creation_/.test(String(r.status || ''));
-        const copy = hiringDripCopy(cardsById.get(r.hiringId), { signer: r.owner, after: unwritten ? 0 : sent });
+        // Written: every email sent, and the next one when its Gmail draft exists or is being made.
+        const written = unwritten ? 0 : Math.min(4, sent + (r.draftId || /^draft_creation_/.test(String(r.status || '')) ? 1 : 0));
+        const bodies = Array.from({ length: written }, (_, i) => (i === 0 ? r.bodyText : (r.followupBodies || {})[i + 1]) || '');
+        const copy = hiringDripCopy(cardsById.get(r.hiringId), { signer: r.owner, after: written, usedLines: linesIn(bodies) });
         if (unwritten) Object.assign(r, { subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies });
         else {
             const firstFree = sent + (r.draftId ? 2 : 1);

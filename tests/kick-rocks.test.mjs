@@ -56,6 +56,20 @@ test('"kick rocks" as their answer: under a long signature, after a greeting, or
     assert.ok(KICK_LINES.every((_, i) => kickLine('x' + i + '@a.com', 0) === KICK_LINES[kickStart('x' + i + '@a.com')]));
 });
 
+test('a joke or a question after "kick rocks" goes to a person; the quoted, thanked or greeted answer still stops', () => {
+    // Second review, 2026-10-30: the first-line rule must read what follows it, because classify re-reads stored threads.
+    const me = 'paul@staffifyhq.com', them = 'j@x.com';
+    const cl = t => classify([{ id: 'r', from: them, to: [me], text: t, sent: false }], them, [me]).status;
+    const sig = '\n\nJane Doe\nOwner | Acme Insurance Agency\n123 Main St, Austin, TX 78701\nCall or text (512) 555-1234';
+    for (const t of ['“Kick rocks”' + sig, '"kick rocks"' + sig, 'Kick rocks, thanks.' + sig, 'Kick rocks 👋' + sig, 'Paul,\nKick rocks.' + sig, 'Morning Paul,\nKick rocks.' + sig, 'No. Kick rocks.'])
+        assert.equal(cl(t), 'suppressed', t);
+    for (const t of ['Kick rocks!\nJust kidding, call me Tuesday', 'Hi Paul,\nKick rocks!\n\nJust kidding, we are interested. When can we talk?', 'Kick rocks\nhaha jk, still open, call me', 'Yes, kick rocks.\nKidding, call me tomorrow',
+        'No kick rocks!\nWe still need someone, send the profiles.', 'Kick rocks.\nJust kidding. Send profiles.', "I'd rather not kick rocks.\nStill open, send pricing", 'No kick rocks needed, call me',
+        'Kick rocks?\nHa, no. Call me Tuesday.', '"Kick rocks"\nLOL, love it. Still open, send profiles.', 'Kick rocks??\n\nNot a chance, send the profiles']) {
+        assert.notEqual(cl(t), 'suppressed', t); assert.equal(asksToStop(t), false, t);
+    }
+});
+
 test('the email worker lets go of anyone who answers "kick rocks", and not of someone whose reply only quotes our line', () => {
     const me = 'paul@staffifyhq.com', them = 'jjohnson10@farmersagent.com';
     const reply = text => [{ id: 'r', from: them, to: [me], text, sent: false }];
@@ -80,17 +94,28 @@ test('each email of the Hiring now sequence ends with its own way out: a reply, 
     for (const b of bodies) { assert.doesNotMatch(b, /kick-rocks\/|One click|unsubscribe/i); assert.equal(asksToStop(b.split('\n\n').at(-1)), false, 'our own line, quoted back, never reads as a stop'); }
 });
 
-test('a row moved from the older lines never hears the line it just got again', () => {
-    for (const email of ['pat@b.com', 'dana@acme.com', 'a1@x.com', 'a2@x.com', 'a3@x.com', 'a4@x.com', 'a5@x.com', 'a6@x.com']) {
+test('a row moved from the older lines never hears a line it already got again, sent or drafted', () => {
+    const emails = ['pat@b.com', 'dana@acme.com', ...Array.from({ length: 30 }, (_, i) => 'a' + i + '@x.com')];
+    const near = (a, b) => a.slice(0, 12) === b.slice(0, 12) || (a.startsWith('Not for you') && b.startsWith('Still not for you'));
+    for (const email of emails) {
         const card = { id: 'hire:cccccccccccccccc', company: { name: 'Acme', domain: 'x.com' }, job: { title: 'Scheduler' }, contact: { firstName: 'Pat', email, status: 'verified' } };
-        for (const after of [1, 2]) {
-            const c = hiringDripCopy(card, { after });
-            const lines = [2, 3, 4].filter(n => n > after).map(n => c.followupBodies[n].split('\n\n').at(-1));
-            const sent = SEQUENCE_LINES.slice(0, after).map(l => l.slice(0, 12));
-            for (const l of lines) assert.ok(!sent.some(x => KICK_LINES.find(k => k === l) && (l.slice(0, 12) === x || (x === 'Still not fo' && l.startsWith('Not for you')))), email + ' after ' + after + ': ' + l);
+        const old = { 2: 'Hi Pat,\n\nold 2\n\n' + SEQUENCE_LINES[1], 3: 'old 3\n\n' + SEQUENCE_LINES[2], 4: 'old 4\n\n' + SEQUENCE_LINES[3] };
+        const row = over => ({ campaignId: HIRING_DRIP_ID, hiringId: card.id, owner: 'Paul', copyVersion: 'hiring-now-2026-10-30-kick-rocks-link', subject: 'old', bodyText: 'Hi Pat,\n\nold 1\n\n' + SEQUENCE_LINES[0], followupBodies: { ...old }, ...over });
+        const state = { records: [row({ id: 'sent1', status: 'sent', sentTouches: 1, threadId: 't' }), row({ id: 'drafted1', status: 'draft_saved', sentTouches: 0, draftId: 'd' }), row({ id: 'drafted2', status: 'draft_saved', sentTouches: 1, draftId: 'd', threadId: 't' })] };
+        refreshDripCopy(state, new Map([[card.id, card]]));
+        for (const r of state.records) {
+            const written = r.id === 'drafted2' ? 2 : 1;
+            const before = [SEQUENCE_LINES[0], SEQUENCE_LINES[1]].slice(0, written);
+            const lines = [2, 3, 4].filter(n => n > written).map(n => r.followupBodies[n].split('\n\n').at(-1));
+            for (const l of lines) assert.ok(!before.some(x => near(l, x)), email + ' ' + r.id + ': ' + l);
             assert.equal(new Set(lines).size, lines.length);
         }
     }
+    // A row whose sent email carried none of our lines (the first version's sign-off) keeps its own rotation.
+    const card = { id: 'hire:dddddddddddddddd', company: { name: 'Acme', domain: 'x.com' }, job: { title: 'Scheduler' }, contact: { firstName: 'Pat', email: 'pat@b.com', status: 'verified' } };
+    const st = { records: [{ id: 'v1', campaignId: HIRING_DRIP_ID, hiringId: card.id, owner: 'Paul', copyVersion: 'hiring-now-2026-10-30', status: 'sent', sentTouches: 1, threadId: 't', subject: 'old', bodyText: "old 1\n\nIf you'd rather I not follow up, just let me know.", followupBodies: {} }] };
+    refreshDripCopy(st, new Map([[card.id, card]]));
+    assert.ok(st.records[0].followupBodies[2].endsWith(kickLine('pat@b.com', 1)));
 });
 
 test('rows written with the older copy take the new lines for every email not yet written', () => {
