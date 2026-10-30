@@ -10,17 +10,18 @@
 // Nothing here calls, texts or emails anyone. Submitted leads meet every Hiring now check when the hourly run works them.
 import { redis, readBody } from './_auth.js';
 import { KEY } from './_outreach-queue.js';
-import { HK, allRecords, parseValue, qualifyLead, tollFree, leadKey } from './_hiring-intent.js';
+import { HK, allRecords, parseValue, qualifyLead, tollFree, leadKey, leadDomain } from './_hiring-intent.js';
 import { addPending, cellMatch } from './_hiring-run.js';
 import { optedOutSet } from './_optout.js';
 import { rrConfigured, account, lookupPerson, checkStatus, searchPeople, profileOf } from './_rocketreach.js';
 import { dayKey } from './_outreach-policy.js';
 import { agentAuthorized, knownIndex, knownWhy, leadProblem, capLookup, agentProfile, remember, phoneCheck, rememberLines, lineProof, provenPhone, carrierLookup, carrierConfigured, LEAD_FIELDS, LOOKUPS_PER_DAY, CHECKS_PER_DAY, LEAD_AGENT_KEYS as K } from './_lead-agent.js';
 
-// The Hub's own test for a RocketReach profile (api/_hiring-run.js cellMatch): this lead's owner, at this business, in its state.
-const hostOf = u => { try { return new URL(/^https?:/i.test(String(u)) ? String(u) : 'https://' + u).hostname.toLowerCase().replace(/^www\./, ''); } catch { return null; } };
-const ownerMatch = (l, proof) => cellMatch({ company: { name: l.business, domain: hostOf(l.website) }, contact: { name: [l.owner_first, l.owner_last].filter(Boolean).join(' ') }, job: { usState: l.state || null } },
-    { name: proof.person, employer: proof.employer, employerDomain: proof.employerDomain, title: proof.title, region: proof.region, location: proof.location });
+// The Hub's own test for a RocketReach profile (api/_hiring-run.js cellMatch): this lead's owner, at this business, in its
+// state. The domain is the Hub's (a shared host like statefarm.com or facebook.com ties nobody), and a profile with no
+// state is refused, as the Hub does for ids found by a people search.
+export const ownerMatch = (l, proof) => cellMatch({ company: { name: l.business, domain: l.website ? leadDomain(l.website) : null }, contact: { name: [l.owner_first, l.owner_last].filter(Boolean).join(' ') }, job: { usState: l.state || null } },
+    { name: proof.person, employer: proof.employer, employerDomain: proof.employerDomain, title: proof.title, region: proof.region, location: proof.location }, { strictState: true });
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');

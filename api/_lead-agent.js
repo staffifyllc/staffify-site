@@ -99,7 +99,12 @@ const LINE_TTL = 90 * 86400;
 const FRESH_MS = 30 * 86400e3;
 const fresh = (at, now) => now - (Date.parse(at || '') || 0) < FRESH_MS;
 // A number the agent itself calls the main line, front desk or reception is never the owner's cell, whatever the carrier.
-const MAIN_WORDS = /\b(main(\s*-?\s*line)?|mainline|switchboard|front[\s-]?desk|reception(ist)?|headquarters|hq|office\s+(line|number|phone)|business\s+(line|number)|toll[\s-]?free)\b/i;
+const MAIN_WORDS = /\b(main(?!\s+(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|hwy|highway)\b)(\s*-?\s*line)?|mainline|switchboard|front[\s-]?(desk|office)|reception(ist)?|headquarters|hq|office|business\s+(line|number|phone)|work\s+(line|number|phone)|toll[\s-]?free)\b/i;
+// The agent's own label for the number may only say it is a cell (or say nothing).
+const CELL_LABEL = /^\s*(?:mobile|cell|cellular|wireless)\b/i;
+// Phone-shaped runs in a quote: "(615) 555-0100", "615.555.0100", "+1 615 555 0100".
+const PHONES_IN = /(?:\+?1[\s.-]*)?\(?\d{3}\)?[\s.-]*\d{3}[\s.-]*\d{4}\b/g;
+const wordIn = (text, w) => new RegExp('(?:^|[^a-z])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:[^a-z]|$)', 'i').test(text);
 
 /** Twilio's line type for one US number: { type, carrier }. Throws when Twilio does not answer. */
 export async function carrierLookup(d10, { env = process.env, fetcher = fetch } = {}) {
@@ -114,7 +119,7 @@ export async function carrierLookup(d10, { env = process.env, fetcher = fetch } 
  * and did not mark the number invalid. Whose cell it is is a separate question (leadProblem).
  */
 export const provenCell = proof => !!proof && (proof.by === 'carrier' ? proof.type === 'mobile' && !!proof.carrier
-    : proof.by === 'rocketreach' && MOBILE.test(String(proof.type || '')) && proof.valid !== false && !(proof.carrierType && proof.carrierType !== 'mobile'));
+    : proof.by === 'rocketreach' && proof.valid !== false && (proof.carrierType ? proof.carrierType === 'mobile' && !!proof.carrier : MOBILE.test(String(proof.type || ''))));
 
 /**
  * The carrier's answer for up to 10 numbers. A number asked before is answered from memory, free; a new one counts against
@@ -157,10 +162,14 @@ export async function rememberLines(kv, profile, now = Date.now()) {
         const d = ten(x && x.number);
         if (d.length !== 10) continue;
         const known = parseJson(await kv.get(K.line(d)));
-        if (known && known.by === 'carrier') continue;
-        if (x.valid === false) continue;   // RocketReach's own "invalid": never proof (the Hub's own lookups drop it too)
+        // RocketReach's own "invalid" is never proof (the Hub's own lookups drop it too), and takes back an earlier lookup's.
+        if (x.valid === false) { if (known && known.by === 'rocketreach') await kv.del(K.line(d)); continue; }
+        // A carrier that said something other than mobile stands; a carrier's named "mobile" rides along with the lookup.
+        if (known && known.by === 'carrier' && !(known.type === 'mobile' && known.carrier)) continue;
+        const carried = known && known.by === 'carrier' ? { carrier: known.carrier, carrierType: known.type, carrierAt: known.at }
+            : known && known.by === 'rocketreach' && known.carrierType ? { carrier: known.carrier, carrierType: known.carrierType, carrierAt: known.carrierAt } : {};
         await kv.set(K.line(d), { by: 'rocketreach', type: x.type || null, grade: x.grade || null, valid: x.valid == null ? null : !!x.valid, person: profile.name || null,
-            employer: profile.employer || null, employerDomain: profile.employer_domain || profile.employerDomain || null, title: profile.title || null, location: profile.location || null, region: profile.region || null, at: new Date(now).toISOString() }, { ex: LINE_TTL });
+            employer: profile.employer || null, employerDomain: profile.employer_domain || profile.employerDomain || null, title: profile.title || null, location: profile.location || null, region: profile.region || null, at: new Date(now).toISOString(), ...carried }, { ex: LINE_TTL });
     }
 }
 /** What we know about a submitted number (the submit handler reads it before leadProblem). */
@@ -189,8 +198,8 @@ export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = n
     const p = ten(l.phone);
     if (p.length !== 10) return 'phone must be a 10-digit US number';
     if (tollFree(p)) return 'a toll-free number is never a lead';
-    if (MAIN_WORDS.test(String(l.phone_type || '')) || MAIN_WORDS.test(String(l.phone || '').replace(/[\d\s()+.-]/g, ' ')) || MAIN_WORDS.test(String(l.phone_evidence || '')))
-        return 'this number is described as a main line, front desk or office line: only the owner\'s own cell, never a main line';
+    if ((l.phone_type && !CELL_LABEL.test(String(l.phone_type))) || MAIN_WORDS.test(String(l.phone_type || '')) || MAIN_WORDS.test(String(l.phone || '').replace(/[\d\s()+.-]/g, ' ')) || MAIN_WORDS.test(String(l.phone_evidence || '')))
+        return 'this number is described as a main line, front desk or office line (or not as a cell): only the owner\'s own cell, never a main line';
     if (!proof) return 'phone is not proven a cell: ask the carrier (action phone) or look the owner up first. Never a main line.';
     if (!provenCell(proof)) return proof.by === 'carrier' ? `the carrier says this number is ${proof.type || 'unknown'}${proof.carrier ? ' (' + proof.carrier + ')' : ' and did not name itself'}, not a proven cell: never a main line`
         : proof.valid === false ? 'RocketReach marks this number invalid' : proof.carrierType ? `the carrier says this number is ${proof.carrierType}, not a cell` : 'RocketReach did not list this number as a mobile: never a main line';
@@ -198,9 +207,11 @@ export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = n
         // A carrier proves the line is a cell, not whose: the page must put the number beside the owner's name.
         if (!fresh(proof.at, now)) return 'the carrier was asked over 30 days ago: ask again (action phone)';
         if (!/^https:\/\//i.test(String(l.phone_source_url || ''))) return 'phone_source_url is required: the https page where the owner\'s number was found';
-        const ev = String(l.phone_evidence || ''), last4 = ten(l.phone).slice(-4);
-        const names = [l.owner_first, l.owner_last].map(x => String(x || '').trim().toLowerCase()).filter(x => x.length > 1);
-        if (!ev.replace(/\D/g, '').includes(last4) || !names.some(n => ev.toLowerCase().includes(n)))
+        // The very number as a phone number in the quote (not digits strung across a year or an address), and the owner's
+        // last name as a whole word (their first name when no last name was given).
+        const ev = String(l.phone_evidence || ''), want = ten(l.phone);
+        const name = String(l.owner_last || '').trim() || String(l.owner_first || '').trim();
+        if (!(ev.match(PHONES_IN) || []).some(x => ten(x) === want) || name.length < 2 || !wordIn(ev, name))
             return 'phone_evidence is required: the exact words on that page that put this number beside the owner\'s name. A number the business publishes with no owner name beside it is not the owner\'s cell.';
     } else if (match) {
         // A lookup's number belongs to the person RocketReach found: it must be this lead's owner, at this business.
@@ -214,7 +225,7 @@ export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = n
 }
 
 /** What the agent may see of a RocketReach profile: who, where, and each number and address with RocketReach's own type and grade. */
-export const agentProfile = p => p && ({ id: p.id, name: p.name, title: p.title, employer: p.employer, employer_domain: p.employerDomain, location: p.location,
+export const agentProfile = p => p && ({ id: p.id, name: p.name, title: p.title, employer: p.employer, employer_domain: p.employerDomain, location: p.location, region: p.region || null,
     phones: (p.phones || []).map(x => ({ number: x.number, type: x.type, grade: x.grade, valid: x.valid })),
     emails: (p.emails || []).map(x => ({ email: x.email, type: x.type, grade: x.grade, smtp: x.smtp })) });
 

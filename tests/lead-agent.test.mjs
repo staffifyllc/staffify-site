@@ -83,8 +83,56 @@ test('submit refuses what the agent was told never to send: no cell, a main line
 
 function lineKv() {
     const m = new Map();
-    return { m, async get(k) { return m.has(k) ? m.get(k) : null; }, async set(k, v) { m.set(k, v); return 'OK'; }, async incr(k) { m.set(k, (m.get(k) || 0) + 1); return m.get(k); }, async decr(k) { m.set(k, (m.get(k) || 0) - 1); return m.get(k); }, async expire() { return 1; } };
+    return { m, async get(k) { return m.has(k) ? m.get(k) : null; }, async set(k, v) { m.set(k, v); return 'OK'; }, async del(k) { m.delete(k); return 1; }, async incr(k) { m.set(k, (m.get(k) || 0) + 1); return m.get(k); }, async decr(k) { m.set(k, (m.get(k) || 0) - 1); return m.get(k); }, async expire() { return 1; } };
 }
+
+test('third check: whole names, the very number, plain office wording, the Hub\'s own owner test, and RocketReach and carrier together', async () => {
+    const { ownerMatch } = await import('../api/lead-agent.js');
+    const idx = await knownIndex(deps);
+    const now = Date.parse('2026-10-30T18:00:00Z');
+    const CAR = { by: 'carrier', type: 'mobile', carrier: 'Verizon Wireless', at: '2026-10-30T17:00:00Z' };
+    const why = (l, proof) => leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: ownerMatch, now });
+    const page = (over) => lead({ phone_source_url: 'https://newplumbing.com/about', ...over });
+    // The owner's name as a whole word, the last name when there is one.
+    assert.match(why(page({ owner_first: 'Pat', owner_last: 'Quinlan', phone_evidence: 'New patients: text Sarah at (615) 555-0100' }), CAR), /phone_evidence/);
+    assert.match(why(page({ owner_first: 'Will', owner_last: 'Jones', phone_evidence: 'Text Sarah at 615-555-0100 and she will get back to you' }), CAR), /phone_evidence/);
+    assert.match(why(page({ phone_evidence: 'Dana (office manager) 615-555-0100' }), CAR), /main line|phone_evidence/);
+    // The number itself, never digits strung across a year or an address.
+    assert.match(why(page({ phone: '+16155552026', phone_evidence: 'Dana Reyes, owner. Text 615-555-0100. (c) 2026' }), CAR), /phone_evidence/);
+    assert.match(why(page({ phone: '+16155550012', phone_evidence: 'Dana Reyes, 100 Elm Ave Suite 12, cell 615-555-0199' }), CAR), /phone_evidence/);
+    assert.equal(why(page({ phone_evidence: 'Dana Reyes, 210 Main St. Cell: (615) 555-0100' }), CAR), null, 'a street called Main is not a main line');
+    // Plain office wording, and a label that is not a cell.
+    assert.match(why(page({ phone_evidence: 'Dana Reyes, Owner | Office: (615) 555-0100' }), CAR), /main line/);
+    for (const t of ['office', 'business', 'work']) assert.match(why(page({ phone_type: t, phone_evidence: 'Cell: Dana Reyes (615) 555-0100' }), CAR), /not as a cell/, t);
+    // RocketReach: the Hub's own owner test, with the state and the Hub's domain rules.
+    const kv = lineKv();
+    const lookup = async (profile) => capLookup({ kv, rr: { account: acct(500), lookupPerson: async () => ({ found: true, profile }) }, day: 'd' }, { id: 1 });
+    await lookup({ id: 1, name: 'Dana Reyes', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: 'TX', location: 'Greater Houston Area', phones: [{ number: '+16155550100', type: 'mobile', grade: 'A', valid: true }] });
+    assert.match(why(lead(), await lineProof(kv, '6155550100')), /Dana Reyes is in TX, the job is in TN/);
+    await lookup({ id: 2, name: 'Dana Reyes', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: null, location: null, phones: [{ number: '+16155550101', type: 'mobile', grade: 'A', valid: true }] });
+    assert.match(why(lead({ phone: '+16155550101' }), await lineProof(kv, '6155550101')), /no state/);
+    await lookup({ id: 3, name: 'John Smith', title: 'Claims Adjuster', employer: 'State Farm', employerDomain: 'statefarm.com', region: 'TX', phones: [{ number: '+15125550100', type: 'mobile', grade: 'A', valid: true }] });
+    const sf = lead({ owner_first: 'John', owner_last: 'Smith', business: 'John Smith - State Farm Insurance Agent', website: 'https://www.statefarm.com/agent/us/tx/austin/john-smith-abc123', state: 'TX', city: 'Austin', phone: '+15125550100', owner_email: 'john@jsmithagency.com' });
+    assert.match(why(sf, await lineProof(kv, '5125550100')), /not this owner's/);
+    // A later "invalid" takes back an earlier lookup's proof.
+    await lookup({ id: 4, name: 'Dana Reyes', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: 'TN', phones: [{ number: '+16155550102', type: 'mobile', grade: 'A', valid: null }] });
+    assert.ok(await lineProof(kv, '6155550102'));
+    await lookup({ id: 4, name: 'Dana Reyes', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: 'TN', phones: [{ number: '+16155550102', type: 'mobile', grade: 'A', valid: false }] });
+    assert.equal(await lineProof(kv, '6155550102'), null);
+    // Carrier first, then a lookup: the lookup proves it, with the carrier's answer kept.
+    kv.m.set('staffify:lead-agent:line:6155550103', { ...CAR });
+    await lookup({ id: 5, name: 'Dana Reyes', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: 'TN', phones: [{ number: '+16155550103', type: 'mobile', grade: 'A', valid: true }] });
+    const both = await lineProof(kv, '6155550103');
+    assert.equal(both.by, 'rocketreach'); assert.equal(both.carrier, 'Verizon Wireless');
+    assert.equal(why(lead({ phone: '+16155550103' }), both), null);
+    // RocketReach says "professional", the carrier names itself and says mobile: the carrier decides the line type.
+    await lookup({ id: 6, name: 'Dana Reyes', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: 'TN', phones: [{ number: '+16155550104', type: 'professional', grade: 'A', valid: true }] });
+    process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY = '10';
+    const [r] = await phoneCheck({ kv, day: 'd', tollFree, lookup: async () => ({ type: 'mobile', carrier: 'Verizon Wireless' }) }, ['6155550104'], now);
+    assert.equal(r.mobile, true);
+    assert.equal(why(lead({ phone: '+16155550104' }), await lineProof(kv, '6155550104')), null);
+    delete process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY;
+});
 
 test('the carrier check: cached per number, inside the day\'s cap, refunded when the carrier does not answer', async () => {
     process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY = '2';
