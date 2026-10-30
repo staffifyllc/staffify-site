@@ -1,10 +1,10 @@
 // Paul, 2026-10-29/30: "we need to be emailing and dripping emails to the folks sitting in our queue", "asking if the
 // job is still available ... 'i see you have this listed for $22 an hour' we can fill this role with someone amazing for
-// $14 an hour", and "never put in data for Main Line".
+// $14 an hour", and "never put in data for Main Line". Then, of that copy: "theres very little value in this message".
 process.env.KV_REST_API_URL ||= 'https://example.invalid'; process.env.KV_REST_API_TOKEN ||= 'x';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HIRING_DRIP_ID, hiringDripStop, postedPay, payPhrase, hourlyOf, dripRole, dripCompany, hiringDripCopy, dripCandidates, dripSender, dripRow, rebalanceDripRows } from '../api/_hiring-drip-copy.js';
+import { HIRING_DRIP_ID, hiringDripStop, dripWait, postedPay, payPhrase, hourlyOf, dripRole, dripCompany, postedDay, hiringDripCopy, dripCandidates, dripSender, dripRow, rebalanceDripRows } from '../api/_hiring-drip-copy.js';
 import { hiringDripFollowup } from '../api/_hiring-drip-campaign.js';
 import { prepareDripRows, addDripRows, enrollHiringDrip, hiringSupply, contactProps, dripAllowed } from '../api/_hiring-drip.js';
 import { inCampaign, tagCampaign } from '../api/_outreach-campaign.js';
@@ -23,22 +23,82 @@ const CFG = { allowedCampaignIds: ['staffify-talent-network-outreach'], accounts
 const emptyState = () => ({ revision: 3, records: [], suppressions: [], assignments: [], pausedOwners: [] });
 const lines = s => s.split('\n');
 
-test('email 1 asks if the role is open, quotes their posted rate back, offers $14 an hour and asks for the appointment', () => {
-    const c = hiringDripCopy(card('a'));
-    assert.equal(c.subject, 'Is the Legal Assistant role still open?');
-    assert.match(c.bodyText, /^Hi Denise,\n\nIs the Legal Assistant role at MDM Legal still open\? I see you have it listed at \$22 an hour\.\n\n/);
-    assert.match(c.bodyText, /someone amazing for \$14 an hour\. They work only for you, and we handle the recruiting and vetting\./);
-    assert.match(c.bodyText, /Do you have 15 minutes this week\? I'll show you how it works\. Grab a time here:\nhttps:\/\/calendly\.com\/go-staffify\/discovery-call/);
+test('email 1: their post and pay, our remote hire at $14 an hour, the work it takes over, a one-word answer and the link', () => {
+    const c = hiringDripCopy(card('a', { family: 'support', company: { name: 'Bayside HVAC', domain: 'a.com' }, job: { title: 'Customer Service Rep - $22/hr', city: 'Tampa', workplace: 'remote', source: 'provided' }, lead: { posting_date: 'Posted 2026-10-26' } }), { unsubscribe: () => 'https://k.example/x' });
+    assert.equal(c.subject, 'Your Customer Service Rep hire');
+    assert.equal(c.bodyText, [
+        'Hi Denise,',
+        'I saw the Customer Service Rep job you posted in Tampa on Oct 26, listed at $22 an hour. Is it still open?',
+        "If so, we can fill it with a full-time remote hire from Latin America or the Philippines for $14 an hour. They'd work only for you, on your hours, and take over your customer calls and emails and every follow-up.",
+        'You skip the applicant pile. We find and screen candidates, you interview the finalists and pick one, and we run their payroll and HR.',
+        'Reply "open" or "filled." If it\'s open, grab a time and I\'ll show you who we\'d look for:\nhttps://calendly.com/go-staffify/discovery-call',
+        'Paul\nStaffify',
+        "P.S. Not the right fit? Just tell me to kick rocks and I'll leave you alone.\nOne click works too: https://k.example/x",
+    ].join('\n\n'));
     for (const text of [c.subject, c.bodyText, ...Object.values(c.followupBodies)]) {
         assert.doesNotMatch(text, /—|–|[“”’]/, 'no em or en dashes, straight quotes only');
         assert.doesNotMatch(text, /\bi\b/, 'I is always capitalised');
-        assert.doesNotMatch(text, /30-day|mint/i);
+        assert.doesNotMatch(text, /30-day|mint|amazing|\d+ ?%|\b\d+ (days|weeks)\b/i, 'no hype, no percentages, no placement timeline');
         if (/guarantee/i.test(text)) assert.match(text, /lifetime replacement guarantee/, 'only the lifetime replacement guarantee');
     }
-    assert.match(c.followupBodies[2], /lifetime replacement guarantee/);
-    assert.match(c.followupBodies[4], /close the loop/);
+    assert.match(c.followupBodies[2], /written screen, a live video interview and a paid skills test/);
+    assert.match(c.followupBodies[2], /Is the Customer Service Rep job still open\? "Open" or "filled" is all I need\./);
+    assert.doesNotMatch(c.followupBodies[2], /confidentiality/, 'the law line is for law firms');
+    assert.match(c.followupBodies[3], /lifetime replacement guarantee\. It's month to month, with no long-term contract\./);
+    assert.match(c.followupBodies[3], /calendly\.com/);
+    assert.match(c.followupBodies[4], /^Hi Denise,\n\nDid your Customer Service Rep job get filled\? If it did, congrats\./);
+    assert.doesNotMatch(c.followupBodies[4], /\$/, 'the close quotes no price');
+    assert.equal(Object.values(c.followupBodies).filter(t => /\$14/.test(t)).length, 0, 'the price is in email 1 only');
     assert.equal(hiringDripFollowup({ followupBodies: c.followupBodies, sentTouches: 1 }), c.followupBodies[2]);
     assert.throws(() => hiringDripFollowup({ followupBodies: {}, sentTouches: 1 }), /follow-up missing/);
+});
+
+test('email 1 says remote up front to an in-office post, and tells a legal seat we place admins, not paralegals', () => {
+    const office = hiringDripCopy(card('o', { family: 'support', job: { title: 'Customer Retention Specialist - $46K-$52K a year', city: 'Boise', workplace: 'onsite' } }));
+    assert.match(office.bodyText, /I saw the Customer Retention Specialist job you posted in Boise, listed at \$46K to \$52K a year\. Is it still open\?/);
+    assert.match(office.bodyText, /One thing up front: our hires work remotely from Latin America or the Philippines\. If the work can be done remotely, we can put a full-time person on it for \$14 an hour, about \$29K a year\./);
+    assert.match(office.bodyText, /I'll show you which parts could go remote:/);
+    const doubted = hiringDripCopy(card('d', { family: 'support', job: { title: 'CSR', workplace: 'remote' }, lead: { notes: 'Role not confirmed remote' } }));
+    assert.match(doubted.bodyText, /One thing up front/, 'a remote tag the researcher doubted reads as in-office');
+    const legal = hiringDripCopy(card('l', { family: 'admin', company: { name: 'Hunt & Co', domain: 'l.com' }, job: { title: 'Paralegal - $28/hr', workplace: 'onsite' } }));
+    assert.match(legal.bodyText, /One thing up front: we place legal admins, not paralegals, and they work remotely from Latin America or the Philippines\. If the admin side of this seat can be done remotely, we can put a full-time person on it for \$14 an hour\./);
+    assert.match(legal.bodyText, /take over intake calls on your script, court dates and deadlines on your calendar, and time entry for billing\./);
+    assert.match(legal.followupBodies[2], /They sign a confidentiality agreement, work under your data policies and see only the systems you give them access to\./);
+    assert.match(legal.followupBodies[4], /full-time remote legal admin/);
+    const firm = hiringDripCopy(card('f', { family: 'support', company: { name: 'Henkels & Baker Law', domain: 'f.com' }, job: { title: 'Receptionist (remote)', workplace: 'remote' } }));
+    assert.match(firm.bodyText, /take over intake calls on your script/, 'a law firm hears the law page tasks whatever the seat');
+    const part = hiringDripCopy(card('p', { family: 'scheduling', job: { title: 'Part-Time Scheduling Coordinator', workplace: 'remote' } }));
+    assert.match(part.bodyText, /You listed it as part-time, and our hires are full-time, so this fits if there's a full week of work to give them\./);
+});
+
+test('the price: never to an offshore post or one paying our rate or less, their number only when the gap is worth reading', () => {
+    const offshore = hiringDripCopy(card('d', { job: { title: 'Virtual Executive Assistant - $4-$9/hr (PH-based)', workplace: 'remote', restrictions: { offshore: 'Philippines' } } }));
+    assert.doesNotMatch(offshore.bodyText + Object.values(offshore.followupBodies).join(''), /\$14|listed at/, 'an offshore post never hears a higher number');
+    assert.match(offshore.bodyText, /Your post is open to someone outside the US, and that's who we place: full-time remote hires from Latin America or the Philippines\./);
+    const low = hiringDripCopy(card('w', { job: { title: 'Admin Assistant - $12/hr', workplace: 'remote' } }));
+    assert.doesNotMatch(low.bodyText, /\$14|listed at/);
+    assert.match(low.bodyText, /from Latin America or the Philippines\. They'd work only for you/);
+    const near = hiringDripCopy(card('b', { job: { title: 'Intake Coordinator - $15/hr', workplace: 'remote' } }));
+    assert.doesNotMatch(near.bodyText, /listed at/, 'no comparison when theirs is close to ours');
+    assert.match(near.bodyText, /for \$14 an hour\./);
+    const none = hiringDripCopy(card('e', { job: { title: 'Dispatcher- (OVERTIME)', workplace: 'remote' } }));
+    assert.match(none.bodyText, /^Hi Denise,\n\nI saw the Dispatcher job you posted\. Is it still open\?\n\nIf so, we can fill it with a full-time remote hire from Latin America or the Philippines for \$14 an hour\./);
+    const video = hiringDripCopy(card('v', { family: 'video', company: { name: 'Reel Co', domain: 'v.com' }, job: { title: 'Video Editor - $30/hr', workplace: 'remote' } }));
+    assert.doesNotMatch(video.bodyText, /listed at/, 'a video seat is never compared to a US wage (copy rule 7)');
+    assert.match(video.bodyText, /take over your short-form and YouTube edits/);
+    assert.match(hiringDripCopy(card('y', { job: { title: 'Office Assistant (Immigration Law) - From $25 an hour' } })).bodyText, /listed at \$25 an hour and up\./);
+    const unknown = hiringDripCopy(card('u', { company: { name: 'Bayside HVAC', domain: 'u.com' }, job: { title: '' }, family: 'nope' }));
+    assert.equal(unknown.subject, 'Your open role');
+    assert.match(unknown.bodyText, /I saw the job you posted\. Is it still open\?/);
+    assert.match(unknown.bodyText, /They'd work only for you, on your hours\.\n\n/);
+});
+
+test('the posting date only when the post itself states it', () => {
+    assert.equal(postedDay(card('a', { job: { source: 'provided', postedAt: '2026-10-30T15:00:00Z' }, lead: { posting_date: 'Posted 2026-10-26' } })), 'Oct 26');
+    assert.equal(postedDay(card('a', { job: { source: 'provided', postedAt: '2026-10-30T15:00:00Z' }, lead: { posting_date: '46266.0' } })), 'Sep 1', 'an Excel serial is the date it stands for');
+    assert.equal(postedDay(card('a', { job: { source: 'provided', postedAt: '2026-10-30T15:00:00Z' }, lead: { posting_date: 'within the last week' } })), null, 'never the import time');
+    assert.equal(postedDay(card('a', { job: { source: 'google_jobs', postedAt: '2026-10-27T15:00:00Z' } })), null, 'a Google age label is not a date');
+    assert.equal(postedDay(card('a', { job: { source: 'ats', postedAt: '2026-10-20T15:00:00Z' } })), 'Oct 20');
 });
 
 test('posted pay: only dollar amounts, in the unit the post states; quoted back only when well above our rate', () => {
@@ -62,16 +122,6 @@ test('posted pay: only dollar amounts, in the unit the post states; quoted back 
         assert.equal(payPhrase(p), phrase, t);
         if (hourly == null) assert.equal(hourlyOf(p), null); else assert.ok(Math.abs(hourlyOf(p) - hourly) < 0.01, t);
     }
-    const near = hiringDripCopy(card('b', { job: { title: 'Intake Coordinator - $15/hr' } }));
-    assert.doesNotMatch(near.bodyText, /I see you have it listed/, 'no comparison when theirs is close to ours');
-    assert.match(near.bodyText, /someone amazing for \$14 an hour/);
-    const yearly = hiringDripCopy(card('c', { job: { title: 'Customer Service Representative - $50k-$65k' } }));
-    assert.match(yearly.bodyText, /listed at \$50K to \$65K a year\.\n\nWe can fill it with someone amazing for \$14 an hour \(about \$29K a year, full time\)/);
-    const offshore = hiringDripCopy(card('d', { job: { title: 'Virtual Executive Assistant - $4-$9/hr (PH-based)' } }));
-    assert.doesNotMatch(offshore.bodyText + offshore.followupBodies[3], /\$14/, 'an offshore post at or under our rate never hears a higher number');
-    assert.match(hiringDripCopy(card('f', { job: { title: 'Office Assistant (Immigration Law) - From $25 an hour' } })).bodyText, /I see you have it listed at \$25 an hour and up\./);
-    const none = hiringDripCopy(card('e', { job: { title: 'Dispatcher- (OVERTIME)' } }));
-    assert.match(none.bodyText, /Is the Dispatcher role at MDM Legal still open\?\n\nWe can fill it/);
 });
 
 test('role and company read as people say them', () => {
@@ -92,14 +142,17 @@ test('role and company read as people say them', () => {
     assert.equal(dripRole('Part Time and Weekend Paralegal (remote, US; Florida preferred; $25-$37/hr)'), 'Paralegal');
     assert.equal(dripRole('Patient Coordinator / RECEPTIONIST'), 'Patient Coordinator and Receptionist');
     assert.equal(dripRole('HVAC CSR'), 'HVAC CSR');
-    const own = hiringDripCopy(card('g', { company: { name: 'Law Office of Denise M. Mutamba', domain: 'g.com' } }));
-    assert.match(own.bodyText, /Is the Legal Assistant role still open\?/, 'their own name is not read back to them as the company');
 });
 
 test('the card stops the drip: a conversation, a booking, a closed card or posting, a hold that doubts the person', () => {
     assert.equal(hiringDripStop(card('a')), null);
     assert.equal(hiringDripStop(card('a', { callOutcome: 'no_answer' })), null, 'a missed call keeps the emails going');
     assert.equal(hiringDripStop(card('a', { callOutcome: 'gatekeeper' })), null);
+    assert.match(hiringDripStop(card('a', { job: { title: 'Front Desk Medical Receptionist', workplace: 'onsite' } })), /front desk/);
+    assert.match(hiringDripStop(card('a', { job: { title: 'Dental Receptionist' } })), /front desk/);
+    assert.equal(hiringDripStop(card('a', { job: { title: 'Virtual Receptionist' } })), null, 'a remote front desk is ours');
+    assert.equal(hiringDripStop(card('a', { job: { title: 'Receptionist', workplace: 'remote' } })), null);
+    assert.match(hiringDripStop(card('a', { job: { title: 'Account Manager - Fully Remote - US', restrictions: { soft: ['asks for US-based applicants'] } } })), /US-based/);
     assert.equal(hiringDripStop(card('a', { status: 'research', hold: { reason: 'main_line_only' } })), null, 'a card waiting on a cell can still be emailed');
     assert.match(hiringDripStop(card('a', { status: 'research', hold: { reason: 'owner_unconfirmed' } })), /held/);
     assert.match(hiringDripStop(card('a', { status: 'conversation', callOutcome: 'connected' })), /conversation/);
@@ -111,6 +164,16 @@ test('the card stops the drip: a conversation, a booking, a closed card or posti
     assert.match(hiringDripStop(card('a', { contact: { firstName: 'Denise', status: 'not_found' } })), /No verified owner email/);
     assert.match(hiringDripStop(card('a', { contact: { firstName: 'Denise', email: 'd@x.com', status: 'unconfirmed' } })), /No verified owner email/);
     assert.match(hiringDripStop(null), /gone/);
+});
+
+test('the first email waits a day after a call; follow-ups and drafted emails do not', () => {
+    const now = Date.parse('2026-10-30T18:00:00Z');
+    const called = card('a', { callHistory: [{ outcome: 'no_answer', at: '2026-10-30T14:51:00Z' }] });
+    assert.match(dripWait(called, { sentTouches: 0 }, now), /waits/);
+    assert.equal(dripWait(called, { sentTouches: 0 }, now + 21 * 3600e3), null, 'a day later it goes');
+    assert.equal(dripWait(called, { sentTouches: 1 }, now), null, 'a follow-up is not held');
+    assert.equal(dripWait(called, { sentTouches: 0, draftId: 'd' }, now), null, 'a saved draft is never stranded in a hold');
+    assert.equal(dripWait(card('b'), { sentTouches: 0 }, now), null, 'never called');
 });
 
 test('candidates: callable first, one per person and per company, never someone the queue already tracks', () => {

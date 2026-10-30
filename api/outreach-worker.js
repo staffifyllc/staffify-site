@@ -9,7 +9,7 @@ import {canDraft as crmCanDraft,suppress} from './_outreach-crm.js';
 import {bookedIdentity} from './_booked-leads.js';
 import {eligible,quota,dayKey,classify,followup,reconcileThread,callReady} from './_outreach-policy.js';
 import {makeWorker} from './_outreach-worker-core.js';
-import {HIRING_DRIP_ID,hiringDripStop} from './_hiring-drip-copy.js';
+import {HIRING_DRIP_ID,hiringDripStop,dripWait} from './_hiring-drip-copy.js';
 import {hiringSupply} from './_hiring-drip.js';
 import {dripDeps} from './_hiring-drip-live.js';
 import {getRecord,laneFor} from './_hiring-intent.js';
@@ -28,7 +28,7 @@ import {isOptedOut} from './_optout.js';
 // The caller is the card's owner, else the caller its sector goes to (law and insurance: Milton), so a first email to an
 // unworked card still copies the person who will call it. Paul's own login is hello@, already on the list.
 const hiringReplyTo=(row,card)=>{const who=String(card.callOwner||laneFor(card)||'').toLowerCase();const box=who&&who!==ROUTE_TO?mailboxFor({email:who}):null;return [row.sender,ROUTE_TO,box].filter(Boolean);};
-const hiringCanDraft=async row=>{try{const card=await getRecord(redis,row.hiringId);if(hiringDripStop(card)||String(card.contact.email||'').toLowerCase()!==row.recipient)return false;row.replyTo=hiringReplyTo(row,card);return await crmCanDraft(row);}catch{return false;}};
+const hiringCanDraft=async row=>{try{const card=await getRecord(redis,row.hiringId);if(hiringDripStop(card)||dripWait(card,row)||String(card.contact.email||'').toLowerCase()!==row.recipient)return false;row.replyTo=hiringReplyTo(row,card);return await crmCanDraft(row);}catch{return false;}};
 const canDraft=async row=>{if(row.booking)return false;try{if(await bookedIdentity(redis,{email:row.recipient,domain:row.agencyKey}))return false;}catch{return false;}return row.campaignId===HIRING_DRIP_ID?hiringCanDraft(row):crmCanDraft(row);};
 // The last look before a send: the card, and the stop list, read again after the Gmail and Findymail round trips.
 const lastCheck=async row=>{if(row.campaignId!==HIRING_DRIP_ID)return true;try{const card=await getRecord(redis,row.hiringId);return !hiringDripStop(card)&&!await isOptedOut({email:row.recipient});}catch{return false;}};
