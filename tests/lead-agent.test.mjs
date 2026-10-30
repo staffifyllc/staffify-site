@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { agentToken, agentAuthorized, knownIndex, knownWhy, leadProblem, capLookup, remember, agentProfile, phoneCheck, rememberLines, lineProof, provenCell, provenPhone, carrierLookup } from '../api/_lead-agent.js';
 import { qualifyLead, tollFree } from '../api/_hiring-intent.js';
+import { cellMatch } from '../api/_hiring-run.js';
 
 test('the agent\'s key: its own setting, else derived from the cron secret; anything else is refused', () => {
     const env = { CRON_SECRET: 'cron' };
@@ -42,17 +43,33 @@ const lead = over => ({ owner_first: 'Dana', owner_last: 'Reyes', owner_title: '
 test('submit refuses what the agent was told never to send: no cell, a main line, toll-free, no email, a seat we do not fill, a stale post, a known company', async () => {
     const idx = await knownIndex(deps);
     const now = Date.parse('2026-10-30T18:00:00Z');
-    const RR = { by: 'rocketreach', type: 'mobile', grade: 'A', person: 'Dana Reyes' };
-    const why = (l, proof = RR) => leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, now });
+    const RR = { by: 'rocketreach', type: 'mobile', grade: 'A', valid: true, person: 'Dana Reyes', employer: 'Brand New Plumbing', employerDomain: 'newplumbing.com', region: 'TN' };
+    const ownerMatch = (l, p) => cellMatch({ company: { name: l.business, domain: 'newplumbing.com' }, contact: { name: [l.owner_first, l.owner_last].join(' ') }, job: { usState: l.state } }, { name: p.person, employer: p.employer, employerDomain: p.employerDomain, title: p.title, region: p.region, location: p.location });
+    const why = (l, proof = RR) => leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: ownerMatch, now });
+    const CAR = { by: 'carrier', type: 'mobile', carrier: 'Verizon Wireless', at: '2026-10-30T17:00:00Z' };
+    const site = { phone_source_url: 'https://newplumbing.com/about', phone_evidence: 'Call or text Dana Reyes, owner: (615) 555-0100' };
     assert.equal(why(lead()), null);
-    // The agent's word is not proof (Paul, 2026-10-30: never a main line, and not always RocketReach).
+    // The agent's word is not proof, and its own main-line label always stands (Paul: never a main line).
     assert.match(why(lead(), null), /not proven a cell/);
-    assert.match(why(lead({ phone_type: 'mobile' }), { by: 'carrier', type: 'landline', carrier: 'AT&T' }), /the carrier says this number is landline \(AT&T\), not a cell/);
-    assert.match(why(lead(), { by: 'carrier', type: 'nonfixedvoip', carrier: 'Twilio' }), /not a cell/);
-    assert.match(why(lead(), { by: 'carrier', type: 'mobile', carrier: '' }), /not a cell/, 'a carrier that does not name itself proves nothing');
-    assert.match(why(lead(), { by: 'rocketreach', type: 'professional' }), /did not list this number as a mobile/);
-    assert.match(why(lead(), { by: 'carrier', type: 'mobile', carrier: 'Verizon Wireless' }), /phone_source_url is required/);
-    assert.equal(why(lead({ phone_source_url: 'https://newplumbing.com/about' }), { by: 'carrier', type: 'mobile', carrier: 'Verizon Wireless' }), null);
+    assert.match(why(lead({ phone_type: 'main business line' })), /main line, front desk or office line/);
+    assert.match(why(lead({ phone: '615-555-0100 (front desk)' })), /main line/);
+    assert.match(why(lead({ ...site, phone_evidence: 'Office line: 615-555-0100 (Dana Reyes)' }), CAR), /main line/);
+    assert.match(why(lead({ phone_type: 'mobile' }), { by: 'carrier', type: 'landline', carrier: 'AT&T', at: CAR.at }), /the carrier says this number is landline \(AT&T\), not a proven cell/);
+    assert.match(why(lead(), { by: 'carrier', type: 'nonfixedvoip', carrier: 'Twilio', at: CAR.at }), /not a proven cell/);
+    assert.match(why(lead(), { by: 'carrier', type: 'mobile', carrier: '', at: CAR.at }), /did not name itself/, 'a carrier that does not name itself proves nothing');
+    assert.match(why(lead(), { ...RR, type: 'professional' }), /did not list this number as a mobile/);
+    assert.match(why(lead(), { ...RR, valid: false }), /invalid/);
+    assert.match(why(lead(), { ...RR, carrierType: 'landline' }), /the carrier says this number is landline/);
+    // A carrier proves the line is a cell, never whose it is: the page must put it beside the owner's name.
+    assert.match(why(lead(), CAR), /phone_source_url is required/);
+    assert.match(why(lead({ phone_source_url: site.phone_source_url }), CAR), /phone_evidence is required/);
+    assert.match(why(lead({ ...site, phone_evidence: 'Call us: (615) 555-0100' }), CAR), /phone_evidence is required/, 'the business line with no owner beside it');
+    assert.match(why(lead({ ...site, phone_evidence: 'Dana Reyes, owner. Call 615-555-0199' }), CAR), /phone_evidence is required/, 'another number');
+    assert.equal(why(lead(site), CAR), null);
+    assert.match(why(lead(site), { ...CAR, at: '2026-09-01T00:00:00Z' }), /over 30 days ago/);
+    // A lookup's number is the person RocketReach found: this owner, at this business.
+    assert.match(why(lead(), { ...RR, person: 'Zed Other', employer: 'Other Co', employerDomain: 'other.com', region: 'CA' }), /not this owner's: RocketReach found Zed Other, not Dana Reyes/);
+    assert.match(why(lead(), { ...RR, employer: 'Acme Roofing', employerDomain: 'acmeroof.com' }), /not this owner's: Dana Reyes works at Acme Roofing/);
     assert.match(why(lead({ phone: '888-555-0100' })), /toll-free/);
     assert.match(why(lead({ owner_email: null })), /owner_email/);
     assert.match(why(lead({ owner_first: null })), /named owner/);
@@ -98,8 +115,26 @@ test('RocketReach numbers are remembered as proof, never over a carrier\'s answe
     assert.equal(provenCell(await lineProof(kv, '6155550100')), true);
     assert.equal((await lineProof(kv, '6155550101')).by, 'carrier', 'the carrier outranks the vendor');
     assert.equal(provenCell(await lineProof(kv, '6155550101')), false);
-    assert.deepEqual(provenPhone({ owner_first: 'Dana', owner_last: 'Reyes' }, { by: 'carrier', type: 'mobile', carrier: 'Verizon' }), { phone_type: 'mobile', phone_source: 'carrier-checked public listing', phone_person: 'Dana Reyes', phone_grade: null });
-    assert.deepEqual(provenPhone({ owner_first: 'Dana' }, { by: 'rocketreach', type: 'mobile', grade: 'A', person: 'Dana Reyes' }), { phone_type: 'mobile', phone_source: 'RocketReach', phone_person: 'Dana Reyes', phone_grade: 'A' });
+    assert.deepEqual(provenPhone({ owner_first: 'Dana', owner_last: 'Reyes' }, { by: 'carrier', type: 'mobile', carrier: 'Verizon', at: 'T1' }), { phone_type: 'mobile', phone_source: 'carrier-checked public listing', phone_person: 'Dana Reyes', phone_grade: null, phone_checked_at: 'T1' });
+    assert.deepEqual(provenPhone({ owner_first: 'Dana' }, { by: 'rocketreach', type: 'mobile', grade: 'A', person: 'Dana Reyes', at: 'T0', carrierAt: 'T2' }), { phone_type: 'mobile', phone_source: 'RocketReach', phone_person: 'Dana Reyes', phone_grade: 'A', phone_checked_at: 'T2' });
+    // RocketReach's own "invalid" is never remembered as proof; a carrier that also says mobile keeps the lookup's owner.
+    await rememberLines(kv, { name: 'Dana Reyes', phones: [{ number: '+16155550177', type: 'mobile', grade: 'F', valid: false }] });
+    assert.equal(await lineProof(kv, '6155550177'), null);
+    process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY = '10';
+    const [merged] = await phoneCheck({ kv, day: 'd', tollFree, lookup: async () => ({ type: 'mobile', carrier: 'Verizon' }) }, ['6155550100'], Date.parse('2026-10-30T18:00:00Z'));
+    assert.equal(merged.mobile, true); assert.equal(merged.looked_up, true);
+    const p = await lineProof(kv, '6155550100');
+    assert.equal(p.by, 'rocketreach'); assert.equal(p.person, 'Dana Reyes'); assert.equal(p.carrier, 'Verizon');
+    const [unnamed] = await phoneCheck({ kv, day: 'd', tollFree, lookup: async () => ({ type: 'mobile', carrier: '' }) }, ['6155550188'], Date.parse('2026-10-30T18:00:00Z'));
+    assert.equal(unnamed.mobile, false); assert.match(unnamed.note, /did not name itself/); assert.equal(await lineProof(kv, '6155550188'), null, 'not remembered, so a later answer can prove it');
+    kv.m.set('staffify:lead-agent:line:6155550166', { by: 'carrier', type: 'mobile', carrier: 'AT&T', at: '2026-08-01T00:00:00Z' });
+    let asked = 0;
+    await phoneCheck({ kv, day: 'd', tollFree, lookup: async () => { asked++; return { type: 'landline', carrier: 'AT&T' }; } }, ['6155550166'], Date.parse('2026-10-30T18:00:00Z'));
+    assert.equal(asked, 1, 'an answer older than 30 days is asked again'); assert.equal((await lineProof(kv, '6155550166')).type, 'landline');
+    for (const v of ['1,000', '150/day', 'abc', '']) { process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY = v; const { CHECKS_PER_DAY } = await import('../api/_lead-agent.js'); assert.ok(Number.isFinite(CHECKS_PER_DAY()), v); }
+    process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY = '1,000'; assert.equal((await import('../api/_lead-agent.js')).CHECKS_PER_DAY(), 1000);
+    process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY = 'abc'; assert.equal((await import('../api/_lead-agent.js')).CHECKS_PER_DAY(), 150, 'never no cap');
+    delete process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY;
     const r = await carrierLookup('6155550100', { env: { TWILIO_SID: 'AC1', TWILIO_AUTH: 'tok' }, fetcher: async (url, o) => { assert.match(url, /lookups\.twilio\.com\/v2\/PhoneNumbers\/%2B16155550100\?Fields=line_type_intelligence/); assert.equal(o.headers.Authorization, 'Basic ' + Buffer.from('AC1:tok').toString('base64')); return { ok: true, json: async () => ({ line_type_intelligence: { type: 'mobile', carrier_name: 'Verizon Wireless' } }) }; } });
     assert.deepEqual(r, { type: 'mobile', carrier: 'Verizon Wireless' });
     await assert.rejects(carrierLookup('6155550100', { env: { TWILIO_SID: 'a', TWILIO_AUTH: 'b' }, fetcher: async () => ({ ok: false, status: 401 }) }), /401/);

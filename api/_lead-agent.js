@@ -16,8 +16,10 @@
 // have 1,000 a month", so the agent looks in public places first and asks the carrier, and looks people up last.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export const LOOKUPS_PER_DAY = () => Math.max(0, Number(process.env.LEAD_AGENT_LOOKUPS_PER_DAY || 30));
-export const CHECKS_PER_DAY = () => Math.max(0, Number(process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY || 150));
+// A setting typed as "1,000" or "150/day" must never lift a cap: anything that is not a plain number is the default.
+const setting = (v, fallback) => { const n = Number(String(v == null ? '' : v).replace(/[,\s]/g, '')); return v != null && v !== '' && Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback; };
+export const LOOKUPS_PER_DAY = () => setting(process.env.LEAD_AGENT_LOOKUPS_PER_DAY, 30);
+export const CHECKS_PER_DAY = () => setting(process.env.LEAD_AGENT_PHONE_CHECKS_PER_DAY, 150);
 export const carrierConfigured = (env = process.env) => !!(env.TWILIO_SID && env.TWILIO_AUTH);
 export const RESERVE = 100;   // the same monthly reserve as the Hub's own lookups (api/_hiring-run.js RR_RESERVE)
 const K = {
@@ -93,6 +95,11 @@ export function remember(idx, l, why = 'submitted earlier in this batch') {
 const MOBILE = /\b(mobile|cell)\b/i;
 const parseJson = v => { if (v == null) return null; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch { return null; } };
 const LINE_TTL = 90 * 86400;
+// A carrier answer older than this is asked again before it proves anything (numbers get ported).
+const FRESH_MS = 30 * 86400e3;
+const fresh = (at, now) => now - (Date.parse(at || '') || 0) < FRESH_MS;
+// A number the agent itself calls the main line, front desk or reception is never the owner's cell, whatever the carrier.
+const MAIN_WORDS = /\b(main(\s*-?\s*line)?|mainline|switchboard|front[\s-]?desk|reception(ist)?|headquarters|hq|office\s+(line|number|phone)|business\s+(line|number)|toll[\s-]?free)\b/i;
 
 /** Twilio's line type for one US number: { type, carrier }. Throws when Twilio does not answer. */
 export async function carrierLookup(d10, { env = process.env, fetcher = fetch } = {}) {
@@ -102,8 +109,12 @@ export async function carrierLookup(d10, { env = process.env, fetcher = fetch } 
     const lti = ((await r.json()) || {}).line_type_intelligence || {};
     return { type: String(lti.type || 'unknown').toLowerCase(), carrier: String(lti.carrier_name || '').trim() };
 }
-/** A cell, and proven: a carrier that named itself and said mobile, or a RocketReach lookup this door made that said mobile. */
-export const provenCell = proof => !!proof && (proof.by === 'carrier' ? proof.type === 'mobile' && !!proof.carrier : proof.by === 'rocketreach' && MOBILE.test(String(proof.type || '')));
+/**
+ * A cell, and proven: a carrier that named itself and said mobile, or a RocketReach lookup this door made that said mobile
+ * and did not mark the number invalid. Whose cell it is is a separate question (leadProblem).
+ */
+export const provenCell = proof => !!proof && (proof.by === 'carrier' ? proof.type === 'mobile' && !!proof.carrier
+    : proof.by === 'rocketreach' && MOBILE.test(String(proof.type || '')) && proof.valid !== false && !(proof.carrierType && proof.carrierType !== 'mobile'));
 
 /**
  * The carrier's answer for up to 10 numbers. A number asked before is answered from memory, free; a new one counts against
@@ -117,15 +128,21 @@ export async function phoneCheck(deps, numbers, now = Date.now()) {
         if (d.length !== 10) { out.push({ number: String(raw), error: 'not a 10-digit US number' }); continue; }
         if (tollFree(d)) { out.push({ number: d, type: 'tollfree', carrier: null, mobile: false }); continue; }
         const known = parseJson(await kv.get(K.line(d)));
-        if (known && known.by === 'carrier') { out.push({ number: d, type: known.type, carrier: known.carrier || null, mobile: provenCell(known), cached: true }); continue; }
+        if (known && known.by === 'carrier' && fresh(known.at, now)) { out.push({ number: d, type: known.type, carrier: known.carrier || null, mobile: provenCell(known), cached: true }); continue; }
+        if (known && known.by === 'rocketreach' && known.carrierType && fresh(known.carrierAt, now)) { out.push({ number: d, type: known.carrierType, carrier: known.carrier || null, mobile: provenCell(known), cached: true, looked_up: true }); continue; }
         const used = Number(await kv.incr(K.checks(day)));
         await kv.expire(K.checks(day), 3 * 86400);
         if (used > cap) { await kv.decr(K.checks(day)).catch(() => {}); out.push({ number: d, error: `The day's ${cap} carrier checks are used.` }); continue; }
         try {
-            const r = await lookup(d);
-            const rec = { by: 'carrier', type: r.type, carrier: r.carrier || null, at: new Date(now).toISOString() };
-            if (r.type !== 'unknown') await kv.set(K.line(d), rec, { ex: LINE_TTL });
-            out.push({ number: d, type: r.type, carrier: r.carrier || null, mobile: provenCell(rec) });
+            const r = await lookup(d), at = new Date(now).toISOString();
+            // A RocketReach number the carrier also calls mobile keeps its lookup (who it belongs to, its grade); a carrier
+            // that says otherwise replaces it. A "mobile" from a carrier that does not name itself proves nothing and is
+            // not remembered, so a later answer can still prove the number.
+            const named = r.type !== 'mobile' || !!r.carrier;
+            const rec = known && known.by === 'rocketreach' && r.type === 'mobile' && named ? { ...known, carrier: r.carrier, carrierType: r.type, carrierAt: at }
+                : { by: 'carrier', type: r.type, carrier: r.carrier || null, at };
+            if (r.type !== 'unknown' && named) await kv.set(K.line(d), rec, { ex: LINE_TTL });
+            out.push({ number: d, type: r.type, carrier: r.carrier || null, mobile: provenCell(rec), ...(named ? {} : { note: 'The carrier did not name itself, so this proves nothing. Look the owner up instead.' }), ...(rec.by === 'rocketreach' ? { looked_up: true } : {}) });
         } catch (e) {
             await kv.decr(K.checks(day)).catch(() => {});
             out.push({ number: d, error: 'The carrier could not be asked: ' + String((e && e.message) || e).slice(0, 80) });
@@ -141,13 +158,15 @@ export async function rememberLines(kv, profile, now = Date.now()) {
         if (d.length !== 10) continue;
         const known = parseJson(await kv.get(K.line(d)));
         if (known && known.by === 'carrier') continue;
-        await kv.set(K.line(d), { by: 'rocketreach', type: x.type || null, grade: x.grade || null, person: profile.name || null, at: new Date(now).toISOString() }, { ex: LINE_TTL });
+        if (x.valid === false) continue;   // RocketReach's own "invalid": never proof (the Hub's own lookups drop it too)
+        await kv.set(K.line(d), { by: 'rocketreach', type: x.type || null, grade: x.grade || null, valid: x.valid == null ? null : !!x.valid, person: profile.name || null,
+            employer: profile.employer || null, employerDomain: profile.employer_domain || profile.employerDomain || null, title: profile.title || null, location: profile.location || null, region: profile.region || null, at: new Date(now).toISOString() }, { ex: LINE_TTL });
     }
 }
 /** What we know about a submitted number (the submit handler reads it before leadProblem). */
 export const lineProof = async (kv, phone) => { const d = ten(phone); return d.length === 10 ? parseJson(await kv.get(K.line(d))) : null; };
 const EMAIL = /^[^\s@<>()",;:]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i;
-export const LEAD_FIELDS = ['owner_first', 'owner_last', 'owner_title', 'business', 'industry', 'city', 'state', 'website', 'owner_email', 'phone', 'phone_type', 'phone_source_url', 'role_posted', 'posting_url', 'posting_date', 'email_source_url', 'notes', 'vertical'];
+export const LEAD_FIELDS = ['owner_first', 'owner_last', 'owner_title', 'business', 'industry', 'city', 'state', 'website', 'owner_email', 'phone', 'phone_type', 'phone_source_url', 'phone_evidence', 'role_posted', 'posting_url', 'posting_date', 'email_source_url', 'notes', 'vertical'];
 /**
  * The phone fields the Hub writes itself from the proof, never the agent's: the hourly run then treats the number as a
  * named person's looked-up cell (it stays first, and the Hub spends no lookup of its own on the card).
@@ -155,14 +174,14 @@ export const LEAD_FIELDS = ['owner_first', 'owner_last', 'owner_title', 'busines
 export function provenPhone(l, proof) {
     const person = [l.owner_first, l.owner_last].filter(Boolean).join(' ') || null;
     return proof.by === 'carrier'
-        ? { phone_type: 'mobile', phone_source: 'carrier-checked public listing', phone_person: person, phone_grade: null }
-        : { phone_type: 'mobile', phone_source: 'RocketReach', phone_person: proof.person || person, phone_grade: proof.grade || null };
+        ? { phone_type: 'mobile', phone_source: 'carrier-checked public listing', phone_person: person, phone_grade: null, phone_checked_at: proof.at || null }
+        : { phone_type: 'mobile', phone_source: 'RocketReach', phone_person: proof.person || person, phone_grade: proof.grade || null, phone_checked_at: proof.carrierAt || proof.at || null };
 }
 /**
  * Why a submitted lead is refused, or null. The same rules the agent was given, checked again here: the owner's own
  * mobile and an email, a seat we fill, a post we may still call about (qualifyLead), and nobody we already know.
  */
-export function leadProblem(l, { idx, qualify, tollFree, proof = null, now = Date.now() }) {
+export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = null, now = Date.now() }) {
     if (!l.business || !l.role_posted) return 'business and role_posted are required';
     if (!/^https:\/\//i.test(String(l.posting_url || ''))) return 'posting_url must be the https link to the posting';
     if (!l.owner_first) return 'owner_first is required: a lead is a named owner';
@@ -170,9 +189,24 @@ export function leadProblem(l, { idx, qualify, tollFree, proof = null, now = Dat
     const p = ten(l.phone);
     if (p.length !== 10) return 'phone must be a 10-digit US number';
     if (tollFree(p)) return 'a toll-free number is never a lead';
+    if (MAIN_WORDS.test(String(l.phone_type || '')) || MAIN_WORDS.test(String(l.phone || '').replace(/[\d\s()+.-]/g, ' ')) || MAIN_WORDS.test(String(l.phone_evidence || '')))
+        return 'this number is described as a main line, front desk or office line: only the owner\'s own cell, never a main line';
     if (!proof) return 'phone is not proven a cell: ask the carrier (action phone) or look the owner up first. Never a main line.';
-    if (!provenCell(proof)) return proof.by === 'carrier' ? `the carrier says this number is ${proof.type || 'unknown'}${proof.carrier ? ' (' + proof.carrier + ')' : ''}, not a cell: never a main line` : 'RocketReach did not list this number as a mobile: never a main line';
-    if (proof.by === 'carrier' && !/^https:\/\//i.test(String(l.phone_source_url || ''))) return 'phone_source_url is required: the https page where the owner\'s number was found';
+    if (!provenCell(proof)) return proof.by === 'carrier' ? `the carrier says this number is ${proof.type || 'unknown'}${proof.carrier ? ' (' + proof.carrier + ')' : ' and did not name itself'}, not a proven cell: never a main line`
+        : proof.valid === false ? 'RocketReach marks this number invalid' : proof.carrierType ? `the carrier says this number is ${proof.carrierType}, not a cell` : 'RocketReach did not list this number as a mobile: never a main line';
+    if (proof.by === 'carrier') {
+        // A carrier proves the line is a cell, not whose: the page must put the number beside the owner's name.
+        if (!fresh(proof.at, now)) return 'the carrier was asked over 30 days ago: ask again (action phone)';
+        if (!/^https:\/\//i.test(String(l.phone_source_url || ''))) return 'phone_source_url is required: the https page where the owner\'s number was found';
+        const ev = String(l.phone_evidence || ''), last4 = ten(l.phone).slice(-4);
+        const names = [l.owner_first, l.owner_last].map(x => String(x || '').trim().toLowerCase()).filter(x => x.length > 1);
+        if (!ev.replace(/\D/g, '').includes(last4) || !names.some(n => ev.toLowerCase().includes(n)))
+            return 'phone_evidence is required: the exact words on that page that put this number beside the owner\'s name. A number the business publishes with no owner name beside it is not the owner\'s cell.';
+    } else if (match) {
+        // A lookup's number belongs to the person RocketReach found: it must be this lead's owner, at this business.
+        const m = match(l, proof);
+        if (!m.ok) return 'the looked-up number is not this owner\'s: ' + m.why;
+    }
     const q = qualify(l, now);
     if (!q.ok) return 'refused by the Hub rules: ' + q.reason + (q.detail ? ' (' + String(q.detail).slice(0, 120) + ')' : '');
     const known = knownWhy(idx, { company: l.business, website: l.website, phone: l.phone, email: l.owner_email });

@@ -11,11 +11,16 @@
 import { redis, readBody } from './_auth.js';
 import { KEY } from './_outreach-queue.js';
 import { HK, allRecords, parseValue, qualifyLead, tollFree, leadKey } from './_hiring-intent.js';
-import { addPending } from './_hiring-run.js';
+import { addPending, cellMatch } from './_hiring-run.js';
 import { optedOutSet } from './_optout.js';
 import { rrConfigured, account, lookupPerson, checkStatus, searchPeople, profileOf } from './_rocketreach.js';
 import { dayKey } from './_outreach-policy.js';
 import { agentAuthorized, knownIndex, knownWhy, leadProblem, capLookup, agentProfile, remember, phoneCheck, rememberLines, lineProof, provenPhone, carrierLookup, carrierConfigured, LEAD_FIELDS, LOOKUPS_PER_DAY, CHECKS_PER_DAY, LEAD_AGENT_KEYS as K } from './_lead-agent.js';
+
+// The Hub's own test for a RocketReach profile (api/_hiring-run.js cellMatch): this lead's owner, at this business, in its state.
+const hostOf = u => { try { return new URL(/^https?:/i.test(String(u)) ? String(u) : 'https://' + u).hostname.toLowerCase().replace(/^www\./, ''); } catch { return null; } };
+const ownerMatch = (l, proof) => cellMatch({ company: { name: l.business, domain: hostOf(l.website) }, contact: { name: [l.owner_first, l.owner_last].filter(Boolean).join(' ') }, job: { usState: l.state || null } },
+    { name: proof.person, employer: proof.employer, employerDomain: proof.employerDomain, title: proof.title, region: proof.region, location: proof.location });
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
@@ -59,7 +64,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ results });
         }
         if (action === 'phone') {
-            if (!carrierConfigured()) return res.status(503).json({ error: 'The carrier check is not connected yet. Look the owner up instead.' });
+            if (!carrierConfigured()) return res.status(503).json({ error: 'The carrier check is not connected yet. For this owner, use one lookup if lookups are left; otherwise skip the lead.' });
             const numbers = (Array.isArray(body.numbers) ? body.numbers : []).slice(0, 10).map(String);
             if (!numbers.length) return res.status(400).json({ error: 'numbers: ["5615550100", ...] (up to 10)' });
             return res.status(200).json({ results: await phoneCheck({ kv: redis, day, lookup: d => carrierLookup(d), tollFree }, numbers, now) });
@@ -72,7 +77,7 @@ export default async function handler(req, res) {
             let accepted = 0;
             for (const [i, l] of leads.entries()) {
                 const proof = await lineProof(redis, l.phone);
-                const problem = leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, now });
+                const problem = leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: ownerMatch, now });
                 if (problem) { results.push({ i, business: l.business, accepted: false, why: problem }); continue; }
                 Object.assign(l, provenPhone(l, proof));
                 const key = leadKey(l);
