@@ -107,7 +107,7 @@ return async function handler(req,res){res.setHeader('Cache-Control','no-store')
    const fresh=await redis.get(KEY);if(fresh.revision!==state.revision)throw Error('Controls changed before draft creation');
    if(!await redis.set('outreach:cloud:operation:'+operation,{status:'reserved',at:Date.now()},{nx:true}))continue;
    state.creations.push({id:operation,day:dayKey(Date.now()),owner:row.owner,sender:row.sender,touch:row.sentTouches+1,status:'reserved'});row.status='draft_creation_pending';state=await save(state);
-   try{const raw=mime({sender:row.sender,to:row.recipient,subject:row.sentTouches?'Re: '+String(row.subject||'Your agency workflow').replace(/^Re:\s*/i,''):row.subject,body,id:'staffify-'+operation.replace(/[^a-z0-9-]/gi,'-'),replyId:row.sentTouches?row.replyId:undefined,replyTo:row.replyTo,unsubscribe:unsubscribeLink?unsubscribeLink(row):undefined});
+   try{const raw=mime({sender:row.sender,to:row.recipient,subject:row.sentTouches?'Re: '+String(row.subject||'Your agency workflow').replace(/^Re:\s*/i,''):row.subject,body,id:'staffify-'+operation.replace(/[^a-z0-9-]/gi,'-'),replyId:row.sentTouches?row.replyId:undefined,replyTo:row.replyTo,unsubscribe:unsubscribeLink?unsubscribeLink(row):undefined,fromName:row.senderName});
     const draft=await gmail(tokens[row.sender],'drafts',{message:{raw,...(row.sentTouches?{threadId:row.threadId}:{})}});
     assertDraft(await gmail(tokens[row.sender],'drafts/'+encodeURIComponent(draft.id)),row.recipient);
     await redis.set('outreach:cloud:operation:'+operation,{status:'saved',draft,at:Date.now()});

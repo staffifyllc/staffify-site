@@ -17,6 +17,20 @@ import { leadStatedDate, sectorOf } from './_hiring-intent.js';
 export { HIRING_DRIP_ID };
 // Paul, 2026-10-30: "we should say 12-14 an hour". The top of the range decides who hears a price at all.
 export const OUR_LOW = 12;
+
+// Paul, 2026-10-30 (relayed from the Flylisted session, then his answers here): the "name and mobile" subject, tested
+// against "Your {role} hire" on half of new first emails; each signer uses their own name and mobile, and a signer
+// with no confirmed mobile keeps the current subject. The From line carries the same name.
+export const SIGNERS = Object.freeze({
+    Paul: Object.freeze({ name: 'Paul Chareth', mobile: '305-636-9210' }),
+    Madison: Object.freeze({ name: 'Madison Sterling', mobile: null }),   // waiting on Paul to confirm her cell
+});
+const halfOf = email => [...String(email || '').trim().toLowerCase()].reduce((h, ch) => (h * 33 + ch.charCodeAt(0)) >>> 0, 5381) % 2;
+/** Which subject this person's first email gets: 'name-mobile' or 'role'. The same person always gets the same one. */
+export function subjectVariant(email, signer) {
+    const s = SIGNERS[signer];
+    return s && s.mobile && halfOf(email) === 1 ? 'name-mobile' : 'role';
+}
 export const OUR_RATE = 14;
 // A posted rate this far above ours is worth quoting back; closer than that, the comparison is no argument.
 const QUOTE_FROM = 16;
@@ -238,7 +252,8 @@ export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', a
     // A part-time post is told plainly that ours are full-time (AlestaCare said no to a pitch that hid it).
     const partTime = partTimeOf(title);
     if (partTime) offer += " You listed it as part-time, and our hires are full-time, so this fits if there's a full week of work to give them.";
-    const subject = role === 'open' ? 'Your open role' : `Your ${role} hire`;
+    const variant = subjectVariant(c.email, signer);
+    const subject = variant === 'name-mobile' ? `${SIGNERS[signer].name} | ${SIGNERS[signer].mobile} mobile` : role === 'open' ? 'Your open role' : `Your ${role} hire`;
     const bodyText = [`Hi ${first},`, seen, offer,
         'You skip the applicant pile. We find and screen candidates, you interview the finalists and pick one, and we run their payroll and HR.',
         `Reply "open" or "filled." If it's open, grab a time and I'll show you ${remote ? "who we'd look for" : 'which parts could go remote'}:\n${link}`,
@@ -262,7 +277,7 @@ export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', a
             `If it's still open, or another seat opens up later, we'll run the search for a full-time remote ${legalSeat ? 'legal admin' : 'hire'} and you'll pick from the finalists.`,
             'This is my last note, so one word back is plenty: "filled" or "open."', SIGN, out(4)].join('\n\n'),
     };
-    return { subject, bodyText, followupBodies, role, payText: payPhrase(pay), quoted: quote };
+    return { subject, subjectVariant: variant, bodyText, followupBodies, role, payText: payPhrase(pay), quoted: quote };
 }
 
 const key = s => String(s || '').trim().toLowerCase();
@@ -313,7 +328,7 @@ export function dripSender(accounts, records, { owner = null } = {}) {
 
 // Rows written with an older version take this one through refreshDripCopy: the whole sequence before email 1 is
 // drafted, the follow-ups not yet drafted after it.
-export const COPY_VERSION = 'hiring-now-2026-10-31-remote-value';
+export const COPY_VERSION = 'hiring-now-2026-10-31-subject-test';
 
 /** The queue row for one card: prepared, approved, and carrying its own follow-ups. */
 export function dripRow(card, { account, now = Date.now() }) {
@@ -323,7 +338,7 @@ export function dripRow(card, { account, now = Date.now() }) {
         id: 'hiring-drip-' + String(card.id).replace(/^hire:/, ''), campaignId: HIRING_DRIP_ID, lane: 'hiring_now', owner: account.owner, sender: account.email,
         recipient: key(card.contact.email), company: (card.company && card.company.name) || '', agencyKey: domainOf(card), website: (card.company && card.company.website) || null,
         verifiedFirstName: card.contact.firstName, hiringId: card.id, roleName: copy.role,
-        subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies, copyVersion: COPY_VERSION,
+        subject: copy.subject, subjectVariant: copy.subjectVariant, senderName: (SIGNERS[account.owner] || {}).name || null, bodyText: copy.bodyText, followupBodies: copy.followupBodies, copyVersion: COPY_VERSION,
         source: { label: 'Hiring now card', id: card.id, job: (card.job && card.job.title) || null, url: (card.job && card.job.url) || null },
         status: 'prepared', sentTouches: 0, verifiedSentTouches: 0, qualificationApproved: true, createdAt: at, enrichedAt: at,
     };
@@ -371,13 +386,28 @@ export function refreshDripCopy(state, cardsById) {
         const written = unwritten ? 0 : Math.min(4, sent + (r.draftId || /^draft_creation_/.test(String(r.status || '')) ? 1 : 0));
         const bodies = Array.from({ length: written }, (_, i) => (i === 0 ? r.bodyText : (r.followupBodies || {})[i + 1]) || '');
         const copy = hiringDripCopy(cardsById.get(r.hiringId), { signer: r.owner, after: written, usedLines: linesIn(bodies) });
-        if (unwritten) Object.assign(r, { subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies });
+        if (unwritten) Object.assign(r, { subject: copy.subject, subjectVariant: copy.subjectVariant, bodyText: copy.bodyText, followupBodies: copy.followupBodies });
         else {
             const firstFree = written + 1;
             r.followupBodies = { ...(r.followupBodies || {}), ...Object.fromEntries(Object.entries(copy.followupBodies).filter(([k]) => Number(k) >= firstFree)) };
         }
+        r.senderName = (SIGNERS[r.owner] || {}).name || null;   // the From line's name, on every email still to go
         r.copyVersion = COPY_VERSION;
         changed++;
     }
     return changed;
+}
+
+/**
+ * The subject test so far, per variant: first emails sent and people who wrote back (a human reply, the copy engine's
+ * own definition). Read it after about 100 sends each; below that the difference is noise.
+ */
+export function subjectTest(records, humanReply) {
+    const out = { 'name-mobile': { sent: 0, replied: 0 }, role: { sent: 0, replied: 0 } };
+    for (const r of records || []) {
+        if (r.campaignId !== HIRING_DRIP_ID || !out[r.subjectVariant] || !(Number(r.sentTouches) >= 1)) continue;
+        out[r.subjectVariant].sent++;
+        if (humanReply(r)) out[r.subjectVariant].replied++;
+    }
+    return out;
 }

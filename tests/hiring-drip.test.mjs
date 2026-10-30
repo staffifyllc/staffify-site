@@ -4,7 +4,7 @@
 process.env.KV_REST_API_URL ||= 'https://example.invalid'; process.env.KV_REST_API_TOKEN ||= 'x';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HIRING_DRIP_ID, hiringDripStop, dripWait, sendWait, refreshDripCopy, COPY_VERSION, postedPay, payPhrase, hourlyOf, dripRole, dripCompany, postedDay, hiringDripCopy, dripCandidates, dripSender, dripRow, rebalanceDripRows } from '../api/_hiring-drip-copy.js';
+import { HIRING_DRIP_ID, hiringDripStop, dripWait, sendWait, refreshDripCopy, COPY_VERSION, subjectVariant, subjectTest, SIGNERS, postedPay, payPhrase, hourlyOf, dripRole, dripCompany, postedDay, hiringDripCopy, dripCandidates, dripSender, dripRow, rebalanceDripRows } from '../api/_hiring-drip-copy.js';
 import { hiringDripFollowup } from '../api/_hiring-drip-campaign.js';
 import { prepareDripRows, addDripRows, enrollHiringDrip, hiringSupply, contactProps, dripAllowed } from '../api/_hiring-drip.js';
 import { inCampaign, tagCampaign } from '../api/_outreach-campaign.js';
@@ -26,7 +26,9 @@ const lines = s => s.split('\n');
 
 test('email 1: their post and pay, our remote hire at $12 to $14 an hour, the work it takes over, a one-word answer and the link', () => {
     const c = hiringDripCopy(card('a', { family: 'support', company: { name: 'Bayside HVAC', domain: 'a.com' }, job: { title: 'Customer Service Rep - $22/hr', city: 'Tampa', workplace: 'remote', source: 'provided' }, lead: { posting_date: 'Posted 2026-10-26' } }));
-    assert.equal(c.subject, 'Your Customer Service Rep hire');
+    // The subject under test (Paul, 2026-10-30): half get his name and mobile, half keep "Your {role} hire".
+    assert.equal(c.subject, subjectVariant('denise@a.com', 'Paul') === 'name-mobile' ? 'Paul Chareth | 305-636-9210 mobile' : 'Your Customer Service Rep hire');
+    assert.equal(hiringDripCopy(card('a', { family: 'support', company: { name: 'Bayside HVAC', domain: 'a.com' }, job: { title: 'Customer Service Rep - $22/hr' } }), { signer: 'Madison' }).subject, 'Your Customer Service Rep hire', 'no confirmed mobile for Madison yet: her emails keep the role subject');
     assert.equal(c.bodyText, [
         'Hi Denise,',
         'I saw the Customer Service Rep job you posted in Tampa on Oct 26, listed at $22 an hour. Is it still open?',
@@ -91,7 +93,7 @@ test('the price: never to an offshore post or one paying our rate or less, their
     assert.match(video.bodyText, /take over your short-form and YouTube edits/);
     assert.match(hiringDripCopy(card('y', { job: { title: 'Office Assistant (Immigration Law) - From $25 an hour' } })).bodyText, /listed at \$25 an hour and up\./);
     const unknown = hiringDripCopy(card('u', { company: { name: 'Bayside HVAC', domain: 'u.com' }, job: { title: '' }, family: 'nope' }));
-    assert.equal(unknown.subject, 'Your open role');
+    assert.equal(hiringDripCopy(card('u', { company: { name: 'Bayside HVAC', domain: 'u.com' }, job: { title: '' }, family: 'nope' }), { signer: 'Madison' }).subject, 'Your open role');
     assert.match(unknown.bodyText, /I saw the job you posted\. Is it still open\?/);
     assert.match(unknown.bodyText, /They'd work only for you, on your hours\.\n\n/);
 });
@@ -233,6 +235,33 @@ test('second review: US-only titles both ways, colon titles, PT and offshore wor
     for (const t of ['Remote (U.S.)', 'Executive Assistant (remote, U.S.)', 'Paralegal - Remote - U.S.', 'Remote in the U.S.']) assert.match(hiringDripStop(card('u', { job: { title: t } })), /US-based/, t);
     for (const t of ['Remote (US Hours)', 'Remote (US Time Zones)', 'Remote - US Business Hours', 'Remote (US Eastern Time)']) assert.equal(hiringDripStop(card('u', { job: { title: t } })), null, t);
     for (const [t, r] of [['Now Hiring a Receptionist', 'Receptionist'], ['Now hiring for Executive Assistant', 'Executive Assistant'], ['Now Hiring!! Customer Service Rep', 'Customer Service Rep'], ['Now Hiring – Dispatcher', 'Dispatcher']]) assert.equal(dripRole(t), r, t);
+});
+
+test('the name-and-mobile subject test: an even split per signer, stable per person, the From name, and its tally', async () => {
+    const mk = (e, over = {}) => card('s', { company: { name: 'Bayside HVAC', domain: 's.com' }, family: 'support', job: { title: 'CSR - $20/hr', workplace: 'remote' }, contact: { firstName: 'Dana', email: e, status: 'verified' }, ...over });
+    const seen = { 'name-mobile': 0, role: 0 };
+    for (let i = 0; i < 200; i++) { const x = hiringDripCopy(mk('o' + i + '@s.com'), { signer: 'Paul' }); seen[x.subjectVariant]++; assert.equal(x.subjectVariant, subjectVariant('o' + i + '@s.com', 'Paul')); if (x.subjectVariant === 'name-mobile') assert.equal(x.subject, 'Paul Chareth | 305-636-9210 mobile'); else assert.equal(x.subject, 'Your CSR hire'); }
+    assert.ok(seen['name-mobile'] > 70 && seen.role > 70, JSON.stringify(seen));
+    assert.equal(subjectVariant('O1@S.com', 'Paul'), subjectVariant('o1@s.com', 'Paul'), 'the same person always gets the same subject');
+    assert.equal(subjectVariant('o1@s.com', 'Madison'), 'role'); assert.equal(SIGNERS.Madison.mobile, null);
+    for (const t of Object.values(hiringDripCopy(mk('o3@s.com'), { signer: 'Paul' }))) if (typeof t === 'string') assert.doesNotMatch(t, /—|–/);
+    // The row carries the variant and the From name; a moved row keeps the subject it was sent with.
+    const row = dripRow(mk('o5@s.com'), { account: { email: 'paul@staffifyhq.com', owner: 'Paul', brand: 'Staffify', draftEnabled: true } });
+    assert.equal(row.senderName, 'Paul Chareth'); assert.equal(row.subjectVariant, subjectVariant('o5@s.com', 'Paul'));
+    const c = mk('o5@s.com');
+    const state = { records: [{ id: 'sent', campaignId: HIRING_DRIP_ID, hiringId: c.id, owner: 'Paul', copyVersion: 'old', status: 'sent', sentTouches: 1, threadId: 't', subject: 'Your CSR hire', bodyText: 'old', followupBodies: {} }] };
+    refreshDripCopy(state, new Map([[c.id, c]]));
+    assert.equal(state.records[0].subject, 'Your CSR hire', 'a sent thread keeps its subject'); assert.equal(state.records[0].senderName, 'Paul Chareth');
+    // The tally: first emails sent and human replies, per variant.
+    const { humanReply } = await import('../api/_copy-variants.js');
+    const r = (v, status, sent = 1) => ({ campaignId: HIRING_DRIP_ID, subjectVariant: v, sentTouches: sent, status });
+    assert.deepEqual(subjectTest([r('name-mobile', 'sent'), r('name-mobile', 'human_reply_hold'), r('role', 'sent'), r('role', 'prepared', 0), { ...r('role', 'sent'), campaignId: 'other' }], humanReply), { 'name-mobile': { sent: 2, replied: 1 }, role: { sent: 1, replied: 0 } });
+    // The From line: the signer's name beside the address, never anything that could carry a header.
+    const { mime } = await import('../api/_outreach-gmail.js');
+    const head = o => Buffer.from(mime({ sender: 'paul@staffifyhq.com', to: 'd@s.com', subject: 's', body: 'x', id: 'a', ...o }), 'base64url').toString().split('\r\n')[0];
+    assert.equal(head({ fromName: 'Paul Chareth' }), 'From: "Paul Chareth" <paul@staffifyhq.com>');
+    assert.equal(head({}), 'From: paul@staffifyhq.com');
+    assert.equal(head({ fromName: 'Evil"<x@y.com>' }), 'From: paul@staffifyhq.com');
 });
 
 test('the call gap: a call in progress counts, and a first email drafted before a call waits at the send', () => {
