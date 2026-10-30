@@ -5,6 +5,7 @@
 //   POST {action:'people', company}                who runs it, by title (RocketReach search, free)
 //   POST {action:'lookup', id | name+company}      one person's numbers and addresses (counts against the day's cap)
 //   POST {action:'collect', ids:[...]}             lookups RocketReach was still finishing (free)
+//   POST {action:'phone', numbers:[...]}           what the carrier says each number is (up to 10, inside the day's cap)
 //   POST {action:'submit', leads:[...]}            up to 25 leads into the Hiring now pending queue
 // Nothing here calls, texts or emails anyone. Submitted leads meet every Hiring now check when the hourly run works them.
 import { redis, readBody } from './_auth.js';
@@ -14,7 +15,7 @@ import { addPending } from './_hiring-run.js';
 import { optedOutSet } from './_optout.js';
 import { rrConfigured, account, lookupPerson, checkStatus, searchPeople, profileOf } from './_rocketreach.js';
 import { dayKey } from './_outreach-policy.js';
-import { agentAuthorized, knownIndex, knownWhy, leadProblem, capLookup, agentProfile, remember, LEAD_FIELDS, LOOKUPS_PER_DAY, LEAD_AGENT_KEYS as K } from './_lead-agent.js';
+import { agentAuthorized, knownIndex, knownWhy, leadProblem, capLookup, agentProfile, remember, phoneCheck, rememberLines, lineProof, provenPhone, carrierLookup, carrierConfigured, LEAD_FIELDS, LOOKUPS_PER_DAY, CHECKS_PER_DAY, LEAD_AGENT_KEYS as K } from './_lead-agent.js';
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
@@ -25,9 +26,10 @@ export default async function handler(req, res) {
         const body = req.method === 'POST' ? readBody(req) || {} : {};
         const action = req.method === 'GET' ? 'status' : String(body.action || '');
         if (action === 'status') {
-            const [used, submitted] = await Promise.all([redis.get(K.lookups(day)), redis.get(K.submitted(day))]);
-            const cap = LOOKUPS_PER_DAY();
-            return res.status(200).json({ day, lookups_used: Number(used) || 0, lookups_cap: cap, lookups_left: Math.max(0, cap - (Number(used) || 0)), submitted_today: Number(submitted) || 0, rocketreach: rrConfigured() });
+            const [used, submitted, checked] = await Promise.all([redis.get(K.lookups(day)), redis.get(K.submitted(day)), redis.get(K.checks(day))]);
+            const cap = LOOKUPS_PER_DAY(), ccap = CHECKS_PER_DAY();
+            return res.status(200).json({ day, lookups_used: Number(used) || 0, lookups_cap: cap, lookups_left: Math.max(0, cap - (Number(used) || 0)), submitted_today: Number(submitted) || 0, rocketreach: rrConfigured(),
+                carrier_check: carrierConfigured(), phone_checks_used: Number(checked) || 0, phone_checks_left: carrierConfigured() ? Math.max(0, ccap - (Number(checked) || 0)) : 0 });
         }
         if (action === 'check') {
             const items = (Array.isArray(body.items) ? body.items : []).slice(0, 100);
@@ -52,7 +54,15 @@ export default async function handler(req, res) {
             if (!rrConfigured()) return res.status(503).json({ error: 'RocketReach is not configured' });
             const ids = (Array.isArray(body.ids) ? body.ids : []).slice(0, 20).map(String);
             const st = await checkStatus(ids);
-            return res.status(200).json({ results: ids.map(id => { const s = st[id]; return { id, done: !!(s && s.done), profile: s ? agentProfile(s.profile || profileOf({ id, name: s.name, phones: s.phones })) : null }; }) });
+            const results = ids.map(id => { const s = st[id]; return { id, done: !!(s && s.done), profile: s ? agentProfile(s.profile || profileOf({ id, name: s.name, phones: s.phones })) : null }; });
+            for (const r of results) if (r.profile) await rememberLines(redis, r.profile).catch(() => {});
+            return res.status(200).json({ results });
+        }
+        if (action === 'phone') {
+            if (!carrierConfigured()) return res.status(503).json({ error: 'The carrier check is not connected yet. Look the owner up instead.' });
+            const numbers = (Array.isArray(body.numbers) ? body.numbers : []).slice(0, 10).map(String);
+            if (!numbers.length) return res.status(400).json({ error: 'numbers: ["5615550100", ...] (up to 10)' });
+            return res.status(200).json({ results: await phoneCheck({ kv: redis, day, lookup: d => carrierLookup(d), tollFree }, numbers, now) });
         }
         if (action === 'submit') {
             const leads = (Array.isArray(body.leads) ? body.leads : []).slice(0, 25).map(x => Object.fromEntries(LEAD_FIELDS.map(f => [f, x && x[f] != null ? String(x[f]).trim().slice(0, f === 'notes' ? 600 : 300) : null])));
@@ -61,8 +71,10 @@ export default async function handler(req, res) {
             const at = new Date(now).toISOString(), results = [];
             let accepted = 0;
             for (const [i, l] of leads.entries()) {
-                const problem = leadProblem(l, { idx, qualify: qualifyLead, tollFree, now });
+                const proof = await lineProof(redis, l.phone);
+                const problem = leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, now });
                 if (problem) { results.push({ i, business: l.business, accepted: false, why: problem }); continue; }
+                Object.assign(l, provenPhone(l, proof));
                 const key = leadKey(l);
                 if (await redis.hget(HK.pending, key)) { results.push({ i, business: l.business, accepted: false, why: 'already waiting to be checked' }); continue; }
                 await addPending(redis, { kind: 'lead', key, lead: { ...l, vertical: l.vertical || 'lead agent' } }, { seed: true, discoveredBy: 'provided', source: 'Lead agent', addedBy: 'lead-agent', discoveredAt: at, file: 'lead-agent ' + day });
@@ -75,7 +87,7 @@ export default async function handler(req, res) {
             await redis.ltrim(K.log, 0, 199).catch(() => {});
             return res.status(200).json({ received: leads.length, accepted, refused: leads.length - accepted, results });
         }
-        return res.status(400).json({ error: 'Unknown action. Use check, people, lookup, collect or submit.' });
+        return res.status(400).json({ error: 'Unknown action. Use check, people, lookup, collect, phone or submit.' });
     } catch (e) {
         return res.status(500).json({ error: String((e && e.message) || e).slice(0, 200) });
     }
