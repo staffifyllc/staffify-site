@@ -68,6 +68,12 @@ test('a joke or a question after "kick rocks" goes to a person; the quoted, than
         'Kick rocks?\nHa, no. Call me Tuesday.', '"Kick rocks"\nLOL, love it. Still open, send profiles.', 'Kick rocks??\n\nNot a chance, send the profiles']) {
         assert.notEqual(cl(t), 'suppressed', t); assert.equal(asksToStop(t), false, t);
     }
+    // Fifth check: jokes and "no kick rocks" in the short-reply path, a question-mark emoji; and the forms that must stop.
+    for (const t of ['Kick rocks!\nJust kidding', 'Kick rocks.\n\nJust kidding!', 'Kick rocks\njk', 'Kick rocks!\nKidding! Still hiring', 'No kick rocks', 'No kick rocks!', 'Kick rocks is funny', 'lol kick rocks, nice line', 'Kick rocks ❓'])
+        assert.notEqual(cl(t), 'suppressed', t);
+    for (const t of ['Kick rocks.\nWe don\'t hire overseas.' + sig, 'Kick rocks!\nNot looking.' + sig, 'Kick rocks :)' + sig, '*Kick rocks*' + sig, '(kick rocks)' + sig, '\u200bKick rocks.' + sig, 'Paul, kick rocks.' + sig, 'Go kick rocks.' + sig, 'Kick rocks. Lori' + sig, 'Kick rocks.\n\nLori\n<https://exclaimer.net/?url=x>'])
+        assert.equal(cl(t), 'suppressed', t);
+    const t0 = Date.now(); cl('a' + '"'.repeat(40000) + 'x'); assert.ok(Date.now() - t0 < 500, 'a hostile reply never stalls the worker');
 });
 
 test('the email worker lets go of anyone who answers "kick rocks", and not of someone whose reply only quotes our line', () => {

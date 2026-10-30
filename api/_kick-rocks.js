@@ -76,12 +76,14 @@ function firstLineKick(all) {
     let i = raw.findIndex(Boolean);
     if (i < 0) return false;
     if ((GREETING.test(raw[i]) || GREETING_I.test(raw[i])) && raw.slice(i + 1).some(Boolean)) i = raw.findIndex((l, j) => j > i && l);
-    if (!FIRST_KICK.test(unquote(raw[i]))) return false;
-    const rest = raw.slice(i + 1).join('\n');
+    // A missed stop pauses the emails and reaches a person; a wrong stop loses someone for good, so anything doubtful
+    // after the answer (a "?" anywhere outside a link, a joke) sends it to a person.
+    if (raw[i].length > 200 || !FIRST_KICK.test(unquote(raw[i]))) return false;
+    const rest = raw.slice(i + 1).join('\n').replace(/<[^>\n]*>|https?:\/\/\S+/g, ' ').replace(/[❓❔]/gu, '?');
     if (/\?/.test(rest) || JEST.test(rest)) return false;
     const end = raw.findIndex((l, j) => j > i && !l);
     const paragraph = raw.slice(i + 1, end < 0 ? raw.length : end).join(' ');
-    return !WARM.test(paragraph);
+    return !TAKE_BACK.test(paragraph);
 }
 
 // "Kick rocks" counts only as their whole answer: a short reply, no question, nothing warm or negated in it. "Ha, love the
@@ -94,15 +96,18 @@ const GREETING = /^(?:(?:hi|hello|hey|dear|good (?:morning|afternoon|evening)|mo
 const GREETING_I = /^(?:hi|hello|hey|dear|good (?:morning|afternoon|evening)|morning|afternoon|evening)\b[\w .'-]{0,30},?$/i;
 // "Yes, kick rocks" answers a line that asked "Not for you?"; a "no" or "rather not" counts only with a stop after it
 // ("No. Kick rocks"), never "No kick rocks needed" or "I'd rather not kick rocks".
-const FIRST_KICK = /^(?:(?:(?:yes|yeah|yep|yup|ok|okay|sure|please)[\s,.!-]+)|(?:(?:no|nope|rather not)[,.!]+\s*))?(?:please\s+)?kick(?:ing)?\s+rocks(?:\s+please)?(?:,?\s*(?:thanks|thank you|thx|ty))?[\s.!]*$/i;
+const FIRST_KICK = /^(?:(?:hi|hey|hello)\b[^,!.:?-]{0,30}[,!.:-]+\s*|[A-Z][a-z]{1,20}[,:-]+\s*|go\s+)?(?:(?:(?:yes|yeah|yep|yup|ok|okay|sure|please)[\s,.!-]+)|(?:(?:no|nope|rather not)[,.!]+\s*))?(?:please\s+)?kick(?:ing)?\s+rocks(?:\s+please)?(?:,?\s*(?:thanks|thank you|thx|ty))?(?:[,.!]\s*-?\s*[A-Z][a-z]{1,20})?[\s.!]*$/i;
 const JEST = /\b(?:kidding|jk|j\/k|joking|joke|lol|haha+|lmao)\b/i;
-const unquote = l => l.replace(/^["“”'‘’]+|["“”'‘’]+(?=[\s.!,]*$)/g, '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]+/gu, '').trim();
+// Quotes, Gmail's *bold*, brackets, emoji and Outlook's zero-width spaces around the answer are not part of it; a
+// question-mark emoji is a question.
+const unquote = l => l.replace(/[❓❔]/gu, '?').replace(/^[^\p{L}?]+|[^\p{L}?]+$/gu, '').trim();
 const WARM = /\b(?:yes|yeah|yep|sure|call|send|interested|open|pricing|price|rate|cost|when|schedule|meet|talk|love|great|before|don'?t|do not|not|no need|won'?t|never|have to|need to|want you to|needed)\b/i;
+const TAKE_BACK = /\b(?:yes|yeah|yep|sure|call|send|interested|open|pricing|price|rate|cost|when|schedule|meet|talk|love|great)\b/i;
 export function kicksRocks(text) {
     const all = authored(text);
     if (firstLineKick(all)) return true;
-    const t = all.replace(/\s+/g, ' ').trim();
-    if (!/\bkick(?:ing)? rocks\b/i.test(t) || /\?/.test(t) || WARM.test(t)) return false;
+    const t = all.replace(/[❓❔]/gu, '?').replace(/\s+/g, ' ').trim();
+    if (!/\bkick(?:ing)? rocks\b/i.test(t) || /\?/.test(t) || WARM.test(t) || /\b(?:kidding|jk|j\/k|joking)\b|\b(?:no|nah)\s+kick(?:ing)?\s+rocks\b|\bkick(?:ing)?\s+rocks\s+(?:is|was|line)\b|\b(?:funny|hilarious|good one|nice line|made me laugh)\b/i.test(t)) return false;
     return t.replace(/[^a-z' ]+/gi, ' ').trim().split(/\s+/).filter(Boolean).length <= 8;
 }
 

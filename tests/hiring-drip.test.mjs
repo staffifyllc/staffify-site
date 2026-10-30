@@ -226,9 +226,13 @@ test('second review: US-only titles both ways, colon titles, PT and offshore wor
     assert.equal(payPhrase(postedPay('EA ($50K-$70K + bonus)')), '$50K to $70K a year');
     assert.doesNotMatch(body('Telemarketer - $12 + bonus'), /\$12 to \$14/, 'a post paying $12 never hears our price');
     const moved = hiringDripCopy(card('m', { company: { name: 'Bayside HVAC', domain: 'm.com' }, family: 'support', job: { title: 'Part-Time CSR - $18/hr', workplace: 'onsite' } }), { after: 1 });
-    assert.match(moved.followupBodies[2], /Here's how we screen our remote candidates in Latin America and the Philippines\. One thing up front: our hires are full-time, so this fits if there's a full week of work to give them\./);
+    assert.match(moved.followupBodies[2], /^Hi Denise,\n\nYou listed it as part-time, and our hires are full-time, so this fits if there's a full week of work to give them\.\n\nThe risk with any hire/);
     const fresh = hiringDripCopy(card('n', { company: { name: 'Bayside HVAC', domain: 'n.com' }, family: 'support', job: { title: 'Part-Time CSR - $18/hr', workplace: 'onsite' } }));
-    assert.doesNotMatch(fresh.followupBodies[2], /One thing up front/, 'a new thread heard it in email 1');
+    assert.doesNotMatch(fresh.followupBodies[2], /You listed it as part-time/, 'a new thread heard it in email 1');
+    // Fifth check: "U.S." at the end, title-case schedules, and "Now Hiring a ..." prefixes.
+    for (const t of ['Remote (U.S.)', 'Executive Assistant (remote, U.S.)', 'Paralegal - Remote - U.S.', 'Remote in the U.S.']) assert.match(hiringDripStop(card('u', { job: { title: t } })), /US-based/, t);
+    for (const t of ['Remote (US Hours)', 'Remote (US Time Zones)', 'Remote - US Business Hours', 'Remote (US Eastern Time)']) assert.equal(hiringDripStop(card('u', { job: { title: t } })), null, t);
+    for (const [t, r] of [['Now Hiring a Receptionist', 'Receptionist'], ['Now hiring for Executive Assistant', 'Executive Assistant'], ['Now Hiring!! Customer Service Rep', 'Customer Service Rep'], ['Now Hiring – Dispatcher', 'Dispatcher']]) assert.equal(dripRole(t), r, t);
 });
 
 test('the call gap: a call in progress counts, and a first email drafted before a call waits at the send', () => {

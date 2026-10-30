@@ -34,11 +34,11 @@ const FRONT_DESK = /\b(front[\s-]*desk|receptionist)\b/i;
 const STATES = 'alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming';
 const CODES = 'AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY';
 const US = '(?:U\\.S\\.A?\\.?|USA|US|United States)';
-const NOT_SCHEDULE = '(?!\\s*(?:hours|time|business hours|time ?zones?|shift)\\b)';
+const NOT_SCHEDULE = '(?!\\s*(?:[Ee]astern\\s+|[Cc]entral\\s+|[Mm]ountain\\s+|[Pp]acific\\s+)?(?:[Hh]ours|[Tt]ime|[Bb]usiness [Hh]ours|[Tt]ime ?[Zz]ones?|[Ss]hift)\\b)';
 const US_ONLY = [
     new RegExp('\\b' + US + '(?:[- ](?:[Bb]ased|[Oo]nly|ONLY|[Rr]esidents?)\\b|\\s+[Rr]emote\\b)'),
     new RegExp('\\b(?:[Aa]nywhere\\s+(?:in\\s+(?:the\\s+)?)?|[Ww]ithin\\s+(?:the\\s+)?)' + US + NOT_SCHEDULE),
-    new RegExp('\\b[Rr]emote\\s*(?:\\(|,|-|\\s)\\s*(?:in\\s+)?(?:the\\s+)?' + US + '\\b' + NOT_SCHEDULE),
+    new RegExp('\\b[Rr]emote\\s*(?:\\(|,|-|\\s)\\s*(?:in\\s+)?(?:the\\s+)?' + US + '(?![A-Za-z])' + NOT_SCHEDULE),
     new RegExp('\\b(?:' + STATES + ')(?:[- ]based|\\s+residents?|,\\s*remote)\\b' + NOT_SCHEDULE, 'i'),
     new RegExp('\\bremote\\s*(?:\\(|,|-|\\s)\\s*(?:in\\s+)?(?:' + STATES + ')\\b' + NOT_SCHEDULE, 'i'),
     new RegExp('\\b(?:[Rr]emote\\s+in\\s+(?:' + CODES + ')|(?:' + CODES + ')(?:\\s*\\/\\s*(?:' + CODES + '))*\\s+[Rr]esidents?|(?:' + CODES + ')-[Bb]ased)\\b'),
@@ -127,7 +127,7 @@ export function payPhrase(pay) {
 /** The seat as it reads in a sentence: "Paralegal", "Executive Assistant", "Customer Service Rep". */
 export function dripRole(title) {
     // "Medical College is hiring: Senior Admin", "Telemarketer w/ career growth!", "Bilingual Telemarketer: English-Spanish".
-    let t = String(title || '').replace(/^.*?\bis\s+hiring\s*:\s*/i, '').replace(/^(?:now\s+hiring|hiring\s+now|urgently\s+hiring|we'?re\s+hiring|work\s+from\s+home)\s*[:!-]?\s*/i, '').replace(/\s+w\/.*$/i, '');
+    let t = String(title || '').replace(/^.*?\bis\s+hiring\s*:\s*/i, '').replace(/^(?:now\s+hiring|hiring\s+now|urgently\s+hiring|we'?re\s+hiring|work\s+from\s+home)\s*[:!–—-]*\s*(?:(?:a|an|for)\s+)?/i, '').replace(/\s+w\/.*$/i, '');
     // "<role>: <specialty>" keeps the role ("Paralegal: Family Law"); "<label>: <role>" keeps the role on the right.
     const colon = t.split(':');
     if (colon.length > 1) { const left = colon[0].trim(), right = colon.slice(1).join(':').trim(); t = ROLE_END.test(left) || !ROLE_IN.test(right) ? left : right; }
@@ -246,8 +246,8 @@ export function hiringDripCopy(card, { link = DISCOVERY_LINK, signer = 'Paul', a
     const followupBodies = {
         // Email 2 names where our hires work for everyone: a thread moved from the older copy never heard it in email 1,
         // nor the part-time note.
-        2: [`Hi ${first},`, "The risk with any hire is someone who interviews well and then can't do the job. " + (legalSeat ? "We place legal admins, not paralegals, from Latin America and the Philippines, and here's how we screen them." : "Here's how we screen our remote candidates in Latin America and the Philippines.")
-                + (partTime && after >= 1 ? " One thing up front: our hires are full-time, so this fits if there's a full week of work to give them." : ''),
+        2: [`Hi ${first},`, ...(partTime && after >= 1 ? ["You listed it as part-time, and our hires are full-time, so this fits if there's a full week of work to give them."] : []),
+            "The risk with any hire is someone who interviews well and then can't do the job. " + (legalSeat ? "We place legal admins, not paralegals, from Latin America and the Philippines, and here's how we screen them." : "Here's how we screen our remote candidates in Latin America and the Philippines."),
             'Every candidate does a written screen, a live video interview and a paid skills test, and we call their references. For seats that talk to customers or clients, we test their spoken and written English. We check their computer and internet speed too.'
                 + (law ? ' They sign a confidentiality agreement, work under your data policies and see only the systems you give them access to.' : ''),
             'The finalists then do a test task modeled on your work, so you see what they can do before anyone starts.',
@@ -373,7 +373,7 @@ export function refreshDripCopy(state, cardsById) {
         const copy = hiringDripCopy(cardsById.get(r.hiringId), { signer: r.owner, after: written, usedLines: linesIn(bodies) });
         if (unwritten) Object.assign(r, { subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies });
         else {
-            const firstFree = sent + (r.draftId ? 2 : 1);
+            const firstFree = written + 1;
             r.followupBodies = { ...(r.followupBodies || {}), ...Object.fromEntries(Object.entries(copy.followupBodies).filter(([k]) => Number(k) >= firstFree)) };
         }
         r.copyVersion = COPY_VERSION;
