@@ -145,7 +145,9 @@ const NOT_FILLABLE = /\b(director|head\s+of|vp|vice\s+president|chief|principal|
 // Always physical: the seat itself is a place. Sometimes physical: a word that is a seat on its own
 // ("Driver", "HVAC Technician") but only a department next to a remote-capable seat ("Field Service
 // Dispatcher", "Help Desk Technician", "Customer Service Representative - Driver Support").
-const PHYSICAL = /\b(store|in[- ]store|retail|cashier|warehouse|valet|housekeep(er|ing)|janitor|custodian|cook|barista|bartender|caregiver|security\s+(officer|guard)|guard|merchandiser|stocker|loader|forklift|hotel|front\s+desk\s+agent|showroom|dealership|door[- ]to[- ]door|outside\s+sales|territory|route\s+sales|911|police|emergency|on[- ]site\s+only)\b/i;
+// Public-safety dispatch stays out; a contractor's "Emergency CSR / Job Dispatcher" taking calls from home is a seat
+// we fill (RooterMan of Muncie, Madison's 2026-10-30 list).
+const PHYSICAL = /\b(store|in[- ]store|retail|cashier|warehouse|valet|housekeep(er|ing)|janitor|custodian|cook|barista|bartender|caregiver|security\s+(officer|guard)|guard|merchandiser|stocker|loader|forklift|hotel|front\s+desk\s+agent|showroom|dealership|door[- ]to[- ]door|outside\s+sales|territory|route\s+sales|911|police|emergency\s+(dispatch(er)?|communications|medical|services|response|telecommunicator)|on[- ]site\s+only)\b/i;
 const PHYSICAL_SEAT = /\b(field|driver|delivery|technician|installer|courier|porter|mechanic|server)\b/i;
 const REMOTE_SEAT = /\b(help\s*desk|support|dispatch(er|ing)?|schedul(er|ing)|coordinator|customer\s+service|call\s+cent(er|re)|representative|specialist|assistant|admin(istrator)?|receptionist|sales\s+development|inside\s+sales|appointment\s+setter)\b/i;
 const SENIOR = /\b(manager|lead|supervisor|senior|sr\.?)\b/i;

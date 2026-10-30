@@ -1,0 +1,181 @@
+// Hiring now drip: the owners on Hiring now cards get four emails, 48 hours apart, while the Hub callers keep calling.
+// ------------------------------------------------------------------
+// Paul, 2026-10-29: "we need to be emailing and dripping emails to the folks sitting in our queue, there needs to be
+// constant contact again, wire that up". 2026-10-30, the copy: "asking if the job is still available, don't try to
+// sell the outcome, sell the value and the appointment 'i see you have this listed for $22 an hour' we can fill this
+// role with someone amazing for $14 an hour".
+//
+// The campaign id and its follow-up reader live in api/_hiring-drip-campaign.js, which the engine imports.
+// The hosted Gmail worker (api/_outreach-worker-core.js) sends these like every other campaign: one queue, the same
+// history, opt-out, client, CRM and Findymail checks, the same send window. This file only says who qualifies, what
+// they read, and when a card's own state stops the sequence (a caller reached them, a booking, a closed posting).
+import { spokenRole, DISCOVERY_LINK } from './_call-scripts.js';
+import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
+
+export { HIRING_DRIP_ID };
+export const OUR_RATE = 14;
+// A posted rate this far above ours is worth quoting back; closer than that, the comparison is no argument.
+const QUOTE_FROM = 16;
+
+// Card states the drip may email. A held card waits on a phone number, not on doubt about the person or the job.
+const LIVE = ['ready', 'research', 'number_research'];
+const PHONE_HOLDS = ['main_line_only', 'toll_free_only', 'owner_cell_unconfirmed', 'number_unconfirmed'];
+// Someone spoke to them (or asked not to be called): from here a person follows up, not the drip.
+const SPOKE = ['connected', 'callback', 'timing', 'suppress'];
+const EMAIL_OK = ['verified', 'named'];
+
+/** Why a card must not get (or keep getting) drip email, or null when it may. */
+export function hiringDripStop(card) {
+    if (!card) return 'The card is gone';
+    if (card.booking || card.status === 'booked') return 'They booked a call';
+    if (!LIVE.includes(card.status)) return 'The card is ' + card.status;
+    if (card.status === 'research' && !PHONE_HOLDS.includes(card.hold && card.hold.reason)) return 'The card is held: ' + ((card.hold && card.hold.reason) || 'under review');
+    if (/^(closed|stale)$/.test(String(card.job && card.job.state || ''))) return 'The posting is ' + card.job.state;
+    if (SPOKE.includes(card.callOutcome) || (card.callHistory || []).some(h => h && SPOKE.includes(h.outcome))) return 'A caller already spoke with them';
+    const c = card.contact || {};
+    if (!c.email || !c.firstName || !EMAIL_OK.includes(c.status)) return 'No verified owner email';
+    return null;
+}
+
+// "$22/hr", "$23 - $27 an hour", "$2.0K-$2.2K/wk", "$50–60K Base", "from $60k": the first stated amount or range.
+const AMOUNT = /\$\s?(\d[\d,]*(?:\.\d+)?)\s?(k\b)?(?:\s*(?:-|–|—|to)\s*\$?\s?(\d[\d,]*(?:\.\d+)?)\s?(k\b)?)?/i;
+const num = s => Number(String(s).replace(/,/g, ''));
+/** The pay a posting states, read from its title: { low, high, unit, from } or null. Only dollar amounts count. */
+export function postedPay(title) {
+    const t = String(title || '');
+    const m = t.match(AMOUNT);
+    if (!m) return null;
+    const k = !!(m[2] || m[4]);
+    // "$50–60K": the K on the top of the range covers the bottom too.
+    let low = num(m[1]) * (m[2] || (m[4] && num(m[1]) < 1000) ? 1000 : 1);
+    let high = m[3] ? num(m[3]) * (m[4] ? 1000 : 1) : null;
+    if (!(high > low)) high = null;
+    const after = t.slice(m.index + m[0].length, m.index + m[0].length + 30).toLowerCase();
+    const unit = /^[^$]*?(\/\s?hr|\bhour|\bhourly|\/\s?h\b)/.test(after) ? 'hour'
+        : /^[^$]*?(\/\s?day|\bdaily|\ba day|\bper day)/.test(after) ? 'day'
+        : /^[^$]*?(\/\s?wk|\bweek|\bweekly)/.test(after) ? 'week'
+        : /^[^$]*?(\/\s?mo|\bmonth|\bmonthly)/.test(after) ? 'month'
+        : /^[^$]*?(\/\s?yr|\byear|\bannual|\bsalary|\bbase)/.test(after) || k || low >= 1000 ? 'year' : 'hour';
+    return { low, high, unit, from: /\bfrom\s*$/i.test(t.slice(0, m.index)) };
+}
+const PER_HOUR = { hour: 1, day: 1 / 8, week: 1 / 40, month: 12 / 2080, year: 1 / 2080 };
+export const hourlyOf = pay => (pay ? pay.low * PER_HOUR[pay.unit] : null);
+
+const money = (n, unit) => {
+    if (unit === 'year') return '$' + Math.round(n / 1000) + 'K';
+    return '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2).replace(/\.00$/, ''));
+};
+const UNIT = { hour: 'an hour', day: 'a day', week: 'a week', month: 'a month', year: 'a year' };
+/** "$20 to $25 an hour", "$60K to $65K a year", "$25 an hour and up". */
+export function payPhrase(pay) {
+    if (!pay) return null;
+    const range = money(pay.low, pay.unit) + (pay.high ? ' to ' + money(pay.high, pay.unit) : '');
+    return range + ' ' + UNIT[pay.unit] + (pay.from && !pay.high ? ' and up' : '');
+}
+
+/** The seat as it reads in a sentence: "Paralegal", "Executive Assistant", "Customer Service Rep". */
+export function dripRole(title) {
+    let r = spokenRole(title).replace(/\s+(to|for)\s+(the\s+)?\S.*$/i, '');
+    r = r.replace(/\b(fully\s+remote|100%\s+remote|remote|hybrid|part[- ]time|full[- ]time|weekend)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+    r = r.replace(/^(experienced|entry[- ]level)\s+/i, '').replace(/^(and|&)\s+|\s+(and|&)$/gi, '').trim();
+    return calm(r) || 'open';
+}
+// A word typed in capitals ("RECEPTIONIST", "INNOVATE PHYSICAL THERAPY") reads as shouting; short acronyms (CSR, HVAC) stay.
+const calm = s => String(s || '').replace(/\b[A-Z]{5,}\b/g, w => w[0] + w.slice(1).toLowerCase());
+// "Farmers Insurance - Alan Bradshaw" is Alan's agency, not Farmers: a carrier name before the dash gives way to the agent's.
+const CARRIER = /^(state farm|farmers( insurance)?|allstate|nationwide|american family|liberty mutual|country financial)\b/i;
+/** The company as people say it: no "LLC", no "(Farmers Insurance)", no " - State Farm Agent" descriptor. */
+export function dripCompany(name) {
+    let n = String(name || '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+    const parts = n.split(/\s+[-–|]\s+/);
+    if (parts.length > 1) n = CARRIER.test(parts[0]) ? parts.slice(1).join(' ') : parts[0];
+    for (let i = 0; i < 2; i++) n = n.replace(/,?\s+(llc\.?|l\.l\.c\.|inc\.?|pllc\.?|p\.?a\.?|p\.?c\.?|llp\.?|ltd\.?|corp\.?|co\.)$/i, '').trim();
+    return calm(n);
+}
+
+const SIGN = 'Paul\nStaffify';
+const OUT = "If you'd rather I not follow up, just let me know.";
+/**
+ * The four emails for one card. Email 1 asks if the role is still open, quotes their posted rate back when it is
+ * well above ours, and asks for the appointment. Nothing promises an outcome.
+ */
+export function hiringDripCopy(card, { link = DISCOVERY_LINK } = {}) {
+    const c = card.contact || {}, first = c.firstName;
+    const title = (card.job && card.job.title) || (card.lead && card.lead.role_posted) || '';
+    const role = dripRole(title), company = dripCompany(card.company && card.company.name);
+    const pay = postedPay(title), hourly = hourlyOf(pay);
+    const roleRef = role === 'open' ? 'the role you posted' : `the ${role} role`;
+    // Writing to Patrick about "the role at Law Office of Patrick M. Erker" reads like a form letter: his own name is dropped.
+    const at = company && !(first && new RegExp('\\b' + String(first).replace(/[^a-z]/gi, '') + '\\b', 'i').test(company)) ? ' at ' + company : '';
+    // Quote their number only when ours is clearly lower; a posting at or under our rate (an offshore one) hears the service.
+    const quote = hourly != null && hourly >= QUOTE_FROM;
+    const below = hourly != null && hourly <= OUR_RATE;
+    const yearNote = quote && pay.unit === 'year' ? ' (about $' + Math.round(OUR_RATE * 2080 / 1000) + 'K a year, full time)' : '';
+    const offer = below
+        ? 'We can fill it for you. We recruit and vet a dedicated hire from Latin America or the Philippines who works only for you, and we handle payroll from there.'
+        : `We can fill it with someone amazing for $${OUR_RATE} an hour${yearNote}. They work only for you, and we handle the recruiting and vetting.`;
+    const ask = `Is ${roleRef}${at} still open?` + (quote ? ` I see you have it listed at ${payPhrase(pay)}.` : '');
+    const subject = role === 'open' ? `${first}, is the role still open?` : `Is the ${role} role still open?`;
+    const bodyText = [`Hi ${first},`, ask, offer, `Do you have 15 minutes this week? I'll show you how it works. Grab a time here:\n${link}`, SIGN, OUT].join('\n\n');
+    const followupBodies = {
+        2: [`Hi ${first},`, `Following up on ${roleRef}. Every hire comes with our lifetime replacement guarantee: if the fit is ever wrong, we find you someone new.`, `Worth 15 minutes to see how it works?\n${link}`, SIGN, OUT].join('\n\n'),
+        3: [`Hi ${first},`, below
+            ? `If ${roleRef} is still open, we can take the recruiting off your plate: a vetted, dedicated hire who works only for you.`
+            : `If ${roleRef} is still open, the offer stands: someone great at $${OUR_RATE} an hour, recruited and vetted by our team, working only for you.`,
+            `Want me to walk you through it? 15 minutes:\n${link}`, SIGN, OUT].join('\n\n'),
+        4: [`Hi ${first},`, `I'll close the loop here. If you've filled ${roleRef}, congratulations. If it opens up again, or you need a second person, reply here and we'll pick it up.`, SIGN].join('\n\n'),
+    };
+    return { subject, bodyText, followupBodies, role, payText: payPhrase(pay), quoted: quote };
+}
+
+const key = s => String(s || '').trim().toLowerCase();
+const domainOf = card => key(card.company && card.company.domain).replace(/^www\./, '') || null;
+/**
+ * The cards to enrol now, best first: callable cards, then cards waiting on a cell, newest first. One per address and
+ * one per company, never someone the queue already tracks, suppressed, or assigned to another owner.
+ */
+export function dripCandidates(cards, state, { limit = 25 } = {}) {
+    const tracked = new Set((state.records || []).map(r => key(r.recipient)).filter(Boolean));
+    const cardsDone = new Set((state.records || []).map(r => r.hiringId).filter(Boolean));
+    const domains = new Set((state.records || []).filter(r => r.campaignId === HIRING_DRIP_ID && r.agencyKey).map(r => key(r.agencyKey)));
+    const suppressed = new Set((state.suppressions || []).map(key));
+    const taken = new Set((state.assignments || []).filter(a => a.owner !== 'Paul').map(a => key(a.email)));
+    const out = [], skipped = {};
+    const skip = (why, card) => { (skipped[why] ||= []).push(card.company && card.company.name || card.id); };
+    const order = c => (c.status === 'ready' ? 0 : 1);
+    for (const card of [...cards].sort((a, b) => order(a) - order(b) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')))) {
+        const stop = hiringDripStop(card);
+        if (stop) { skip(stop, card); continue; }
+        const email = key(card.contact.email), dom = domainOf(card);
+        if (cardsDone.has(card.id) || tracked.has(email)) { skip('Already in the email queue', card); continue; }
+        if (suppressed.has(email)) { skip('Suppressed', card); continue; }
+        if (taken.has(email)) { skip('Owned by another sender', card); continue; }
+        if (dom && domains.has(dom)) { skip('Company already enrolled', card); continue; }
+        tracked.add(email); if (dom) domains.add(dom);
+        out.push(card);
+        if (out.length >= limit) break;
+    }
+    return { cards: out, skipped };
+}
+
+/** Paul's mailbox with the fewest live rows, so new introductions spread across his inboxes. */
+export function dripSender(accounts, records) {
+    const choices = (accounts || []).filter(a => a.brand === 'Staffify' && a.owner === 'Paul' && a.draftEnabled && /^paul@/.test(a.email));
+    if (!choices.length) throw Error('No Paul outreach inbox available');
+    const load = email => records.filter(r => r.sender === email && r.recipient && !['sequence_complete_hold', 'suppressed', 'bounce_hold', 'sender_retired_hold'].includes(r.status)).length;
+    return choices.sort((a, b) => load(a.email) - load(b.email) || a.email.localeCompare(b.email))[0].email;
+}
+
+/** The queue row for one card: prepared, approved, and carrying its own follow-ups. */
+export function dripRow(card, { sender, now = Date.now() }) {
+    const copy = hiringDripCopy(card);
+    const at = new Date(now).toISOString();
+    return {
+        id: 'hiring-drip-' + String(card.id).replace(/^hire:/, ''), campaignId: HIRING_DRIP_ID, lane: 'hiring_now', owner: 'Paul', sender,
+        recipient: key(card.contact.email), company: (card.company && card.company.name) || '', agencyKey: domainOf(card), website: (card.company && card.company.website) || null,
+        verifiedFirstName: card.contact.firstName, hiringId: card.id, roleName: copy.role,
+        subject: copy.subject, bodyText: copy.bodyText, followupBodies: copy.followupBodies, copyVersion: 'hiring-now-2026-10-30',
+        source: { label: 'Hiring now card', id: card.id, job: (card.job && card.job.title) || null, url: (card.job && card.job.url) || null },
+        status: 'prepared', sentTouches: 0, verifiedSentTouches: 0, qualificationApproved: true, createdAt: at, enrichedAt: at,
+    };
+}

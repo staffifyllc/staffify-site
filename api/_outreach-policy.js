@@ -1,5 +1,6 @@
 import {TALENT_ID,talentFollowup} from './_talent-network-campaign.js';
 import {TOBIT_ID,tobitFollowup} from './_tobit-campaign.js';
+import {HIRING_DRIP_ID,hiringDripFollowup} from './_hiring-drip-campaign.js';
 import {inCampaign} from './_outreach-campaign.js';
 import {dealEmail} from './_deal-followup-policy.js';
 export function automatedModeAllowed(mode){return !mode||mode==='AUTOMATED';}
@@ -33,6 +34,7 @@ export function classify(messages,recipient,senders) {
 export function followup(record) {
  if(record.campaignId===TALENT_ID)return talentFollowup(record);
  if(record.campaignId===TOBIT_ID)return tobitFollowup(record);
+ if(record.campaignId===HIRING_DRIP_ID)return hiringDripFollowup(record);
  if(record.lane==='deal_followup')return dealEmail(record,record.sentTouches);
  // The "15 tasks" opener promised the list with no call required. Its first follow-up delivers
  // the list and keeps that promise; the later touches are the shared ones.
@@ -63,7 +65,9 @@ export function followup(record) {
 
 // Only the newly authored reply is evidence of refusal, never quoted campaign copy.
 export function replyText(text){return String(text||'').split(/<blockquote\b|<div[^>]*class=["']gmail_quote|\nOn .{0,200}wrote:|-----Original Message-----|\nFrom:\s/mi)[0].split('\n').filter(l=>!/^\s*>/.test(l)).join('\n').replace(/<[^>]*>/g,' ');}
-export function callReady(r,now=Date.now()){return inCampaign(r)&&!r.booking&&( !r.callOutcome||(['no_answer','voicemail','callback','gatekeeper','timing'].includes(r.callOutcome)&&!!r.nextCallAt&&Date.parse(r.nextCallAt)<=now))&&r.status==='sent'&&r.sentTouches>=4&&r.verifiedSentTouches>=4&&!!r.lastSentAt&&now-Date.parse(r.lastSentAt)>=48*3600000;}
+// A Hiring now drip row is called from its own card (on the owner's cell), never from this queue's phone ladder,
+// which can land on a company main line (Paul, 2026-10-30: "never put in data for Main Line").
+export function callReady(r,now=Date.now()){return inCampaign(r)&&r.campaignId!==HIRING_DRIP_ID&&!r.booking&&( !r.callOutcome||(['no_answer','voicemail','callback','gatekeeper','timing'].includes(r.callOutcome)&&!!r.nextCallAt&&Date.parse(r.nextCallAt)<=now))&&r.status==='sent'&&r.sentTouches>=4&&r.verifiedSentTouches>=4&&!!r.lastSentAt&&now-Date.parse(r.lastSentAt)>=48*3600000;}
 export function reconcileThread(row,messages,now=Date.now()) {
  const sent=messages.filter(m=>m.sent&&m.to.includes(row.recipient)).sort((a,b)=>a.date-b.date);
  const drafts=messages.filter(m=>m.draft);const before=row.sentTouches||0;row.verifiedSentTouches=sent.length;

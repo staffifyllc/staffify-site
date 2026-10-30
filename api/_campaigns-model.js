@@ -22,6 +22,7 @@ import { CAMPAIGN_ID } from './_outreach-campaign.js';
 import { TOBIT_ID } from './_tobit-campaign.js';
 import { TALENT_ID } from './_talent-network-campaign.js';
 import { HIRING_ID } from './_hiring-intent.js';
+import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
 
 export const NAMES = {
     [CAMPAIGN_ID]: { name: 'Staffify agency outreach', motion: 'email_call', motionLabel: 'Email, then call', summary: 'Four emails, 48 hours apart, then a call to anyone who has not replied.' },
@@ -29,8 +30,10 @@ export const NAMES = {
     // Buyers, not candidates. The 99 rows are businesses that may need remote talent (the PM's review of
     // 2026-10-27 read every one); the old "candidates" flag hid them from every rate and mislabelled the page.
     [TALENT_ID]: { name: 'Talent network outreach', motion: 'email_call', motionLabel: 'Email, then call', summary: 'Businesses that may need remote talent. Four emails, then a call to anyone who has not replied.' },
-    // Call first, no email before the call: the business is hiring for the role right now (api/_hiring-intent.js).
+    // Called on the owner's line; since 2026-10-30 the owners with a verified email also get the Hiring now emails below.
     [HIRING_ID]: { name: 'Hiring now', motion: 'call', motionLabel: 'Call first', summary: 'Businesses hiring right now for a customer service, sales or admin seat a remote person can fill. Called first, on the number their business lists.' },
+    // Paul, 2026-10-29: "there needs to be constant contact again" (api/_hiring-drip-campaign.js).
+    [HIRING_DRIP_ID]: { name: 'Hiring now emails', motion: 'email_call', motionLabel: 'Email and call', summary: 'The owners on Hiring now cards: four emails, 48 hours apart, while the callers keep calling.' },
 };
 export const MOTIONS = [
     { key: 'email_call', label: 'Email, then call' },

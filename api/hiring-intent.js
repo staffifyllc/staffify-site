@@ -11,11 +11,13 @@
 //   POST {action:'owner-lines', source, lines:[...]}   machine only: an owner's own line first on live cards
 //   POST {action:'cells-tried', tried:[...]}           machine only: cards already looked up by hand
 //   POST {action:'sync-quo-contacts', write?, limit?} machine only: a Quo contact per card, so callbacks show who
+//   POST {action:'drip-enroll', write?, limit?, allow?} machine only: owners with a verified email into the Hiring now
+//                                            email drip (api/_hiring-drip.js); allow also switches the drip on
 //   POST {action:'import-leads', source, leads:[...], recheck?}  owner or machine: researched leads into the pending
 //                                            queue (recheck: true runs leads already turned away under older rules)
 //                                            queue; worked by the next run (?leads=only works them alone)
 // Logic lives in api/_hiring-intent.js and api/_hiring-run.js; this file only wires the real
-// services in. Nothing here dials, texts or emails anyone.
+// services in. Nothing here dials, texts or emails anyone; drip-enroll queues email the hosted worker sends.
 import { randomUUID } from 'node:crypto';
 import { redis, requireAccess, adminAuthorized, readBody, SITE } from './_auth.js';
 import { ownerFor, KEY } from './_outreach-queue.js';
@@ -32,6 +34,9 @@ import { rrConfigured, account as rrAccount, lookupPerson, checkStatus as rrChec
 import { quoConfigured } from './_quo.js';
 import { syncQuoContacts, quoContactsApi } from './_quo-contacts.js';
 import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf, leadKey } from './_hiring-intent.js';
+import { config as outreachConfig } from './_outreach-gmail.js';
+import { enrollHiringDrip } from './_hiring-drip.js';
+import { dripDeps } from './_hiring-drip-live.js';
 import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines, ownerEmails, recheckOwnerEmails, RR_TRIED, RR_DAILY_CAP, RR_DAILY_MAX } from './_hiring-run.js';
 
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail)\./i;
@@ -227,6 +232,13 @@ export default async function handler(req, res) {
                 const write = body.write === true;
                 const result = body.recheck === true ? await recheckOwnerEmails(redis, { write }) : await ownerEmails(redis, { rr: { checkStatus: rrCheckStatus }, write, limit: Math.max(1, Math.min(300, Number(body.limit) || 300)) });
                 return res.status(200).json({ ok: true, write, ...result });
+            }
+            // Machine only: Hiring now owners with a verified email into the email drip. Dry unless write; allow also adds
+            // the campaign to the worker's allowlist, which is what starts drafting and sending (api/_hiring-drip.js).
+            if (body.action === 'drip-enroll') {
+                if (!machine) return res.status(403).json({ error: 'Machine only' });
+                const out = await enrollHiringDrip({ redis, queueKey: KEY, config: outreachConfig, ...dripDeps(redis) }, { write: body.write === true, allow: body.allow === true, limit: Math.max(1, Math.min(60, Number(body.limit) || 25)) });
+                return res.status(200).json({ ok: true, ...out });
             }
             if (body.action === 'cells-tried') {
                 if (!machine) return res.status(403).json({ error: 'Machine only' });
