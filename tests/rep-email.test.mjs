@@ -130,7 +130,7 @@ test('routed to hello@: every rep but Paul copies hello@ and asks for answers th
     assert.deepEqual(R.routeCopy('hello@gostaffify.com', 'Paul Chareth'), {}, 'Paul already sends from hello@');
     assert.deepEqual(R.routeCopy('madison@gostaffify.com', 'Madison Sterling'), { bcc: 'hello@gostaffify.com', replyTo: '"Madison Sterling" <madison@gostaffify.com>, hello@gostaffify.com' });
     assert.deepEqual(R.routeCopy('Milton@TryStaffify.com'), { bcc: 'hello@gostaffify.com', replyTo: 'milton@trystaffify.com, hello@gostaffify.com' });
-    assert.deepEqual([...R.TEAM_MAILBOXES].sort(), ['madison@gostaffify.com', 'madison@trystaffify.com', 'milton@trystaffify.com', 'paul@trystaffify.com']);
+    assert.deepEqual([...R.TEAM_MAILBOXES].sort(), ['madison@gostaffify.com', 'madison@trystaffify.com', 'milton@trystaffify.com', 'paul@staffifyhq.com']);
     const paul = R.buildMime({ from: 'hello@gostaffify.com', fromName: 'Paul Chareth', to: 'a@b.co', subject: 's', text: 't', html: 'h', ...R.routeCopy('hello@gostaffify.com', 'Paul Chareth') });
     assert.doesNotMatch(paul, /\r\nBcc:|\r\nReply-To:/);
     assert.throws(() => R.buildMime({ from: 'a@b.co', to: 'c@d.co', subject: 's', text: 't', html: 'h', bcc: 'x@y.co\r\nX-Evil: 1' }), /Invalid mail header/);
@@ -448,7 +448,7 @@ test('handler: signed-in Milton gets his status; an admin token is not a caller;
     assert.equal((await call(handler, { method: 'POST', cookie: 'milton-sid', body: DRAFT, origin: 'https://evil.example' })).code, 403);
     const owners = await call(handler, { bearer: 'test-admin', query: { action: 'mailboxes' } });
     assert.equal(owners.code, 200); assert.equal(owners.body.routeTo, 'hello@gostaffify.com');
-    assert.deepEqual(owners.body.mailboxes.map(m => m.mailbox).sort(), ['hello@gostaffify.com', 'madison@gostaffify.com', 'madison@trystaffify.com', 'milton@trystaffify.com', 'paul@trystaffify.com']);
+    assert.deepEqual(owners.body.mailboxes.map(m => m.mailbox).sort(), ['hello@gostaffify.com', 'madison@gostaffify.com', 'madison@trystaffify.com', 'milton@trystaffify.com', 'paul@staffifyhq.com']);
     assert.equal((await call(handler, { cookie: 'milton-sid', query: { action: 'mailboxes' } })).code, 403, 'a caller does not see who else is connected');
     assert.equal((await call(handler, { cookie: 'paul-sid', query: { action: 'mailboxes' } })).code, 200);
 });

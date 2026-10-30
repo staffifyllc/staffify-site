@@ -54,7 +54,9 @@ export const REP_MAILBOXES = Object.freeze({
         title: 'Growth Strategist',
         phone: Object.freeze({ e164: '+15616179973', display: '(561) 617-9973' }),
     }),
-    'paul@trystaffify.com': Object.freeze({
+    // Paul, 2026-10-29: "I don't have that email anymore, that email is milton@trystaffify.com". His sending mailbox is
+    // paul@staffifyhq.com, one of his Staffify sending mailboxes on the same Workspace.
+    'paul@staffifyhq.com': Object.freeze({
         name: 'Paul Chareth',
         first: 'Paul',
         title: 'Founder',
@@ -67,7 +69,7 @@ export const REP_MAILBOXES = Object.freeze({
 // only be used within its organization", org_internal). Paul: "make sure that all of the sales reps are able to send
 // emails out". So a gostaffify.com login sends from that rep's own Staffify sending mailbox, the way Milton does, and
 // every send still goes to hello@ (routeCopy). REP_SEND_AS (JSON) overrides it; {} sends from the login's own address.
-const sendAs = () => { try { const v = JSON.parse(process.env.REP_SEND_AS || 'null'); if (v && typeof v === 'object') return v; } catch {} return { 'madison@gostaffify.com': 'madison@trystaffify.com', 'hello@gostaffify.com': 'paul@trystaffify.com' }; };
+const sendAs = () => { try { const v = JSON.parse(process.env.REP_SEND_AS || 'null'); if (v && typeof v === 'object') return v; } catch {} return { 'madison@gostaffify.com': 'madison@trystaffify.com', 'hello@gostaffify.com': 'paul@staffifyhq.com' }; };
 export const SEND_AS = Object.freeze(Object.fromEntries(Object.entries(sendAs()).map(([k, v]) => [String(k).toLowerCase(), String(v).toLowerCase()])));
 
 /** The mailbox a signed-in rep sends from. The misspelt Hub record sends from the real address. */

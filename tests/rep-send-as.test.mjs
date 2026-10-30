@@ -9,11 +9,11 @@ delete process.env.REP_SEND_AS;
 const R = await import('../api/_rep-email.js');
 
 test('a gostaffify.com login sends from that rep\'s Staffify mailbox, routed to hello@', () => {
-    assert.equal(R.mailboxFor({ email: 'hello@gostaffify.com' }), 'paul@trystaffify.com');
+    assert.equal(R.mailboxFor({ email: 'hello@gostaffify.com' }), 'paul@staffifyhq.com');
     assert.equal(R.mailboxFor({ email: 'madison@gostaffify.com' }), 'madison@trystaffify.com');
     assert.equal(R.mailboxFor({ email: 'miltion@trystaffify.com' }), 'milton@trystaffify.com', 'Milton is unchanged');
     assert.equal(R.mailboxFor({ email: 'nobody@gostaffify.com' }), null);
-    assert.equal(R.profileFor('paul@trystaffify.com').title, 'Founder'); assert.equal(R.profileFor('madison@trystaffify.com').name, 'Madison Sterling');
-    assert.deepEqual(R.routeCopy('paul@trystaffify.com', 'Paul Chareth'), { bcc: 'hello@gostaffify.com', replyTo: '"Paul Chareth" <paul@trystaffify.com>, hello@gostaffify.com' }, 'Paul\'s sends land in hello@ too');
-    assert.ok(R.TEAM_MAILBOXES.includes('madison@trystaffify.com') && R.TEAM_MAILBOXES.includes('paul@trystaffify.com'), 'their copies in hello@ are the team\'s mail');
+    assert.equal(R.profileFor('paul@staffifyhq.com').title, 'Founder'); assert.equal(R.profileFor('madison@trystaffify.com').name, 'Madison Sterling');
+    assert.deepEqual(R.routeCopy('paul@staffifyhq.com', 'Paul Chareth'), { bcc: 'hello@gostaffify.com', replyTo: '"Paul Chareth" <paul@staffifyhq.com>, hello@gostaffify.com' }, 'Paul\'s sends land in hello@ too');
+    assert.ok(R.TEAM_MAILBOXES.includes('madison@trystaffify.com') && R.TEAM_MAILBOXES.includes('paul@staffifyhq.com'), 'their copies in hello@ are the team\'s mail');
 });

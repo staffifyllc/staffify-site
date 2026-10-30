@@ -1,7 +1,8 @@
 import {researchPace} from './_research-pace.js';
 import {slackHealth} from './_slack.js';
 import {redis,requireAccess,currentRep,newToken,SITE,readBody,adminAuthorized} from './_auth.js';
-import {ownerFor} from './_outreach-queue.js';
+import {ownerFor,KEY} from './_outreach-queue.js';
+import {retireSender} from './_outreach-retire.js';
 import {CONFIG,SCOPES,config,clientId,clientSecret,seal,gmail,access} from './_outreach-gmail.js';
 const callback=SITE+'/api/outreach-connect/?action=callback';
 export default async function handler(req,res){res.setHeader('Cache-Control','private, no-store');try{
@@ -67,6 +68,19 @@ export default async function handler(req,res){res.setHeader('Cache-Control','pr
    if(process.env.OUTREACH_SEND_VERIFIED!=='true'||process.env.OUTREACH_WORKER_VERIFIED!=='true')return res.status(409).json({error:'Automatic sending validation is incomplete'});
    const health=await redis.get('outreach:cloud:health');if(!health?.ok||Date.now()-Date.parse(health.checkedAt)>600000)return res.status(409).json({error:'Run live mailbox checks before enabling sending'});
    cfg.enabled=true;cfg.draftingEnabled=true;cfg.sendingEnabled=true;cfg.sendingAuthorizedAt=new Date().toISOString();
+  }else if(body.action==='retire-account'){
+   // A sending mailbox that no longer exists (renamed or deleted) leaves the worker; see api/_outreach-retire.js.
+   const nonce=newToken();if(!await redis.set('outreach:cloud:lock',nonce,{nx:true,ex:360}))return res.status(409).json({error:'Worker running; retry in a minute'});
+   try{
+    const state=await redis.get(KEY);if(!state)return res.status(503).json({error:'Queue unavailable'});
+    const stored=(await redis.get(CONFIG))||cfg;   // the stored inventory, not the read-time view with campaign pauses applied
+    let r;try{r=retireSender({cfg:stored,state,email:body.email,replacedBy:body.replacedBy?String(body.replacedBy).toLowerCase().slice(0,120):null});}catch(e){return res.status(400).json({error:e.message});}
+    if(body.write!==true)return res.status(200).json({ok:true,write:false,summary:r.summary,accounts:r.cfg.accounts.map(a=>a.email)});
+    const CAS="local s=redis.call('GET',KEYS[1]); if not s or cjson.decode(s).revision~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1";
+    if(Number(await redis.eval(CAS,[KEY],[String(state.revision),JSON.stringify(r.state)]))!==1)return res.status(409).json({error:'Queue changed; retry'});
+    await redis.set(CONFIG,r.cfg);
+    return res.status(200).json({ok:true,write:true,summary:r.summary,accounts:r.cfg.accounts.map(a=>a.email)});
+   }finally{await redis.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",['outreach:cloud:lock'],[nonce]);}
   }else if(body.action==='disable-sending')cfg.sendingEnabled=false;else if(body.action==='disable')cfg.enabled=false;else return res.status(400).json({error:'Unknown action'});
   cfg.updatedAt=new Date().toISOString();await redis.set(CONFIG,cfg);
  }
