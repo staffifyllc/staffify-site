@@ -366,6 +366,10 @@
     },
     "api/lead-agent.js": {
       "maxDuration": 60
+    },
+    "api/training-call.js": {
+      "includeFiles": "api/_training/**",
+      "maxDuration": 10
     }
   }
 }
