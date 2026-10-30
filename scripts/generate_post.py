@@ -31,7 +31,7 @@ TEMPLATE_FILE = BLOG_DIR / "_template.html"
 INDEX_FILE = BLOG_DIR / "index.html"
 INDEX_TEMPLATE = BLOG_DIR / "_index_template.html"
 
-MODEL = "claude-opus-4-7"
+MODEL = "claude-opus-5-5"
 
 SYSTEM_PROMPT = """You are a senior business writer for Staffify, a workforce-infrastructure company that places vetted full-time talent (video editors, executive admins, B2B lead gen) into service businesses.
 
