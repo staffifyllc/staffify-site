@@ -21,9 +21,10 @@
 // MAX_AGE_DAYS or no longer live. Excluded before a record is offered: opt-outs, clients, anyone
 // already in an outreach thread or owned by a person in the CRM, and numbers marked wrong.
 //
-// Call first means exactly that: no email goes out before the call, no sequence, no AI caller.
-// The record is worked by a person in the dialer and nowhere else.
+// Call first: a person works the record in the dialer, no AI caller. Since 2026-10-30 an owner with a verified email
+// also gets the Hiring now emails beside the calls (api/_hiring-drip-copy.js); an opt-out there closes the card too.
 import { createHash } from 'node:crypto';
+import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
 
 export const HIRING_ID = 'staffify-hiring-intent';
 // Paul, 2026-10-28: "job postings ... might be good today, but they could have filled that role tomorrow,
@@ -831,6 +832,21 @@ export function applyOutcome(rec, { outcome, notes, nextCallAt, dialled }, calle
     const entry = { outcome, notes: String(notes || '').slice(0, 4000), at, caller, nextCallAt: RETRY.includes(outcome) ? nextCallAt : null, ...(d.length === 10 ? { dialled: '+1' + d } : {}) };
     const status = outcome === 'connected' ? 'conversation' : outcome === 'wrong_number' ? 'number_research' : outcome === 'suppress' ? 'suppressed' : 'ready';
     return { ...rec, status, callOutcome: outcome, nextCallAt: entry.nextCallAt, callOwner: rec.callOwner || caller, callOwnerAt: rec.callOwnerAt || at, callHistory: [...(rec.callHistory || []), entry], updatedAt: at };
+}
+
+/**
+ * The email-queue row that means someone at this card's company is being worked by email (a reply, a person's thread,
+ * another campaign), so the card is worked there. A Hiring now drip row is never one: the drip runs beside the calls
+ * (Paul, 2026-10-30: "milton needs folks to call"). Matches the card's address, or any address at its domain.
+ */
+export function companyThread(rec, records) {
+    const email = String(rec && rec.contact && (rec.contact.email || rec.contact.candidateEmail) || '').toLowerCase();
+    const domain = rec && rec.company && rec.company.domain;
+    return (records || []).find(r => {
+        if (!r || r.campaignId === HIRING_DRIP_ID) return false;
+        const to = String(r.recipient || '').toLowerCase(), rd = to.split('@')[1];
+        return (email && to === email) || (domain && rd && rd.replace(/^www\./, '') === domain);
+    }) || null;
 }
 
 // ---- store helpers ---------------------------------------------------------------------------

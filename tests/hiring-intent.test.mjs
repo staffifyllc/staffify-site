@@ -1500,3 +1500,41 @@ test('video editing is a seat Staffify places; shooting on location and creator 
     const s = hiringCallScript({ caller: 'Paul', company: 'Wedding Weekender', firstName: 'Anne', jobTitle: lead.role_posted, family: 'video', direct: true });
     assert.match(s.reason, /I saw you're hiring a Post-Production Specialist\. We help companies hire dedicated Post-Production Specialists from Latin America and the Philippines/);
 });
+
+// Paul, 2026-10-30: "milton needs folks to call". The Hiring now emails put every owner in an email-queue row; opening a
+// card then closed it as "already in a Staffify email thread". A card's own drip runs beside the calls.
+test('a Hiring now drip row never closes a card; a real email thread at the company still does', async () => {
+    const { companyThread } = await import('../api/_hiring-intent.js');
+    const w = await readyCard();
+    const rec = await getRecord(w.kv, w.id);
+    const email = rec.contact.email || 'ceo@acme.com';
+    const card = { ...rec, contact: { ...rec.contact, email } };
+    const drip = { campaignId: 'staffify-hiring-now-outreach', recipient: email, status: 'prepared', hiringId: rec.id };
+    const agency = { campaignId: 'staffify-agency-outreach', recipient: email, status: 'human_reply_hold' };
+    assert.equal(companyThread(card, [drip]), null);
+    assert.equal(companyThread(card, [drip, agency]), agency);
+    const base = { kv: w.kv, isOptedOut: async () => false, clientCheck: async () => ({ status: 'clear' }), crmContact: async () => { throw Error('CRM contact missing'); }, crmStop, loadBad, isBad };
+    assert.deepEqual(await liveStops(card, { ...base, queueState: async () => ({ records: [drip] }) }), {});
+    assert.match((await liveStops(card, { ...base, queueState: async () => ({ records: [drip, agency] }) })).stop, /email thread/);
+});
+
+test('cards the drip closed by mistake come back on the next run; one with a real thread stays closed', async () => {
+    const { KEY: QUEUE_KEY } = await import('../api/_outreach-queue.js');
+    const w = jobsWorld();
+    await runHiring(w.deps, { maxSearches: 1, maxCandidates: 5, refresh: 0 });
+    const base = (await allRecords(w.kv))[0];
+    const reason = 'someone at this company is already in a Staffify email thread (prepared). Work it there.';
+    const closed = (id, email, domain) => ({ ...base, id, status: 'excluded', exclusion: { reason, at: '2026-10-30T16:30:07.264Z' }, contact: { ...base.contact, email }, company: { ...base.company, domain }, callOwner: MILTON.email });
+    await putRecord(w.kv, closed('hire:00000000000000d1', 'ravi@roverpass.com', 'roverpass.com'));
+    await putRecord(w.kv, closed('hire:00000000000000d2', 'sam@thread.com', 'thread.com'));
+    await w.kv.set(QUEUE_KEY, { revision: 1, records: [
+        { campaignId: 'staffify-hiring-now-outreach', recipient: 'ravi@roverpass.com', status: 'prepared', hiringId: 'hire:00000000000000d1' },
+        { campaignId: 'staffify-hiring-now-outreach', recipient: 'sam@thread.com', status: 'sent', hiringId: 'hire:00000000000000d2' },
+        { campaignId: 'staffify-talent-network-outreach', recipient: 'pat@thread.com', status: 'human_reply_hold' },
+    ] });
+    const out = await refreshReady(w.deps, { limit: 5 });
+    const back = await getRecord(w.kv, 'hire:00000000000000d1');
+    assert.equal(back.status, 'ready'); assert.equal(back.exclusion, null); assert.equal(back.restored.from, 'email_thread'); assert.equal(back.callOwner, MILTON.email, 'owner kept');
+    assert.equal((await getRecord(w.kv, 'hire:00000000000000d2')).status, 'excluded', 'someone else at the company replied in another campaign');
+    assert.ok(out.restored >= 1);
+});

@@ -8,10 +8,11 @@
 // found" (memory: an API error is not absence).
 import { contactLinks, phonesOnPage } from './_site-phone.js';
 import { syncQuoContacts } from './_quo-contacts.js';
+import { KEY as QUEUE_KEY } from './_outreach-queue.js';
 import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
-    parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, domainKey, listingEvidence, remotePost, MAIN_LINE, mainLabel, mainNumbers,
+    parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, companyThread, domainKey, listingEvidence, remotePost, MAIN_LINE, mainLabel, mainNumbers,
     ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel, hiringCallReady, tollFree, laneFor,
 } from './_hiring-intent.js';
 
@@ -691,6 +692,26 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
             next.brief = briefFor(next);
             await putRecord(kv, next);
         } finally { await kv.del(lock).catch(() => {}); }
+    }
+    // 2026-10-30: in the first hour of the Hiring now emails, opening a card closed it when its only "email thread" was its
+    // own drip (companyThread now leaves drip rows out). A card closed for a thread comes back when no thread but a drip
+    // remains at the company; its owner and history are kept.
+    const threadClosed = (await allRecords(kv)).filter(r => r.status === 'excluded' && r.exclusion && /already in a Staffify email thread/.test(r.exclusion.reason || ''));
+    if (threadClosed.length) {
+        const queue = await kv.get(QUEUE_KEY).catch(() => null);
+        for (const rec of queue && Array.isArray(queue.records) ? threadClosed : []) {
+            if (companyThread(rec, queue.records)) continue;
+            const lock = HK.recLock(rec.id);
+            if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+            try {
+                const fresh = await getRecord(kv, rec.id);
+                if (!fresh || fresh.status !== 'excluded' || !/already in a Staffify email thread/.test((fresh.exclusion && fresh.exclusion.reason) || '')) continue;
+                const next = { ...fresh, status: 'ready', exclusion: null, restored: { from: 'email_thread', reason: fresh.exclusion.reason, at: new Date(now).toISOString(), by: 'rules re-check' } };
+                next.brief = briefFor(next);
+                await putRecord(kv, next);
+                out.restored = (out.restored || 0) + 1;
+            } finally { await kv.del(lock).catch(() => {}); }
+        }
     }
     // Paul, 2026-10-28: "dont ever publish a 1800 number because we wont call it, go find the cell phone". Cards made
     // before that: a toll-free line leaves the card; the next number up rings instead, or, with nothing else, the card

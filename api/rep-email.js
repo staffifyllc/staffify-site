@@ -40,6 +40,7 @@ import { knownIdentity } from './_contact-identity.js';
 import { createHash } from 'node:crypto';
 import { hiringReportRows } from './_hiring-intent.js';
 import { HK as HOLDS } from './_call-holds.js';
+import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
 
 const CALLBACK = SITE + '/api/outreach-connect/?action=callback';   // the redirect URI Google already knows
 export const K = {
@@ -111,7 +112,8 @@ async function queueSuppressed(email, kv = redis) {
 
 async function queueRow(email, kv = redis) {
     const state = await kv.get(KEY);
-    const row = visibleState(state, 'all').records.find(r => String(r.recipient || '').toLowerCase() === email) || null;
+    // The card's own Hiring now drip row is not the prospect: the card is (its templates, its call-first rule).
+    const row = visibleState(state, 'all').records.find(r => r.campaignId !== HIRING_DRIP_ID && String(r.recipient || '').toLowerCase() === email) || null;
     if (row) return row;
     // A Hiring now card keeps its own store (api/_hiring-intent.js): its verified contact is a prospect too.
     return (await hiringReportRows(kv)).find(r => r.recipient && r.recipient.toLowerCase() === email) || null;

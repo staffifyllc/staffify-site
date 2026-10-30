@@ -36,6 +36,7 @@ import { syncQuoContacts, quoContactsApi } from './_quo-contacts.js';
 import { HK, HIRING_ID, parseAts, allRecords, allBacklog, parseValue, hiringCallReady, companyKey, cityOf, stateOf, leadKey } from './_hiring-intent.js';
 import { config as outreachConfig } from './_outreach-gmail.js';
 import { enrollHiringDrip } from './_hiring-drip.js';
+import { HIRING_DRIP_ID } from './_hiring-drip-campaign.js';
 import { dripDeps } from './_hiring-drip-live.js';
 import { runHiring, addPending, holdCards, fillResearch, FILL_FIELDS, ownerLines, ownerEmails, recheckOwnerEmails, RR_TRIED, RR_DAILY_CAP, RR_DAILY_MAX } from './_hiring-run.js';
 
@@ -122,7 +123,8 @@ async function findContact(domain) {
 async function outreachDomains() {
     const state = await redis.get(KEY);
     const out = new Set();
-    for (const r of (state && state.records) || []) {
+    // A Hiring now drip row is the card's own email, not outreach that owns the company.
+    for (const r of ((state && state.records) || []).filter(x => x.campaignId !== HIRING_DRIP_ID)) {
         const d = String(r.recipient || '').toLowerCase().split('@')[1];
         if (d && !FREE.test(d)) out.add(d.replace(/^www\./, ''));
         try { if (r.website) out.add(new URL(/^https?:/.test(r.website) ? r.website : 'https://' + r.website).hostname.replace(/^www\./, '').toLowerCase()); } catch { /* not a URL */ }

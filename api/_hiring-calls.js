@@ -11,7 +11,7 @@
 //                          contact email go through optOutEverywhere: the global list every campaign
 //                          checks, plus the CRM contact's other address and number
 //   timing                 comes back on the date given. No nurture email: this campaign is call-first.
-import { HK, MAX_AGE_DAYS, tollFree, getRecord, putRecord, putBacklog, applyOutcome, callRow, callerNumbers, boardKey, domainKey, companyKey, phoneKey, parseAts, hiringCallReady } from './_hiring-intent.js';
+import { HK, MAX_AGE_DAYS, tollFree, getRecord, putRecord, putBacklog, applyOutcome, callRow, callerNumbers, boardKey, domainKey, companyKey, phoneKey, parseAts, hiringCallReady, companyThread } from './_hiring-intent.js';
 import { hiringCallScript } from './_call-scripts.js';
 import { scheduleCallbackTask } from './_callback-task.js';
 import { markBad } from './_bad-numbers.js';
@@ -193,8 +193,7 @@ export async function liveStops(rec, deps = {}) {
     // Anyone at this company now in an email thread (a reply, a person's conversation, a stop) is worked there.
     let state;
     try { state = await d.queueState(d.kv); } catch { return { unavailable: 'The outreach queue could not be read.' }; }
-    const domain = rec.company && rec.company.domain;
-    const same = (state && state.records || []).find(r => { const rd = String(r.recipient || '').toLowerCase().split('@')[1]; return (email && String(r.recipient || '').toLowerCase() === email) || (domain && rd && rd.replace(/^www\./, '') === domain); });
+    const same = companyThread(rec, state && state.records);
     if (same) return { stop: 'someone at this company is already in a Staffify email thread (' + (same.status || 'queued') + '). Work it there.' };
     try {
         const bad = await d.loadBad(d.kv, rec.id);
