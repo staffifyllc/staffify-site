@@ -50,8 +50,15 @@ test('submit refuses what the agent was told never to send: no cell, a main line
     const site = { phone_source_url: 'https://newplumbing.com/about', phone_evidence: 'Call or text Dana Reyes, owner: (615) 555-0100' };
     assert.equal(why(lead()), null);
     // The agent's word is not proof, and its own main-line label always stands (Paul: never a main line).
-    assert.match(why(lead(), null), /not proven a cell/);
-    assert.match(why(lead({ phone_type: 'main business line' })), /phone_type must say mobile or cell/);
+    assert.match(why(lead(), null), /not proven to be the owner's cell: if it is the business's own published number, send phone_type "business line"/);
+    // A business line on a shared host (a carrier agent page, a directory) can't be checked against the business's own site.
+    assert.match(why(lead({ phone_type: 'business line', website: 'https://agents.farmers.com/az/tucson/x' }), null), /not a carrier, directory or social page/);
+    // Paul, 2026-10-30: the business's own published line is called ("Yes, use RocketReach on fails"): no lookup, no
+    // proof, but the business's own website so the Hub can check the number against it.
+    for (const t of ['business line', 'main business line', 'Main line', 'office number', 'company phone']) assert.equal(why(lead({ phone_type: t }), null), null, t);
+    assert.match(why(lead({ phone_type: 'business line', website: null }), null), /needs the business's own website/);
+    assert.match(why(lead({ phone_type: 'business line', phone: '888-555-0100' }), null), /toll-free/);
+    assert.match(why(lead({ phone_type: 'work' })), /must say "business line"/);
     assert.equal(why(lead({ phone_type: "mobile (owner's own cell, not the main line)" })), null, 'a cell label that mentions the main line only to deny it');
     assert.equal(why(lead({ phone_type: 'cellphone' })), null);
     // The free path stays off until switched on: a carrier's answer alone proves nothing at the door.
@@ -75,7 +82,8 @@ test('submit refuses what the agent was told never to send: no cell, a main line
     assert.match(why(lead(), { ...RR, person: 'Zed Other', employer: 'Other Co', employerDomain: 'other.com', region: 'CA' }), /not this owner's: RocketReach found Zed Other, not Dana Reyes/);
     assert.match(why(lead(), { ...RR, employer: 'Acme Roofing', employerDomain: 'acmeroof.com' }), /not this owner's: Dana Reyes works at Acme Roofing/);
     assert.match(why(lead({ phone: '888-555-0100' })), /toll-free/);
-    assert.match(why(lead({ owner_email: null })), /owner_email/);
+    assert.equal(why(lead({ owner_email: null })), null, 'an email is welcome, not required');
+    assert.match(why(lead({ owner_email: 'not-an-address' })), /not a valid address/);
     assert.match(why(lead({ owner_first: null })), /named owner/);
     assert.match(why(lead({ posting_url: 'ziprecruiter.com/job/abc' })), /https/);
     assert.match(why(lead({ role_posted: 'Marketing Coordinator - $20/hr' })), /refused by the Hub rules: role_not_fillable/);
@@ -83,6 +91,13 @@ test('submit refuses what the agent was told never to send: no cell, a main line
     assert.match(why(lead({ business: 'Rowland Pest Management' })), /already known/);
     remember(idx, lead());
     assert.match(why(lead({ owner_email: 'other@x.com', phone: '6155550199', business: 'Brand New Plumbing LLC' })), /submitted earlier in this batch/);
+});
+
+test('two agents on one shared host (agents.farmers.com) are two businesses, not a duplicate', async () => {
+    const idx = await knownIndex(deps);
+    remember(idx, lead({ business: 'Zachary Rogers Agency', website: 'https://agents.farmers.com/az/tucson/zachary-rogers', phone: '5206000025', owner_email: 'z@zra.com' }));
+    assert.equal(knownWhy(idx, { company: 'Maria Lopez Agency', website: 'https://agents.farmers.com/az/tucson/maria-lopez', phone: '5206000099', email: 'm@mla.com' }), null);
+    assert.match(knownWhy(idx, { company: 'Zachary Rogers Agency' }), /earlier in this batch/);
 });
 
 function lineKv() {
@@ -107,7 +122,7 @@ test('third check: whole names, the very number, plain office wording, the Hub\'
     assert.equal(why(page({ phone_evidence: 'Dana Reyes, 210 Main St. Cell: (615) 555-0100' }), CAR), null, 'a street called Main is not a main line');
     // Plain office wording, and a label that is not a cell.
     assert.match(why(page({ phone_evidence: 'Dana Reyes, Owner | Office: (615) 555-0100' }), CAR), /main line/);
-    for (const t of ['office', 'business', 'work']) assert.match(why(page({ phone_type: t, phone_evidence: 'Cell: Dana Reyes (615) 555-0100' }), CAR), /must say mobile or cell/, t);
+    assert.match(why(page({ phone_type: 'work', phone_evidence: 'Cell: Dana Reyes (615) 555-0100' }), CAR), /must say "business line"/);
     // RocketReach: the Hub's own owner test, with the state and the Hub's domain rules.
     const kv = lineKv();
     const lookup = async (profile) => capLookup({ kv, rr: { account: acct(500), lookupPerson: async () => ({ found: true, profile }) }, day: 'd' }, { id: 1 });

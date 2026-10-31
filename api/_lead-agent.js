@@ -10,11 +10,13 @@
 //            reserve the Hub's own hourly lookups keep. collect picks up a lookup RocketReach is still finishing.
 //   phone    what the carrier says each number is (Twilio line type), inside a daily cap, remembered per number.
 //   submit   leads into the Hiring now pending queue, each with the owner's own cell and email, checked again here.
-// Paul's rule holds at the door: a lead without the owner's mobile is refused, never a main line. The agent's word that a
+// Since 2026-10-30 a lead may carry the business's own published line (phone_type "business line"), checked against its
+// own website; a lead that claims the owner's cell must prove it. The agent's word that a
 // number is a cell is not proof: only a carrier's answer (with the carrier's name) or a RocketReach lookup this door
 // made is. Paul, 2026-10-30: "It should not always count on Rocket Reach to go and find the cell phone numbers ... we
 // have 1,000 a month", so the agent looks in public places first and asks the carrier, and looks people up last.
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { leadDomain } from './_hiring-intent.js';
 
 // A setting typed as "1,000" or "150/day" must never lift a cap: anything that is not a plain number is the default.
 const setting = (v, fallback) => { const n = Number(String(v == null ? '' : v).replace(/[,\s]/g, '')); return v != null && v !== '' && Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback; };
@@ -51,7 +53,9 @@ export function agentAuthorized(req, env = process.env) {
 
 const ten = n => String(n || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
 const norm = n => String(n || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b(llc|inc|corp|co|pllc|pc|pa|llp|ltd|the|and|group|company)\b|&/g, ' ').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-const host = u => { try { return new URL(/^https?:/i.test(String(u)) ? String(u) : 'https://' + u).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; } };
+// The Hub's own domain rule: a shared host (agents.farmers.com, statefarm.com, facebook.com) is nobody's domain, so two
+// agents on it are never one business.
+const host = u => (u ? leadDomain(String(u)) || '' : '');
 const FREE = /^(gmail|yahoo|hotmail|outlook|aol|icloud|me|live|msn|proton|protonmail|comcast)\./i;
 
 /**
@@ -108,6 +112,11 @@ const fresh = (at, now) => now - (Date.parse(at || '') || 0) < FRESH_MS;
 const MAIN_WORDS = /\b(main(?!\s+(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|hwy|highway)\b)(\s*-?\s*line)?|mainline|switchboard|front[\s-]?(desk|office)|reception(ist)?|headquarters|hq|office|business\s+(line|number|phone)|work\s+(line|number|phone)|toll[\s-]?free)\b/i;
 // The agent's own label for the number may only say it is a cell (or say nothing).
 const CELL_LABEL = /^\s*(?:mobile|cell(?:ular|[\s-]?phone)?|wireless)\b/i;
+// Paul, 2026-10-30: the business's own published line is called at these small companies ("Yes, use RocketReach on
+// fails"). The agent says so with phone_type "business line"; it needs no lookup and no proof, only the business's own
+// website, where the Hub's admission checks the number against the lines the business publishes.
+const BUSINESS_LINE = /^\s*(?:business|main|office|company)(?:\s+(?:line|number|phone))?\b/i;
+export const businessLine = l => BUSINESS_LINE.test(String(l && l.phone_type || '')) && !CELL_LABEL.test(String(l && l.phone_type || ''));
 // Phone-shaped runs in a quote: "(615) 555-0100", "615.555.0100", "+1 615 555 0100".
 // Not a foreign number's last ten digits ("+52 656 612 3456") or a bare ID; any dash the page used.
 const PHONES_IN = /(?<![\d+])(?<!\+(?:[02-9]\d{0,2}|1\d{1,2})[\s.\-‐-―]*)(?:\+?1[\s.\-‐-―]*)?(?:\(\d{3}\)[\s.\-‐-―]*|\d{3}[\s.\-‐-―]+)\d{3}[\s.\-‐-―]+\d{4}(?!\d)/g;
@@ -203,14 +212,22 @@ export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = n
     if (!l.business || !l.role_posted) return 'business and role_posted are required';
     if (!/^https:\/\//i.test(String(l.posting_url || ''))) return 'posting_url must be the https link to the posting';
     if (!l.owner_first) return 'owner_first is required: a lead is a named owner';
-    if (!EMAIL.test(String(l.owner_email || ''))) return 'owner_email is required';
+    // An email is welcome, not required: a card is called on its line, and emailed only when the Hub verifies an address.
+    if (l.owner_email && !EMAIL.test(String(l.owner_email))) return 'owner_email is not a valid address (leave it empty if you have none)';
     const p = ten(l.phone);
     if (p.length !== 10) return 'phone must be a 10-digit US number';
     if (tollFree(p)) return 'a toll-free number is never a lead';
-    if (l.phone_type && !CELL_LABEL.test(String(l.phone_type))) return 'phone_type must say mobile or cell: only the owner\'s own cell, never a main line';
+    if (businessLine(l)) {
+        if (!/^https:\/\//i.test(String(l.website || '')) || !leadDomain(String(l.website))) return 'a business line needs the business\'s own website (https, not a carrier, directory or social page), where the Hub checks the number';
+        const q0 = qualify(l, now);
+        if (!q0.ok) return 'refused by the Hub rules: ' + q0.reason + (q0.detail ? ' (' + String(q0.detail).slice(0, 120) + ')' : '');
+        const known0 = knownWhy(idx, { company: l.business, website: l.website, phone: l.phone, email: l.owner_email });
+        return known0 ? 'already known: ' + known0 : null;
+    }
+    if (l.phone_type && !CELL_LABEL.test(String(l.phone_type))) return 'phone_type must say "business line" (the business\'s own published number) or mobile (the owner\'s cell, proven by a lookup)';
     if (MAIN_WORDS.test(String(l.phone || '').replace(/[\d\s()+.-]/g, ' ')) || (proof && proof.by === 'carrier' && MAIN_WORDS.test(String(l.phone_evidence || ''))))
-        return 'this number is described as a main line, front desk or office line: only the owner\'s own cell, never a main line';
-    if (!proof) return 'phone is not proven a cell: ask the carrier (action phone) or look the owner up first. Never a main line.';
+        return 'this number is described as a main line or office line: if it is the business\'s own published number, send phone_type "business line"';
+    if (!proof) return 'phone is not proven to be the owner\'s cell: if it is the business\'s own published number, send phone_type "business line"; a cell needs a lookup first';
     if (!provenCell(proof)) return proof.by === 'carrier' ? `the carrier says this number is ${proof.type || 'unknown'}${proof.carrier ? ' (' + proof.carrier + ')' : ' and did not name itself'}, not a proven cell: never a main line`
         : proof.valid === false ? 'RocketReach marks this number invalid' : proof.carrierType ? `the carrier says this number is ${proof.carrierType}, not a cell` : 'RocketReach did not list this number as a mobile. Ask the carrier (action phone): a named carrier saying mobile proves it.';
     // RocketReach's own label is not mobile and only the carrier says it is: that answer must be recent.

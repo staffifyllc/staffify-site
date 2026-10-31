@@ -601,9 +601,10 @@ export const phoneKey = n => 'phone:' + String(n || '').replace(/\D/g, '').slice
 // Paul, 2026-10-28: "dont ever publish a 1800 number because we wont call it, go find the cell phone". A toll-free
 // line is a switchboard: it is never the number on a card, never a backup, and a card with nothing else waits for a cell.
 export const tollFree = n => /^(800|888|877|866|855|844|833)\d{7}$/.test(String(n || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, ''));
-// Paul, 2026-10-28: "we don't want "main" unless they are cell phones in our database". A number a researcher labels
-// as the company's main line (a type column, or a note written beside the number) is not called: the card waits while
-// the owner's cell is looked up, and that line only rings again if a lookup shows it is the owner's mobile.
+// Paul, 2026-10-28: "we don't want "main" unless they are cell phones in our database". Reversed 2026-10-30 on the call
+// results: at these small owner-run businesses the business's own line got a conversation on 46% of dials against 30%
+// for RocketReach cells, so a main line is called (the caller asks for the owner) and a lookup is spent only when that
+// line fails (lineFailed in _hiring-run.js). MAIN_LINE and mainNumbers still name such lines for the record.
 export const MAIN_LINE = /\b(main(\s*-?\s*line)?|mainline|switchboard|front[\s-]?desk|reception(ist)?|headquarters|hq)\b/i;
 export const mainLabel = s => MAIN_LINE.test(String(s || '')) && !/\b(mobile|cell)\b/i.test(String(s || ''));
 const ten = v => String(v || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
@@ -614,10 +615,9 @@ export function mainNumbers(r) {
     const own = !String(l.phone_source || '').trim() && ten(l.phone).length === 10 && (mainLabel(l.phone_type) || mainLabel(note)) ? ['+1' + ten(l.phone)] : [];
     return [...new Set([...own, ...((r && r.mainLines) || [])])];
 }
-/** The numbers a caller may see on a card: never a toll-free line, and none while it waits on a main line for a cell. */
+/** The numbers a caller may see on a card: never a toll-free line. */
 export function callerNumbers(rec) {
     const p0 = rec && rec.phone || {};
-    if (rec && rec.status === 'research' && rec.hold && rec.hold.reason === 'main_line_only') return { number: null, alternates: [] };
     return { number: tollFree(p0.number) ? null : p0.number, alternates: (p0.alternates || []).filter(n => !tollFree(n)) };
 }
 const STATES = { alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA', colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA', hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA', kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD', massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT', virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY', 'district of columbia': 'DC' };
