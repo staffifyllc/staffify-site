@@ -15,7 +15,7 @@ import { addPending, cellMatch } from './_hiring-run.js';
 import { optedOutSet } from './_optout.js';
 import { rrConfigured, account, lookupPerson, checkStatus, searchPeople, profileOf } from './_rocketreach.js';
 import { dayKey } from './_outreach-policy.js';
-import { agentAuthorized, knownIndex, knownWhy, leadProblem, capLookup, agentProfile, remember, phoneCheck, rememberLines, lineProof, provenPhone, carrierLookup, carrierConfigured, freeCellsOn, LEAD_FIELDS, LOOKUPS_PER_DAY, CHECKS_PER_DAY, LEAD_AGENT_KEYS as K } from './_lead-agent.js';
+import { agentAuthorized, knownIndex, knownWhy, leadProblem, businessLine, capLookup, agentProfile, remember, phoneCheck, rememberLines, lineProof, provenPhone, carrierLookup, carrierConfigured, freeCellsOn, LEAD_FIELDS, LOOKUPS_PER_DAY, CHECKS_PER_DAY, LEAD_AGENT_KEYS as K } from './_lead-agent.js';
 
 // The Hub's own test for a RocketReach profile (api/_hiring-run.js cellMatch): this lead's owner, at this business, in its
 // state. The domain is the Hub's (a shared host like statefarm.com or facebook.com ties nobody), and a profile with no
@@ -95,7 +95,8 @@ export default async function handler(req, res) {
                 const proof = await lineProof(redis, l.phone);
                 const problem = leadProblem(l, { idx, qualify: qualifyLead, tollFree, proof, match: (lead, p) => ownerMatch(lead, p, now), freeCells: freeCellsOn(), now });
                 if (problem) { results.push({ i, business: l.business, accepted: false, why: problem }); continue; }
-                Object.assign(l, provenPhone(l, proof));
+                // A business line goes in as the company's main line (callers ask for the owner); a cell as the proven cell.
+                Object.assign(l, businessLine(l) ? { phone_type: "main line (the business's own published number)", phone_source: null } : provenPhone(l, proof));
                 const key = leadKey(l);
                 if (await redis.hget(HK.pending, key)) { results.push({ i, business: l.business, accepted: false, why: 'already waiting to be checked' }); continue; }
                 await addPending(redis, { kind: 'lead', key, lead: { ...l, vertical: l.vertical || 'lead agent' } }, { seed: true, discoveredBy: 'provided', source: 'Lead agent', addedBy: 'lead-agent', discoveredAt: at, file: 'lead-agent ' + day });

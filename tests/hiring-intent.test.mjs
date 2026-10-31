@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sectorOf, laneFor, SECTOR_CALLER, postEvidence, listingEvidence, addressCity, qualifyLead, leadKey, leadDomain, leadPostedAt, leadStatedDate, leadDateLabel, HK, HIRING_ID, FRESH_MS, MAX_AGE_DAYS, JOB_QUERIES, JOB_TERMS, METROS, qualifyJob, profileMatches, jobAgeDays, stateOf, companyKey, phoneKey, parseAts, roleFamily, qualifyPosting, restrictions, hiringCallReady, applyOutcome, callRow, linksToBoard, boardHomepage, getRecord, allRecords, allBacklog, putRecord, hiringReportRows } from '../api/_hiring-intent.js';
-import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED, MAIN_LINE, ownerEmail, contactWithEmail, ownerEmails, mailNamed, recheckOwnerEmails } from '../api/_hiring-run.js';
+import { processPosting, runHiring, refreshReady, addPending, PENDING_MAX_ATTEMPTS, compactListing, localNumber, preferLocal, holdCards, alignNumbers, siteCheck, processLead, fillResearch, ownerLines, ownerCells, cellMatch, cellsOf, RR_DAILY_CAP, RR_TRIED, MAIN_LINE, lineFailed, ownerEmail, contactWithEmail, ownerEmails, mailNamed, recheckOwnerEmails } from '../api/_hiring-run.js';
 import { profileOf } from '../api/_rocketreach.js';
 import { mainLabel, mainNumbers, callerNumbers } from '../api/_hiring-intent.js';
 import { contactOf } from '../api/_quo-contacts.js';
@@ -1086,10 +1086,17 @@ const fakeRR = (over = {}) => {
         checkStatus: async ids => { calls.status++; return over.status ? over.status(ids) : {}; },
     } };
 };
-async function cardWorld() {
+// Paul, 2026-10-30: a lookup only once the business's line has failed. These cards hit a gatekeeper twice.
+async function cardWorld({ failed = true } = {}) {
     const w = jobsWorld();
     await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Madison' }, w.deps);
-    return { w, rec: (await allRecords(w.kv))[0] };
+    let rec = (await allRecords(w.kv))[0];
+    if (failed) {
+        const gk = { outcome: 'gatekeeper', at: new Date(NOW - 3600e3).toISOString(), caller: 'miltion@trystaffify.com' };
+        rec = { ...rec, callHistory: [gk, gk], callOutcome: 'gatekeeper', nextCallAt: new Date(NOW + 864e5).toISOString() };
+        await putRecord(w.kv, rec);
+    }
+    return { w, rec };
 }
 test('each run puts an owner\'s cell first on a card that rings a main line, once, inside the caps', async () => {
     const { w, rec } = await cardWorld();
@@ -1182,104 +1189,50 @@ test('a toll-free number is never on a card: dropped at intake, stripped from ol
     const chk = await siteCheck({ website: 'https://x.com/', domain: 'x.com', getPage: async u => ({ url: u, html: '<p>Call 800-833-0128 or 562-345-8700</p>', text: 'Call 800-833-0128 or 562-345-8700' }), findSitePhone: async () => ({ phone: '+18008330128', alternates: [] }) });
     assert.deepEqual(chk.numbers, ['+15623458700']);
 });
-// Paul, 2026-10-28: "we don't want "main" unless they are cell phones in our database".
-test('a number labelled the main line is never called: the card waits for the owner\'s cell, and the main line is not kept', async () => {
-    assert.ok(MAIN_LINE.test('main') && MAIN_LINE.test('main (likely founder)') && MAIN_LINE.test('Front desk'));
-    assert.ok(!MAIN_LINE.test('direct') && !MAIN_LINE.test('direct (founder voicemail)') && !MAIN_LINE.test('mobile') && !MAIN_LINE.test(''));
-    // Intake: held, never callable, no number shown.
+// Paul, 2026-10-28: "we don't want "main" unless they are cell phones in our database". Reversed 2026-10-30 on the call
+// results (business lines: a conversation on 46% of dials, RocketReach cells 30%): "Yes, use RocketReach on fails".
+test('a main line is called at these small companies; the owner\'s cell is looked up only once that line fails', async () => {
+    assert.ok(MAIN_LINE.test('main') && MAIN_LINE.test('Front desk') && !MAIN_LINE.test('direct') && !MAIN_LINE.test('mobile'));
+    for (const t of ['Receptionist', 'front-desk', 'HQ', 'Main line', 'mainline']) assert.ok(mainLabel(t), t);
+    for (const t of ['cell (main contact)', 'mobile / main', 'maintenance', 'domain', 'direct']) assert.ok(!mainLabel(t), t);
+    // Intake: on the list, callable, the line shown and labelled for the caller.
     const w = jobsWorld();
     const r = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: 'main', owner_email: null }) }, { source: 'Madison' }, w.deps);
     const rec = await getRecord(w.kv, r.id);
-    assert.equal(rec.status, 'research'); assert.equal(rec.hold.reason, 'main_line_only');
+    assert.equal(rec.status, 'ready'); assert.equal(rec.hold, undefined === rec.hold ? undefined : rec.hold);
+    assert.match(rec.phone.type, /main line: ask for the owner/);
     const row = callRow(rec, MILTON.email, NOW);
-    assert.equal(row.callReady, false); assert.equal(row.unclaimed, false, 'nobody is offered it');
-    assert.equal(row.phone, null); assert.equal(row.callContact.phone, null); assert.deepEqual(row.callContact.phoneAlternates, [], 'and its main line is not shown anywhere');
-    // A direct line, a cell, or a list with no line types (Madison's) goes in as before.
-    for (const t of ['direct', 'mobile', undefined]) {
-        const w1 = jobsWorld();
-        const r1 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: t, owner_email: null }) }, { source: 'Madison' }, w1.deps);
-        assert.equal((await getRecord(w1.kv, r1.id)).status, 'ready', String(t));
-    }
-    // The hourly lookup goes to it, and the owner's cell releases it without the main line behind it.
+    assert.equal(row.callReady, true); assert.ok(row.phone, 'the caller sees the number');
+    assert.deepEqual(callerNumbers(rec).number, rec.phone.number);
+    // No lookup while the line has not failed.
     let f = fakeRR();
+    assert.equal((await ownerCells({ ...w.deps, rr: f.rr, now: NOW })).lookups, 0); assert.equal(f.calls.lookups.length, 0);
+    // A gatekeeper twice: now the owner's cell is looked up, and it goes first with the main line kept behind it.
+    const gk = { outcome: 'gatekeeper', at: new Date(NOW - 3600e3).toISOString(), caller: MILTON.email };
+    assert.equal(lineFailed({ callHistory: [gk] }), false); assert.equal(lineFailed({ callHistory: [gk, gk] }), true);
+    assert.equal(lineFailed({ callHistory: [{ outcome: 'wrong_number' }] }), true); assert.equal(lineFailed({ callHistory: [{ outcome: 'no_answer' }, { outcome: 'voicemail' }] }), false);
+    await putRecord(w.kv, { ...rec, callHistory: [gk, gk], callOutcome: 'gatekeeper', nextCallAt: new Date(NOW + 864e5).toISOString() });
+    f = fakeRR();
     const out = await ownerCells({ ...w.deps, rr: f.rr, now: NOW });
-    assert.equal(out.added, 1);
+    assert.equal(out.lookups, 1); assert.equal(out.added, 1);
     const after = await getRecord(w.kv, r.id);
-    assert.equal(after.status, 'ready'); assert.equal(after.hold, null); assert.equal(after.released.from, 'main_line_only');
     assert.equal(after.phone.number, '+15203017788'); assert.equal(after.phone.lineType, 'mobile');
-    assert.ok(![rec.phone.number, ...(rec.phone.alternates || [])].some(n => after.phone.alternates.includes(n)), 'the main line is not kept as a backup');
-    assert.equal(after.phone.previous.number, rec.phone.number, 'but the card remembers it');
-    // Unless the lookup shows that same number is the owner's mobile: then it rings, as their cell.
-    const w2 = jobsWorld();
-    const r2 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: 'main', owner_email: null }) }, { source: 'Madison' }, w2.deps);
-    const held2 = await getRecord(w2.kv, r2.id);
-    await ownerCells({ ...w2.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: RRP({ phones: [{ number: held2.phone.number, type: 'mobile', grade: 'A', valid: true }] }) }) }).rr, now: NOW });
-    const same = await getRecord(w2.kv, r2.id);
-    assert.equal(same.status, 'ready'); assert.equal(same.phone.number, held2.phone.number); assert.equal(same.phone.lineType, 'mobile');
-    // No cell found: it stays held.
-    const w3 = jobsWorld();
-    const r3 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: 'main (likely founder)', owner_email: null }) }, { source: 'Madison' }, w3.deps);
-    const none = await ownerCells({ ...w3.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: RRP({ phones: [{ number: '+15204440000', type: 'direct dial', grade: 'A', valid: true }] }) }) }).rr, now: NOW });
-    assert.equal(none.noMobile, 1);
-    assert.equal((await getRecord(w3.kv, r3.id)).hold.reason, 'main_line_only');
-    // A line added by hand releases it only when it is a mobile.
-    const lines = (phone_type) => ownerLines(w3.kv, { source: 'RocketReach', lines: [{ id: r3.id, phone: '520-444-0000', phone_type, phone_person: 'Zachary Rogers' }], write: true, by: 'test', now: NOW, isOptedOut: async () => false, loadBad: async () => new Set(), isBad: () => false });
-    const [direct] = await lines('direct dial');
-    assert.equal(direct.done, false); assert.match(direct.why, /mobile/);
-    assert.equal((await getRecord(w3.kv, r3.id)).status, 'research');
-    const [cell] = await lines('mobile');
-    assert.equal(cell.done, true); assert.equal((await getRecord(w3.kv, r3.id)).status, 'ready');
+    assert.ok(after.phone.alternates.includes(rec.phone.number), 'the main line stays behind the cell');
 });
-test('second review of the main-line rule: no main line rides back in, merges, notes beside a number, and a labelled cell stays first', async () => {
-    // Labels: a cell that is also the main contact is a cell; the common ways of writing a switchboard are main lines.
-    for (const t of ['Receptionist', 'front-desk', 'HQ', 'Main line', 'mainline']) assert.ok(mainLabel(t), t);
-    for (const t of ['cell (main contact)', 'mobile / main', 'maintenance', 'domain', 'direct']) assert.ok(!mainLabel(t), t);
-    // The lookup lists the held main line as a 'direct dial': released on the cell, and the main line is not a backup.
+test('cards held on a main line before the change go back on the list with that line', async () => {
     const w = jobsWorld();
-    const r = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: 'main', owner_email: null }) }, { source: 'Paul' }, w.deps);
-    const held = await getRecord(w.kv, r.id);
-    await ownerCells({ ...w.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: RRP({ phones: [{ number: '+15203017788', type: 'mobile', grade: 'A', valid: true }, { number: held.phone.number, type: 'direct dial', grade: 'A', valid: true }] }) }) }).rr, now: NOW });
-    const released = await getRecord(w.kv, r.id);
-    assert.equal(released.phone.number, '+15203017788'); assert.ok(!released.phone.alternates.includes(held.phone.number), 'the main line is not back as a backup');
-    // Madison's first lists wrote the label beside the number: that counts too.
-    const w2 = jobsWorld();
-    const r2 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone: '520-600-0025 (main)', owner_email: null }) }, { source: 'Madison' }, w2.deps);
-    assert.equal((await getRecord(w2.kv, r2.id)).hold.reason, 'main_line_only');
-    // A card already on the list: a later lead that labels its line a main line holds it (nobody working it) ...
-    const w3 = jobsWorld();
-    const first = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Madison' }, w3.deps);
-    assert.equal((await getRecord(w3.kv, first.id)).status, 'ready');
-    const again = LEAD({ owner_email: null, phone_type: 'main', role_posted: 'Office Assistant - $18/hr', posting_url: 'https://www.indeed.com/viewjob?jk=main1' });
-    const m = await processLead({ kind: 'lead', key: leadKey(again), lead: again }, { source: 'Paul' }, w3.deps);
-    assert.equal(m.verdict, 'merged');
-    const noted = await getRecord(w3.kv, first.id);
-    assert.deepEqual(noted.mainLines, [noted.phone.number]); assert.deepEqual(mainNumbers(noted), [noted.phone.number]);
-    const res = await refreshReady({ ...w3.deps, now: NOW }, { limit: 0, siteChecks: 0 });
+    const r = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Madison' }, w.deps);
+    const c = await getRecord(w.kv, r.id);
+    await putRecord(w.kv, { ...c, status: 'research', hold: { reason: 'main_line_only', detail: 'old rule', at: '2026-10-29T00:00:00Z', by: 'admission' } });
+    const res = await refreshReady({ ...w.deps, now: NOW }, { limit: 0, siteChecks: 0 });
     assert.equal(res.mainLine, 1);
-    assert.equal((await getRecord(w3.kv, first.id)).hold.reason, 'main_line_only');
-    // ... and a card someone is working keeps its line for that person; only backups that are main lines leave.
-    const w4 = jobsWorld();
-    const f4 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Madison' }, w4.deps);
-    const c4 = await getRecord(w4.kv, f4.id);
-    await putRecord(w4.kv, { ...c4, callOwner: MILTON.email, phone: { ...c4.phone, alternates: ['+15209990000'] }, mainLines: [c4.phone.number, '+15209990000'] });
-    await refreshReady({ ...w4.deps, now: NOW }, { limit: 0, siteChecks: 0 });
-    const kept = await getRecord(w4.kv, f4.id);
-    assert.equal(kept.status, 'ready'); assert.equal(kept.phone.number, c4.phone.number); assert.deepEqual(kept.phone.alternates, []);
-    // A number labelled the person's own (mobile or direct) stays first, and the website's lines are not added behind it.
-    const w5 = jobsWorld();
-    w5.deps.getPage = async u => ({ url: u, html: '<p>Call 520-555-0100</p>', text: 'Call 520-555-0100' });
-    w5.deps.findSitePhone = async () => ({ phone: '+15205550100', alternates: [] });
-    const own = LEAD({ owner_email: null, phone_type: 'mobile', website: 'https://rogershomeservices.com' });
-    const r5 = await processLead({ kind: 'lead', key: leadKey(own), lead: own }, { source: 'Paul' }, w5.deps);
-    const c5 = await getRecord(w5.kv, r5.id);
-    assert.equal(c5.status, 'ready'); assert.equal(c5.phone.number, '+15206000025'); assert.deepEqual(c5.phone.alternates, []);
-    // A held card's main line is in no number a caller can see: the row, the card, the Quo contact.
-    assert.deepEqual(callerNumbers(held), { number: null, alternates: [] });
-    assert.equal(contactOf(held), null, 'no Quo contact for a held main line');
-    const brief = await hiringBrief(w2.kv, { id: r2.id, caller: 'Milton', callerEmail: MILTON.email, shiftGate: { allowed: true } }, { kv: w2.kv, isOptedOut: async () => false, clientCheck: async () => ({ status: 'clear' }), crmContact: async () => { throw Error('CRM contact missing'); }, crmStop, loadBad, isBad, queueState: async () => ({ records: [] }) });
-    assert.equal(brief.body.company, 'Rogers Home Services - Zachary Rogers', 'the held card itself was read');
-    assert.equal(brief.body.phone, null); assert.equal(brief.body.callable, false);
-    assert.ok(!JSON.stringify(brief.body).includes('5206000025'), 'the call card never shows its main line');
+    const back = await getRecord(w.kv, r.id);
+    assert.equal(back.status, 'ready'); assert.equal(back.hold, null); assert.equal(back.released.from, 'main_line_only');
+    assert.equal(callRow(back, MILTON.email, NOW).callReady, true);
+    // A toll-free hold is not released.
+    await putRecord(w.kv, { ...back, status: 'research', hold: { reason: 'toll_free_only' }, phone: { ...back.phone, number: '+18005551212', alternates: [] } });
+    await refreshReady({ ...w.deps, now: NOW }, { limit: 0, siteChecks: 0 });
+    assert.equal((await getRecord(w.kv, r.id)).hold.reason, 'toll_free_only');
 });
 test('titles from Paul\'s remote list that are seats we fill, and the ones that are not', () => {
     for (const [t, f] of [['Medical Cold Caller', 'sales'], ['Marketing / Appointment Setting', 'sales'], ['Remote lead-gen specialist', 'sales'], ['Part-time remote CEO guest booking coordinator', 'scheduling'], ['Membership Coordinator', 'account'], ['Firm Operations & Tax Administration', 'admin']]) assert.equal(roleFamily(t), f, t);
@@ -1312,6 +1265,7 @@ test('the owner\'s email comes with the lookup that found their cell, only one R
     // The hourly lookup: with a cell, the address rides along; without one, it still goes on the card.
     const w = jobsWorld();
     const r = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: 'main', owner_email: null }) }, { source: 'Paul' }, w.deps);
+    { const c0 = await getRecord(w.kv, r.id), gk = { outcome: 'gatekeeper', at: new Date(NOW - 3600e3).toISOString() }; await putRecord(w.kv, { ...c0, callHistory: [gk, gk], callOutcome: 'gatekeeper', nextCallAt: new Date(NOW + 864e5).toISOString() }); }
     const rawMail = { emails: [{ email: 'zrogers@rogershome.com', smtp_valid: 'valid', type: 'professional', grade: 'A' }] };
     const withMail = { employerDomain: 'rogershome.com', emails: profileOf(rawMail).emails };   // the fake lookup hands back a profile already read
     const out = await ownerCells({ ...w.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: RRP(withMail) }) }).rr, now: NOW });
@@ -1321,10 +1275,11 @@ test('the owner\'s email comes with the lookup that found their cell, only one R
     assert.equal(callRow(card, MILTON.email, NOW).recipient, 'zrogers@rogershome.com', 'so Email them and the quick sends appear on the card');
     const w2 = jobsWorld();
     const r2 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ phone_type: 'main', owner_email: null }) }, { source: 'Paul' }, w2.deps);
+    { const c0 = await getRecord(w2.kv, r2.id), gk = { outcome: 'gatekeeper', at: new Date(NOW - 3600e3).toISOString() }; await putRecord(w2.kv, { ...c0, callHistory: [gk, gk], callOutcome: 'gatekeeper', nextCallAt: new Date(NOW + 864e5).toISOString() }); }
     const none = await ownerCells({ ...w2.deps, rr: fakeRR({ lookup: () => ({ found: true, profile: RRP({ ...withMail, phones: [{ number: '+15204440000', type: 'direct dial', grade: 'A', valid: true }] }) }) }).rr, now: NOW });
     assert.equal(none.noMobile, 1); assert.equal(none.emails, 1);
     const held = await getRecord(w2.kv, r2.id);
-    assert.equal(held.status, 'research', 'still held: an address is not a reason to call a main line'); assert.equal(held.contact.email, 'zrogers@rogershome.com');
+    assert.equal(held.status, 'ready', 'still called on its line (since 2026-10-30)'); assert.equal(held.contact.email, 'zrogers@rogershome.com');
     // Owners looked up before tonight: read back free and filled in; dry first.
     const w3 = jobsWorld();
     const r3 = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Paul' }, w3.deps);

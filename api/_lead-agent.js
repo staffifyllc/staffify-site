@@ -108,6 +108,11 @@ const fresh = (at, now) => now - (Date.parse(at || '') || 0) < FRESH_MS;
 const MAIN_WORDS = /\b(main(?!\s+(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|hwy|highway)\b)(\s*-?\s*line)?|mainline|switchboard|front[\s-]?(desk|office)|reception(ist)?|headquarters|hq|office|business\s+(line|number|phone)|work\s+(line|number|phone)|toll[\s-]?free)\b/i;
 // The agent's own label for the number may only say it is a cell (or say nothing).
 const CELL_LABEL = /^\s*(?:mobile|cell(?:ular|[\s-]?phone)?|wireless)\b/i;
+// Paul, 2026-10-30: the business's own published line is called at these small companies ("Yes, use RocketReach on
+// fails"). The agent says so with phone_type "business line"; it needs no lookup and no proof, only the business's own
+// website, where the Hub's admission checks the number against the lines the business publishes.
+const BUSINESS_LINE = /^\s*(?:business|main|office|company)(?:\s+(?:line|number|phone))?\b/i;
+export const businessLine = l => BUSINESS_LINE.test(String(l && l.phone_type || '')) && !CELL_LABEL.test(String(l && l.phone_type || ''));
 // Phone-shaped runs in a quote: "(615) 555-0100", "615.555.0100", "+1 615 555 0100".
 // Not a foreign number's last ten digits ("+52 656 612 3456") or a bare ID; any dash the page used.
 const PHONES_IN = /(?<![\d+])(?<!\+(?:[02-9]\d{0,2}|1\d{1,2})[\s.\-‐-―]*)(?:\+?1[\s.\-‐-―]*)?(?:\(\d{3}\)[\s.\-‐-―]*|\d{3}[\s.\-‐-―]+)\d{3}[\s.\-‐-―]+\d{4}(?!\d)/g;
@@ -203,11 +208,19 @@ export function leadProblem(l, { idx, qualify, tollFree, proof = null, match = n
     if (!l.business || !l.role_posted) return 'business and role_posted are required';
     if (!/^https:\/\//i.test(String(l.posting_url || ''))) return 'posting_url must be the https link to the posting';
     if (!l.owner_first) return 'owner_first is required: a lead is a named owner';
-    if (!EMAIL.test(String(l.owner_email || ''))) return 'owner_email is required';
+    // An email is welcome, not required: a card is called on its line, and emailed only when the Hub verifies an address.
+    if (l.owner_email && !EMAIL.test(String(l.owner_email))) return 'owner_email is not a valid address (leave it empty if you have none)';
     const p = ten(l.phone);
     if (p.length !== 10) return 'phone must be a 10-digit US number';
     if (tollFree(p)) return 'a toll-free number is never a lead';
-    if (l.phone_type && !CELL_LABEL.test(String(l.phone_type))) return 'phone_type must say mobile or cell: only the owner\'s own cell, never a main line';
+    if (businessLine(l)) {
+        if (!/^https:\/\//i.test(String(l.website || ''))) return 'a business line needs the business\'s own website (https), where the Hub checks the number';
+        const q0 = qualify(l, now);
+        if (!q0.ok) return 'refused by the Hub rules: ' + q0.reason + (q0.detail ? ' (' + String(q0.detail).slice(0, 120) + ')' : '');
+        const known0 = knownWhy(idx, { company: l.business, website: l.website, phone: l.phone, email: l.owner_email });
+        return known0 ? 'already known: ' + known0 : null;
+    }
+    if (l.phone_type && !CELL_LABEL.test(String(l.phone_type))) return 'phone_type must say "business line" (the business\'s own published number) or mobile (the owner\'s cell, proven by a lookup)';
     if (MAIN_WORDS.test(String(l.phone || '').replace(/[\d\s()+.-]/g, ' ')) || (proof && proof.by === 'carrier' && MAIN_WORDS.test(String(l.phone_evidence || ''))))
         return 'this number is described as a main line, front desk or office line: only the owner\'s own cell, never a main line';
     if (!proof) return 'phone is not proven a cell: ask the carrier (action phone) or look the owner up first. Never a main line.';

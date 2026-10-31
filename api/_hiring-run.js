@@ -439,10 +439,15 @@ export async function processPosting(p, provenance, deps, report) {
  * company verdict, the domain and the number already on a card, Staffify outreach, a booked call, a
  * client, the opt-out list, the CRM, bad numbers. The owner's name and email go on the card as the contact.
  */
-// Cards that wait for the owner's cell: a toll-free line (no number to call) or a main line (Paul: not called). MAIN_LINE
-// and mainNumbers live in _hiring-intent.js with the numbers a caller may see.
+// Cards that wait for the owner's cell: a toll-free line (no number to call). A main line is called since 2026-10-30
+// (see MAIN_LINE in _hiring-intent.js); a card still held on one is released by refreshReady.
 export { MAIN_LINE };
-const HELD_FOR_CELL = new Set(['toll_free_only', 'main_line_only']);
+const HELD_FOR_CELL = new Set(['toll_free_only']);
+/**
+ * The business's line has failed, so the owner's cell is worth a RocketReach lookup (Paul, 2026-10-30: lookups only
+ * "when that line fails"): a gatekeeper or phone menu twice, or the number logged as wrong.
+ */
+export const lineFailed = r => { const h = (r && r.callHistory) || []; return h.filter(x => x && x.outcome === 'gatekeeper').length >= 2 || (h.length > 0 && h[h.length - 1].outcome === 'wrong_number'); };
 export const heldForCell = r => !!(r && r.status === 'research' && r.hold && HELD_FOR_CELL.has(r.hold.reason));
 
 export async function processLead(p, provenance, deps, report) {
@@ -572,7 +577,7 @@ export async function processLead(p, provenance, deps, report) {
     if (existing) Object.assign(rec, { createdAt: existing.createdAt, callHistory: existing.callHistory || [], callOwner: existing.callOwner || null, callOwnerAt: existing.callOwnerAt || null, jobs: existing.jobs && existing.jobs.length ? existing.jobs : rec.jobs, provenance: existing.provenance || rec.provenance });
     rec.priority = priorityOf({ age: q.age, restrictions: q.restrictions, openRoles: null, contact });
     if (tollOnly) Object.assign(rec, { status: 'research', hold: { reason: 'toll_free_only', detail: 'The only number they publish is toll-free, a switchboard we do not call. The owner\'s cell is looked up next.', at: checkedAt, by: 'admission' } });
-    else if (mainOnly) Object.assign(rec, { status: 'research', hold: { reason: 'main_line_only', detail: 'The number we were given is the company\'s main line, which we do not call. The owner\'s cell is looked up next.', at: checkedAt, by: 'admission' } });
+    else if (mainOnly) rec.phone = { ...rec.phone, type: 'the company\'s main line: ask for the owner' };
     rec.brief = briefFor(rec);
     if (existing) { const now2 = await getRecord(kv, id); if (now2 && (now2.booking || now2.status !== existing.status)) { await mark('merged', 'changed_meanwhile', { id }); return { verdict: 'merged', reason: 'changed_meanwhile', id }; } }
     await putRecord(kv, rec);
@@ -842,24 +847,19 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
             if (okNew) { out.siteNumbers = (out.siteNumbers || 0) + 1; await kv.hset(HK.companies, { [phoneKey(a.primary)]: JSON.stringify({ id: fresh.id, verdict: 'ready', at }) }); }
         } finally { await kv.del(lock).catch(() => {}); }
     }
-    // After the website check, so a line it publishes cannot ride back in. Paul, 2026-10-28: "we don't want "main" unless they are cell phones in our database". A line labelled a main line
-    // (by this card's lead, or by a later lead merged into it) leaves the card's backups; a card that rings it first with
-    // no cell of the owner's on it, and no one's callback or calls on it, waits in research while ownerCells looks for the
-    // cell. A card someone is already working keeps its line for that person.
-    for (const rec of live.filter(r => r.phone && mainNumbers(r).some(n => [r.phone.number, ...(r.phone.alternates || [])].includes(n)))) {
+    // Paul, 2026-10-30: business lines are called at these small companies. A card still held on a main line from before
+    // goes back on the list with that line, unless it has a callback or a caller already; nothing is looked up for it
+    // until the line fails.
+    for (const rec of (await allRecords(kv)).filter(r => r.status === 'research' && r.hold && r.hold.reason === 'main_line_only' && r.phone && r.phone.number && !tollFree(r.phone.number))) {
         const lock = HK.recLock(rec.id);
         if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
         try {
             const fresh = await getRecord(kv, rec.id);
-            if (!fresh || fresh.status !== 'ready' || !fresh.phone) continue;
-            const at = new Date(now).toISOString(), mains = new Set(mainNumbers(fresh));
-            const alternates = (fresh.phone.alternates || []).filter(n => !mains.has(n));
-            const hold = mains.has(fresh.phone.number) && !ownsCell(fresh) && !fresh.booking && !fresh.callOwner && !(fresh.callHistory || []).length;
-            if (!hold && alternates.length === (fresh.phone.alternates || []).length) continue;
-            const next = { ...fresh, phone: { ...fresh.phone, alternates }, ...(hold ? { status: 'research', hold: { reason: 'main_line_only', detail: 'The number on the card is the company\'s main line, which we do not call. The owner\'s cell is looked up next.', at, by: 'rules re-check' } } : {}) };
+            if (!fresh || fresh.status !== 'research' || !fresh.hold || fresh.hold.reason !== 'main_line_only' || !fresh.phone || tollFree(fresh.phone.number)) continue;
+            const at = new Date(now).toISOString();
+            const next = { ...fresh, status: 'ready', hold: null, released: { from: 'main_line_only', at, why: 'Business lines are called at small companies (Paul, 2026-10-30)' }, phone: { ...fresh.phone, type: 'the company\'s main line: ask for the owner' } };
             next.brief = briefFor(next);
             await putRecord(kv, next);
-            Object.assign(rec, { phone: next.phone, status: next.status });
             out.mainLine = (out.mainLine || 0) + 1;
         } finally { await kv.del(lock).catch(() => {}); }
     }
@@ -958,9 +958,8 @@ export async function ownerLines(kv, { source, lines, write = false, by, now = D
             const primary = usable[0];
             const lineType = primary === nums[0] ? String(f.phone_type || '').trim() || 'number' : 'other number';
             if (mainHeld && !/\b(mobile|cell)/i.test(lineType)) { out.push({ ...base, done: false, why: 'a card held on a main line waits for the owner\'s mobile' }); continue; }
-            // Known main lines never come back as a backup: the held line, its backups, and any a lead labelled, even when
-            // the lookup itself lists one as a 'direct dial'. The primary may still be one, when the lookup says it is a mobile.
-            const mains = new Set([...mainNumbers(rec), ...(mainHeld ? [old.number, ...(old.alternates || [])] : [])]);
+            // Since 2026-10-30 a business's main line is called, so it stays behind the owner's cell as a backup.
+            const mains = new Set(mainHeld ? [old.number, ...(old.alternates || [])] : []);
             const phone = {
                 number: primary, alternates: [...usable.slice(1, 3), ...(mainHeld ? [] : [old.number, ...(old.alternates || [])])].filter((n, i, a) => n && n !== primary && !tollFree(n) && !mains.has(n) && a.indexOf(n) === i).slice(0, 8),
                 source: 'vendor', vendor: source, foundBy: old.foundBy || (rec.job && rec.job.foundBy) || null, person, lineType, grade: primary === nums[0] ? f.phone_grade || null : null,
@@ -1147,7 +1146,8 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
     const all = await allRecords(kv);
     const byId = new Map(all.map(r => [r.id, r]));
     const held = r => heldForCell(r) && jobCurrent(r, now);
-    const open = r => r && !r.booking && ((r.status === 'ready' && hiringCallReady(r, now)) || held(r));
+    // Answers already paid for are applied to any live card, due for a call or not.
+    const open = r => r && !r.booking && ((r.status === 'ready' && jobCurrent(r, now)) || held(r));
     // Free work first: answers already paid for.
     for (const [id, t] of Object.entries(tried)) {
         if (!room()) break;
@@ -1168,7 +1168,9 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
     const cap = Math.min(limit, left - RR_RESERVE);
     // The day counter is the authority: taken before each lookup, so two runs together never pass the cap.
     const take = async () => { const n = Number(await kv.incr(dayKey)); await kv.expire(dayKey, 3 * 86400).catch(() => {}); if (n > dayCap) { out.skipped = `daily cap of ${dayCap} reached`; return false; } out.lookups++; return true; };
-    const cand = all.filter(r => open(r) && !tried[r.id] && !ownsCell(r))
+    // A lookup is spent only on a card with no number to call (toll-free only) or whose business line has failed.
+    // (A failed line is looked up before its next call is due, so the cell is on the card when it comes round.)
+    const cand = all.filter(r => r && !r.booking && !tried[r.id] && !ownsCell(r) && (held(r) || (r.status === 'ready' && jobCurrent(r, now) && lineFailed(r))))
         .sort((a, b) => (held(b) - held(a)) || (Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0)));
     for (const rec of cand) {
         if (out.lookups >= cap || out.skipped || !room()) break;
