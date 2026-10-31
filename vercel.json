@@ -72,16 +72,16 @@
       "schedule": "15 13-23 * * 1-5"
     },
     {
+      "path": "/api/payment-welcome/",
+      "schedule": "0 13,14,17,18,22,23 * * *"
+    },
+    {
       "path": "/api/booked-leads/",
       "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/rep-optout-sweep/",
       "schedule": "*/2 * * * *"
-    },
-    {
-      "path": "/api/payment-welcome/",
-      "schedule": "17 0,1,12-23 * * *"
     }
   ],
   "rewrites": [

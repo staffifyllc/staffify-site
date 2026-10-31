@@ -2,33 +2,40 @@
 // ------------------------------------------------------------------
 // The cloud copy of the Mac job staffify-payment-welcome (logic in api/_payment-welcome.js).
 //
-//   GET  (cron, Bearer CRON_SECRET)    one run, hourly at :17 from 8 AM to 8 PM Eastern.
+//   GET  (cron, Bearer CRON_SECRET)    one run at 9 AM, 1 PM and 6 PM Eastern (the desktop's hours).
 //                                      Sends nothing unless PAYMENT_WELCOME_SEND is 'on'.
-//   GET  ?view=pending   (owner)       the last dry run: who would get the email, and its links
-//   GET  ?view=backfill  (owner)       first-time payers in the last 21 days with no welcome on record
-//   GET  ?view=status    (owner)       mode, missing secrets by name, go-live time, last run
+//   GET  ?view=pending   (owner)       the last run: who would get (or got) the email, flags, links
+//   GET  ?view=backfill  (owner)       first-time payers since the Mac stopped (21 days, never later
+//                                      than 2026-09-28) with no welcome on record
+//   GET  ?view=status    (owner)       mode, what live is waiting for, go-live time, last run, flags
 //   GET  ?view=preview   (owner)       the email itself, for a sample first name (&firstName=)
 //   POST {action:'import', keys:[{kind,hash,at}], suppressed:[hash], substrings:[text]}   (owner)
 //        the Mac's dedupe keys, from scripts/seed-payment-welcome-ledger.mjs
-//   POST {action:'send-backfill', customerIds:['372']}   (owner)
-//        welcome exactly these backfill customers; live mode only, otherwise it shows what it would send
+//   POST {action:'send-backfill', customerIds:['372'], checkedResend:['372']}   (owner)
+//        welcome exactly these backfill customers; live mode only, otherwise it shows what it would send.
+//        checkedResend: ids flagged retry-expired that Paul checked in Resend and found never delivered.
 //
 // Owner: a machine token (ADMIN_TOKEN, CRON_SECRET, HUB_TOKEN) or a signed-in admin or finance owner.
 // A browser POST must come from the site itself.
 import { redis, adminAuthorized, currentRep, readBody, SITE } from './_auth.js';
 import { financeAccess } from './_finance-access.js';
 import { qboQuery } from './_qbo.js';
-import { isOptedOut } from './_optout.js';
+import { optedOutSet } from './_optout.js';
+import { slackNotify } from './_slack.js';
 import { scheduledRun, backfillView, sendBackfill, importKeys, statusView, previewHtml, resendSend, KEYS } from './_payment-welcome.js';
 
 const isOwner = rep => !!rep && (rep.role === 'admin' || financeAccess(rep));
 
 function deps() {
+    // One read of the do-not-contact list per run, strict: an unreadable list throws, so the person is
+    // flagged "unreadable" for a person instead of quietly skipped.
+    let optSet = null;
     return {
         kv: redis,
         query: qboQuery,
         send: ({ payload, idempotencyKey }) => resendSend({ payload, idempotencyKey, apiKey: process.env.RESEND_API_KEY }),
-        optedOut: email => isOptedOut({ email }),
+        optedOut: async email => { optSet = optSet || optedOutSet({ strict: true }); return (await optSet).emails.has(String(email || '').trim().toLowerCase()); },
+        notify: text => slackNotify(text),
         env: process.env,
         now: Date.now(),
     };
@@ -51,7 +58,7 @@ export default async function handler(req, res) {
                 return res.status(out.status === 'invalid' ? 400 : 200).json(out);
             }
             if (b.action === 'send-backfill') {
-                const out = await sendBackfill(deps(), b.customerIds);
+                const out = await sendBackfill(deps(), b.customerIds, { checkedResend: b.checkedResend });
                 return res.status(out.status === 'invalid' ? 400 : 200).json(out);
             }
             return res.status(400).json({ error: 'Unknown action' });
@@ -62,7 +69,7 @@ export default async function handler(req, res) {
             if (!owner) return res.status(rep ? 403 : 401).json({ error: 'Owners only' });
             if (q.view === 'pending') {
                 const saved = await redis.get(KEYS.pending);
-                return res.status(200).json(saved ? (typeof saved === 'string' ? JSON.parse(saved) : saved) : { pending: [], message: 'No dry run in the last 36 hours' });
+                return res.status(200).json(saved ? (typeof saved === 'string' ? JSON.parse(saved) : saved) : { pending: [], message: 'No run in the last 36 hours' });
             }
             if (q.view === 'backfill') return res.status(200).json(await backfillView(deps()));
             if (q.view === 'status') return res.status(200).json(await statusView(deps()));

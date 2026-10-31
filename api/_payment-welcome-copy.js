@@ -6,7 +6,11 @@
 // and lands in this file and in TEMPLATE_SHA256 together.
 //
 // Sender, subject, Reply-To and the HubSpot BCC are the desktop script's constants, unchanged.
-import { tagHtml, hrefs, leadId } from './_staffify-utm.js';
+import { tagHtml, leadId } from './_staffify-utm.js';
+// api/_staffify-utm.js is shared with the pre-call port byte for byte, so this helper lives here.
+
+/** Every href in an HTML string, entity-decoded, in order. */
+export const hrefs = html => [...String(html).matchAll(/href="([^"]*)"/g)].map(m => m[1].replace(/&amp;/g, '&'));
 
 export const KIND = 'welcome-strategy-call';
 export const FROM = 'Staffify <staffing@gostaffify.com>';

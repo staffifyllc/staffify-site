@@ -15,13 +15,19 @@
 //
 //   welcome:claim:<kind>:<hash>   string  {token, by, ref, state: sending|sent|failed, at}
 //   welcome:sent                  hash    <kind>:<hash> -> {at, by, source, providerId?, customerId?, email?}
-//   welcome:failures              hash    <kind>:<hash> -> provider failures so far
+//   welcome:failures              hash    <kind>:<hash> -> {n, firstAt, lastAt, error}: provider failures so far
+//
+// firstAt matters because Resend keeps an idempotency key for 24 hours. A retry inside that window
+// with the same key cannot send twice; a retry after it can, if the first "failure" was a timeout on a
+// send Resend actually accepted. So the sender stops retrying on its own once the first failure is
+// older than RETRY_WINDOW_MS, and a person checks Resend first.
 import { createHash, randomUUID } from 'node:crypto';
 
 export const WELCOME_KIND = 'welcome-strategy-call';
 export const SENT = 'welcome:sent';
 export const FAILURES = 'welcome:failures';
 export const MAX_ATTEMPTS = 2; // the desktop rule: report a failed send, retry it no more than once
+export const RETRY_WINDOW_MS = 23 * 3600 * 1000; // inside Resend's 24-hour idempotency window
 
 export const normEmail = e => String(e || '').trim().toLowerCase();
 export const emailHash = e => createHash('sha256').update(normEmail(e)).digest('hex');
@@ -30,11 +36,26 @@ export const claimKey = (hash, kind = WELCOME_KIND) => `welcome:claim:${kind}:${
 const field = (hash, kind) => `${kind}:${hash}`;
 const parse = v => { if (v == null) return null; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch { return { raw: String(v) }; } };
 
-/** What is on record for this person: the sent row and the claim, either may be null. Throws if unreadable. */
+/** A failures field as {n, firstAt, lastAt, error}. A bare count (older shape) has no firstAt. */
+export function failureOf(v) {
+    if (v == null) return { n: 0, firstAt: null, lastAt: null, error: '' };
+    if (typeof v === 'number' || /^\d+$/.test(String(v))) return { n: Number(v), firstAt: null, lastAt: null, error: '' };
+    const o = parse(v) || {};
+    return { n: Number(o.n) || 0, firstAt: o.firstAt || null, lastAt: o.lastAt || null, error: String(o.error || '') };
+}
+
+/** True when a person had a failed send and the automatic retry can no longer rely on Resend's key. */
+export function retryExpired(failures, now = Date.now()) {
+    if (!failures || !(failures.n >= 1)) return false;
+    const first = Date.parse(failures.firstAt || '');
+    return !(now - first <= RETRY_WINDOW_MS); // an unknown first time counts as expired: fail closed
+}
+
+/** What is on record for this person: the sent row, the claim and past failures. Throws if unreadable. */
 export async function welcomeRecord(kv, email, kind = WELCOME_KIND) {
     const h = emailHash(email);
-    const [sent, claim] = await Promise.all([kv.hget(SENT, field(h, kind)), kv.get(claimKey(h, kind))]);
-    return { hash: h, sent: parse(sent), claim: parse(claim) };
+    const [sent, claim, failures] = await Promise.all([kv.hget(SENT, field(h, kind)), kv.get(claimKey(h, kind)), kv.hget(FAILURES, field(h, kind))]);
+    return { hash: h, sent: parse(sent), claim: parse(claim), failures: failureOf(failures) };
 }
 
 /**
@@ -70,8 +91,11 @@ export async function markWelcomed(kv, email, { token, by, kind = WELCOME_KIND, 
  * nothing retries again without a person.
  */
 export async function failWelcome(kv, email, { token, kind = WELCOME_KIND, error = '', at = new Date().toISOString() }) {
-    const h = emailHash(email), key = claimKey(h, kind);
-    const attempts = Number(await kv.hincrby(FAILURES, field(h, kind), 1));
+    const h = emailHash(email), key = claimKey(h, kind), f = field(h, kind);
+    // Only the claim holder gets here, so one writer per person at a time: read, add one, write.
+    const prev = failureOf(await kv.hget(FAILURES, f));
+    const attempts = prev.n + 1;
+    await kv.hset(FAILURES, { [f]: JSON.stringify({ n: attempts, firstAt: prev.n ? prev.firstAt : at, lastAt: at, error: String(error).slice(0, 200) }) });
     const holder = parse(await kv.get(key));
     if (!holder || holder.token !== token) return { attempts, released: false };
     if (attempts < MAX_ATTEMPTS) { await kv.del(key); return { attempts, released: true }; }
