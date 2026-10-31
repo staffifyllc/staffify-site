@@ -456,3 +456,32 @@ test('Hear it speaks with a natural voice at normal speed, never a novelty voice
         restore();
     }
 });
+
+// The 2026-10-30 trace: when the nurture skipped someone (already in it, opted out, a client), the save said nothing.
+test('a "Not now" the nurture left out says why on the save; one it added says so', async () => {
+    for (const [nurture, want, warn] of [
+        [{ enrolled: false, reason: 'existing client', message: 'already a client' }, /^Saved\. Not added to the nurture: already a client\.$/, true],
+        [{ enrolled: false, reason: 'already in nurture', message: 'they have already been added to it' }, /^Saved\. Not added to the nurture: they have already been added to it\.$/, false],
+        [{ enrolled: true, reason: 'enrolled' }, /^Saved\. Added to the email nurture\.$/, false],
+    ]) {
+        const d = makeDom(); const restore = install(d);
+        const app = document.createElement('div'); app.id = 'app'; app.className = 'wrap'; document.body.append(app);
+        const a = stubApi(); const inner = globalThis.fetch;
+        globalThis.fetch = async (url, opts = {}) => {
+            const r = await inner(url, opts); const body = opts.body ? JSON.parse(opts.body) : null;
+            if (body && body.action === 'call-outcome' && body.outcome === 'timing') { const j = await r.json(); return { ok: true, status: 200, json: async () => ({ ...j, nurture }) }; }
+            return r;
+        };
+        await import('../assets/js/dialer-workspace.js?' + Date.now() + 'nurture' + nurture.reason.length);
+        await tick(60);
+        document.dispatchEvent(d.makeEvent('keydown', { key: '5', target: document.body }));
+        assert.equal(document.querySelector('.dw-oc.sel').dataset.outcome, 'timing');
+        document.dispatchEvent(d.makeEvent('keydown', { key: 'Enter', metaKey: true, target: document.body }));
+        await tick(60);
+        assert.equal(a.calls.filter(c => c.body && c.body.action === 'call-outcome').pop().body.outcome, 'timing', 'the Not now was posted');
+        const t = document.getElementById('toast');
+        assert.match(d.text(t), want);
+        assert.equal(t.className.includes('warn'), warn);
+        restore();
+    }
+});

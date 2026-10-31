@@ -4,6 +4,10 @@
 import { Redis } from '@upstash/redis';
 import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
 import { optedOutSet } from './_optout.js';
+import { contact } from './_outreach-crm.js';
+import { clientCheck } from './_client-guard.js';
+import { KEY as QUEUE_KEY } from './_outreach-queue.js';
+import { sendGate } from './_nurture-gates.js';
 
 const redis = new Redis({
     url: process.env.KV_REST_API_URL,
@@ -223,72 +227,104 @@ function authorized(req) {
     return m && validSecrets.includes(m[1]);
 }
 
+/**
+ * One run of the drip. deps lets tests stand in for the store, the sender and the checks.
+ * Every touch is checked again at the moment it is due (api/_nurture-gates.js sendGate), because a
+ * person can book a call, become a client or ask to be left alone between day 1 and day 21. A stop
+ * ends their nurture, with the reason on their record. A check that cannot run holds the touch:
+ * nothing is sent and nothing is marked sent, so the next run asks again.
+ */
+export async function runNurture({ kv = redis, now = Date.now(), send = sendViaResend, deps = {} } = {}) {
+    const d = { optedOutSet, contact, clientCheck, ...deps };
+    const result = { processed: 0, day3_sent: 0, day14_sent: 0, day45_sent: 0, removed: 0, stopped: 0, held: 0, errors: 0, stopped_by: {}, held_by: {} };
+
+    // Anyone who has opted out is dropped before a single send is attempted. This covers people who
+    // replied STOP to a text as well as one-click email unsubscribes, because withdrawing consent
+    // applies to every channel and not just the one they happened to use.
+    // Strict: if the list cannot be read, nothing is sent this run (it used to read as empty and send to everyone).
+    const suppressed = await d.optedOutSet({ strict: true });
+    // The call queue is megabytes, so a run reads it once, and only if a touch is due.
+    let queueRead = null;
+    const queueState = () => (queueRead ||= kv.get(QUEUE_KEY));
+    const emails = await kv.zrange('nurture:active', 0, -1);
+    for (const email of emails) {
+        result.processed++;
+        try {
+            if (suppressed.emails.has(String(email).trim().toLowerCase())) {
+                await kv.zrem('nurture:active', email);
+                result.suppressed = (result.suppressed || 0) + 1;
+                continue;
+            }
+            const rec = await kv.hgetall(`nurture:${email}`);
+            if (!rec || !rec.enrolled_at) continue;
+
+            const enrolledAt = Number(rec.enrolled_at);
+            const ageDays = (now - enrolledAt) / DAY;
+
+            const subscriber = await kv.hgetall(`subscriber:${email}`);
+            const firstName = (subscriber && subscriber.first_name) || (email.split('@')[0] || 'there');
+
+            // If they've since converted (e.g. booked again and we flipped to client), stop the drip
+            if (subscriber && subscriber.decision && subscriber.decision !== 'nope') {
+                await kv.zrem('nurture:active', email);
+                result.removed++;
+                continue;
+            }
+
+            // Weekly cadence: touches at day 7, 14, 21 (was day 3, 14, 45).
+            // Internal flag names kept for backwards-compat with existing
+            // Redis records.
+            const due = (ageDays >= 7 && !rec.day3_sent_at) || (ageDays >= 14 && !rec.day14_sent_at) || (ageDays >= 21 && !rec.day45_sent_at);
+            if (!due) continue;
+
+            const gate = await sendGate(email, rec, { kv, optedOut: suppressed, contact: d.contact, clientCheck: d.clientCheck, queueState });
+            if (gate && gate.verdict === 'stop') {
+                await kv.hset(`nurture:${email}`, { stopped_at: Date.now(), stopped_reason: gate.reason, stopped_detail: String(gate.detail || '').slice(0, 200) });
+                await kv.zrem('nurture:active', email);
+                result.stopped++;
+                result.stopped_by[gate.reason] = (result.stopped_by[gate.reason] || 0) + 1;
+                continue;
+            }
+            if (gate) {
+                result.held++;
+                result.held_by[gate.reason] = (result.held_by[gate.reason] || 0) + 1;
+                continue;
+            }
+
+            const unsubLink = unsubscribeLink(email);
+            if (ageDays >= 7 && !rec.day3_sent_at) {
+                await send({ to: email, ...TEMPLATES.day3({ firstName, unsubLink }) });
+                await kv.hset(`nurture:${email}`, { day3_sent_at: Date.now() });
+                result.day3_sent++;
+                continue;
+            }
+            if (ageDays >= 14 && !rec.day14_sent_at) {
+                await send({ to: email, ...TEMPLATES.day14({ firstName, unsubLink }) });
+                await kv.hset(`nurture:${email}`, { day14_sent_at: Date.now() });
+                result.day14_sent++;
+                continue;
+            }
+            if (ageDays >= 21 && !rec.day45_sent_at) {
+                await send({ to: email, ...TEMPLATES.day45({ firstName, unsubLink }) });
+                await kv.hset(`nurture:${email}`, { day45_sent_at: Date.now() });
+                await kv.zrem('nurture:active', email);
+                result.day45_sent++;
+                result.removed++;
+            }
+        } catch (err) {
+            console.error(`nurture error for ${email}`, err);
+            result.errors++;
+        }
+    }
+    return result;
+}
+
 export default async function handler(req, res) {
     if (!authorized(req)) return res.status(401).json({ error: 'unauthorized' });
 
     const now = Date.now();
-    const result = { processed: 0, day3_sent: 0, day14_sent: 0, day45_sent: 0, removed: 0, errors: 0 };
-
     try {
-        // Anyone who has opted out is dropped before a single send is attempted. This covers people who
-        // replied STOP to a text as well as one-click email unsubscribes, because withdrawing consent
-        // applies to every channel and not just the one they happened to use.
-        // Strict: if the list cannot be read, nothing is sent this run (it used to read as empty and send to everyone).
-        const suppressed = await optedOutSet({ strict: true });
-        const emails = await redis.zrange('nurture:active', 0, -1);
-        for (const email of emails) {
-            result.processed++;
-            try {
-                if (suppressed.emails.has(String(email).trim().toLowerCase())) {
-                    await redis.zrem('nurture:active', email);
-                    result.suppressed = (result.suppressed || 0) + 1;
-                    continue;
-                }
-                const rec = await redis.hgetall(`nurture:${email}`);
-                if (!rec || !rec.enrolled_at) continue;
-
-                const enrolledAt = Number(rec.enrolled_at);
-                const ageDays = (now - enrolledAt) / DAY;
-
-                const subscriber = await redis.hgetall(`subscriber:${email}`);
-                const firstName = (subscriber && subscriber.first_name) || (email.split('@')[0] || 'there');
-                const unsubLink = unsubscribeLink(email);
-
-                // If they've since converted (e.g. booked again and we flipped to client), stop the drip
-                if (subscriber && subscriber.decision && subscriber.decision !== 'nope') {
-                    await redis.zrem('nurture:active', email);
-                    result.removed++;
-                    continue;
-                }
-
-                // Weekly cadence: touches at day 7, 14, 21 (was day 3, 14, 45).
-                // Internal flag names kept for backwards-compat with existing
-                // Redis records.
-                if (ageDays >= 7 && !rec.day3_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day3({ firstName, unsubLink }) });
-                    await redis.hset(`nurture:${email}`, { day3_sent_at: Date.now() });
-                    result.day3_sent++;
-                    continue;
-                }
-                if (ageDays >= 14 && !rec.day14_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day14({ firstName, unsubLink }) });
-                    await redis.hset(`nurture:${email}`, { day14_sent_at: Date.now() });
-                    result.day14_sent++;
-                    continue;
-                }
-                if (ageDays >= 21 && !rec.day45_sent_at) {
-                    await sendViaResend({ to: email, ...TEMPLATES.day45({ firstName, unsubLink }) });
-                    await redis.hset(`nurture:${email}`, { day45_sent_at: Date.now() });
-                    await redis.zrem('nurture:active', email);
-                    result.day45_sent++;
-                    result.removed++;
-                }
-            } catch (err) {
-                console.error(`nurture error for ${email}`, err);
-                result.errors++;
-            }
-        }
-
+        const result = await runNurture({ now });
         return res.status(200).json({ ok: true, ts: now, ...result });
     } catch (err) {
         console.error('cron-nurture fatal', err);

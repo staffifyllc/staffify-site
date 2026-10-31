@@ -157,7 +157,7 @@ export default async function handler(req,res) {
           if(body.action==='call-outcome'&&body.outcome==='timing') {
             const row=(fresh?.records||[]).find(r=>r.id===body.id);
             if(row)nurture=await enrolInNurture({redis,email:row.recipient,name:row.verifiedFirstName||'',
-              company:row.company||'',caller:rep.email,campaignId:row.campaignId||''});
+              company:row.company||'',domain:row.agencyKey||'',caller:rep.email,campaignId:row.campaignId||''});
           }
           // A callback becomes a CRM task with a reminder, owned by the caller. Same rule as the
           // nurture above: only after the save landed, and it can never fail the save.

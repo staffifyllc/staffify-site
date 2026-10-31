@@ -201,3 +201,11 @@ export function dripLine(drip, now = Date.now()) {
   if (['prepared', 'draft_saved', 'draft_creation_pending', 'auto_send_pending'].includes(drip.status)) return { tone: 'muted', text: sent ? sent + ' of 4 emails sent' + last + ', the next is queued.' : 'First email queued.' };
   return { tone: 'muted', text: (sent ? sent + ' of 4 emails sent' + last + '. ' : '') + 'Emails paused.' };
 }
+
+// What the save tells the rep about the nurture after "Not now", or null when the server said nothing about it.
+// A skip used to show no message at all, so a client or a booked lead left out read the same as one added.
+export function nurtureNote(n) {
+  if (!n) return null;
+  if (n.enrolled) return { text: 'Saved. Added to the email nurture.', warn: false };
+  return { text: 'Saved. Not added to the nurture: ' + (n.message || 'it could not be saved just now') + '.', warn: n.reason !== 'already in nurture' };
+}

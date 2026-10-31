@@ -14,7 +14,7 @@ import {emailCompose} from './dialer-email.js';
 // caller's tasks), /api/outreach-call-brief/ for one card, POST call-outcome / suppress / task-add /
 // task-done to save. Nothing here invents a number, a date or a claim.
 import {orderCallQueue,queueMix,searchRecords} from './call-queue-order.js';
-import {OUTCOMES,NEEDS_TIME,outcome as outcomeOf,quickPicks,defaultNext,toLocalInput,fmtWhen,localTime,followUps,followUpCount,timeline,lastTouch,shortcut,SHORTCUTS,numberTrust,dripLine} from './dialer-model.js';
+import {OUTCOMES,NEEDS_TIME,outcome as outcomeOf,quickPicks,defaultNext,toLocalInput,fmtWhen,localTime,followUps,followUpCount,timeline,lastTouch,shortcut,SHORTCUTS,numberTrust,dripLine,nurtureNote} from './dialer-model.js';
 
 const app=document.getElementById('app');
 const params=new URLSearchParams(location.search);
@@ -816,7 +816,7 @@ async function saveOutcome(row,b,status,save,notesEl=null){
   const next=await api('/api/outreach-queue/?view=calls',{...body,expectedRevision:latest.revision});
   const tasks=state.tasks;state=next;state.tasks=next.tasks||tasks||[];
   session.saved[choice]=(session.saved[choice]||0)+1;
-  if(state.nurture&&state.nurture.enrolled)toast('Saved. Added to the email nurture.');
+  const nurture=nurtureNote(state.nurture);if(nurture)toast(nurture.text,nurture.warn);
   if(state.callbackTask){const t=state.callbackTask;if(t.ok)toast('Callback saved. A HubSpot task will remind you at '+new Date(due.value).toLocaleString()+'.');else toast('Callback saved; it returns to the top of your queue at that time. No HubSpot reminder: '+(t.detail||t.reason)+'.',true);}
   if(state.wrongNumber){if(state.wrongNumber.ok)toast('Logged. That number will not be offered again for them; we are looking for another.');else toast('Logged as a wrong number, but the number could not be marked: '+state.wrongNumber.reason+'.',true);}
   if(!state.nurture&&!state.callbackTask&&!state.wrongNumber)toast('Saved: '+(LOGLABEL[choice]||choice)+'.');

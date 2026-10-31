@@ -23,13 +23,21 @@ export function rowStop(row) {
     return null;
 }
 
-/** HubSpot's stops for a human 1:1 email. `p` is the contact's properties. */
-export function crmStop(p, { reply = false } = {}) {
+/** HubSpot's do-not-contact answers on their own: a named exclusion, an opt-out, a DNC state. The nurture reads these too. */
+export function crmDoNotContact(p) {
     if (!p) return null;
     const name = (String(p.firstname || '') + ' ' + String(p.lastname || '')).toLowerCase();
     if (EXCLUDED_NAMES.some(n => name.includes(n))) return 'This person is on the do-not-contact list.';
     if (p.hs_email_optout === 'true' || p.do_not_contact === 'true') return 'The CRM marks this person do not contact.';
     if (['DNC', 'NOT_INTERESTED', 'LEGAL'].includes(p.rep_lifecycle_state) || /DNC|NOT_INTERESTED|OPT|LEGAL/i.test(String(p.rep_terminal_state || ''))) return 'The CRM says this person asked not to be contacted.';
+    return null;
+}
+
+/** HubSpot's stops for a human 1:1 email. `p` is the contact's properties. */
+export function crmStop(p, { reply = false } = {}) {
+    if (!p) return null;
+    const dnc = crmDoNotContact(p);
+    if (dnc) return dnc;
     // Any other end state the sequences stop on (a booked or closed record): not a cold email either.
     if (p.rep_terminal_state) return 'The CRM records this person as finished (' + p.rep_terminal_state + '). Check with Paul first.';
     // The human-led cohort: Paul is handling them himself (rep_outreach_mode HUMAN_LED).

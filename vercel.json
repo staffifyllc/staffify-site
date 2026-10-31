@@ -334,6 +334,9 @@
     "api/deal-followups.js": {
       "maxDuration": 120
     },
+    "api/cron-nurture.js": {
+      "maxDuration": 120
+    },
     "api/outreach-lead-prep.js": {
       "maxDuration": 300
     },

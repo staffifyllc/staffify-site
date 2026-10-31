@@ -4,7 +4,7 @@
 // does what. If any of these are wrong the rep calls at the wrong time or misses a promise.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { OUTCOMES, NEEDS_TIME, quickPicks, defaultNext, toLocalInput, fmtWhen, localTime, followUps, followUpCount, timeline, lastTouch, shortcut, numberTrust } from '../assets/js/dialer-model.js';
+import { OUTCOMES, NEEDS_TIME, quickPicks, defaultNext, toLocalInput, fmtWhen, localTime, followUps, followUpCount, timeline, lastTouch, shortcut, numberTrust, nurtureNote } from '../assets/js/dialer-model.js';
 
 const at = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi, 0, 0);
 
@@ -156,4 +156,13 @@ test('a closed card is nobody\'s follow-up: no callback and no task for it', asy
   const g = followUps({ me, now, records: [rec('live', 'ready'), rec('no', 'suppressed'), rec('stop', 'excluded')], tasks: [{ id: 't1', recordId: 'no', dueAt: at, title: 'Call back' }, { id: 't2', recordId: 'live', dueAt: at, title: 'Send info' }, { id: 't3', recordId: 'elsewhere', dueAt: at, title: 'Other page' }] });
   assert.equal(followUpCount(g), 3);
   assert.deepEqual(g.today.map(i => i.recordId).sort(), ['elsewhere', 'live', 'live']);
+});
+
+test('the nurture line after a save: added, or left out with the server\'s reason in plain words', () => {
+    assert.equal(nurtureNote(null), null, 'nothing said when the server said nothing');
+    assert.deepEqual(nurtureNote({ enrolled: true, reason: 'enrolled' }), { text: 'Saved. Added to the email nurture.', warn: false });
+    assert.deepEqual(nurtureNote({ enrolled: false, reason: 'existing client', message: 'already a client' }), { text: 'Saved. Not added to the nurture: already a client.', warn: true });
+    assert.deepEqual(nurtureNote({ enrolled: false, reason: 'booked', message: 'they have booked a call' }), { text: 'Saved. Not added to the nurture: they have booked a call.', warn: true });
+    assert.equal(nurtureNote({ enrolled: false, reason: 'already in nurture', message: 'they have already been added to it' }).warn, false, 'already in it is not a problem');
+    assert.equal(nurtureNote({ enrolled: false, reason: 'enrolment failed: x' }).text, 'Saved. Not added to the nurture: it could not be saved just now.', 'never a raw code');
 });
