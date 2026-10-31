@@ -10,17 +10,30 @@
 //
 // What it adds, all of it on the side of sending less:
 //   dry-run       nothing is sent unless PRECALL_SEND is 'on'. A dry run computes exactly what would
-//                 go out, keeps it for three days (precall:dryrun) and returns it.
-//   fail closed   live mode refuses to send without LEAD_ID_SALT (the links would carry the wrong id)
-//                 or RESEND_API_KEY, and says which is missing.
+//                 go out, keeps it for three days (precall:dryrun, the last six runs) and returns it. A
+//                 held email is shown too (its subject, template, banner and links), so the copy can be
+//                 checked even while the client check holds everything.
+//   fail closed   live mode refuses to send without LEAD_ID_SALT (the links would carry the wrong id),
+//                 RESEND_API_KEY, a run notice destination, or the Mac's log imported (precall:seeded,
+//                 written by the import), and says which is missing.
 //   one claim     each person and email (#1, #2) is claimed with SET NX before the send, so two
-//                 overlapping runs never both send it. Marked sent only after Resend accepts; a refusal
-//                 or no answer lets the claim go, so the next run tries again under the same
-//                 Idempotency-Key (Resend keeps it 24 hours, the same as the claim).
+//                 overlapping runs never both send it. Marked sent only after Resend accepts. The claim
+//                 lasts 15 days, longer than the 14-day window, so a run killed between Resend's answer
+//                 and the ledger write can never lead to a second email: a claim older than ten minutes
+//                 with no ledger entry is held as an unconfirmed send for a person to check.
+//   retries       a refusal lets the claim go and the next run tries again. When Resend may have taken
+//                 it (5xx, 429, no answer), the retry goes under the same Idempotency-Key and only inside
+//                 20 hours of the first try (precall:attempt), because Resend forgets the key at 24.
 //   re-check      right before a send, the event and the invitee are read again from Calendly. A
-//                 cancelled event, a cancelled invitee, or a booking that was rescheduled is not emailed.
+//                 cancelled event or a cancelled invitee is not emailed. A booking someone moved into is,
+//                 as on the Mac: the ledger is by address, so a person who had #1 can only get #2.
+//   one booking   a booking that cannot be handled (a malformed answer, a throw) is reported under
+//                 errors and lets go of its claim; it never stops the run for everyone else.
+//   time budget   no send starts after 90 seconds of the 120 second limit; the rest is held for the next run.
+//   run notice    every live run (and a live run that was refused) posts its counts, holds and errors to
+//                 PRECALL_SLACK_WEBHOOK, or PRECALL_SLACK_CHANNEL with SLACK_BOT_TOKEN. Never the team channel.
 //   client guard  api/_client-guard.js: a client never gets a prospect template. A guard that cannot
-//                 answer holds the email for the next run.
+//                 answer holds the email for the next run, and is asked once per run, not once per person.
 //   stop list     api/_optout.js: someone who asked not to be contacted is not emailed, the same rule
 //                 the Calendly webhook applies to its own booking email.
 //   overlap flag  api/calendly-webhook.js sends its own "Before our call" email on booking, with its
@@ -67,11 +80,19 @@ const CALL_ZONE = 'America/New_York';                 // the Mac formatted the b
 // The store.
 export const SENT = (hash, stage) => `precall:sent:${hash}:${stage}`;
 export const CLAIM = (hash, stage) => `precall:claim:${hash}:${stage}`;
+export const ATTEMPT = (hash, stage) => `precall:attempt:${hash}:${stage}`;   // when a send was first tried
+export const SEEDED = 'precall:seeded';                                         // the Mac's log was imported
 export const DRY_LOG = 'precall:dryrun';
 export const LIVE_LOG = 'precall:log';
-const CLAIM_SECONDS = 24 * 3600;
+export const CLAIM_SECONDS = 15 * 24 * 3600;      // longer than the 14-day window: an orphaned claim outlives every booking it covers
+export const CLAIM_STALE_MS = 10 * 60 * 1000;     // a run lasts at most 120 seconds, so an older claim has no run behind it
+export const RETRY_WINDOW_MS = 20 * 3600 * 1000;  // Resend keeps an Idempotency-Key 24 hours; retries stay inside 20
+export const RUN_BUDGET_MS = 90 * 1000;           // no send starts after this, 30 seconds before the function's limit
+const BUDGET_NOTE = 'this run used its 90 seconds; the next run picks this one up';
 const DRY_TTL_SECONDS = 3 * 24 * 3600;
+const DRY_KEEP = 6;                               // two runs a day for three days
 const WEBHOOK_ROLES = ['editors', 'admins', 'csr', 'sales', 'default'];
+export const PENDING_URL = 'https://www.gostaffify.com/api/cron-precall/?view=pending';
 
 // Where a lid goes in a dry run that has no salt, so the link still shows its shape. Never sent:
 // live mode refuses without the salt.
@@ -88,12 +109,36 @@ export const emailHash = e => createHash('sha256').update(norm(e)).digest('hex')
 /** 'live' only when PRECALL_SEND is exactly 'on'. */
 export const requestedMode = (env = process.env) => (String(env.PRECALL_SEND || '').trim() === 'on' ? 'live' : 'dry-run');
 
-/** What stops a live run from sending. Empty means it may send. */
+/** What in the environment stops a live run from sending. Empty means it may send (seedState adds the store's part). */
 export function liveBlockers(env = process.env) {
     const out = [];
     if (!String(env.LEAD_ID_SALT || '').trim()) out.push('missing LEAD_ID_SALT');
     if (!env.RESEND_API_KEY) out.push('missing RESEND_API_KEY');
+    if (!noticeDestination(env)) out.push('missing PRECALL_SLACK_WEBHOOK (or PRECALL_SLACK_CHANNEL with SLACK_BOT_TOKEN), where the run notice goes');
     return out;
+}
+
+/**
+ * Where the run notice goes: a channel Paul picks, never the team channel. label is what reports show;
+ * the webhook URL itself is a secret and never leaves this function's caller.
+ */
+export function noticeDestination(env = process.env) {
+    if (String(env.PRECALL_SLACK_WEBHOOK || '').trim()) return { kind: 'webhook', url: String(env.PRECALL_SLACK_WEBHOOK).trim(), label: 'PRECALL_SLACK_WEBHOOK' };
+    if (String(env.PRECALL_SLACK_CHANNEL || '').trim() && env.SLACK_BOT_TOKEN) return { kind: 'bot', channel: String(env.PRECALL_SLACK_CHANNEL).trim(), token: env.SLACK_BOT_TOKEN, label: String(env.PRECALL_SLACK_CHANNEL).trim() };
+    return null;
+}
+
+/**
+ * Was the Mac's sent log imported? Live mode refuses until it was, so going live on an empty ledger can
+ * never email #1 again to everyone the Mac already emailed. A read that fails is not a yes.
+ */
+export async function seedState(kv) {
+    try {
+        const s = parse(await kv.get(SEEDED));
+        return s && s.at ? { seeded: s, blockers: [] } : { seeded: null, blockers: ['desktop log not imported'] };
+    } catch (e) {
+        return { seeded: null, blockers: ['desktop log import could not be confirmed: ' + errText(e)] };
+    }
 }
 
 // Role detection from the "Which role" answer. The desktop's function, unchanged.
@@ -124,10 +169,15 @@ export function detectRole(answer) {
     return null;
 }
 
-/** The "Which role" answer, found the way the desktop finds it: the first question about a role or a fill. */
+/**
+ * The "Which role" answer, found the way the desktop finds it: the first question about a role or a fill.
+ * A question with no text is passed over rather than thrown on.
+ */
 export function roleAnswerOf(inv) {
-    const q = (inv.questions_and_answers || []).find(x =>
-        x.question.toLowerCase().includes('role') || x.question.toLowerCase().includes('fill'));
+    const q = (inv.questions_and_answers || []).find(x => {
+        const question = String((x && x.question) || '').toLowerCase();
+        return question.includes('role') || question.includes('fill');
+    });
     return q ? q.answer : '';
 }
 
@@ -228,13 +278,76 @@ export async function sendViaResend({ to, subject, html, idempotencyKey }, { api
     return { ok: true, id: (data && data.id) || null };
 }
 
+/**
+ * Post the run notice once, the way api/_daily-report-run.js posts: a webhook must answer "ok", the bot
+ * must answer ok. Never throws: { posted: true, via } or { posted: false, error }.
+ */
+export async function postNotice(dest, text, fetchImpl = fetch) {
+    if (!dest) return { posted: false, error: 'no notice destination is set' };
+    try {
+        if (dest.kind === 'webhook') {
+            const r = await fetchImpl(dest.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, unfurl_links: false, unfurl_media: false }), signal: AbortSignal.timeout(10000) });
+            const body = (await r.text()).trim();
+            return r.ok && body === 'ok' ? { posted: true, via: 'webhook' } : { posted: false, error: 'the webhook answered ' + r.status };
+        }
+        const r = await fetchImpl('https://slack.com/api/chat.postMessage', { method: 'POST', headers: { Authorization: 'Bearer ' + dest.token, 'Content-Type': 'application/json; charset=utf-8' }, body: JSON.stringify({ channel: dest.channel, text, unfurl_links: false, unfurl_media: false }), signal: AbortSignal.timeout(10000) });
+        const j = await r.json().catch(() => ({}));
+        return j.ok ? { posted: true, via: 'bot', channel: dest.channel } : { posted: false, error: j.error || 'Slack answered ' + r.status };
+    } catch (e) { return { posted: false, error: errText(e) }; }
+}
+
+const NOTICE_LINES = 15;
+const clip = (s, n = 160) => { const t = String(s == null ? '' : s); return t.length > n ? t.slice(0, n - 3) + '...' : t; };
+
+/**
+ * The run notice. Sent emails read as the desktop's push did ("Pre-call email sent to [Name] ([email])
+ * for their [date] discovery call. Role: [role]."), then every hold and error with its reason.
+ */
+export function noticeText(r) {
+    const c = r.counts || {};
+    const at = r.ts && Number.isFinite(Date.parse(r.ts)) ? formatCall(r.ts).time : 'unknown time';
+    const live = r.mode === 'live';
+    const lines = [`Pre-call emails${live ? '' : ' (dry run, nothing sent)'}, ${at} run: ${live ? `${c.sent || 0} sent` : `${c.wouldSend || 0} would send`}, ${c.held || 0} held, ${c.errors || 0} errors, ${c.skipped || 0} skipped.`];
+    if (r.refused && r.refused.length) lines.push(`Live sending is switched on but refused: ${r.refused.join('; ')}. Nothing was sent.`);
+    if (r.error) lines.push(`The run stopped early: ${clip(r.error)}`);
+    if (r.truncated) lines.push(`Note: ${r.truncated}.`);
+    const who = x => `${x.name || x.email || 'no name'} (${x.email || 'no address'})`;
+    const callDate = x => (x.eventTime && Number.isFinite(Date.parse(x.eventTime)) ? formatCall(x.eventTime).date : 'unknown date');
+    const list = (items, line) => {
+        for (const x of items.slice(0, NOTICE_LINES)) lines.push(line(x));
+        if (items.length > NOTICE_LINES) lines.push(`...and ${items.length - NOTICE_LINES} more.`);
+    };
+    list(r.sent || [], x => `Pre-call email #${x.stage} sent to ${who(x)} for their ${callDate(x)} discovery call. Role: ${x.role}.`);
+    if (!live) list(r.wouldSend || [], x => `Would send email #${x.stage} to ${who(x)} for their ${callDate(x)} discovery call. Role: ${x.role}.`);
+    list(r.held || [], x => `Held: ${x.email ? who(x) : x.eventUri || 'a booking'}${x.stage ? `, email #${x.stage}` : ''}: ${x.reason}${x.detail ? ` (${clip(x.detail)})` : ''}.`);
+    list(r.errors || [], x => `Error: ${x.email ? who(x) : x.eventUri || 'the run'}${x.stage ? `, email #${x.stage}` : ''}: ${clip(x.error)}${x.unknown ? ' (Resend may have it; retried under the same key)' : ''}.`);
+    if (!(r.sent || []).length && !(r.wouldSend || []).length && !(r.held || []).length && !(r.errors || []).length && !r.error && !(r.refused && r.refused.length)) lines.push('No new discovery call bookings to email.');
+    lines.push(`Details: ${PENDING_URL}`);
+    return lines.join('\n');
+}
+
 // ─── The store ──────────────────────────────────────────────────
 
-/** Both ledger entries and both claims for one person. Throws if the store cannot be read. */
+/** Both ledger entries, both claims and both first-try times for one person. Throws if the store cannot be read. */
 async function readLedger(kv, hash) {
-    const [s1, s2, c1, c2] = await Promise.all([kv.get(SENT(hash, 1)), kv.get(SENT(hash, 2)), kv.get(CLAIM(hash, 1)), kv.get(CLAIM(hash, 2))]);
-    return { s1: parse(s1), s2: parse(s2), claim1: c1 != null, claim2: c2 != null };
+    const [s1, s2, c1, c2, a1, a2] = await Promise.all([kv.get(SENT(hash, 1)), kv.get(SENT(hash, 2)), kv.get(CLAIM(hash, 1)), kv.get(CLAIM(hash, 2)), kv.get(ATTEMPT(hash, 1)), kv.get(ATTEMPT(hash, 2))]);
+    return { s1: parse(s1), s2: parse(s2), claim1: c1, claim2: c2, attempt1: a1, attempt2: a2 };
 }
+
+/**
+ * What a claim with no ledger entry means. 'sent': Resend accepted it and the ledger write failed.
+ * 'running': a run claimed it in the last ten minutes. 'stale': no run is behind it, so a send may have
+ * gone without being recorded (a run killed mid-send); a person checks Resend.
+ */
+export function claimState(value, now) {
+    const v = String(value);
+    if (v.startsWith('sent:')) return { state: 'sent', id: v.slice(5) || null };
+    const at = Number(v.split(':')[0]);
+    return Number.isFinite(at) && at > 0 && now - at < CLAIM_STALE_MS ? { state: 'running' } : { state: 'stale' };
+}
+
+/** A first try older than 20 hours: Resend may have it and may have forgotten its key, so no more retries. */
+export const retryClosed = (firstTry, now) => { const t = Number(firstTry); return !Number.isFinite(t) || now - t >= RETRY_WINDOW_MS; };
 
 /** Let go of a claim, only if it is still this run's. A failed read leaves it to expire. */
 async function release(kv, key, runId) {
@@ -265,7 +378,11 @@ export async function webhookOverlap(kv, email) {
     }
 }
 
-/** Right before a send: is the meeting still on, and is this still their booking? null when it is. */
+/**
+ * Right before a send: is the meeting still on, and is this still their booking? null when it is.
+ * rescheduled marks the booking someone moved away from. The one they moved into (old_invitee set) is
+ * theirs, and is emailed as the Mac emails it.
+ */
 async function recheck(calendlyGet, event, inv) {
     let ev, iv;
     try { ev = ((await calendlyGet(event.uri)) || {}).resource || {}; }
@@ -276,45 +393,78 @@ async function recheck(calendlyGet, event, inv) {
     catch (e) { return { hold: 'Calendly re-check failed', detail: errText(e) }; }
     if (iv.status !== 'active') return { skip: 'invitee cancelled' };
     if (iv.rescheduled) return { skip: 'rescheduled' };
-    if (iv.old_invitee) return { skip: 'rescheduled booking' };
     return null;
 }
 
 // ─── The run ────────────────────────────────────────────────────
 
+/** Who a booking is, read without trusting its shape: for reporting a booking that threw. */
+const whoOf = (event, inv) => ({
+    email: norm(inv && inv.email), name: inv && typeof inv.name === 'string' ? inv.name : '',
+    eventUri: (event && event.uri) || null, eventTime: (event && event.start_time) || null,
+});
+
 /**
  * One run. Returns the report the handler answers with. deps lets tests stand in for every provider:
- *   calendlyGet(url)  send(msg)  optedOutSet({ strict })  clientCheck({ email, company })  loadTemplate(file)  sleep(ms)
- * force: 'dry-run' makes a live-configured run a dry run (?dry=1).
+ *   calendlyGet(url)  send(msg)  optedOutSet({ strict })  clientCheck({ email, company })  notify(text)
+ *   loadTemplate(file)  sleep(ms)  clock()
+ * force: 'dry-run' makes a live-configured run a dry run (?dry=1). notify: post the notice from a dry run
+ * too (?notify=1); a live run, or a live run that was refused, always posts it.
  */
-export async function runPrecall({ kv, now = Date.now(), env = process.env, force = null, includeHtml = false, deps = {} } = {}) {
+export async function runPrecall({ kv, now = Date.now(), env = process.env, force = null, includeHtml = false, notify = false, deps = {} } = {}) {
     const d = {
         calendlyGet: calendlyGetter(env.CALENDLY_API_TOKEN),
         send: msg => sendViaResend(msg, { apiKey: env.RESEND_API_KEY }),
         optedOutSet: async (o) => (await import('./_optout.js')).optedOutSet(o),
         clientCheck: async (q) => (await import('./_client-guard.js')).clientCheck(q),
+        notify: text => postNotice(noticeDestination(env), text),
         loadTemplate,
         sleep: ms => new Promise(r => setTimeout(r, ms)),
+        clock: Date.now,
         ...deps,
     };
+    const started = d.clock();
+    const overBudget = () => d.clock() - started > RUN_BUDGET_MS;
     const requested = requestedMode(env);
-    const refused = requested === 'live' ? liveBlockers(env) : [];
+    const seed = await seedState(kv);
+    const refused = requested === 'live' ? [...liveBlockers(env), ...seed.blockers] : [];
     const mode = requested === 'live' && !refused.length && force !== 'dry-run' ? 'live' : 'dry-run';
     const salt = String(env.LEAD_ID_SALT || '').trim();
     const runId = `${now}:${randomUUID()}`;
     const report = {
         ok: true, mode, requested, ...(refused.length ? { refused } : {}), ...(force === 'dry-run' && requested === 'live' ? { forced: 'dry-run' } : {}),
-        ts: iso(now), window: { from: iso(now), to: iso(now + WINDOW_MS) },
+        ts: iso(now), window: { from: iso(now), to: iso(now + WINDOW_MS) }, seeded: seed.seeded,
         events: 0, discovery: 0, wouldSend: [], sent: [], skipped: [], held: [], errors: [], overlaps: [],
         ...(salt ? {} : { lidNote: `LEAD_ID_SALT is not set: links show lid=${LID_PLACEHOLDER} (utm_term on Calendly) where the real id goes, and live mode will not send` }),
     };
-    if (!env.CALENDLY_API_TOKEN) return { ...report, ok: false, error: 'CALENDLY_API_TOKEN is not set' };
+
+    // Every run ends here: counts, the notice, and the copy kept for the owner view.
+    const finish = async () => {
+        report.counts = { wouldSend: report.wouldSend.length, sent: report.sent.length, skipped: report.skipped.length, held: report.held.length, errors: report.errors.length, overlaps: report.overlaps.length };
+        if (mode === 'live' || refused.length || notify) {
+            let text;
+            try { text = noticeText(report); } catch (e) { text = `Pre-call emails: the run notice could not be written (${errText(e)}). ${PENDING_URL}`; }
+            try { report.notice = await d.notify(text); } catch (e) { report.notice = { posted: false, error: errText(e) }; }
+            if (!report.notice || typeof report.notice !== 'object') report.notice = { posted: false, error: 'no answer from the notifier' };
+        }
+        // Kept for the owner view: dry runs for three days (the last six), live runs as a log. Never the HTML.
+        const stored = JSON.stringify({ ...report, wouldSend: report.wouldSend.map(stripHtml), sent: report.sent.map(stripHtml), held: report.held.map(h => (h.preview ? { ...h, preview: stripHtml(h.preview) } : h)) });
+        try {
+            if (mode === 'dry-run') { await kv.lpush(DRY_LOG, stored); await kv.ltrim(DRY_LOG, 0, DRY_KEEP - 1); await kv.expire(DRY_LOG, DRY_TTL_SECONDS); }
+            else { await kv.lpush(LIVE_LOG, stored); await kv.ltrim(LIVE_LOG, 0, 199); }
+        } catch (e) { report.recordError = 'the run could not be kept for the owner view: ' + errText(e); }
+        return report;
+    };
+
+    if (!env.CALENDLY_API_TOKEN) { report.ok = false; report.error = 'CALENDLY_API_TOKEN is not set'; return finish(); }
 
     // Upcoming scheduled events, next 14 days: the desktop's exact query, one page of 50.
     const eventsUrl = `https://api.calendly.com/scheduled_events?user=${USER_URI}&status=active&min_start_time=${iso(now)}&max_start_time=${iso(now + WINDOW_MS)}&sort=start_time:asc&count=50`;
-    const eventsData = await d.calendlyGet(eventsUrl);
-    const events = eventsData.collection || [];
-    const discoveryEvents = events.filter(e => DISCOVERY_EVENT_TYPES.includes(e.event_type));
+    let eventsData;
+    try { eventsData = (await d.calendlyGet(eventsUrl)) || {}; }
+    catch (e) { report.ok = false; report.error = 'Calendly events unreadable: ' + errText(e); return finish(); }
+    const events = Array.isArray(eventsData.collection) ? eventsData.collection : [];
+    const discoveryEvents = events.filter(e => e && DISCOVERY_EVENT_TYPES.includes(e.event_type));
     report.events = events.length;
     report.discovery = discoveryEvents.length;
     if (eventsData.pagination && eventsData.pagination.next_page_token) report.truncated = 'more than 50 events in the window; like the desktop, only the first 50 were read';
@@ -327,149 +477,222 @@ export async function runPrecall({ kv, now = Date.now(), env = process.env, forc
     }
     // What this run has already decided, so a person on two bookings gets one email, dry run or live.
     const seen = new Map();
+    // The client guard's sources are the same for everyone: once it cannot answer, it is not asked again
+    // this run (each ask can wait on a HubSpot refresh).
+    let guardDown = null;
+
+    /** A claim with no ledger entry, reported for what it is. */
+    const claimReport = (who, stage, hash, value) => {
+        const c = claimState(value, now), key = CLAIM(hash, stage);
+        if (c.state === 'sent') report.skipped.push({ ...who, stage, reason: 'sent, ledger write failed', detail: `Resend accepted it${c.id ? ` (id ${c.id})` : ''}; ${key} stops it going again` });
+        else if (c.state === 'stale') report.held.push({ ...who, stage, reason: 'unconfirmed send', detail: `check Resend: if it did not go, delete ${key} and ${ATTEMPT(hash, stage)} and the next run sends it; if it went, leave the claim` });
+        else report.skipped.push({ ...who, stage, reason: 'another run is sending this one' });
+    };
+    const unconfirmed = (hash, stage, firstTry) => ({ reason: 'unconfirmed send',
+        detail: `first tried ${Number.isFinite(Number(firstTry)) ? iso(Number(firstTry)) : 'at an unknown time'} and Resend never confirmed it; past 20 hours a retry could be a second email. Check Resend: if it did not go, delete ${ATTEMPT(hash, stage)} and the next run sends it` });
+
+    /** One booking. state.claimKey is set while this booking holds a claim; state.sent once Resend accepted. */
+    const one = async (event, inv, state) => {
+        const email = inv.email;
+        const name = inv.name || '';
+        const firstName = name.split(/[\s/]+/)[0] || 'there';
+        const addr = norm(email);
+        const who = { email: addr, name, eventUri: event.uri, eventTime: event.start_time };
+        if (!addr) { report.skipped.push({ ...who, reason: 'no email' }); return; }
+        // The Mac would send "Your call: Invalid Date at Invalid Date". Never.
+        if (!Number.isFinite(Date.parse(event.start_time))) { report.skipped.push({ ...who, reason: 'no call time' }); return; }
+        const hash = emailHash(addr);
+
+        // Stage logic: email 1 on booking; email 2 >=24h later if the call is still >=12h out.
+        let led;
+        try { led = await readLedger(kv, hash); }
+        catch (e) { report.held.push({ ...who, reason: 'ledger unreadable', detail: errText(e) }); return; }
+        const mine = seen.get(hash) || {};
+        const s1 = mine.s1 || led.s1, s2 = mine.s2 || led.s2;
+        const stage = nextStage(s1, s2, { now, startTime: event.start_time });
+        if (!stage) { report.skipped.push({ ...who, reason: 'already emailed', sent: [s1 && 1, s2 && 2].filter(Boolean) }); return; }
+        if (!mine[`s${stage}`] && led[`claim${stage}`] != null && !led[`s${stage}`]) { claimReport(who, stage, hash, led[`claim${stage}`]); return; }
+        if (!mine[`s${stage}`] && led[`attempt${stage}`] != null && retryClosed(led[`attempt${stage}`], now)) { report.held.push({ ...who, stage, ...unconfirmed(hash, stage, led[`attempt${stage}`]) }); return; }
+
+        const roleText = roleAnswerOf(inv);
+        const role = stage === 2 ? (s1.role && s1.role !== 'hold' ? s1.role : detectRole(roleText)) : detectRole(roleText);
+        if (!role) { report.skipped.push({ ...who, stage, reason: 'role other or unknown', roleAnswer: roleText }); return; }
+        const template = stage === 1 ? TEMPLATES[role] : (TEMPLATES2[role] || TEMPLATES2.default);
+
+        // Never someone whose booking is cancelled, or the booking they moved away from.
+        if (inv.status && inv.status !== 'active') { report.skipped.push({ ...who, stage, reason: 'invitee cancelled' }); return; }
+        if (inv.rescheduled) { report.skipped.push({ ...who, stage, reason: 'rescheduled' }); return; }
+
+        const lid = leadId(addr, salt) || (mode === 'dry-run' ? LID_PLACEHOLDER : null);
+        let built = null;
+        const build = () => built || (built = { lid, ...renderEmail({ template: d.loadTemplate(template.file), firstName, startTime: event.start_time, role, stage, lid }) });
+        const fields = (b, webhook) => ({
+            kind: `precall${stage}`, role, roleAnswer: roleText,
+            from: FROM, replyTo: REPLY_TO, bcc: HUBSPOT_BCC, subject: template.subject, template: template.file,
+            banner: b.banner, lid: b.lid, links: b.links,
+            htmlBytes: Buffer.byteLength(b.html), htmlSha256: createHash('sha256').update(b.html).digest('hex'),
+            webhook, ...(includeHtml ? { html: b.html } : {}),
+        });
+        // A dry-run hold still shows the email it holds, so the copy, links and recipient can be checked
+        // before go-live even while the client check holds everyone.
+        const hold = async (reason, detail = null, { preview = true } = {}) => {
+            const h = { ...who, stage, reason, detail };
+            if (mode === 'dry-run' && preview) {
+                try { h.preview = { to: email, firstName, ...fields(build(), await webhookOverlap(kv, addr)) }; }
+                catch (e) { h.preview = { error: `template ${template.file} could not be built: ${errText(e)}` }; }
+            }
+            report.held.push(h);
+        };
+
+        // Never someone who asked not to be contacted.
+        if (!stops) { await hold('stop list unavailable', stopsWhy); return; }
+        if (stops.emails.has(addr)) { report.skipped.push({ ...who, stage, reason: 'opted out' }); return; }
+        if (overBudget()) { await hold('run time budget reached', BUDGET_NOTE, { preview: false }); return; }
+        // Never a client, for a prospect template. Only 'clear' passes.
+        let client = guardDown;
+        if (!client) {
+            try { client = await d.clientCheck({ email: addr, company: '' }); } catch (e) { client = { status: 'unknown', why: errText(e) }; }
+            if (!client || !['clear', 'client', 'possible'].includes(client.status)) guardDown = client || { status: 'unknown' };
+        }
+        const cs = client && client.status;
+        if (cs === 'client') { report.skipped.push({ ...who, stage, reason: 'existing client' }); return; }
+        if (cs !== 'clear') { await hold(cs === 'possible' ? 'possible client' : 'client check unavailable', (client && (client.reason || client.why)) || null); return; }
+
+        let b;
+        try { b = build(); }
+        catch (e) { report.errors.push({ ...who, stage, error: `template ${template.file} could not be built: ${errText(e)}` }); return; }
+        const webhook = await webhookOverlap(kv, addr);
+        const item = { ...who, to: email, firstName, stage, ...fields(b, webhook) };
+        const noteOverlap = () => { if (webhook.overlap) report.overlaps.push({ email: addr, stage, overlap: webhook.overlap, webhookRole: (webhook.sentKeys && webhook.sentKeys[0] && webhook.sentKeys[0].key.split(':').pop()) || (webhook.booking && webhook.booking.role) || null }); };
+
+        if (mode === 'dry-run') {
+            // The same re-check a live send makes, read only.
+            const r = await recheck(d.calendlyGet, event, inv);
+            if (r && r.skip) { report.skipped.push({ ...who, stage, reason: r.skip }); return; }
+            if (r) { await hold(r.hold, r.detail); return; }
+            report.wouldSend.push(item);
+            noteOverlap();
+            seen.set(hash, { ...mine, [`s${stage}`]: { ts: iso(now), role, ok: true } });
+            return;
+        }
+
+        // Live: claim first, so an overlapping run cannot send it too.
+        const claimKey = CLAIM(hash, stage);
+        let claimed;
+        try { claimed = await kv.set(claimKey, runId, { nx: true, ex: CLAIM_SECONDS }); }
+        catch (e) { report.held.push({ ...who, stage, reason: 'claim failed', detail: errText(e) }); return; }
+        if (!claimed) {
+            let v = null;
+            try { v = await kv.get(claimKey); } catch { /* reported as another run's */ }
+            if (v == null) report.skipped.push({ ...who, stage, reason: 'another run is sending this one' });
+            else claimReport(who, stage, hash, v);
+            return;
+        }
+        state.claimKey = claimKey;
+        let firstTry = null;
+        try {
+            if (await kv.get(SENT(hash, stage))) { await release(kv, claimKey, runId); report.skipped.push({ ...who, stage, reason: 'already emailed' }); return; }
+            firstTry = await kv.get(ATTEMPT(hash, stage));
+            if (firstTry != null && retryClosed(firstTry, now)) { await release(kv, claimKey, runId); report.held.push({ ...who, stage, ...unconfirmed(hash, stage, firstTry) }); return; }
+            const r = await recheck(d.calendlyGet, event, inv);
+            if (r) { await release(kv, claimKey, runId); (r.skip ? report.skipped : report.held).push({ ...who, stage, reason: r.skip || r.hold, ...(r.detail ? { detail: r.detail } : {}) }); return; }
+        } catch (e) { await release(kv, claimKey, runId); report.held.push({ ...who, stage, reason: 'ledger unreadable', detail: errText(e) }); return; }
+        if (overBudget()) { await release(kv, claimKey, runId); report.held.push({ ...who, stage, reason: 'run time budget reached', detail: BUDGET_NOTE }); return; }
+
+        // The first try is written before the send, so a run killed mid-send still leaves it, and every
+        // retry stays inside Resend's 24 hour key.
+        let firstHere = false;
+        try { firstHere = !!await kv.set(ATTEMPT(hash, stage), String(now), { nx: true, ex: CLAIM_SECONDS }); }
+        catch (e) { await release(kv, claimKey, runId); report.held.push({ ...who, stage, reason: 'claim failed', detail: errText(e) }); return; }
+        const firstMs = firstHere ? now : (Number(firstTry) || now);
+
+        let result;
+        try { result = await d.send({ to: email, subject: template.subject, html: b.html, idempotencyKey: `precall/${hash}/${stage}` }); }
+        catch (e) { result = { ok: false, unknown: true, error: errText(e) }; }
+        if (!result || !result.ok) {
+            // Not sent, or not known to be: not marked, the claim let go, the next run tries again. A plain
+            // refusal sent nothing, so it does not start the 20 hour retry window.
+            const unknown = !result || !!result.unknown;
+            if (!unknown && firstHere) { try { await kv.del(ATTEMPT(hash, stage)); } catch { /* the window only gets shorter */ } }
+            await release(kv, claimKey, runId);
+            report.errors.push({ ...who, stage, kind: item.kind, error: (result && result.error) || 'no result from the sender',
+                ...(unknown ? { unknown: true, retryUntil: iso(firstMs + RETRY_WINDOW_MS) } : {}) });
+            return;
+        }
+        state.sent = true;
+        const entry = { ts: iso(now), role, ok: true, stage, id: result.id || null, eventUri: event.uri, eventTime: event.start_time, source: 'cloud' };
+        let marked = false;
+        for (let i = 0; i < 2 && !marked; i++) { try { await kv.set(SENT(hash, stage), JSON.stringify(entry)); marked = true; } catch { /* once more */ } }
+        if (marked) { try { await kv.del(ATTEMPT(hash, stage)); } catch { /* lapses with the claim */ } }
+        else {
+            // Resend has it. The claim is made permanent, so no run ever sends it again; a person clears it.
+            let kept = false;
+            try { kept = !!await kv.set(claimKey, `sent:${result.id || ''}`); } catch { /* the 15 day claim still stands */ }
+            report.errors.push({ ...who, stage, kind: item.kind, id: result.id || null,
+                error: kept ? 'sent, but the ledger write failed; the claim now holds it for good' : 'sent, but the ledger write failed; the claim holds it for 15 days' });
+        }
+        report.sent.push({ ...item, id: result.id || null });
+        noteOverlap();
+        seen.set(hash, { ...mine, [`s${stage}`]: entry });
+        await d.sleep(SEND_GAP_MS);
+    };
 
     for (const event of discoveryEvents) {
+        if (overBudget()) { report.held.push({ eventUri: event.uri || null, eventTime: event.start_time || null, reason: 'run time budget reached', detail: BUDGET_NOTE }); continue; }
         let invitees;
-        try { invitees = ((await d.calendlyGet(`${event.uri}/invitees`)) || {}).collection || []; }
+        try { const got = (await d.calendlyGet(`${event.uri}/invitees`)) || {}; invitees = Array.isArray(got.collection) ? got.collection : []; }
         catch (e) { report.errors.push({ eventUri: event.uri, error: 'invitees unreadable: ' + errText(e) }); continue; }
 
         for (const inv of invitees) {
-            const email = inv.email;
-            const name = inv.name || '';
-            const firstName = name.split(/[\s/]+/)[0] || 'there';
-            const addr = norm(email);
-            const who = { email: addr, name, eventUri: event.uri, eventTime: event.start_time };
-            if (!addr) { report.skipped.push({ ...who, reason: 'no email' }); continue; }
-            const hash = emailHash(addr);
-
-            // Stage logic: email 1 on booking; email 2 >=24h later if the call is still >=12h out.
-            let led;
-            try { led = await readLedger(kv, hash); }
-            catch (e) { report.held.push({ ...who, reason: 'ledger unreadable', detail: errText(e) }); continue; }
-            const mine = seen.get(hash) || {};
-            const s1 = mine.s1 || led.s1, s2 = mine.s2 || led.s2;
-            const stage = nextStage(s1, s2, { now, startTime: event.start_time });
-            if (!stage) { report.skipped.push({ ...who, reason: 'already emailed', sent: [s1 && 1, s2 && 2].filter(Boolean) }); continue; }
-            if (!mine[`s${stage}`] && led[`claim${stage}`] && !led[`s${stage}`]) { report.skipped.push({ ...who, stage, reason: 'another run is sending this one' }); continue; }
-
-            const roleText = roleAnswerOf(inv);
-            const role = stage === 2 ? (s1.role && s1.role !== 'hold' ? s1.role : detectRole(roleText)) : detectRole(roleText);
-            if (!role) { report.skipped.push({ ...who, stage, reason: 'role other or unknown', roleAnswer: roleText }); continue; }
-            const template = stage === 1 ? TEMPLATES[role] : (TEMPLATES2[role] || TEMPLATES2.default);
-
-            // Never someone whose booking is cancelled or was moved.
-            if (inv.status && inv.status !== 'active') { report.skipped.push({ ...who, stage, reason: 'invitee cancelled' }); continue; }
-            if (inv.rescheduled) { report.skipped.push({ ...who, stage, reason: 'rescheduled' }); continue; }
-            if (inv.old_invitee) { report.skipped.push({ ...who, stage, reason: 'rescheduled booking' }); continue; }
-            // Never someone who asked not to be contacted.
-            if (!stops) { report.held.push({ ...who, stage, reason: 'stop list unavailable', detail: stopsWhy }); continue; }
-            if (stops.emails.has(addr)) { report.skipped.push({ ...who, stage, reason: 'opted out' }); continue; }
-            // Never a client, for a prospect template. Only 'clear' passes.
-            let client = null;
-            try { client = await d.clientCheck({ email: addr, company: '' }); } catch { client = null; }
-            const cs = client && client.status;
-            if (cs === 'client') { report.skipped.push({ ...who, stage, reason: 'existing client' }); continue; }
-            if (cs !== 'clear') { report.held.push({ ...who, stage, reason: cs === 'possible' ? 'possible client' : 'client check unavailable', detail: (client && (client.reason || client.why)) || null }); continue; }
-
-            let built;
-            try {
-                const lid = leadId(addr, salt) || (mode === 'dry-run' ? LID_PLACEHOLDER : null);
-                built = { lid, ...renderEmail({ template: d.loadTemplate(template.file), firstName, startTime: event.start_time, role, stage, lid }) };
-            } catch (e) { report.errors.push({ ...who, stage, error: `template ${template.file} could not be built: ${errText(e)}` }); continue; }
-            const webhook = await webhookOverlap(kv, addr);
-            const item = {
-                ...who, to: email, firstName, stage, kind: `precall${stage}`, role, roleAnswer: roleText,
-                from: FROM, replyTo: REPLY_TO, bcc: HUBSPOT_BCC, subject: template.subject, template: template.file,
-                banner: built.banner, lid: built.lid, links: built.links,
-                htmlBytes: Buffer.byteLength(built.html), htmlSha256: createHash('sha256').update(built.html).digest('hex'),
-                webhook, ...(includeHtml ? { html: built.html } : {}),
-            };
-            const noteOverlap = () => { if (webhook.overlap) report.overlaps.push({ email: addr, stage, overlap: webhook.overlap, webhookRole: (webhook.sentKeys && webhook.sentKeys[0] && webhook.sentKeys[0].key.split(':').pop()) || (webhook.booking && webhook.booking.role) || null }); };
-
-            if (mode === 'dry-run') {
-                // The same re-check a live send makes, read only.
-                const r = await recheck(d.calendlyGet, event, inv);
-                if (r && r.skip) { report.skipped.push({ ...who, stage, reason: r.skip }); continue; }
-                if (r) { report.held.push({ ...who, stage, reason: r.hold, detail: r.detail }); continue; }
-                report.wouldSend.push(item);
-                noteOverlap();
-                seen.set(hash, { ...mine, [`s${stage}`]: { ts: iso(now), role, ok: true } });
-                continue;
+            // One booking that cannot be handled is reported and lets go of its claim; the run goes on.
+            const state = { claimKey: null, sent: false };
+            try { await one(event, inv, state); }
+            catch (e) {
+                if (state.claimKey && !state.sent) await release(kv, state.claimKey, runId);
+                report.errors.push({ ...whoOf(event, inv), error: 'this booking could not be handled: ' + errText(e),
+                    ...(state.sent ? { sent: true, note: 'Resend accepted it before the error; the claim stops it going again' } : {}) });
             }
-
-            // Live: claim first, so an overlapping run cannot send it too.
-            const claimKey = CLAIM(hash, stage);
-            let claimed;
-            try { claimed = await kv.set(claimKey, runId, { nx: true, ex: CLAIM_SECONDS }); }
-            catch (e) { report.held.push({ ...who, stage, reason: 'claim failed', detail: errText(e) }); continue; }
-            if (!claimed) { report.skipped.push({ ...who, stage, reason: 'another run is sending this one' }); continue; }
-            try {
-                if (await kv.get(SENT(hash, stage))) { await release(kv, claimKey, runId); report.skipped.push({ ...who, stage, reason: 'already emailed' }); continue; }
-                const r = await recheck(d.calendlyGet, event, inv);
-                if (r) { await release(kv, claimKey, runId); (r.skip ? report.skipped : report.held).push({ ...who, stage, reason: r.skip || r.hold, ...(r.detail ? { detail: r.detail } : {}) }); continue; }
-            } catch (e) { await release(kv, claimKey, runId); report.held.push({ ...who, stage, reason: 'ledger unreadable', detail: errText(e) }); continue; }
-
-            let result;
-            try { result = await d.send({ to: email, subject: template.subject, html: built.html, idempotencyKey: `precall/${hash}/${stage}` }); }
-            catch (e) { result = { ok: false, unknown: true, error: errText(e) }; }
-            if (!result || !result.ok) {
-                // Not sent, or not known to be: not marked, the claim let go, the next run tries again.
-                await release(kv, claimKey, runId);
-                report.errors.push({ ...who, stage, kind: item.kind, error: (result && result.error) || 'no result from the sender', ...(result && result.unknown ? { unknown: true } : {}) });
-                continue;
-            }
-            const entry = { ts: iso(now), role, ok: true, stage, id: result.id || null, eventUri: event.uri, eventTime: event.start_time, source: 'cloud' };
-            let marked = false;
-            for (let i = 0; i < 2 && !marked; i++) { try { await kv.set(SENT(hash, stage), JSON.stringify(entry)); marked = true; } catch { /* once more */ } }
-            if (!marked) {
-                // Resend has it. The claim is made permanent, so no run ever sends it again; a person clears it.
-                let kept = false;
-                try { kept = !!await kv.set(claimKey, `sent:${result.id || ''}`); } catch { /* the 24 hour claim still stands */ }
-                report.errors.push({ ...who, stage, kind: item.kind, id: result.id || null,
-                    error: kept ? 'sent, but the ledger write failed; the claim now holds it for good' : 'sent, but the ledger write failed; the claim holds it for 24 hours' });
-            }
-            report.sent.push({ ...item, id: result.id || null });
-            noteOverlap();
-            seen.set(hash, { ...mine, [`s${stage}`]: entry });
-            await d.sleep(SEND_GAP_MS);
         }
     }
 
-    report.counts = { wouldSend: report.wouldSend.length, sent: report.sent.length, skipped: report.skipped.length, held: report.held.length, errors: report.errors.length, overlaps: report.overlaps.length };
-    // Kept for the owner view: dry runs for three days, live runs as a log. Never the HTML.
-    const stored = JSON.stringify({ ...report, wouldSend: report.wouldSend.map(stripHtml), sent: report.sent.map(stripHtml) });
-    try {
-        if (mode === 'dry-run') { await kv.lpush(DRY_LOG, stored); await kv.ltrim(DRY_LOG, 0, 19); await kv.expire(DRY_LOG, DRY_TTL_SECONDS); }
-        else { await kv.lpush(LIVE_LOG, stored); await kv.ltrim(LIVE_LOG, 0, 199); }
-    } catch (e) { report.recordError = 'the run could not be kept for the owner view: ' + errText(e); }
-    return report;
+    return finish();
 }
 
 const stripHtml = ({ html, ...rest }) => rest;
 
-/** The owner view: the latest dry runs (three days) and live runs. */
-export async function pendingView(kv, { limit = 10 } = {}) {
+/** The owner view: the latest dry runs (three days), live runs, and what stops live mode. */
+export async function pendingView(kv, { limit = 10, env = process.env } = {}) {
     const read = async k => ((await kv.lrange(k, 0, limit - 1)) || []).map(parse).filter(Boolean);
     const dryRuns = await read(DRY_LOG), live = await read(LIVE_LOG);
+    const seed = await seedState(kv);
     const latest = dryRuns[0] || null;
+    const dest = noticeDestination(env);
     return {
-        sendFlag: requestedMode(),
-        liveBlockers: liveBlockers(),
-        latestDryRun: latest ? { ts: latest.ts, counts: latest.counts, wouldSend: latest.wouldSend, overlaps: latest.overlaps, held: latest.held, skipped: latest.skipped, errors: latest.errors, refused: latest.refused || [] } : null,
+        sendFlag: requestedMode(env),
+        liveBlockers: [...liveBlockers(env), ...seed.blockers],
+        seeded: seed.seeded,
+        notice: dest ? dest.label : null,
+        latestDryRun: latest ? { ts: latest.ts, counts: latest.counts, wouldSend: latest.wouldSend, overlaps: latest.overlaps, held: latest.held, skipped: latest.skipped, errors: latest.errors, refused: latest.refused || [], notice: latest.notice || null } : null,
         dryRuns: dryRuns.map(r => ({ ts: r.ts, counts: r.counts, refused: r.refused || [] })),
-        liveRuns: live.map(r => ({ ts: r.ts, counts: r.counts, sent: (r.sent || []).map(s => ({ email: s.email, stage: s.stage, role: s.role, id: s.id })) })),
+        liveRuns: live.map(r => ({ ts: r.ts, counts: r.counts, notice: r.notice || null,
+            sent: (r.sent || []).map(s => ({ email: s.email, stage: s.stage, role: s.role, id: s.id })),
+            held: (r.held || []).map(h => ({ email: h.email, stage: h.stage, reason: h.reason, detail: h.detail || null })),
+            errors: (r.errors || []).map(e => ({ email: e.email, stage: e.stage, error: e.error })) })),
     };
 }
 
 /**
  * Import the desktop's sent log as ledger entries (scripts/seed-precall-ledger.mjs), so going live never
  * re-sends to anyone the Mac already emailed. Each entry: { key: 32 hex, stage: 1|2, ts, role, ok }.
- * No address, no name. Never overwrites an entry that is already there.
+ * No address, no name. Never overwrites an entry that is already there. An odd role is kept as no role.
+ * Once at least one entry is accepted, precall:seeded records { at, count, latestTs }: live mode refuses
+ * without it. Each import rewrites that record, so a second run right before go-live shows the newest.
  */
 export async function importLedger(kv, entries, now = Date.now()) {
     if (!Array.isArray(entries)) return { ok: false, error: 'entries must be a list' };
     if (entries.length > 5000) return { ok: false, error: 'at most 5000 entries at a time' };
     const out = { ok: true, received: entries.length, imported: 0, alreadyThere: 0, rejected: [] };
+    let latest = null;
     for (let i = 0; i < entries.length; i++) {
         const e = entries[i] || {};
         const stage = Number(e.stage);
@@ -477,12 +700,18 @@ export async function importLedger(kv, entries, now = Date.now()) {
             : ![1, 2].includes(stage) ? 'stage is not 1 or 2'
             : !Number.isFinite(Date.parse(e.ts)) ? 'ts is not a time'
             : typeof e.ok !== 'boolean' ? 'ok is not true or false'
-            : e.role != null && !/^[a-z]{1,16}$/.test(String(e.role)) ? 'role is not a role'
             : null;
         if (why) { out.rejected.push({ index: i, why }); continue; }
-        const doc = { ts: iso(Date.parse(e.ts)), role: e.role || null, ok: e.ok, stage, source: 'desktop-seed', importedAt: iso(now) };
+        const t = Date.parse(e.ts);
+        const role = /^[a-z]{1,16}$/.test(String(e.role || '')) ? e.role : null;
+        const doc = { ts: iso(t), role, ok: e.ok, stage, source: 'desktop-seed', importedAt: iso(now) };
         const r = await kv.set(SENT(e.key, stage), JSON.stringify(doc), { nx: true });
         if (r) out.imported++; else out.alreadyThere++;
+        if (latest == null || t > latest) latest = t;
     }
-    return out;
+    const count = out.imported + out.alreadyThere;
+    if (!count) return { ...out, seeded: null, seedNote: 'nothing was accepted, so the ledger is not marked as imported and live mode still refuses' };
+    const seeded = { at: iso(now), count, imported: out.imported, alreadyThere: out.alreadyThere, rejected: out.rejected.length, latestTs: iso(latest) };
+    await kv.set(SEEDED, JSON.stringify(seeded));
+    return { ...out, seeded };
 }

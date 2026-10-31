@@ -2,16 +2,20 @@
 // ------------------------------------------------------------------
 // Pinned here: a dry run sends nothing, live sends once, two overlapping runs send once, a missing
 // LEAD_ID_SALT refuses live, someone the Mac already emailed is skipped, and a provider error is never
-// marked sent. Plus the desktop's own rules (roles, email #2 timing, the copy byte for byte) and the
-// new stops (cancelled, rescheduled, a client, the stop list). Stubs only: nothing here calls
-// Calendly or Resend or writes a real store.
+// marked sent. Plus the desktop's own rules (roles, email #2 timing, the copy byte for byte), the
+// new stops (cancelled, the booking someone moved away from, a client, the stop list), and the review
+// fixes: rebooked people are emailed, live refuses on an unimported ledger or with no notice
+// destination, an orphaned claim is held and never re-sent, retries stay inside 20 hours, one bad
+// booking never stops a run, dry-run holds show their email, and the run notice. Stubs only: nothing
+// here calls Calendly, Resend or Slack or writes a real store.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 const P = await import('../api/_precall.js');
-const { runPrecall, detectRole, nextStage, renderEmail, formatCall, importLedger, pendingView, emailHash, SENT, CLAIM, DRY_LOG, LIVE_LOG, TEMPLATES, TEMPLATES2, LID_PLACEHOLDER, loadTemplate } = P;
+const { runPrecall, detectRole, nextStage, renderEmail, formatCall, importLedger, pendingView, emailHash, SENT, CLAIM, ATTEMPT, SEEDED, DRY_LOG, LIVE_LOG, TEMPLATES, TEMPLATES2, LID_PLACEHOLDER, loadTemplate,
+    roleAnswerOf, noticeText, liveBlockers, CLAIM_SECONDS, RUN_BUDGET_MS } = P;
 const { leadId, tagUrl, leadIdReady } = await import('../api/_staffify-utm.js');
 const { ledgerEntries } = await import('../scripts/seed-precall-ledger.mjs');
 
@@ -19,14 +23,17 @@ const H = 3600 * 1000, DAY = 24 * H;
 const NOW = Date.parse('2026-11-02T13:10:00Z');            // 8:10 ET, the morning slot
 const ISO = t => new Date(t).toISOString();
 const SALT = 'test-salt-not-real';
-const LIVE = { CALENDLY_API_TOKEN: 'cal', RESEND_API_KEY: 'resend', LEAD_ID_SALT: SALT, PRECALL_SEND: 'on' };
+const HOOK = 'https://hooks.example.invalid/precall-notice';
+const LIVE = { CALENDLY_API_TOKEN: 'cal', RESEND_API_KEY: 'resend', LEAD_ID_SALT: SALT, PRECALL_SEND: 'on', PRECALL_SLACK_WEBHOOK: HOOK };
 const DRY = { CALENDLY_API_TOKEN: 'cal', RESEND_API_KEY: 'resend', LEAD_ID_SALT: SALT };
 const DISCOVERY = 'https://api.calendly.com/event_types/62ac8330-2bb7-40e4-9b93-68a80b02a049';
 const OTHER_TYPE = 'https://api.calendly.com/event_types/00000000-0000-0000-0000-000000000000';
 
-// One fake store: strings with nx, hashes and lists, the shapes Upstash answers in.
-function fakeKv(seed = {}, { failSet = null } = {}) {
+// One fake store: strings with nx, hashes and lists, the shapes Upstash answers in. It starts with the
+// Mac's log imported (precall:seeded) unless a test asks for an empty one.
+function fakeKv(seed = {}, { failSet = null, unseeded = false } = {}) {
     const m = new Map(Object.entries(seed.strings || {})), h = new Map(), l = new Map();
+    if (!unseeded && !m.has(SEEDED)) m.set(SEEDED, JSON.stringify({ at: ISO(NOW - DAY), count: 1, latestTs: ISO(NOW - 2 * DAY) }));
     for (const [k, v] of Object.entries(seed.hashes || {})) h.set(k, new Map(Object.entries(v)));
     const ttl = new Map();
     return { m, h, l, ttl,
@@ -70,7 +77,13 @@ function sender(result = () => ({ ok: true, id: 'resend-1' }), { delay = 0 } = {
     const send = async msg => { if (delay) await new Promise(r => setTimeout(r, delay)); sent.push(msg); return result(msg, sent.length); };
     return { send, sent };
 }
-const run = (kv, cal, env, extra = {}) => runPrecall({ kv, now: NOW, env, deps: { calendlyGet: cal.get, send: extra.send, optedOutSet: extra.optedOutSet || noStops, clientCheck: extra.clientCheck || clear, sleep: async () => {} }, ...(extra.opts || {}) });
+// The notice is caught, never posted; the clock stands still unless a test moves it.
+function notices(answer = () => ({ posted: true, via: 'webhook' })) {
+    const posted = [];
+    return { posted, notify: async text => { posted.push(text); return answer(text); } };
+}
+const run = (kv, cal, env, extra = {}) => runPrecall({ kv, now: extra.now || NOW, env, deps: { calendlyGet: extra.calendlyGet || cal.get, send: extra.send, optedOutSet: extra.optedOutSet || noStops, clientCheck: extra.clientCheck || clear,
+    notify: extra.notify || notices().notify, clock: extra.clock || (() => 0), sleep: async () => {} }, ...(extra.opts || {}) });
 const oneBooking = (answer = 'Video Editor', startTime = ISO(NOW + 3 * DAY), extra = {}) => [{ event: event(1, startTime), invitees: [invitee(1, PAT, 'Pat Rivera', answer, extra)] }];
 
 // ---- the copy -----------------------------------------------------------------------------------
@@ -163,6 +176,8 @@ test('a dry run sends nothing, keeps what it would send, and flags the webhook o
     const kept = JSON.parse(kv.l.get(DRY_LOG)[0]);
     assert.equal(kept.wouldSend[0].email, PAT); assert.equal(kept.wouldSend[0].html, undefined, 'never the HTML');
     assert.equal(kv.ttl.get(DRY_LOG), 3 * 86400, 'a short life');
+    for (let i = 0; i < 8; i++) await run(kv, cal, DRY, { send: s.send });
+    assert.equal(kv.l.get(DRY_LOG).length, 6, 'the last six runs: two a day for the three days, not twenty');
     assert.ok(cal.calls.includes(evUri(1)) && cal.calls.includes(`${evUri(1)}/invitees/inv-1`), 'the dry run re-checks too');
     const view = await pendingView(kv);
     assert.equal(view.latestDryRun.wouldSend[0].email, PAT);
@@ -277,7 +292,6 @@ test('never someone who cancelled or rescheduled, read again right before the se
         ['event cancelled', { eventNow: { [evUri(1)]: { status: 'canceled' } } }],
         ['invitee cancelled', { inviteeNow: { [`${evUri(1)}/invitees/inv-1`]: { status: 'canceled' } } }],
         ['rescheduled', { inviteeNow: { [`${evUri(1)}/invitees/inv-1`]: { rescheduled: true } } }],
-        ['rescheduled booking', {}, { old_invitee: 'https://api.calendly.com/scheduled_events/ev-0/invitees/inv-0' }],
     ]) {
         const kv = fakeKv(); const s = sender();
         const r = await run(kv, fakeCalendly(oneBooking('Video Editor', ISO(NOW + 3 * DAY), extra || {}), opts), LIVE, { send: s.send });
@@ -335,8 +349,10 @@ test('a person on two bookings gets one email in a run, dry or live', async () =
 
 test('?dry=1 makes a live-configured run a dry run', async () => {
     const s = sender();
-    const r = await runPrecall({ kv: fakeKv(), now: NOW, env: LIVE, force: 'dry-run', deps: { calendlyGet: fakeCalendly(oneBooking()).get, send: s.send, optedOutSet: noStops, clientCheck: clear, sleep: async () => {} } });
+    const n = notices();
+    const r = await runPrecall({ kv: fakeKv(), now: NOW, env: LIVE, force: 'dry-run', deps: { calendlyGet: fakeCalendly(oneBooking()).get, send: s.send, optedOutSet: noStops, clientCheck: clear, notify: n.notify, sleep: async () => {} } });
     assert.equal(r.mode, 'dry-run'); assert.equal(r.forced, 'dry-run'); assert.equal(s.sent.length, 0); assert.equal(r.wouldSend.length, 1);
+    assert.equal(n.posted.length, 0, 'a forced dry run posts no notice');
 });
 
 test('the endpoint: runs need the cron token, the pending view an owner, the import a token', async () => {
@@ -358,4 +374,298 @@ test('the cron runs at the desktop slots, with the trailing slash the runner nee
     const cron = vercel.crons.find(c => c.path.startsWith('/api/cron-precall'));
     assert.deepEqual(cron, { path: '/api/cron-precall/', schedule: '10 13,23 * * *' });
     assert.equal(vercel.functions['api/cron-precall.js'].includeFiles, 'api/_precall-templates/**');
+});
+
+// ---- the review fixes (S1 to S6, M1 to M4, M7) ---------------------------------------------------
+
+const KIM = 'kim@northlight.co', LEE = 'lee@harborview.net';
+const booking = (n, email, name, answer = 'Video Editor', startTime = ISO(NOW + 3 * DAY), extra = {}) => ({ event: event(n, startTime), invitees: [invitee(n, email, name, answer, extra)] });
+
+test('S1: a booking someone moved into is emailed, as on the Mac; the one they left is not', async () => {
+    const moved = { old_invitee: 'https://api.calendly.com/scheduled_events/ev-0/invitees/inv-0' };
+    const s = sender();
+    const r = await run(fakeKv(), fakeCalendly(oneBooking('Video Editor', ISO(NOW + 3 * DAY), moved)), LIVE, { send: s.send });
+    assert.equal(s.sent.length, 1, 'never emailed before, so #1 goes');
+    assert.equal(r.sent[0].stage, 1);
+    // They had #1 from the old booking a day ago: the ledger is by address, so only #2 can follow.
+    const kv = fakeKv({ strings: { [SENT(emailHash(PAT), 1)]: JSON.stringify({ ts: ISO(NOW - 24 * H), role: 'video', ok: true, stage: 1 }) } });
+    const s2 = sender();
+    const r2 = await run(kv, fakeCalendly(oneBooking('Video Editor', ISO(NOW + 3 * DAY), moved)), LIVE, { send: s2.send });
+    assert.equal(s2.sent.length, 1); assert.equal(r2.sent[0].stage, 2); assert.equal(s2.sent[0].subject, 'One story before we talk');
+    // Had #1 an hour ago: nothing, no third email and no repeat.
+    const kv3 = fakeKv({ strings: { [SENT(emailHash(PAT), 1)]: JSON.stringify({ ts: ISO(NOW - H), role: 'video', ok: true, stage: 1 }) } });
+    const s3 = sender();
+    await run(kv3, fakeCalendly(oneBooking('Video Editor', ISO(NOW + 3 * DAY), moved)), LIVE, { send: s3.send });
+    assert.equal(s3.sent.length, 0);
+    // The booking they moved away from is still never emailed.
+    const s4 = sender();
+    const r4 = await run(fakeKv(), fakeCalendly(oneBooking('Video Editor', ISO(NOW + 3 * DAY), { rescheduled: true })), LIVE, { send: s4.send });
+    assert.equal(s4.sent.length, 0); assert.equal(r4.skipped[0].reason, 'rescheduled');
+});
+
+test('S2: live refuses until the Mac log is imported, and the import marks it', async () => {
+    const kv = fakeKv({}, { unseeded: true });
+    const cal = fakeCalendly(oneBooking());
+    const s = sender(), n = notices();
+    const r = await run(kv, cal, LIVE, { send: s.send, notify: n.notify });
+    assert.equal(r.mode, 'dry-run'); assert.deepEqual(r.refused, ['desktop log not imported']);
+    assert.equal(s.sent.length, 0, 'an empty ledger never sends #1 to everyone again');
+    assert.match(n.posted[0], /refused: desktop log not imported/);
+    assert.deepEqual((await pendingView(kv, { env: LIVE })).liveBlockers, ['desktop log not imported']);
+    // An import that accepted nothing does not count.
+    const none = await importLedger(kv, [{ key: 'nope', stage: 1, ts: ISO(NOW), ok: true }], NOW);
+    assert.equal(none.seeded, null); assert.ok(!kv.m.has(SEEDED));
+    // A real import marks it, and a second import (right before the flip) is safe.
+    const entries = [
+        { key: emailHash('old@one.com'), stage: 1, ts: ISO(NOW - 5 * DAY), role: 'va', ok: true },
+        { key: emailHash('old@two.com'), stage: 1, ts: ISO(NOW - 2 * DAY), role: 'sales', ok: true },
+    ];
+    const imp = await importLedger(kv, entries, NOW);
+    assert.deepEqual(JSON.parse(kv.m.get(SEEDED)), { at: ISO(NOW), count: 2, imported: 2, alreadyThere: 0, rejected: 0, latestTs: ISO(NOW - 2 * DAY) });
+    assert.equal(imp.seeded.latestTs, ISO(NOW - 2 * DAY));
+    const again = await importLedger(kv, entries, NOW + H);
+    assert.equal(again.alreadyThere, 2); assert.equal(again.seeded.count, 2); assert.equal(again.seeded.at, ISO(NOW + H));
+    const live = await run(kv, cal, LIVE, { send: s.send });
+    assert.equal(live.mode, 'live'); assert.equal(s.sent.length, 1);
+    assert.equal(live.seeded.latestTs, ISO(NOW - 2 * DAY), 'every run shows what was imported');
+    // A store that cannot say is not a yes.
+    const broken = fakeKv({}, { unseeded: true }); broken.get = async () => { throw Error('store down'); };
+    assert.deepEqual((await run(broken, cal, LIVE, { send: s.send })).refused, ['desktop log import could not be confirmed: store down']);
+    assert.equal(s.sent.length, 1);
+});
+
+test('S3: a claim lasts past the 14-day window, and an orphaned one is held, never re-sent', async () => {
+    assert.ok(CLAIM_SECONDS > 14 * 86400);
+    const h = emailHash(PAT), cal = fakeCalendly(oneBooking());
+    const kv0 = fakeKv(); await run(kv0, cal, LIVE, { send: sender().send });
+    assert.equal(kv0.ttl.get(CLAIM(h, 1)), 15 * 86400);
+    // A run killed after Resend accepted, before the ledger write: the claim is all that is left.
+    for (const later of [11 * 60 * 1000, DAY + 60 * 1000, 10 * DAY]) {
+        const kv = fakeKv({ strings: { [CLAIM(h, 1)]: `${NOW - 60 * 1000}:dead-run` } });
+        const s = sender();
+        const r = await run(kv, cal, LIVE, { send: s.send, now: NOW + later });
+        assert.equal(s.sent.length, 0, `not re-sent ${later / 60000} minutes later`);
+        assert.equal(r.held[0].reason, 'unconfirmed send');
+        assert.ok(r.held[0].detail.startsWith(`check Resend: if it did not go, delete ${CLAIM(h, 1)} and ${ATTEMPT(h, 1)} and the next run sends it`));
+    }
+    // A claim a minute old belongs to a run that is still going.
+    const fresh = await run(fakeKv({ strings: { [CLAIM(h, 1)]: `${NOW - 60 * 1000}:busy-run` } }), cal, LIVE, { send: sender().send });
+    assert.equal(fresh.skipped[0].reason, 'another run is sending this one');
+    // A claim made permanent after a failed ledger write says so.
+    const sentClaim = await run(fakeKv({ strings: { [CLAIM(h, 1)]: 'sent:re_9' } }), cal, LIVE, { send: sender().send });
+    assert.equal(sentClaim.skipped[0].reason, 'sent, ledger write failed');
+    assert.match(sentClaim.skipped[0].detail, /id re_9/);
+    // The claim appears between the ledger read and SET NX: the same reading.
+    const kv = fakeKv({ strings: { [CLAIM(h, 1)]: `${NOW - 30 * 60 * 1000}:dead-run` } });
+    const get = kv.get; let hidden = true;
+    kv.get = async k => (k === CLAIM(h, 1) && hidden ? ((hidden = false), null) : get(k));
+    const s = sender();
+    const r = await run(kv, cal, LIVE, { send: s.send });
+    assert.equal(s.sent.length, 0); assert.equal(r.held[0].reason, 'unconfirmed send');
+});
+
+test('S3: when Resend may have it, retries go under the same key and only inside 20 hours', async () => {
+    const h = emailHash(PAT), cal = fakeCalendly(oneBooking());
+    const maybe = () => sender(() => ({ ok: false, status: 503, unknown: true, error: 'Resend 503' }));
+    // Retried 10 hours later: the same key, so Resend makes it the same email.
+    const kv = fakeKv();
+    const bad = maybe();
+    const r = await run(kv, cal, LIVE, { send: bad.send });
+    assert.equal(r.errors[0].retryUntil, ISO(NOW + 20 * H));
+    assert.equal(Number(kv.m.get(ATTEMPT(h, 1))), NOW, 'the first try is kept');
+    assert.ok(!kv.m.has(CLAIM(h, 1)), 'the claim let go');
+    await run(kv, cal, LIVE, { send: maybe().send, now: NOW + 5 * H });
+    assert.equal(Number(kv.m.get(ATTEMPT(h, 1))), NOW, 'a second unknown keeps the first time');
+    const good = sender();
+    await run(kv, cal, LIVE, { send: good.send, now: NOW + 10 * H });
+    assert.equal(good.sent.length, 1); assert.equal(good.sent[0].idempotencyKey, bad.sent[0].idempotencyKey);
+    assert.ok(kv.m.has(SENT(h, 1))); assert.ok(!kv.m.has(ATTEMPT(h, 1)), 'cleared once sent');
+    // Past 20 hours Resend may have forgotten the key: held for a person, never retried.
+    const kv2 = fakeKv();
+    await run(kv2, cal, LIVE, { send: maybe().send });
+    const late = sender();
+    const r2 = await run(kv2, cal, LIVE, { send: late.send, now: NOW + 21 * H });
+    assert.equal(late.sent.length, 0);
+    assert.equal(r2.held[0].reason, 'unconfirmed send');
+    assert.match(r2.held[0].detail, new RegExp(`delete ${ATTEMPT(h, 1)}`));
+    // A plain refusal sent nothing, so it starts no window: two days later it still goes.
+    const kv3 = fakeKv();
+    await run(kv3, cal, LIVE, { send: sender(() => ({ ok: false, status: 422, error: 'Resend 422: invalid' })).send });
+    assert.ok(!kv3.m.has(ATTEMPT(h, 1)));
+    const later = sender();
+    await run(kv3, cal, LIVE, { send: later.send, now: NOW + 2 * DAY });
+    assert.equal(later.sent.length, 1);
+});
+
+test('S4: one malformed booking is reported and never stops the run', async () => {
+    assert.equal(roleAnswerOf({ questions_and_answers: [{ question: null, answer: 'x' }, { question: 'Which role are you looking to fill?', answer: 'Video Editor' }] }), 'Video Editor');
+    assert.equal(roleAnswerOf({ questions_and_answers: [{ answer: 'x' }, null] }), '');
+    const bookings = [
+        { event: event(1, ISO(NOW + 2 * DAY)), invitees: [invitee(1, LEE, 'Lee', 'x', { questions_and_answers: [{ question: null, answer: 'x' }] })] },
+        { event: event(2, ISO(NOW + 3 * DAY)), invitees: [invitee(2, KIM, 42, 'Video Editor'), invitee(2, 'q@odd.com', 'Q', 'x', { uri: `${evUri(2)}/invitees/inv-q`, questions_and_answers: 'not a list' })] },
+        ...oneBooking('Video Editor', ISO(NOW + 4 * DAY)),
+    ];
+    bookings[2].event = event(3, ISO(NOW + 4 * DAY)); bookings[2].invitees[0].uri = `${evUri(3)}/invitees/inv-3`;
+    const s = sender();
+    const r = await run(fakeKv(), fakeCalendly(bookings), LIVE, { send: s.send });
+    assert.equal(s.sent.length, 1, 'the good booking still goes');
+    assert.equal(s.sent[0].to, PAT);
+    assert.equal(r.skipped.find(x => x.email === LEE).reason, 'role other or unknown', 'a question with no text is passed over');
+    assert.deepEqual(r.errors.map(e => e.email).sort(), [KIM, 'q@odd.com']);
+    assert.ok(r.errors.every(e => /^this booking could not be handled: /.test(e.error)));
+    // A throw while the claim is held lets it go, so the next run sends it.
+    const kv = fakeKv(); let armed = false;
+    const cal = fakeCalendly(oneBooking());
+    const get = async url => { const out = await cal.get(url); if (url.endsWith('/invitees/inv-1')) armed = true; return out; };
+    const s2 = sender();
+    const r2 = await run(kv, cal, LIVE, { send: s2.send, calendlyGet: get, clock: () => { if (armed) throw Error('clock broke'); return 0; } });
+    assert.equal(s2.sent.length, 0); assert.match(r2.errors[0].error, /could not be handled: clock broke/);
+    assert.ok(!kv.m.has(CLAIM(emailHash(PAT), 1)), 'claim let go');
+    await run(kv, cal, LIVE, { send: s2.send });
+    assert.equal(s2.sent.length, 1);
+});
+
+test('S5: a dry-run hold still shows the email it holds, without the HTML in what is kept', async () => {
+    const kv = fakeKv();
+    const cal = fakeCalendly(oneBooking());
+    const want = (await run(fakeKv(), cal, DRY, { send: sender().send })).wouldSend[0];
+    const r = await run(kv, cal, DRY, { send: sender().send, clientCheck: async () => ({ status: 'unknown', why: 'the shared client snapshot (40 days old)' }), opts: { includeHtml: true } });
+    assert.equal(r.wouldSend.length, 0);
+    const held = r.held[0];
+    assert.equal(held.reason, 'client check unavailable');
+    for (const k of ['to', 'subject', 'template', 'banner', 'lid', 'links', 'htmlSha256', 'from', 'replyTo', 'bcc', 'webhook']) assert.deepEqual(held.preview[k], want[k], k);
+    assert.equal(held.preview.to, PAT);
+    assert.ok(held.preview.html.includes('Your call: Thursday, November 5'), '?html=1 shows it');
+    assert.equal(JSON.parse(kv.l.get(DRY_LOG)[0]).held[0].preview.html, undefined, 'never kept');
+    const stops = await run(fakeKv(), cal, DRY, { send: sender().send, optedOutSet: async () => { throw Error('down'); } });
+    assert.equal(stops.held[0].reason, 'stop list unavailable'); assert.equal(stops.held[0].preview.subject, want.subject);
+    const live = await run(fakeKv(), cal, LIVE, { send: sender().send, clientCheck: async () => ({ status: 'unknown' }) });
+    assert.equal(live.held[0].preview, undefined, 'live holds stay small');
+});
+
+test('S6: every live run posts its notice; a dry run only when asked; no destination refuses live', async () => {
+    const bookings = [...oneBooking(), booking(2, LEE, 'Lee Park', 'Sales Support'), booking(3, KIM, 'Kim Ode', 'Executive Admin / Assistant')];
+    const n = notices();
+    const s = sender(msg => (msg.to === KIM ? { ok: false, status: 422, error: 'Resend 422: bad address' } : { ok: true, id: 'resend-1' }));
+    const r = await run(fakeKv(), fakeCalendly(bookings), LIVE, { send: s.send, notify: n.notify, clientCheck: async ({ email }) => (email === LEE ? { status: 'possible', reason: 'company match' } : { status: 'clear' }) });
+    assert.equal(n.posted.length, 1); assert.deepEqual(r.notice, { posted: true, via: 'webhook' });
+    const text = n.posted[0];
+    assert.match(text, /^Pre-call emails, 8:10 AM EST run: 1 sent, 1 held, 1 errors, 0 skipped\./);
+    assert.ok(text.includes('Pre-call email #1 sent to Pat Rivera (pat@brightframe.com) for their Thursday, November 5 discovery call. Role: video.'), 'the desktop push, line for line');
+    assert.ok(text.includes(`Held: Lee Park (${LEE}), email #1: possible client (company match).`));
+    assert.ok(text.includes(`Error: Kim Ode (${KIM}), email #1: Resend 422: bad address.`));
+    assert.ok(text.endsWith('Details: https://www.gostaffify.com/api/cron-precall/?view=pending'));
+    assert.ok(!/[\u2013\u2014]/.test(text), 'no em or en dash');
+    // A quiet run still says so, the way the Mac did.
+    const q = notices();
+    await run(fakeKv(), fakeCalendly([]), LIVE, { send: sender().send, notify: q.notify });
+    assert.match(q.posted[0], /No new discovery call bookings to email\./);
+    // A live run that is refused says why.
+    const ref = notices(); const env = { ...LIVE }; delete env.LEAD_ID_SALT;
+    await run(fakeKv(), fakeCalendly(oneBooking()), env, { send: sender().send, notify: ref.notify });
+    assert.match(ref.posted[0], /Live sending is switched on but refused: missing LEAD_ID_SALT\. Nothing was sent\./);
+    // A dry run is quiet unless ?notify=1.
+    const dq = notices();
+    await run(fakeKv(), fakeCalendly(oneBooking()), DRY, { send: sender().send, notify: dq.notify });
+    assert.equal(dq.posted.length, 0);
+    await run(fakeKv(), fakeCalendly(oneBooking()), DRY, { send: sender().send, notify: dq.notify, opts: { notify: true } });
+    assert.match(dq.posted[0], /^Pre-call emails \(dry run, nothing sent\), 8:10 AM EST run: 1 would send/);
+    // No destination: live refuses. A channel with the bot token is a destination.
+    const noDest = { ...LIVE }; delete noDest.PRECALL_SLACK_WEBHOOK;
+    assert.ok(liveBlockers(noDest).some(b => b.startsWith('missing PRECALL_SLACK_WEBHOOK')));
+    const ns = sender();
+    assert.equal((await run(fakeKv(), fakeCalendly(oneBooking()), noDest, { send: ns.send })).mode, 'dry-run'); assert.equal(ns.sent.length, 0);
+    assert.deepEqual(liveBlockers({ ...noDest, PRECALL_SLACK_CHANNEL: 'C0PRECALL', SLACK_BOT_TOKEN: 'xoxb-test' }), []);
+    // A notifier that fails never fails the run, and the webhook URL never shows.
+    const kv = fakeKv();
+    const f = await run(kv, fakeCalendly(oneBooking()), LIVE, { send: sender().send, notify: async () => { throw Error('Slack down'); } });
+    assert.equal(f.ok, true); assert.deepEqual(f.notice, { posted: false, error: 'Slack down' }); assert.equal(f.sent.length, 1);
+    const view = await pendingView(kv, { env: LIVE });
+    assert.equal(view.notice, 'PRECALL_SLACK_WEBHOOK');
+    assert.ok(!JSON.stringify(f).includes(HOOK) && !JSON.stringify(view).includes(HOOK) && !kv.l.get(LIVE_LOG)[0].includes(HOOK));
+    // Calendly down: the run reports it, posts it and keeps it, instead of dying silently.
+    const down = notices(); const kv2 = fakeKv();
+    const d = await run(kv2, { get: async () => { throw Error('Calendly 503: down'); } }, LIVE, { send: sender().send, notify: down.notify });
+    assert.equal(d.ok, false); assert.match(down.posted[0], /The run stopped early: Calendly events unreadable: Calendly 503: down/);
+    assert.equal(kv2.l.get(LIVE_LOG).length, 1);
+});
+
+test('S6: the notice poster accepts only a confirmed post', async () => {
+    const { postNotice, noticeDestination } = P;
+    const answer = (status, body) => async () => ({ ok: status < 300, status, text: async () => body, json: async () => JSON.parse(body) });
+    const hook = noticeDestination({ PRECALL_SLACK_WEBHOOK: HOOK });
+    assert.deepEqual(await postNotice(hook, 'hi', answer(200, 'ok')), { posted: true, via: 'webhook' });
+    assert.equal((await postNotice(hook, 'hi', answer(404, 'no_service'))).posted, false);
+    const bot = noticeDestination({ PRECALL_SLACK_CHANNEL: 'C0PRECALL', SLACK_BOT_TOKEN: 'xoxb-test' });
+    assert.deepEqual(await postNotice(bot, 'hi', answer(200, '{"ok":true,"ts":"1"}')), { posted: true, via: 'bot', channel: 'C0PRECALL' });
+    assert.equal((await postNotice(bot, 'hi', answer(200, '{"ok":false,"error":"not_in_channel"}'))).error, 'not_in_channel');
+    assert.deepEqual(await postNotice(null, 'hi'), { posted: false, error: 'no notice destination is set' });
+    assert.equal(noticeDestination({ SLACK_CHANNEL: 'C0TEAM', SLACK_BOT_TOKEN: 'xoxb-test' }), null, 'never the team channel');
+});
+
+test('M1, M2: the seed reads an escaped line, keeps an untimed entry as a hold, and an odd role imports as none', async () => {
+    const escaped = JSON.stringify({ ts: '2026-07-13T19:15:29Z', to: 'sam@ridge.com', role: 'sales', ok: true, manual: true }).replace(/"/g, '\\"');
+    const { entries, recovered, untimed, unreadable, latestTs } = ledgerEntries([
+        escaped,
+        JSON.stringify({ ts: 'sometime', to: 'tess@field.com', role: 'video', ok: true }),
+        JSON.stringify({ ts: ISO(NOW - DAY), to: PAT, role: 'Weird Role!', ok: true }),
+    ]);
+    assert.equal(recovered, 1); assert.equal(untimed, 1); assert.equal(unreadable, 0);
+    assert.deepEqual(entries.map(e => [e.key, e.stage, e.ts, e.ok, e.role]), [
+        [emailHash('sam@ridge.com'), 1, '2026-07-13T19:15:29.000Z', true, 'sales'],
+        [emailHash('tess@field.com'), 1, '1970-01-01T00:00:00.000Z', false, 'video'],
+        [emailHash(PAT), 1, ISO(NOW - DAY), true, null],
+    ]);
+    assert.equal(latestTs, ISO(NOW - DAY), 'the epoch is not the newest');
+    const kv = fakeKv({}, { unseeded: true });
+    const odd = await importLedger(kv, [{ key: emailHash('rae@x.com'), stage: 1, ts: ISO(NOW), role: 'Not A Role', ok: true }, ...entries], NOW);
+    assert.equal(odd.imported, 4); assert.equal(odd.rejected.length, 0);
+    assert.equal(JSON.parse(kv.m.get(SENT(emailHash('rae@x.com'), 1))).role, null);
+    const cal = fakeCalendly([booking(1, 'tess@field.com', 'Tess'), booking(2, 'sam@ridge.com', 'Sam', 'Sales Support', ISO(NOW + 5 * DAY))]);
+    const s = sender();
+    const r = await run(kv, cal, LIVE, { send: s.send });
+    assert.deepEqual(r.skipped.map(x => [x.email, x.reason]), [['tess@field.com', 'already emailed']], 'the untimed one: never again, as on the Mac');
+    assert.equal(s.sent.length, 1, 'the escaped one already had #1, so only #2 can go');
+    assert.equal(s.sent[0].to, 'sam@ridge.com'); assert.equal(r.sent[0].stage, 2); assert.equal(s.sent[0].subject, 'What actually happens after our call');
+});
+
+test('M3: a booking with no call time is never emailed', async () => {
+    const s = sender();
+    const bookings = oneBooking(); bookings[0].event.start_time = undefined;
+    const r = await run(fakeKv(), fakeCalendly(bookings), LIVE, { send: s.send });
+    assert.equal(s.sent.length, 0); assert.equal(r.skipped[0].reason, 'no call time');
+    const dry = await run(fakeKv(), fakeCalendly(bookings), DRY, { send: s.send });
+    assert.equal(dry.wouldSend.length, 0);
+});
+
+test('M7: a guard that cannot answer is asked once per run, and no send starts after 90 seconds', async () => {
+    const bookings = [...oneBooking(), booking(2, LEE, 'Lee'), booking(3, KIM, 'Kim')];
+    let asked = 0;
+    const r = await run(fakeKv(), fakeCalendly(bookings), LIVE, { send: sender().send, clientCheck: async () => { asked++; return { status: 'unknown', why: 'HubSpot did not answer' }; } });
+    assert.equal(asked, 1); assert.equal(r.held.length, 3); assert.ok(r.held.every(h => h.reason === 'client check unavailable'));
+    let asked2 = 0;
+    await run(fakeKv(), fakeCalendly(bookings), LIVE, { send: sender().send, clientCheck: async () => { asked2++; return { status: 'clear' }; } });
+    assert.equal(asked2, 3, 'a clear answer is per person');
+    // The clock runs out before the first booking: nothing starts.
+    let t = 0;
+    const s = sender(); const kv = fakeKv();
+    const late = await run(kv, fakeCalendly(bookings), LIVE, { send: s.send, clock: () => (t++ === 0 ? 0 : RUN_BUDGET_MS + 1) });
+    assert.equal(s.sent.length, 0); assert.ok(late.held.length === 3 && late.held.every(h => h.reason === 'run time budget reached'));
+    // It runs out after the claim, during the re-check: the claim is let go for the next run.
+    let spent = false;
+    const cal = fakeCalendly(oneBooking());
+    const get = async url => { const out = await cal.get(url); if (url.endsWith('/invitees/inv-1')) spent = true; return out; };
+    const s2 = sender(); const kv2 = fakeKv();
+    const r2 = await run(kv2, cal, LIVE, { send: s2.send, calendlyGet: get, clock: () => (spent ? RUN_BUDGET_MS + 1 : 0) });
+    assert.equal(s2.sent.length, 0); assert.equal(r2.held[0].reason, 'run time budget reached');
+    assert.ok(!kv2.m.has(CLAIM(emailHash(PAT), 1)) && !kv2.m.has(ATTEMPT(emailHash(PAT), 1)));
+    await run(kv2, cal, LIVE, { send: s2.send });
+    assert.equal(s2.sent.length, 1);
+});
+
+test('the notice text holds up on an empty or odd report', () => {
+    assert.match(noticeText({ mode: 'live', ts: ISO(NOW), counts: {} }), /No new discovery call bookings to email\./);
+    const many = Array.from({ length: 20 }, (_, i) => ({ email: `p${i}@x.com`, stage: 1, reason: 'client check unavailable' }));
+    const text = noticeText({ mode: 'live', ts: ISO(NOW), counts: { held: 20 }, held: many });
+    assert.match(text, /\.\.\.and 5 more\./);
 });
