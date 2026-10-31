@@ -78,6 +78,10 @@
     {
       "path": "/api/rep-optout-sweep/",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron-precall/",
+      "schedule": "10 13,23 * * *"
     }
   ],
   "rewrites": [
@@ -373,6 +377,10 @@
     "api/training-call.js": {
       "includeFiles": "api/_training/**",
       "maxDuration": 10
+    },
+    "api/cron-precall.js": {
+      "includeFiles": "api/_precall-templates/**",
+      "maxDuration": 120
     }
   }
 }
