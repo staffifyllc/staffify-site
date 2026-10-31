@@ -119,9 +119,12 @@ test('unreadable accepted terms do not silently fall back to the default', async
 
 function fakeRedis() {
     const H = new Map();
+    const S = new Map(); // plain strings: the shared welcome claim (api/_welcome-ledger.js)
     const h = (k) => { if (!H.has(k)) H.set(k, new Map()); return H.get(k); };
     return {
-        H,
+        H, S,
+        async get(k) { return S.has(k) ? JSON.parse(S.get(k)) : null; },
+        async set(k, v, o = {}) { if (o.nx && S.has(k)) return null; S.set(k, v); return 'OK'; },
         async hgetall(k) { const m = H.get(k); return m ? Object.fromEntries(m) : null; },
         async hget(k, f) { const m = H.get(k); return m && m.has(f) ? m.get(f) : null; },
         async hset(k, o) { const m = h(k); for (const [a, b] of Object.entries(o)) m.set(a, String(b)); return 1; },
@@ -375,4 +378,37 @@ test('legacy customer-scoped terms apply only to the invoice they name', async (
     const vague = { hgetall: async (k) => (k === 'pilot:terms:REALM1:customer:55'
         ? { kind: 'CASH_UPFRONT', cents: '180000' } : null) };
     assert.equal(await acceptedTerms({ realm: REALM, customerId: '55', invoiceId: '900' }, { redis: vague }), null);
+});
+
+// ─── One welcome per person, shared with api/payment-welcome.js ─
+
+test('a person the payment welcome cron already claimed is activated but not welcomed again', async () => {
+    const { claimWelcome } = await import('../api/_welcome-ledger.js');
+    const { redis, deps, sends } = rig();
+    await claimWelcome(redis, 'dana@example.com', { by: 'payment-welcome', ref: 'customer:55' });
+    const r = await processPaymentEvent('P1', REALM, deps);
+    assert.equal(r.outcome, 'already_welcomed_elsewhere');
+    assert.equal(sends.length, 0, 'one welcome per person, whichever path got there first');
+    assert.equal((await redis.hgetall('subscriber:dana@example.com')).decision, 'client', 'activation stands');
+});
+
+test('a webhook welcome leaves the shared slot marked sent, so the cron skips the person', async () => {
+    const { welcomeRecord } = await import('../api/_welcome-ledger.js');
+    const { redis, deps, sends } = rig();
+    assert.equal((await processPaymentEvent('P1', REALM, deps)).outcome, 'activated');
+    assert.equal(sends.length, 1);
+    const rec = await welcomeRecord(redis, 'dana@example.com');
+    assert.equal(rec.claim.by, 'pilot-activation');
+    assert.equal(rec.claim.state, 'sent');
+    assert.equal(rec.sent.providerId, 're_1');
+});
+
+test('a failed webhook send keeps its own slot, and its redelivery resumes it', async () => {
+    const redis = fakeRedis();
+    let attempt = 0;
+    const sends = [];
+    const mk = () => rig({ redis, send: async (m) => { if (++attempt === 1) throw new Error('Resend 500'); sends.push(m); return { id: 're_ok' }; } }).deps;
+    assert.equal((await processPaymentEvent('P1', REALM, mk())).outcome, 'activated_email_failed');
+    assert.equal((await processPaymentEvent('P1', REALM, mk())).outcome, 'activated');
+    assert.equal(sends.length, 1);
 });

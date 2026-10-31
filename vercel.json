@@ -78,6 +78,10 @@
     {
       "path": "/api/rep-optout-sweep/",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/payment-welcome/",
+      "schedule": "17 0,1,12-23 * * *"
     }
   ],
   "rewrites": [
@@ -363,6 +367,9 @@
     },
     "api/rep-optout-sweep.js": {
       "maxDuration": 60
+    },
+    "api/payment-welcome.js": {
+      "maxDuration": 120
     },
     "api/unsubscribe.js": {
       "maxDuration": 30

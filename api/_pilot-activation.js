@@ -5,6 +5,7 @@
 // and Resend instances and passes them in.
 import { activationFromPayment, isVerifiedPaid, verdictRetryable } from './_pilot-payment.js';
 import { acceptedTerms } from './_pilot-terms.js';
+import { claimWelcome, markWelcomed } from './_welcome-ledger.js';
 import crypto from 'node:crypto';
 
 const INTAKE_FORM_URL = 'https://recruiting.gostaffify.com/client-intake';
@@ -235,6 +236,22 @@ export async function processPaymentEvent(paymentId, realmId, deps = {}) {
         qb_invoice_id: String(verdict.invoiceId),
     });
 
+    // ONE WELCOME PER PERSON. api/payment-welcome.js welcomes a first-time payer from the same QuickBooks
+    // data with the approved strategy-call email. Both paths take the same claim before sending
+    // (api/_welcome-ledger.js), so a person this path did not claim first is never written to here.
+    // Activation above stands either way. A redelivery of this invoice resumes its own claim.
+    const welcomeRef = `invoice:${verdict.invoiceId}`;
+    let slot;
+    try { slot = await (deps.claimWelcome || claimWelcome)(redis, email, { by: 'pilot-activation', ref: welcomeRef, resume: true }); }
+    catch (e) {
+        return settle('welcome_claim_unreadable', { retryable: true, why: String((e && e.message) || e), reference: verdict.reference, email });
+    }
+    if (!slot.ok) {
+        await redis.hset(actKey, { welcomeSkippedAt: Date.now(), welcomedBy: String(slot.holder.by || '') });
+        return settle('already_welcomed_elsewhere', { why: `the welcome slot is held by ${slot.holder.by} (${slot.holder.state})`,
+            reference: verdict.reference, invoiceId: verdict.invoiceId, email });
+    }
+
     // Communication is a separate fact with its own evidence.
     const firstName = priorName || customer.GivenName || email.split('@')[0];
     const { subject, html, text } = onboardingEmail({ firstName, kickoff: kickoffUrl() });
@@ -262,6 +279,9 @@ export async function processPaymentEvent(paymentId, realmId, deps = {}) {
         onboarding_email_error: '',
     });
     await redis.hset(actKey, { emailedAt: Date.now(), providerId, email });
+    // The slot now reads sent, so the cron sees this person as welcomed. A failure here leaves the slot
+    // claimed, which still keeps the cron out.
+    await markWelcomed(redis, email, { token: slot.token, by: 'pilot-activation', providerId, invoiceId: String(verdict.invoiceId) }).catch(() => {});
     return settle('activated', { reference: verdict.reference, email, providerId,
         termsAccepted: !!verdict.termsAccepted, kickoffLinked: !!kickoffUrl() });
 }
