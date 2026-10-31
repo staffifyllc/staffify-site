@@ -12,7 +12,8 @@
 //   stop list   the queue's own suppressions and row status (rowStop, api/_rep-email-gates.js), and every
 //               number on file for them (knownNumbers) against the STOP list
 //   opted out   the global do-not-contact list, which the cron reads strictly before any of this
-//   CRM         HubSpot do not contact (crmDoNotContact), or a customer
+//   CRM         HubSpot do not contact (crmDoNotContact), or a customer; after a rep's "Not now", also an
+//               open deal or a conversation Paul or Madison owns (as crmStop and draftBlockReason stop on)
 // A check that cannot run is a hold, never a pass: the enrolment is refused, or the touch stays unsent
 // and the next run asks again.
 import { bookingKeys, bookedIdentity } from './_booked-leads.js';
@@ -117,7 +118,8 @@ export async function sendGate(email, rec, { kv, optedOut, contact, clientCheck,
     catch { return hold('stop list unavailable'); }
     if (numbers.some(n => optedOut.numbers.has(n))) return stop('opted out', 'a number on file replied STOP');
 
-    // HubSpot: do not contact, or a customer. Nobody there by this address is not a stop; the client guard still runs.
+    // HubSpot: do not contact, a customer, or (after a "Not now") in a conversation. Nobody there by this
+    // address is not a stop; the client guard still runs.
     let props = null;
     try { const c = await contact(addr); props = (c && c.properties) || null; }
     catch (e) { if (!/CRM contact missing/.test(String(e && e.message))) return hold('CRM unavailable'); }
@@ -125,6 +127,16 @@ export async function sendGate(email, rec, { kv, optedOut, contact, clientCheck,
     if (dnc) return stop('do not contact', dnc);
     if (props && props.lifecyclestage === 'customer') return stop('existing client', 'the CRM records them as a customer');
     if ([props && props.phone, props && props.mobilephone].map(last10).some(n => n.length === 10 && optedOut.numbers.has(n))) return stop('opted out', 'a number on file replied STOP');
+    // After a rep's "Not now": an open deal, or a conversation Paul or Madison owns, is not a drip's to
+    // interrupt. Every other automated email stops on these (crmStop, api/_rep-email-gates.js; draftBlockReason,
+    // api/_outreach-crm.js). Not for the post-call nurture: it follows a Discovery call, and that contact can
+    // still be an opportunity.
+    const talking = rec && rec.enrolled_source === CALL_SOURCE && props && (
+        props.lifecyclestage === 'opportunity' ? 'the CRM shows an open deal, which Paul handles'
+        : props.rep_lifecycle_state === 'HUMAN_OWNED' ? 'Paul or Madison owns this conversation in the CRM'
+        : props.rep_outreach_mode && props.rep_outreach_mode !== 'AUTOMATED' ? 'Paul is handling them himself (' + props.rep_outreach_mode + ')'
+        : null);
+    if (talking) return stop('in a conversation', talking);
 
     // The client guard, by the answer it actually gives.
     let client = null;

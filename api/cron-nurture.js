@@ -1,6 +1,7 @@
 // GET /api/cron-nurture/  (scheduled daily by Vercel cron)
 // Sends day-3, day-14, day-45 emails to prospects in nurture.
 
+import { randomUUID } from 'node:crypto';
 import { Redis } from '@upstash/redis';
 import { link as unsubscribeLink } from '../lib/unsubscribe-token.js';
 import { optedOutSet } from './_optout.js';
@@ -15,6 +16,13 @@ const redis = new Redis({
 });
 
 const DAY = 86400 * 1000;
+// One run at a time (runNurture). Longer than the function's maxDuration (120s in vercel.json), so a run
+// that is killed part way still lets go of it, and short enough that tomorrow's run is never locked out.
+const LOCK = 'nurture:cron:lock';
+const LOCK_SECONDS = 150;
+// The least time between two touches to one person. Six days, so a daily run that starts a few minutes
+// earlier than last week's still sends.
+const SPACING = 6 * DAY;
 const PLAYBOOK_URL = 'https://www.gostaffify.com/playbook/';
 const FLYLISTED_URL = 'https://www.gostaffify.com/case-studies/flylisted/';
 const REOPEN_URL = 'https://calendly.com/go-staffify/discovery-call?utm_content=reengagement';
@@ -227,16 +235,34 @@ function authorized(req) {
     return m && validSecrets.includes(m[1]);
 }
 
+const emptyResult = () => ({ processed: 0, day3_sent: 0, day14_sent: 0, day45_sent: 0, removed: 0, stopped: 0, held: 0, errors: 0, stopped_by: {}, held_by: {} });
+
 /**
  * One run of the drip. deps lets tests stand in for the store, the sender and the checks.
  * Every touch is checked again at the moment it is due (api/_nurture-gates.js sendGate), because a
  * person can book a call, become a client or ask to be left alone between day 1 and day 21. A stop
  * ends their nurture, with the reason on their record. A check that cannot run holds the touch:
  * nothing is sent and nothing is marked sent, so the next run asks again.
+ *
+ * Only one run at a time. Vercel can deliver the cron twice, and ADMIN_TOKEN can start a run by hand
+ * while the scheduled one is going. Two runs read the same unsent touch, both pass the checks (seconds
+ * of lookups each) and both send it before either marks it sent. A second run finds the lock taken and
+ * sends nothing. A store that cannot take the lock throws, so the handler answers 500 and nothing is sent.
  */
 export async function runNurture({ kv = redis, now = Date.now(), send = sendViaResend, deps = {} } = {}) {
+    const runId = `${now}:${randomUUID()}`;
+    if (!await kv.set(LOCK, runId, { nx: true, ex: LOCK_SECONDS })) return { ...emptyResult(), skipped: 'another run is in progress' };
+    try {
+        return await drip({ kv, now, send, deps });
+    } finally {
+        // Only our own lock: a run that outlived it must not free the next run's. If this read fails, it expires.
+        try { if (await kv.get(LOCK) === runId) await kv.del(LOCK); } catch { /* expires after LOCK_SECONDS */ }
+    }
+}
+
+async function drip({ kv, now, send, deps }) {
     const d = { optedOutSet, contact, clientCheck, ...deps };
-    const result = { processed: 0, day3_sent: 0, day14_sent: 0, day45_sent: 0, removed: 0, stopped: 0, held: 0, errors: 0, stopped_by: {}, held_by: {} };
+    const result = emptyResult();
 
     // Anyone who has opted out is dropped before a single send is attempted. This covers people who
     // replied STOP to a text as well as one-click email unsubscribes, because withdrawing consent
@@ -274,7 +300,12 @@ export async function runNurture({ kv = redis, now = Date.now(), send = sendViaR
             // Weekly cadence: touches at day 7, 14, 21 (was day 3, 14, 45).
             // Internal flag names kept for backwards-compat with existing
             // Redis records.
-            const due = (ageDays >= 7 && !rec.day3_sent_at) || (ageDays >= 14 && !rec.day14_sent_at) || (ageDays >= 21 && !rec.day45_sent_at);
+            // A week apart as well, whatever held them. Due-ness counts from enrolment, so once a hold of
+            // several days clears (a stale client snapshot, a CRM outage) the backlog would otherwise go
+            // out on consecutive days: day 7, 14 and 21 on days 25, 26 and 27.
+            const last = Math.max(Number(rec.day3_sent_at) || 0, Number(rec.day14_sent_at) || 0);
+            const spaced = !last || now - last >= SPACING;
+            const due = spaced && ((ageDays >= 7 && !rec.day3_sent_at) || (ageDays >= 14 && !rec.day14_sent_at) || (ageDays >= 21 && !rec.day45_sent_at));
             if (!due) continue;
 
             const gate = await sendGate(email, rec, { kv, optedOut: suppressed, contact: d.contact, clientCheck: d.clientCheck, queueState });
@@ -291,22 +322,23 @@ export async function runNurture({ kv = redis, now = Date.now(), send = sendViaR
                 continue;
             }
 
+            // Marked sent on the run's own clock, which the spacing above reads.
             const unsubLink = unsubscribeLink(email);
             if (ageDays >= 7 && !rec.day3_sent_at) {
                 await send({ to: email, ...TEMPLATES.day3({ firstName, unsubLink }) });
-                await kv.hset(`nurture:${email}`, { day3_sent_at: Date.now() });
+                await kv.hset(`nurture:${email}`, { day3_sent_at: now });
                 result.day3_sent++;
                 continue;
             }
             if (ageDays >= 14 && !rec.day14_sent_at) {
                 await send({ to: email, ...TEMPLATES.day14({ firstName, unsubLink }) });
-                await kv.hset(`nurture:${email}`, { day14_sent_at: Date.now() });
+                await kv.hset(`nurture:${email}`, { day14_sent_at: now });
                 result.day14_sent++;
                 continue;
             }
             if (ageDays >= 21 && !rec.day45_sent_at) {
                 await send({ to: email, ...TEMPLATES.day45({ firstName, unsubLink }) });
-                await kv.hset(`nurture:${email}`, { day45_sent_at: Date.now() });
+                await kv.hset(`nurture:${email}`, { day45_sent_at: now });
                 await kv.zrem('nurture:active', email);
                 result.day45_sent++;
                 result.removed++;

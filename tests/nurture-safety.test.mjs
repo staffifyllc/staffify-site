@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 
 process.env.UNSUBSCRIBE_SECRET ||= 'test-secret';
 const { enrolInNurture } = await import('../api/_nurture-enrol.js');
-const { runNurture } = await import('../api/cron-nurture.js');
+const { runNurture, TEMPLATES } = await import('../api/cron-nurture.js');
 const { clientCheck } = await import('../api/_client-guard.js');
 const { sendGate, bookingEnds, clientVerdict } = await import('../api/_nurture-gates.js');
 const { KEY } = await import('../api/_outreach-queue.js');
@@ -29,7 +29,9 @@ function fakeKv(seed = {}, { failGet = [], failHget = false } = {}) {
     const H = k => { if (!h.has(k)) h.set(k, new Map()); return h.get(k); };
     return { m, h, z,
         async get(k) { if (failGet.some(p => k.startsWith(p))) throw Error('store down'); return m.has(k) ? m.get(k) : null; },
-        async set(k, v) { m.set(k, v); return 'OK'; },
+        // nx as Upstash answers it: null when the key is already there.
+        async set(k, v, o = {}) { if (o.nx && m.has(k)) return null; m.set(k, v); return 'OK'; },
+        async del(k) { return m.delete(k) ? 1 : 0; },
         async hget(k, f) { if (failHget) throw Error('store down'); return H(k).has(f) ? H(k).get(f) : null; },
         async hset(k, o) { for (const [f, v] of Object.entries(o)) H(k).set(f, v); return 1; },
         async hgetall(k) { return h.has(k) && h.get(k).size ? Object.fromEntries(h.get(k)) : null; },
@@ -247,4 +249,92 @@ test('send time: the queue is read once per run, and only when a touch is due', 
 test('sendGate on its own: an unreadable STOP list is a hold', async () => {
     const r = await sendGate(PROSPECT, callRec(PROSPECT), { kv: fakeKv({ strings: { [KEY]: queue([]) } }), optedOut: null, contact: lead, clientCheck: clear });
     assert.deepEqual(r, { verdict: 'hold', reason: 'stop list unavailable' });
+});
+
+// ---- one run at a time ---------------------------------------------------------------------------
+
+test('two runs at once email a person once: the second finds the lock taken and sends nothing', async () => {
+    const kv = fakeKv({ strings: { [KEY]: queue([row(PROSPECT)]) }, hashes: { ['nurture:' + PROSPECT]: callRec(PROSPECT) }, sets: { 'nurture:active': [PROSPECT] } });
+    const sent = [];
+    // A HubSpot lookup that takes a moment: without the lock both runs pass it before either marks the touch sent.
+    const slow = async () => { await new Promise(r => setTimeout(r, 50)); return { properties: { lifecyclestage: 'lead' } }; };
+    const run = () => runNurture({ kv, now: NOW, send: async m => { sent.push(m); }, deps: { optedOutSet: noStops, contact: slow, clientCheck: clear } });
+    const [a, b] = await Promise.all([run(), run()]);
+    assert.equal(sent.length, 1, 'one email, not two');
+    assert.deepEqual([a.skipped, b.skipped], [undefined, 'another run is in progress']);
+    assert.equal(b.processed, 0, 'the second run read nobody');
+    assert.equal(kv.m.has('nurture:cron:lock'), false, 'the lock is let go when the run ends');
+    // The next run takes it again, and the touch already sent is not sent twice.
+    const later = await run();
+    assert.equal(later.skipped, undefined);
+    assert.equal(sent.length, 1);
+});
+
+test('a lock another run holds is left alone, and a store that cannot take the lock sends nothing', async () => {
+    const held = fakeKv({ strings: { [KEY]: queue([row(PROSPECT)]), 'nurture:cron:lock': 'someone-else' }, hashes: { ['nurture:' + PROSPECT]: callRec(PROSPECT) }, sets: { 'nurture:active': [PROSPECT] } });
+    const sent = [];
+    const out = await runNurture({ kv: held, now: NOW, send: async m => { sent.push(m); }, deps: { optedOutSet: noStops, contact: lead, clientCheck: clear } });
+    assert.equal(out.skipped, 'another run is in progress');
+    assert.equal(sent.length, 0);
+    assert.equal(held.m.get('nurture:cron:lock'), 'someone-else', 'not freed by a run that did not take it');
+    const down = fakeKv({ strings: { [KEY]: queue([row(PROSPECT)]) }, hashes: { ['nurture:' + PROSPECT]: callRec(PROSPECT) }, sets: { 'nurture:active': [PROSPECT] } });
+    down.set = async () => { throw Error('store down'); };
+    await assert.rejects(runNurture({ kv: down, now: NOW, send: async m => { sent.push(m); }, deps: { optedOutSet: noStops, contact: lead, clientCheck: clear } }), /store down/);
+    assert.equal(sent.length, 0, 'no lock, no run: the handler answers 500');
+});
+
+// ---- a week between touches ----------------------------------------------------------------------
+
+// Daily runs, one a day at the same time, from day 1 to day 45 after a "Not now". Returns the day each touch went.
+async function dailyRuns(guard) {
+    const start = NOW - 45 * DAY;
+    const kv = fakeKv({ strings: { [KEY]: queue([row(PROSPECT)]) }, hashes: { ['nurture:' + PROSPECT]: callRec(PROSPECT, { enrolled_at: String(start) }) }, sets: { 'nurture:active': [PROSPECT] } });
+    const days = [];
+    for (let day = 1; day <= 45; day++) {
+        const now = start + day * DAY;
+        await runNurture({ kv, now, send: async m => { days.push([day, m.subject]); }, deps: { optedOutSet: noStops, contact: lead, clientCheck: async () => guard(day) } });
+    }
+    return days;
+}
+
+test('after a long hold the backlog goes a week apart, not on three days in a row', async () => {
+    // The client snapshot is stale until day 25: every touch is held, then the guard answers.
+    const held = await dailyRuns(day => day < 25 ? { status: 'unknown', why: 'the shared client snapshot is more than 8 days old' } : { status: 'clear' });
+    assert.deepEqual(held.map(([d]) => d), [25, 31, 37], 'a week apart once the hold clears');
+    assert.deepEqual(held.map(([, s]) => s), ['day3', 'day14', 'day45'].map(t => TEMPLATES[t]({ firstName: 'Sam' }).subject), 'in order, each once');
+    // Near miss: with nothing held, the cadence is the same day 7, 14 and 21 as before.
+    const normal = await dailyRuns(() => ({ status: 'clear' }));
+    assert.deepEqual(normal.map(([d]) => d), [7, 14, 21]);
+    // A one-day hold on the second touch moves only that touch and keeps a week before the next.
+    const once = await dailyRuns(day => day === 14 ? { status: 'unknown' } : { status: 'clear' });
+    assert.deepEqual(once.map(([d]) => d), [7, 15, 21]);
+});
+
+// ---- in a conversation (CRM) ---------------------------------------------------------------------
+
+test('send time: after a "Not now", an open deal or a conversation Paul or Madison owns ends it', async () => {
+    for (const [p, detail] of [
+        [{ lifecyclestage: 'opportunity' }, 'the CRM shows an open deal, which Paul handles'],
+        [{ lifecyclestage: 'lead', rep_lifecycle_state: 'HUMAN_OWNED' }, 'Paul or Madison owns this conversation in the CRM'],
+        [{ lifecyclestage: 'lead', rep_outreach_mode: 'HUMAN_LED' }, 'Paul is handling them himself (HUMAN_LED)'],
+    ]) {
+        const r = await runFor(PROSPECT, { deps: { contact: async () => ({ properties: p }) } });
+        assert.equal(r.sent.length, 0, JSON.stringify(p));
+        assert.deepEqual(r.result.stopped_by, { 'in a conversation': 1 });
+        assert.equal(r.record.stopped_reason, 'in a conversation');
+        assert.equal(r.record.stopped_detail, detail);
+        assert.ok(!/\u2014/.test(detail), 'no em dash');
+        assert.deepEqual(r.active, []);
+    }
+    // Near misses: an automated contact in outreach still gets the touch, and so does the post-call nurture
+    // (Paul's "Not a fit"), whose contact is still an opportunity from the Discovery call it follows.
+    const automated = await runFor(PROSPECT, { deps: { contact: async () => ({ properties: { lifecyclestage: 'lead', rep_outreach_mode: 'AUTOMATED', rep_lifecycle_state: 'ACTIVE_OUTREACH' } }) } });
+    assert.equal(automated.sent.length, 1);
+    const decided = { email: PROSPECT, enrolled_at: String(NOW - 8 * DAY), day3_sent_at: '', day14_sent_at: '', day45_sent_at: '' };
+    for (const p of [{ lifecyclestage: 'opportunity' }, { rep_lifecycle_state: 'HUMAN_OWNED' }]) {
+        const postCall = await runFor(PROSPECT, { rec: decided, deps: { contact: async () => ({ properties: p }) } });
+        assert.equal(postCall.sent.length, 1, 'post-call nurture: ' + JSON.stringify(p));
+    }
+    const backfill = await runFor(PROSPECT, { rec: { ...decided, enrolled_source: 'backfill-booked-calls' }, deps: { contact: async () => ({ properties: { lifecyclestage: 'opportunity' } }) } });
+    assert.equal(backfill.sent.length, 1, 'the booked-calls backfill too');
 });
