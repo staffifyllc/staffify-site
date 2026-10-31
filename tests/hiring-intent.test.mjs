@@ -1234,6 +1234,22 @@ test('cards held on a main line before the change go back on the list with that 
     await refreshReady({ ...w.deps, now: NOW }, { limit: 0, siteChecks: 0 });
     assert.equal((await getRecord(w.kv, r.id)).hold.reason, 'toll_free_only');
 });
+test('review of the business-line change: a released card meets today\'s rules in the same run, and a paid answer is never stranded', async () => {
+    // A held card whose seat we no longer fill is excluded in the run that releases it, never offered first.
+    const w = jobsWorld();
+    const r = await processLead({ kind: 'lead', key: leadKey(LEAD()), lead: LEAD({ owner_email: null }) }, { source: 'Madison' }, w.deps);
+    const c = await getRecord(w.kv, r.id);
+    await putRecord(w.kv, { ...c, lead: { ...c.lead, role_posted: 'Tax Preparer' }, status: 'research', hold: { reason: 'main_line_only' } });
+    await refreshReady({ ...w.deps, now: NOW }, { limit: 0, siteChecks: 0 });
+    assert.notEqual((await getRecord(w.kv, r.id)).status, 'ready');
+    // A due callback on an aged post still gets the cell already paid for.
+    const { w: w2, rec } = await cardWorld();
+    const old = new Date(NOW - 30 * 864e5).toISOString();
+    await putRecord(w2.kv, { ...rec, callOwner: MILTON.email, nextCallAt: new Date(NOW - 3600e3).toISOString(), job: { ...rec.job, postedAt: old }, lead: { ...rec.lead, posting_date: 'Posted ' + old.slice(0, 10) } });
+    await w2.kv.hset(RR_TRIED, { [rec.id]: JSON.stringify({ at: old, result: 'pending', profileId: 777 }) });
+    const out = await ownerCells({ ...w2.deps, rr: fakeRR({ status: ids => ({ [ids[0]]: { done: true, profile: RRP({ id: 777 }) } }) }).rr, now: NOW });
+    assert.equal(out.collected, 1); assert.equal((await getRecord(w2.kv, rec.id)).phone.number, '+15203017788');
+});
 test('titles from Paul\'s remote list that are seats we fill, and the ones that are not', () => {
     for (const [t, f] of [['Medical Cold Caller', 'sales'], ['Marketing / Appointment Setting', 'sales'], ['Remote lead-gen specialist', 'sales'], ['Part-time remote CEO guest booking coordinator', 'scheduling'], ['Membership Coordinator', 'account'], ['Firm Operations & Tax Administration', 'admin']]) assert.equal(roleFamily(t), f, t);
     for (const t of ['Content Coordinator (remote contractor)', 'Digital Marketing / Google Ads Specialist', 'High-Ticket Sales & Business Development', 'Lead Generation Manager', 'Cold Calling Manager', 'Tax Preparer', 'Team Lead, Customer Support']) assert.equal(roleFamily(t), null, t);

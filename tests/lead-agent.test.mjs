@@ -50,7 +50,9 @@ test('submit refuses what the agent was told never to send: no cell, a main line
     const site = { phone_source_url: 'https://newplumbing.com/about', phone_evidence: 'Call or text Dana Reyes, owner: (615) 555-0100' };
     assert.equal(why(lead()), null);
     // The agent's word is not proof, and its own main-line label always stands (Paul: never a main line).
-    assert.match(why(lead(), null), /not proven a cell/);
+    assert.match(why(lead(), null), /not proven to be the owner's cell: if it is the business's own published number, send phone_type "business line"/);
+    // A business line on a shared host (a carrier agent page, a directory) can't be checked against the business's own site.
+    assert.match(why(lead({ phone_type: 'business line', website: 'https://agents.farmers.com/az/tucson/x' }), null), /not a carrier, directory or social page/);
     // Paul, 2026-10-30: the business's own published line is called ("Yes, use RocketReach on fails"): no lookup, no
     // proof, but the business's own website so the Hub can check the number against it.
     for (const t of ['business line', 'main business line', 'Main line', 'office number', 'company phone']) assert.equal(why(lead({ phone_type: t }), null), null, t);
@@ -89,6 +91,13 @@ test('submit refuses what the agent was told never to send: no cell, a main line
     assert.match(why(lead({ business: 'Rowland Pest Management' })), /already known/);
     remember(idx, lead());
     assert.match(why(lead({ owner_email: 'other@x.com', phone: '6155550199', business: 'Brand New Plumbing LLC' })), /submitted earlier in this batch/);
+});
+
+test('two agents on one shared host (agents.farmers.com) are two businesses, not a duplicate', async () => {
+    const idx = await knownIndex(deps);
+    remember(idx, lead({ business: 'Zachary Rogers Agency', website: 'https://agents.farmers.com/az/tucson/zachary-rogers', phone: '5206000025', owner_email: 'z@zra.com' }));
+    assert.equal(knownWhy(idx, { company: 'Maria Lopez Agency', website: 'https://agents.farmers.com/az/tucson/maria-lopez', phone: '5206000099', email: 'm@mla.com' }), null);
+    assert.match(knownWhy(idx, { company: 'Zachary Rogers Agency' }), /earlier in this batch/);
 });
 
 function lineKv() {

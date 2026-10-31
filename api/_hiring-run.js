@@ -676,10 +676,28 @@ export async function recheck(rec, kv, now = Date.now()) {
 export async function refreshReady(deps, { limit = 12, report = null, siteChecks = 6 } = {}) {
     const { kv } = deps;
     const now = deps.now || Date.now();
+    // First, so a card released here meets every pass below in this same run (the current rules, dates, lanes).
+    let released = 0;
+    // Paul, 2026-10-30: business lines are called at these small companies. A card still held on a main line from before
+    // goes back on the list with that line, unless it has a callback or a caller already; nothing is looked up for it
+    // until the line fails.
+    for (const rec of (await allRecords(kv)).filter(r => r.status === 'research' && r.hold && r.hold.reason === 'main_line_only' && r.phone && r.phone.number && !tollFree(r.phone.number))) {
+        const lock = HK.recLock(rec.id);
+        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
+        try {
+            const fresh = await getRecord(kv, rec.id);
+            if (!fresh || fresh.status !== 'research' || !fresh.hold || fresh.hold.reason !== 'main_line_only' || !fresh.phone || tollFree(fresh.phone.number)) continue;
+            const at = new Date(now).toISOString();
+            const next = { ...fresh, status: 'ready', hold: null, released: { from: 'main_line_only', at, why: 'Business lines are called at small companies (Paul, 2026-10-30)' }, phone: { ...fresh.phone, type: 'the company\'s main line: ask for the owner' } };
+            next.brief = briefFor(next);
+            await putRecord(kv, next);
+            released++;
+        } finally { await kv.del(lock).catch(() => {}); }
+    }
     const live = (await allRecords(kv)).filter(r => r.status === 'ready' && r.job && r.job.state !== 'closed' && r.job.state !== 'stale');
     // Every Google Jobs card (a date check, free) and the ATS cards checked longest ago (a fetch each).
     const recs = [...live.filter(r => ageBased(r.job.source)), ...live.filter(r => !ageBased(r.job.source)).sort((a, b) => Date.parse(a.job.checkedAt || 0) - Date.parse(b.job.checkedAt || 0)).slice(0, limit)];
-    const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0, excluded: 0 };
+    const out = { checked: 0, open: 0, closed: 0, stale: 0, errors: 0, excluded: 0, ...(released ? { mainLine: released } : {}) };
     // Paul, 2026-10-28: "we do want the insurance and law firms, but those should specifically go to Milton not madison and
     // I". Cards taken off the list as law or insurance come back; a law or insurance card someone else booked a callback
     // or retry on goes to Milton at the same time, its history kept. A card in conversation stays with whoever is in it.
@@ -845,22 +863,6 @@ export async function refreshReady(deps, { limit = 12, report = null, siteChecks
                 ? { ...fresh.phone, number: a.primary, alternates: a.alternates, source: 'business website', sourceUrl: a.site && a.site.sourceUrl || fresh.company.website, context: a.site && a.site.context || null, checkedAt: at, type: 'company line listed on their website', previous: { number: fresh.phone.number, source: fresh.phone.source }, siteCheck: { at, result: a.result } }
                 : { ...fresh.phone, siteCheck: { at, result: moved ? 'site_number_blocked' : a.result } } });
             if (okNew) { out.siteNumbers = (out.siteNumbers || 0) + 1; await kv.hset(HK.companies, { [phoneKey(a.primary)]: JSON.stringify({ id: fresh.id, verdict: 'ready', at }) }); }
-        } finally { await kv.del(lock).catch(() => {}); }
-    }
-    // Paul, 2026-10-30: business lines are called at these small companies. A card still held on a main line from before
-    // goes back on the list with that line, unless it has a callback or a caller already; nothing is looked up for it
-    // until the line fails.
-    for (const rec of (await allRecords(kv)).filter(r => r.status === 'research' && r.hold && r.hold.reason === 'main_line_only' && r.phone && r.phone.number && !tollFree(r.phone.number))) {
-        const lock = HK.recLock(rec.id);
-        if (!await kv.set(lock, '1', { nx: true, ex: 10 })) continue;
-        try {
-            const fresh = await getRecord(kv, rec.id);
-            if (!fresh || fresh.status !== 'research' || !fresh.hold || fresh.hold.reason !== 'main_line_only' || !fresh.phone || tollFree(fresh.phone.number)) continue;
-            const at = new Date(now).toISOString();
-            const next = { ...fresh, status: 'ready', hold: null, released: { from: 'main_line_only', at, why: 'Business lines are called at small companies (Paul, 2026-10-30)' }, phone: { ...fresh.phone, type: 'the company\'s main line: ask for the owner' } };
-            next.brief = briefFor(next);
-            await putRecord(kv, next);
-            out.mainLine = (out.mainLine || 0) + 1;
         } finally { await kv.del(lock).catch(() => {}); }
     }
     for (const rec of recs) {
@@ -1147,7 +1149,7 @@ export async function ownerCells(deps, { limit = RR_PER_RUN, deadline = Infinity
     const byId = new Map(all.map(r => [r.id, r]));
     const held = r => heldForCell(r) && jobCurrent(r, now);
     // Answers already paid for are applied to any live card, due for a call or not.
-    const open = r => r && !r.booking && ((r.status === 'ready' && jobCurrent(r, now)) || held(r));
+    const open = r => r && !r.booking && ((r.status === 'ready' && (jobCurrent(r, now) || hiringCallReady(r, now))) || held(r));
     // Free work first: answers already paid for.
     for (const [id, t] of Object.entries(tried)) {
         if (!room()) break;
