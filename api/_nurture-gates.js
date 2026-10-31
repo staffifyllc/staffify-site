@@ -103,7 +103,7 @@ export async function sendGate(email, rec, { kv, optedOut, contact, clientCheck,
     try { state = parse(await queueState()); } catch { return hold('queue unavailable'); }
     if (!state || !Array.isArray(state.records)) return hold('queue unavailable');
     if ((state.suppressions || []).map(norm).includes(addr)) return stop('stop list', 'Not interested / stop in the Hub');
-    const rows = state.records.filter(r => norm(r.recipient) === addr);
+    const rows = state.records.filter(r => r && norm(r.recipient) === addr);
     for (const r of rows) { const why = rowStop(r); if (why) return stop('stop list', why); }
 
     // A Discovery call booked by them or their company.

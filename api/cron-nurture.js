@@ -283,6 +283,12 @@ async function drip({ kv, now, send, deps }) {
             }
             const rec = await kv.hgetall(`nurture:${email}`);
             if (!rec || !rec.enrolled_at) continue;
+            // A stop that wrote stopped_at but failed to leave the active set is still a stop.
+            if (rec.stopped_at) {
+                await kv.zrem('nurture:active', email);
+                result.removed++;
+                continue;
+            }
 
             const enrolledAt = Number(rec.enrolled_at);
             const ageDays = (now - enrolledAt) / DAY;
@@ -357,6 +363,7 @@ export default async function handler(req, res) {
     const now = Date.now();
     try {
         const result = await runNurture({ now });
+        if (result.held || result.stopped) console.warn('cron-nurture', JSON.stringify({ held_by: result.held_by, stopped_by: result.stopped_by }));
         return res.status(200).json({ ok: true, ts: now, ...result });
     } catch (err) {
         console.error('cron-nurture fatal', err);

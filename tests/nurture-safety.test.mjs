@@ -338,3 +338,16 @@ test('send time: after a "Not now", an open deal or a conversation Paul or Madis
     const backfill = await runFor(PROSPECT, { rec: { ...decided, enrolled_source: 'backfill-booked-calls' }, deps: { contact: async () => ({ properties: { lifecyclestage: 'opportunity' } }) } });
     assert.equal(backfill.sent.length, 1, 'the booked-calls backfill too');
 });
+
+test('a record already marked stopped is never emailed, even if it is still in the active set and the gate is clear', async () => {
+    const { sent, result, active } = await runFor(PROSPECT, { rec: callRec(PROSPECT, { stopped_at: String(NOW - DAY), stopped_reason: 'possible client' }) });
+    assert.equal(sent.length, 0, 'no email');
+    assert.equal(result.removed, 1);
+    assert.deepEqual(active, [], 'taken off the active set');
+});
+
+test('a malformed queue record does not halt the run', async () => {
+    const { sent, result } = await runFor(PROSPECT, { strings: { [KEY]: queue([null, row(PROSPECT)]) } });
+    assert.equal(result.errors, 0);
+    assert.equal(sent.length, 1, 'the normal prospect still gets the day 7 email');
+});
