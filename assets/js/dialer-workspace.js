@@ -213,7 +213,7 @@ function bar(){
  pos.append(el('small',research?'Numbers that need confirming':[(pin?pin.h1:NAMES[selectedCampaign]||selectedCampaign),indLabel].filter(Boolean).join(' · ')));
  // What the queue holds, so it is plain that it remembers who was called: callbacks due, leads
  // nobody has called, and people who did not pick up, who wait at the back.
- if(!research&&list.length){const m=queueMix(list),parts=[];if(m.callback)parts.push(m.callback+(m.callback===1?' callback due':' callbacks due'));if(m.later)parts.push(m.later+' "not now" due');parts.push(m.new+' new from the team pool');if(m.retry)parts.push(m.retry+' of your own to try again');pos.append(el('small',parts.join(' · '),'dw-mix'));}
+ if(!research&&list.length){const m=queueMix(list),parts=[];if(m.callback)parts.push(m.callback+(m.callback===1?' callback due':' callbacks due'));if(m.later)parts.push(m.later+' "not now" due');parts.push(m.new+' new from the team pool');if(m.retry)parts.push(m.retry+' of your own to try again');const dn=state&&state.dailyNew;if(dn&&dn.used>=dn.cap)parts.push(`your ${dn.cap} new for today are done; the rest stay with the team`);else if(dn)parts.push(`${dn.used} of your ${dn.cap} new today`);pos.append(el('small',parts.join(' · '),'dw-mix'));}
  title.append(pos);
  b.append(title,searchBox());
  // The Paused area, for whoever owns paused callbacks: kept, labelled, opened only on purpose.

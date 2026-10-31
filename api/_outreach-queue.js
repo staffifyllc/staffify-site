@@ -134,3 +134,21 @@ export function slimState(state, now = Date.now()) {
         events: (r.events || []).map(SLIM_EVENT) };
     }) };
 }
+
+// Paul, 2026-10-31: "i can probably realistically do 20 dials a day on my end, so the rest should go to the team". A caller
+// with a cap gets no more never-called people once they have called that many for the first time today (Eastern); their
+// own callbacks and follow-ups are never limited, and every card they leave stays in the team's pool.
+export const DAILY_NEW_CAP = Object.freeze({ 'hello@gostaffify.com': 20 });
+const etDay = t => new Date(t).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+/** How many people this caller called for the first time today: rows whose first call is theirs, today. */
+export function newCalledToday(records, email, now = Date.now()) {
+    const me = String(email || '').toLowerCase(), day = etDay(now);
+    return (records || []).filter(r => { const h = ((r && r.callHistory) || [])[0]; return !!h && String(h.caller || '').toLowerCase() === me && !!h.at && etDay(Date.parse(h.at)) === day; }).length;
+}
+/** The call rows with the viewer's daily cap applied, and { cap, used } for the dialer to say so. */
+export function capNewPeople(records, email, now = Date.now()) {
+    const cap = DAILY_NEW_CAP[String(email || '').toLowerCase()];
+    if (!cap) return { records, dailyNew: null };
+    const used = newCalledToday(records, email, now);
+    return { dailyNew: { cap, used }, records: used < cap ? records : records.map(r => (r.unclaimed && !((r.callHistory || []).length) ? { ...r, unclaimed: false, capReached: true } : r)) };
+}

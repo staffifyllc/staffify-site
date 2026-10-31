@@ -107,3 +107,28 @@ test('real estate media is paused: its unworked cards leave the pool, an owned c
 });
 // Paul, 2026-10-30: "not only being removed from our view". A said-no row leaves the shared call list even when owned.
 test('a person who said no or opted out leaves the shared call list, owned or not',()=>{const s={revision:1,records:[{id:'a',recipient:'a@x.com',owner:'Paul',status:'suppressed',callOwner:'milton@trystaffify.com',callOutcome:'callback'},{id:'b',recipient:'b@x.com',owner:'Paul',status:'sent',callOwner:'milton@trystaffify.com',callOutcome:'callback'},{id:'c',recipient:'c@x.com',owner:'Paul',status:'sent',callOwner:'milton@trystaffify.com',callOutcome:'callback'}],assignments:[],suppressions:['b@x.com'],pausedOwners:[]};assert.deepEqual(sharedCallState(s,'milton@trystaffify.com').records.map(r=>r.id),['c']);});
+
+// Paul, 2026-10-31: "i can probably realistically do 20 dials a day on my end, so the rest should go to the team".
+test('Paul is capped at 20 new people a day; his callbacks never are, and the rest stays in the team pool', async () => {
+    const { capNewPeople, newCalledToday, DAILY_NEW_CAP } = await import('../api/_outreach-queue.js');
+    assert.equal(DAILY_NEW_CAP['hello@gostaffify.com'], 20);
+    const now = Date.parse('2026-11-02T18:00:00Z');   // 1 PM Eastern
+    const mine = i => ({ id: 'm' + i, unclaimed: false, mine: true, dueForMe: true, callHistory: [{ caller: 'hello@gostaffify.com', at: '2026-11-02T1' + (i % 6) + ':00:00Z', outcome: 'no_answer' }] });
+    const fresh = i => ({ id: 'n' + i, unclaimed: true, callHistory: [] });
+    const yesterday = { id: 'y', unclaimed: false, callHistory: [{ caller: 'hello@gostaffify.com', at: '2026-11-01T18:00:00Z' }] };
+    const someoneElse = { id: 'o', unclaimed: false, callHistory: [{ caller: 'milton@trystaffify.com', at: '2026-11-02T15:00:00Z' }] };
+    const under = [...Array.from({ length: 19 }, (_, i) => mine(i)), yesterday, someoneElse, fresh(1), fresh(2)];
+    assert.equal(newCalledToday(under, 'HELLO@gostaffify.com', now), 19);
+    const a = capNewPeople(under, 'hello@gostaffify.com', now);
+    assert.deepEqual(a.dailyNew, { cap: 20, used: 19 }); assert.equal(a.records.filter(r => r.unclaimed).length, 2, 'under the cap, the pool is open');
+    const at = [...under, mine(19)];
+    const b = capNewPeople(at, 'hello@gostaffify.com', now);
+    assert.deepEqual(b.dailyNew, { cap: 20, used: 20 });
+    assert.equal(b.records.filter(r => r.unclaimed).length, 0, 'at 20, no new people are offered');
+    assert.ok(b.records.filter(r => r.capReached).every(r => !(r.callHistory || []).length));
+    assert.equal(b.records.filter(r => r.dueForMe).length, 20, 'his own follow-ups are untouched');
+    const team = capNewPeople(at, 'milton@trystaffify.com', now);
+    assert.equal(team.dailyNew, null); assert.equal(team.records.filter(r => r.unclaimed).length, 2, 'the team keeps every card');
+    // Late evening Eastern is still the same day: 11 PM ET on Nov 2 is 04:00 UTC on Nov 3.
+    assert.equal(newCalledToday([{ callHistory: [{ caller: 'hello@gostaffify.com', at: '2026-11-03T03:30:00Z' }] }], 'hello@gostaffify.com', Date.parse('2026-11-03T04:00:00Z')), 1);
+});

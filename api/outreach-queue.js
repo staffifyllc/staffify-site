@@ -2,7 +2,7 @@ import {withCallPhones} from './_outreach-call-phones.js';
 import {hubspotRequest} from './_outreach-hubspot.js';
 import { redis, requireAccess, adminAuthorized, SITE, readBody } from './_auth.js';
 import {config,access,gmail,compactMessage} from './_outreach-gmail.js';
-import {KEY,ownerFor,visibleState,mergeSnapshot,controlState,canUseCallQueue,sharedCallState,slimState} from './_outreach-queue.js';
+import {KEY,ownerFor,visibleState,mergeSnapshot,controlState,canUseCallQueue,sharedCallState,slimState,capNewPeople} from './_outreach-queue.js';
 import {enrolInNurture} from './_nurture-enrol.js';
 import {scheduleCallbackTask} from './_callback-task.js';
 import {markBad} from './_bad-numbers.js';
@@ -48,6 +48,8 @@ export default async function handler(req,res) {
        // Each card carries its Hiring now drip row's state, so the caller sees the emails going out (api/_hiring-drip-copy.js).
        const drips=new Map(((s&&s.records)||[]).filter(r=>r.campaignId===HIRING_DRIP_ID&&r.hiringId).map(r=>[r.hiringId,{status:r.status,sentTouches:r.sentTouches||0,lastSentAt:r.lastSentAt||null,nextEligibleAt:r.nextEligibleAt||null,replyReceivedAt:r.replyReceivedAt||null,sender:r.sender||null,copied:!!r.lastSentCopied}]));
        out.records=[...(await hiringCallRows(redis,rep.email).catch(()=>[])).map(r=>drips.has(r.id)?{...r,drip:drips.get(r.id)}:r),...out.records];
+       // A caller's daily cap on new people (Paul: 20), after every card is in, so it counts all campaigns.
+       {const capped=capNewPeople(out.records,rep.email);out.records=capped.records;out.dailyNew=capped.dailyNew;}
        // A task for someone who said no is not work any more: their card left the list, so the task goes with it.
        const closed=async t=>{if(!t||!t.recordId)return false;if(isHiringId(t.recordId)){const c=await getRecord(redis,t.recordId).catch(()=>null);return !!c&&['suppressed','excluded'].includes(c.status);}
         const row=((s&&s.records)||[]).find(x=>x.id===t.recordId);return !!row&&(row.status==='suppressed'||((s&&s.suppressions)||[]).includes(row.recipient));};
