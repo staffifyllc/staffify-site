@@ -86,10 +86,11 @@ export function contactLinks(page, limit = 3) {
         let u; try { u = new URL(m[1], page.url); } catch { continue; }
         if (u.origin !== origin) continue;
         const path = u.pathname.toLowerCase();
+        if (/\.(css|js|json|xml|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|pdf|zip|mp4|mp3)$/.test(path)) continue;   // a file, not a page
         // A whole path segment: /loan-officers/ and /bkf-appoints-...-chief-financial-officer/ are a person's page, and
         // /teaching-children-about-money/ a blog post, not the office's (First Southern National Bank and BKF, 2026-10-30:
         // a named loan officer's and a press contact's line went on cards as the company line).
-        const rank = /contact/.test(path) ? 0 : path.split('/').some(seg => SECTION.test(seg)) ? 1 : null;
+        const rank = /contact/.test(path) ? 0 : path.split('/').some(seg => SECTION.test(seg) || /^(about|meet)[-_]|^offices?[-_]|(^|[-_])locations?([-_.]|$)/.test(seg)) ? 1 : null;
         if (rank === null) continue;
         scored.push({ href: u.href.split('#')[0], rank });
     }

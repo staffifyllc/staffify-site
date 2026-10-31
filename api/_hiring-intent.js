@@ -154,7 +154,7 @@ const NOT_FILLABLE = /\b(director|head\s+of|vp|vice\s+president|chief|principal|
 // we fill (RooterMan of Muncie, Madison's 2026-10-30 list). A bank teller and an airline's counter or gate agent are a
 // branch and an airport, whatever "CSR" or "Customer Service" sits beside them (First Southern National Bank's
 // "Teller/CSR", Pacific Aviation's LAX "Airline Customer Service Agent", Workable 2026-10-30).
-const PHYSICAL = /\b((bank\s+)?tellers?|airline\s+(customer\s+service\s+|passenger\s+service\s+|ticket(ing)?\s+)?agent|airport\s+(customer\s+service\s+|passenger\s+service\s+)?(agent|representative|ambassador)|gate\s+agent|ticket(ing)?\s+agent|ramp\s+agent|baggage\s+(handler|agent)|store|in[- ]store|retail|cashier|warehouse|valet|housekeep(er|ing)|janitor|custodian|cook|barista|bartender|caregiver|security\s+(officer|guard)|guard|merchandiser|stocker|loader|forklift|hotel|front\s+desk\s+agent|showroom|dealership|door[- ]to[- ]door|outside\s+sales|territory|route\s+sales|911|police|emergency\s+(dispatch(er)?|communications|medical|services|response|telecommunicator)|on[- ]site\s+only)\b/i;
+const PHYSICAL = /\b((bank\s+)?tellers?|airline\s+(customer\s+service\s+|passenger\s+service\s+|ticket(ing)?\s+)?agent|airport\s+(customer\s+service\s+|passenger\s+service\s+)?(agent|representative|ambassador)|gate\s+agent|ticket(ing)?\s+agent|ramp\s+agent|baggage\s+(handler|agent)|store|in[- ]store|retail|cashier|warehouse|valet|housekeep(er|ing)|janitor|custodian|cook|barista|bartender|caregiver|security\s+(officer|guard)|guard|merchandiser|stocker|loader|forklift|hotel|front\s+desk\s+agent|showroom|dealership|body\s+shop|collision\s+(center|repair)|door[- ]to[- ]door|outside\s+sales|territory|route\s+sales|911|police|emergency\s+(dispatch(er)?|communications|medical|services|response|telecommunicator)|on[- ]site\s+only)\b/i;
 const PHYSICAL_SEAT = /\b(field|driver|delivery|technician|installer|courier|porter|mechanic|server)\b/i;
 const REMOTE_SEAT = /\b(help\s*desk|support|dispatch(er|ing)?|schedul(er|ing)|coordinator|customer\s+service|call\s+cent(er|re)|representative|specialist|assistant|admin(istrator)?|receptionist|sales\s+development|inside\s+sales|appointment\s+setter)\b/i;
 const SENIOR = /\b(manager|lead|supervisor|senior|sr\.?)\b/i;
@@ -322,7 +322,7 @@ const BRAND_CAREERS = /^(jobs|careers|career|work|join)\.[a-z0-9-]+\.[a-z]+$|\.j
 const ENTERPRISE_ATS = /(myworkdayjobs\.com|wd\d+\.myworkday|oraclecloud\.com|taleo\.net|icims\.com|avature\.net|successfactors|brassring|ultipro|ukg\.net|phenompeople|dayforcehcm\.com|jobs\.jobvite\.com|smartrecruiters\.com\/[A-Z]|eightfold\.ai)/i;
 // Public bodies by their form, not by a word that a small business can carry ("Lakewood Animal Hospital",
 // "Orange County Plumbing", "University Park Dental", "The Roofing Authority").
-const INSTITUTION = /^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b|\b(state'?s?|district|county|city|u\.?s\.?)\s+attorney|attorney'?s?\s+office\b|\bdistrict\s+attorney\b|\bd\.?a\.?['’]s\s+office\b|\b(circuit|superior|district|municipal|county)\s+court\b|\bpublic\s+defender\b|\bboard\s+of\s+(education|supervisors|commissioners)\b|\bisd\b|\bindependent\s+school\b|\btax\s+board\b|\bfranchise\s+tax\b/i;
+const INSTITUTION = /\bspca\b|\bhumane\s+society\b|\banimal\s+(shelter|rescue)\b|^\s*(the\s+)?(city|county|state|town|village|commonwealth)\s+of\b|\bcounty\s+(government|sheriff|schools?|clerk|court)\b|\buniversity\s+of\b|\bstate\s+university\b|\bschool\s+district\b|\bpublic\s+schools\b|\bhealth\s+system\b|\bhospital\s+district\b|\bdepartment\s+of\b|\b(police|sheriff'?s?|fire\s+department|government|federal|municipal)\b|\b(state'?s?|district|county|city|u\.?s\.?)\s+attorney|attorney'?s?\s+office\b|\bdistrict\s+attorney\b|\bd\.?a\.?['’]s\s+office\b|\b(circuit|superior|district|municipal|county)\s+court\b|\bpublic\s+defender\b|\bboard\s+of\s+(education|supervisors|commissioners)\b|\bisd\b|\bindependent\s+school\b|\btax\s+board\b|\bfranchise\s+tax\b/i;
 /** A staffing firm or a public body, by its name alone. The refresh pass re-applies this to cards already made. */
 // Law firms and insurance agencies are Milton's (Paul, 2026-10-28: "we do want the insurance and law firms, but those
 // should specifically go to Milton not madison and I"). Read from the business name, the industry a researcher wrote
@@ -344,7 +344,7 @@ export function laneFor(rec) {
 export function companyExcluded(name, context = '') {
     const comp = competitorReason({ company: name, text: '' });
     if (comp) return { reason: 'competitor', detail: comp };
-    if (INSTITUTION.test(String(name || ''))) return { reason: 'institution', detail: `${name} is a public body, school or court.` };
+    if (INSTITUTION.test(String(name || ''))) return { reason: 'institution', detail: `${name} is a public body, school, court or charity.` };
     const big = String(name || '').match(KNOWN_LARGE);
     if (big) return { reason: 'large_employer', detail: `${name} is a large employer with its own recruiting team (${big[0]}).` };
     return null;
@@ -409,6 +409,10 @@ const DESK_DUTIES = [
     /\b(incoming|outgoing)(\s*\/\s*(incoming|outgoing))?\s+(mail|packages|shipments)\b|\bmail\s+and\s+(packages|shipments)\b/i,
     /\bkitchen\s+supplies\b|\b(clean|tidy)\s+office\s+environment\b|\b(stock|restock)\w*\s+(the\s+)?(kitchen|break\s*room)\b/i,
     /\bwalk[- ]?in\s+(clients|customers|patients)\b|\bcheck(s|ing)?[- ]in\s+(patients|clients|visitors)\b/i,
+    // A clinic or service counter (Central California SPCA, 2026-10-31): cash at the desk, check-in to discharge, upkeep.
+    /\b(cash|money)\s+(handling|transactions?)\b|\bprocess\w*\s+cash\b/i,
+    /\bcheck[- ]in\b.{0,80}\b(discharge|check[- ]out)\b/i,
+    /\b(cleanliness|upkeep)\b.{0,60}\b(facility|exam\s+rooms|lobby|waiting\s+(room|area))\b|\bfacility\s+upkeep\b/i,
 ];
 // A hospital, a residential care home or a health plan: the employer is an institution, not a small business.
 const CLINICAL_NAME = /\b(hospital|health\s*care\s+system|health\s+system|psychiatric|nursing\s+(home|center|facility)|skilled\s+nursing|wellness\s+and\s+rehabilitation|rehabilitation\s+hospital|assisted\s+living|senior\s+living|memory\s+care|hospice|health\s+plan)\b/i;
@@ -537,6 +541,8 @@ export function ownSite(host, company) {
     const distinct = words.filter(w => w.length >= 3 && !GENERIC.has(w));
     const initials = words.map(w => w[0]).join('');
     if (distinct.some(w => (w.length >= 4 ? label.includes(w) : label.startsWith(w))) || (initials.length >= 2 && label === initials) || (initials.length >= 3 && label.startsWith(initials))) return null;
+    // The name run together: h2health.com for H2 Health, ablaw.com for AB Law.
+    if (words.join('').length >= 4 && label.includes(words.join(''))) return null;
     return `${h} does not carry ${company}'s name`;
 }
 // Madison's spreadsheet keeps some dates as Excel serial numbers: 46266.0 is 2026-09-01. Read as text they
@@ -666,7 +672,8 @@ export function qualifyJob(j, now = Date.now()) {
     // A free board's own count of the employer's open jobs, read once per company when the listing was found (Workable,
     // api/_hiring-run.js workableDiscovery): BKF 333, Serenity Mental Health Centers 364, LaBella 331 (2026-10-30).
     if (Number(j.open_roles) > LARGE_EMPLOYER_OPEN_ROLES) return { ok: false, reason: 'large_employer', detail: `${j.open_roles} open roles on their ${j.feed || 'job'} board; we prioritize small and midsize businesses.` };
-    if (Number(j.open_states) >= LARGE_EMPLOYER_STATES) return { ok: false, reason: 'large_employer', detail: `They are hiring in ${j.open_states} states at once on their ${j.feed || 'job'} board, a chain or a national firm.` };
+    // Many states AND a real number of openings: one remote seat listed in four states is still a small company.
+    if (Number(j.open_states) >= LARGE_EMPLOYER_STATES && Number(j.open_roles) >= 20) return { ok: false, reason: 'large_employer', detail: `They are hiring in ${j.open_states} states at once on their ${j.feed || 'job'} board, a chain or a national firm.` };
     // "Now Hiring", "Entry-Level ... - Chicago, IL", "no experience needed": mass recruiting ads, rarely the employer itself.
     if (/\bnow\s+hiring\b|\bhiring\s+(immediately|now)\b|\bimmediate\s+start\b|\bno\s+experience\s+(needed|necessary|required)\b|\bentry[- ]level\b.*\s-\s*[A-Z][a-zA-Z .]+,\s*[A-Z]{2}\s*$/i.test(title)) return { ok: false, reason: 'recruiting_ad', detail: `"${title}" reads as a mass recruiting ad, not an employer hiring for its own seat.` };
     if (!salesSeatOk(title, j.description)) return { ok: false, reason: 'field_sales', detail: 'A sales seat the post describes as in person (a lot, a showroom, a territory), or never says is by phone.' };

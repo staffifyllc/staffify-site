@@ -118,3 +118,10 @@ test('an officer is not an office: a press release and a loan officer\'s page ar
         <a href="/about/reviews/">Reviews</a>`), 5);
     assert.deepEqual(links, ['https://example.com/offices/', 'https://example.com/aboutus.html', 'https://example.com/our-team/', 'https://example.com/about/reviews/']);
 });
+
+test('contact pages: about-<name> and <name>-locations pages count, a stylesheet never does', () => {
+    const page = { url: 'https://reeds.com/', html: '<a href="/wp-content/plugins/contact-form-7/includes/css/styles.css">x</a><a href="/reeds-locations-david-yurman.html">Stores</a><a href="/about-prescotts/">About</a><a href="/loan-officers/">Loans</a>' };
+    const links = contactLinks(page);
+    assert.ok(links.includes('https://reeds.com/reeds-locations-david-yurman.html')); assert.ok(links.includes('https://reeds.com/about-prescotts/'));
+    assert.ok(!links.some(u => /\.css$/.test(u)), 'a stylesheet is a file, not a contact page'); assert.ok(!links.some(u => /loan-officers/.test(u)));
+});

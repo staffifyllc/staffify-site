@@ -259,8 +259,13 @@ const sameJob = l => companyKey(l.company_name, '') + '|' + seatTitle(l.title, l
 /** Workable lists one job per city: the company-and-title pairs posted in FEED_MULTI_CITY or more cities in one search. */
 export function multiCity(listings) {
     const where = new Map();
-    for (const l of listings) { const k = sameJob(l); if (!where.has(k)) where.set(k, new Set()); where.get(k).add(String(l.location || '').toLowerCase()); }
-    return new Set([...where].filter(([, s]) => s.size >= FEED_MULTI_CITY).map(([k]) => k));
+    // Each listing counts under its title as written and under its title with a trailing place removed, so "Rep (San
+    // Diego)" in three cities is one seat whichever city the title happens to name.
+    const keys = l => [...new Set([sameJob(l), companyKey(l.company_name, '') + '|' + String(l.title || '').trim().toLowerCase()])];
+    for (const l of listings) for (const k of keys(l)) { if (!where.has(k)) where.set(k, new Set()); where.get(k).add(String(l.location || '').toLowerCase()); }
+    const many = new Set([...where].filter(([, s]) => s.size >= FEED_MULTI_CITY).map(([k]) => k));
+    for (const l of listings) if (keys(l).some(k => many.has(k))) many.add(sameJob(l));
+    return many;
 }
 /** How many US states a company's open Workable jobs sit in (the page its company endpoint returns). */
 export function boardStates(jobs) {

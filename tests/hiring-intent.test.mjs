@@ -1841,6 +1841,28 @@ async function workFree(l, pages, over = {}) {
     return { ...w, r };
 }
 
+test('third Workable review: clinic and body-shop counters, charities, a small firm in many states, a title naming one city', async () => {
+    const { companyExcluded } = await import('../api/_hiring-intent.js');
+    const { multiCity } = await import('../api/_hiring-run.js');
+    // Central California SPCA: a clinic counter at a charity.
+    assert.equal(companyExcluded('Central California SPCA').reason, 'institution');
+    assert.equal(companyExcluded('Humane Society of Tampa Bay').reason, 'institution');
+    const spca = 'Check in patients through discharge for surgical and vaccination appointments. Process cash and credit card transactions. Maintain cleanliness of reception, exam rooms and facility upkeep.';
+    assert.equal(postEvidence({ company: 'Central California SPCA', title: 'Customer Service Representative', text: spca, family: 'support' }).reason, 'in_person_desk');
+    // Vera Cadillac's body shop counter.
+    assert.equal(roleFamily('Body Shop Receptionist'), null); assert.equal(roleFamily('Collision Center Customer Service Advisor'), null);
+    // One remote seat listed in four states is a small company; 58 roles in 11 states is a chain.
+    const l = (n, st) => ({ ...workableListing(wkJob({ title: 'Digital Health Care Coordinator', company: { title: 'Altro Health', website: 'https://altrohealth.com' } }), NOW), location: 'Tampa, FL', open_roles: n, open_states: st });
+    assert.notEqual(qualifyJob(l(6, 5), NOW).reason, 'large_employer');
+    assert.equal(qualifyJob(l(58, 11), NOW).reason, 'large_employer');
+    // Zipdev: "(San Diego)" in the title, posted in three cities, is one seat in three cities.
+    const z = loc => ({ company_name: 'Zipdev', title: 'Outside Sales Representative (San Diego)', location: loc });
+    const many = multiCity([z('Chula Vista, CA'), z('Los Angeles, CA'), z('San Diego, CA')]);
+    assert.ok(many.has('gco:zipdev:|outside sales representative') && many.has('gco:zipdev:|outside sales representative (san diego)'), 'all three cities are one seat, under either key');
+    // A host that is the name run together.
+    assert.equal(ownSite('h2health.com', 'H2 Health'), null); assert.equal(ownSite('ablaw.com', 'AB Law'), null);
+});
+
 test('size: Workable\'s own count of open jobs keeps BKF, Serenity, LaBella, REEDS, Perry Homes and LV Petroleum off, and Precoa in 11 states', () => {
     const l = (company_name, title, location, open_roles, open_states) => ({ ...workableListing(wkJob({ title, company: { title: company_name, website: 'https://example.com' } }), NOW), location, open_roles, open_states });
     // The counts Workable's company page gave on 2026-10-30.
