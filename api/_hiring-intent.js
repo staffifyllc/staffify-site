@@ -36,6 +36,9 @@ export const DISCOVERY_DAYS = 7;
 // oldest ready cards every time (api/_hiring-run.js refreshReady); weekend gaps fit inside this.
 export const FRESH_MS = 72 * 3600e3;
 export const LARGE_EMPLOYER_OPEN_ROLES = 60;
+// A free board's employer hiring in this many US states at once is a chain or a national firm, whatever its open-role
+// count (Precoa, 2026-10-30: 58 open roles across 11 states, a Portland line for a Salt Lake City seat).
+export const LARGE_EMPLOYER_STATES = 5;
 // Above this head count on Google's company panel, an employer has its own recruiting team.
 export const LARGE_EMPLOYEES = 500;
 
@@ -148,8 +151,10 @@ const NOT_FILLABLE = /\b(director|head\s+of|vp|vice\s+president|chief|principal|
 // ("Driver", "HVAC Technician") but only a department next to a remote-capable seat ("Field Service
 // Dispatcher", "Help Desk Technician", "Customer Service Representative - Driver Support").
 // Public-safety dispatch stays out; a contractor's "Emergency CSR / Job Dispatcher" taking calls from home is a seat
-// we fill (RooterMan of Muncie, Madison's 2026-10-30 list).
-const PHYSICAL = /\b(store|in[- ]store|retail|cashier|warehouse|valet|housekeep(er|ing)|janitor|custodian|cook|barista|bartender|caregiver|security\s+(officer|guard)|guard|merchandiser|stocker|loader|forklift|hotel|front\s+desk\s+agent|showroom|dealership|door[- ]to[- ]door|outside\s+sales|territory|route\s+sales|911|police|emergency\s+(dispatch(er)?|communications|medical|services|response|telecommunicator)|on[- ]site\s+only)\b/i;
+// we fill (RooterMan of Muncie, Madison's 2026-10-30 list). A bank teller and an airline's counter or gate agent are a
+// branch and an airport, whatever "CSR" or "Customer Service" sits beside them (First Southern National Bank's
+// "Teller/CSR", Pacific Aviation's LAX "Airline Customer Service Agent", Workable 2026-10-30).
+const PHYSICAL = /\b((bank\s+)?tellers?|airline\s+(customer\s+service\s+|passenger\s+service\s+|ticket(ing)?\s+)?agent|airport\s+(customer\s+service\s+|passenger\s+service\s+)?(agent|representative|ambassador)|gate\s+agent|ticket(ing)?\s+agent|ramp\s+agent|baggage\s+(handler|agent)|store|in[- ]store|retail|cashier|warehouse|valet|housekeep(er|ing)|janitor|custodian|cook|barista|bartender|caregiver|security\s+(officer|guard)|guard|merchandiser|stocker|loader|forklift|hotel|front\s+desk\s+agent|showroom|dealership|door[- ]to[- ]door|outside\s+sales|territory|route\s+sales|911|police|emergency\s+(dispatch(er)?|communications|medical|services|response|telecommunicator)|on[- ]site\s+only)\b/i;
 const PHYSICAL_SEAT = /\b(field|driver|delivery|technician|installer|courier|porter|mechanic|server)\b/i;
 const REMOTE_SEAT = /\b(help\s*desk|support|dispatch(er|ing)?|schedul(er|ing)|coordinator|customer\s+service|call\s+cent(er|re)|representative|specialist|assistant|admin(istrator)?|receptionist|sales\s+development|inside\s+sales|appointment\s+setter)\b/i;
 const SENIOR = /\b(manager|lead|supervisor|senior|sr\.?)\b/i;
@@ -172,7 +177,7 @@ export const seniorTitle = title => SENIOR.test(String(title || ''));
 
 // Staffing, recruiting, BPO and outsourcing firms are competitors, not buyers. Also job boards
 // reposting someone else's role.
-const COMPETITOR = /\b(staffing|recruit(ing|ment)\s+(agency|firm|partner|solutions)|(is\s+)?partnering\s+with\s+an?\s+(established|leading|growing|well[- ]established|reputable)\s+(organization|company|firm|client)|talent\s+(solutions|partners|agency)|outsourc(e|ing)|\bbpo\b|offshore\s+(team|staff)|virtual\s+assistant\s+(company|agency|services)|on\s+behalf\s+of\s+(our|a)\s+client|our\s+client\s+is\s+(seeking|looking|hiring)|employer\s+of\s+record|nearshore\s+(staffing|talent))\b/i;
+const COMPETITOR = /\b(staffing|recruit(ing|ment)\s+(agency|firm|partner|solutions)|(is\s+)?partnering\s+with\s+an?\s+(established|leading|growing|well[- ]established|reputable)\s+(organization|company|firm|client)|talent\s+(solutions|partners|agency)|outsourc(e|ed|ing)|\bbpo\b|offshore\s+(team|staff)|virtual\s+assistant\s+(company|agency|services)|on\s+behalf\s+of\s+(our|a)\s+client|our\s+client\s+is\s+(seeking|looking|hiring)|employer\s+of\s+record|nearshore\s+(staffing|talent))\b/i;
 const COMPETITOR_NAMES = /\b(taskus|teleperformance|concentrix|ttec|alorica|sitel|foundever|startek|boldr|support\s*ninja|supportyourapp|helpware|belay|time\s*etc|prialto|wing\s+assistant|athena|magic\s+(virtual|assistant)|myoutdesk|virtual\s+staff\s+finder|cloudstaff|remote\s+staff|staffify|hirequotient|toptal|upwork|crossover|turing|andela|lemon\.io|bairesdev|near\s+(inc|staffing)|somewhere\.com|stealth\s+agents|go\s*remote|hire\s+overseas|support\s*shepherd|peak\s+support|influx|simplycontact|partnerhero|hugo|working\s+solutions|liveops|arise|transcom|ibex|ubiquity|5ca|everise|telus\s+international|qualfon|itel|global\s+lingo|randstad|robert\s+half|kelly\s+services|adecco|aerotek|manpower|insight\s+global|teksystems|express\s+employment|spherion|nextsource|frontline\s+source|spectraforce|beacon\s+hill|addison\s+group|vaco|aston\s+carter|peopleready|labor\s+finders|tandym|apex\s+systems|volt\s+workforce|allegis|kforce|ajilon|accountemps|officeteam|appleone|snelling|staffmark|employbridge|prolink|actalent|maximus|jobot|cybercoders|medix|hays|michael\s+page|lhh|korn\s+ferry|akkodis|collabera|cynet|mindlance|russell\s+tobin|solomon\s+page|24\s+seven|hirequest|trueblue|nesco|labormax|sutherland|conduent|iqor|sykes|vxi|alorica|green\s+key|vaco|lasalle\s+network|atrium|bluecrew|instawork|wonolo|veterans\s+sourcing)\b|\bmanpower\w*|^\s*kelly\s*$/i;
 const STAFFING_IN_NAME = /\w*staff(ing|ers)?\b|\bstaff\w*|\brecruit\w*|\bresourcing\b|\bpersonnel\b|\bemployment\s+(agency|services|solutions)\b|\btemps?\b|\btemporary\s+(staffing|services|employment)\b|\bworkforce\b|\btalent\w*|\bsearch\s+(group|partners)\b|\bplacements?\b|\bhire\s*velocity\b/i;
 
@@ -364,9 +369,11 @@ const FLOOR_DUTIES = [
     /\bstock\s*room\b/i,
     /\b(re)?stock(s|ing)?\s+(the\s+)?shelves\b|\bcounters\s+and\s+shelves\b/i,
     /\bpos\s+experience\b/i,
-    /\bstore\s+(manager|environment|tasks|appearance|associates?|hours)\b|\baround\s+the\s+store\b|\bstore\s+#?\d{3,}\b/i,
+    /\bstore\s+(manager|environment|tasks|appearance|associates?|hours)\b|\baround\s+the\s+store\b|\bstore\s+#?\d{3,}\b|\b(cleanliness|appearance|upkeep)\s+of\s+the\s+(store|showroom)\b/i,
     /\bshift\s+lead(er)?\b|\bkeyholder\b/i,
-    /\bmerchandis(e|ing)\s+(displays?|standards)\b|\bvisual\s+merchandising\b|\bmaintains?\s+displays\b/i,
+    /\bmerchandis(e|ing)\s+(displays?|standards)\b|\bvisual\s+merchandising\b|\b(maintain|manag)(s|es|ing)?\s+(tidy\s+|the\s+)?displays\b/i,
+    // A mall jeweler's holiday floor (REEDS Jewelers, 2026-10-30): gift wrapping at the counter.
+    /\bgift\s+wrap(ping)?\b/i,
     /\bwarehouse\s+(manager|floor|team|staff)\b|\bload[- ]out\b|\breceiving\s+tickets\b|\bforklift\b/i,
 ];
 // Selling in person on a route or a territory.
@@ -512,6 +519,26 @@ export function leadDomain(url) {
     let h; try { h = new URL(/^https?:/i.test(url) ? url : 'https://' + url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return null; }
     return SHARED_HOSTS.test(h) ? null : h;
 }
+// Careers platforms and job boards a free board's "website" can point at instead of the employer's own site.
+const JOB_BOARD_HOST = /(^|[.-])(careers?|jobs?|hiring|recruit\w*|talent)([.-]|$)|greatcareers|applytojob|jazzhr|breezy\.hr|bamboohr|paylocity|paycom|recruitee|workday|rippling|teamtailor|jobvite|smartrecruiters|dayforce|adp\.com|isolved|hirebridge|myworkday|wixsite|square\.site|business\.site|godaddysites|weebly|carrd\.co|linktr\.ee|careerbuilder|monster\.com|dice\.com|snagajob|wellfound|builtin\.com/i;
+/**
+ * Is this host the employer's own website? Null when it is, else why not. A website a job board names is proof of the
+ * employer only when it is theirs: not a shared host, a careers platform or a job board, and the host carries a
+ * distinctive word of the company's name or its initials (PIMCO's "website" was community.lgbtgreatcareers.com,
+ * 2026-10-30). fsnb.net is First Southern National Bank's; bar-s.com is not SIGMA's.
+ */
+export function ownSite(host, company) {
+    const h = String(host || '').toLowerCase().replace(/^www\./, '');
+    if (!h || !/\.[a-z]{2,}$/.test(h)) return 'no website';
+    if (!leadDomain(h)) return `${h} is a host many businesses share`;
+    if (BRAND_CAREERS.test(h) || JOB_BOARD_HOST.test(h) || NOT_A_HOMEPAGE.test(h)) return `${h} is a careers site or job board, not their own website`;
+    const label = h.split('.').slice(0, -1).join('').replace(/[^a-z0-9]/g, '');
+    const words = nameWords(company);
+    const distinct = words.filter(w => w.length >= 3 && !GENERIC.has(w));
+    const initials = words.map(w => w[0]).join('');
+    if (distinct.some(w => (w.length >= 4 ? label.includes(w) : label.startsWith(w))) || (initials.length >= 2 && label === initials) || (initials.length >= 3 && label.startsWith(initials))) return null;
+    return `${h} does not carry ${company}'s name`;
+}
 // Madison's spreadsheet keeps some dates as Excel serial numbers: 46266.0 is 2026-09-01. Read as text they
 // matched nothing and the card took the import time, so an eight-week-old post was offered as new (2026-10-28).
 const EXCEL_DAY0 = Date.UTC(1899, 11, 30);
@@ -633,8 +660,13 @@ export function qualifyJob(j, now = Date.now()) {
     // "Columbus, OH (+7 others)": one job posted across many cities is a large employer's.
     const many = String(j.location || '').match(/\(\+\s*(\d+)\s+others?\)/i);
     if (many && Number(many[1]) >= 3) return { ok: false, reason: 'large_employer', detail: `The same job is posted in ${Number(many[1]) + 1} cities, a sign of a large employer.` };
-    const own = hosts.find(h => BRAND_CAREERS.test(h.replace(/^www\./, '')));
+    // The website a free board names counts too: careers.opus2.com is a careers site of their own (Opus 2, 2026-10-30).
+    const own = [...hosts, site].find(h => h && BRAND_CAREERS.test(h.replace(/^www\./, '')));
     if (own) return { ok: false, reason: 'large_employer', detail: `They post on a careers site of their own (${own}), a sign of a large employer.` };
+    // A free board's own count of the employer's open jobs, read once per company when the listing was found (Workable,
+    // api/_hiring-run.js workableDiscovery): BKF 333, Serenity Mental Health Centers 364, LaBella 331 (2026-10-30).
+    if (Number(j.open_roles) > LARGE_EMPLOYER_OPEN_ROLES) return { ok: false, reason: 'large_employer', detail: `${j.open_roles} open roles on their ${j.feed || 'job'} board; we prioritize small and midsize businesses.` };
+    if (Number(j.open_states) >= LARGE_EMPLOYER_STATES) return { ok: false, reason: 'large_employer', detail: `They are hiring in ${j.open_states} states at once on their ${j.feed || 'job'} board, a chain or a national firm.` };
     // "Now Hiring", "Entry-Level ... - Chicago, IL", "no experience needed": mass recruiting ads, rarely the employer itself.
     if (/\bnow\s+hiring\b|\bhiring\s+(immediately|now)\b|\bimmediate\s+start\b|\bno\s+experience\s+(needed|necessary|required)\b|\bentry[- ]level\b.*\s-\s*[A-Z][a-zA-Z .]+,\s*[A-Z]{2}\s*$/i.test(title)) return { ok: false, reason: 'recruiting_ad', detail: `"${title}" reads as a mass recruiting ad, not an employer hiring for its own seat.` };
     if (!salesSeatOk(title, j.description)) return { ok: false, reason: 'field_sales', detail: 'A sales seat the post describes as in person (a lot, a showroom, a territory), or never says is by phone.' };

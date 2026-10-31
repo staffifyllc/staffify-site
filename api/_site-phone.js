@@ -18,7 +18,9 @@ const digits = s => String(s || '').replace(/\D/g, '');
 export const last10 = s => digits(s).slice(-10);
 
 // Formats a business actually prints: (239) 900-7772, 239-900-7772, 239.900.7772, +1 239 900 7772.
-const PATTERN = /(?:\+?1[\s.-]?)?\(?([2-9]\d{2})\)?[\s.-]?([2-9]\d{2})[\s.-]?(\d{4})(?!\d)/g;
+// Never the digits after a decimal point: a CSS value like 0.5982142857rem is not (598) 214-2857 (Strauss Attorneys,
+// 2026-10-30). A leading "1." counts only in the all-dots format, so 1.5982142857 is a decimal too.
+export const PATTERN = /(?<![\d.])(?:\+?1(?:[\s-]|\.(?=\d{3}\.))?)?\(?([2-9]\d{2})\)?[\s.-]?([2-9]\d{2})[\s.-]?(\d{4})(?!\d)/g;
 
 // Reserved, fictional and placeholder exchanges. 555-01xx is the fiction range; a real business
 // does not print it, and a demo theme sometimes does.
@@ -26,10 +28,18 @@ const FAKE = /^(\d)\1{9}$|^1234567890$|^(\d{3})5550(1\d{2})$/;
 const PLACEHOLDER = new Set(['0000000000', '1111111111', '1234567890', '9999999999']);
 
 /** Everything that is definitely not a phone number, stripped before matching. */
+// A block the page never closes runs to the end: the site reader stops at 500 KB, and strausslaw.com's cut fell inside
+// an inline <style>, so every "number" left on the page was a CSS decimal (2026-10-30). The tag name ends where the tag
+// does: <svg-icon> is a custom element, not an <svg> (alexanderwang.com's tel: link sits after one).
 function visible(html) {
     return String(html || '')
-        .replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ')
-        .replace(/<!--[\s\S]*?-->/g, ' ');
+        .replace(/<(script|style|noscript|svg)(?![\w-])[\s\S]*?(?:<\/\1\s*>|$)/gi, ' ')
+        .replace(/<!--[\s\S]*?(?:-->|$)/g, ' ');
+}
+/** The words a visitor sees on a page: its visible HTML only. A page with no HTML falls back to the text it came with. */
+export function visibleText(page) {
+    const html = String((page && page.html) || '');
+    return (html ? visible(html).replace(/<[^>]+>/g, ' ') : String((page && page.text) || '')).replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ');
 }
 
 /**
@@ -41,7 +51,8 @@ function visible(html) {
  */
 export function phonesOnPage(page) {
     const html = visible(page && page.html);
-    const text = String((page && page.text) || '') + ' ' + html.replace(/<[^>]+>/g, ' ');
+    // The visible page only: the reader's own text keeps whatever an unclosed <style> left behind.
+    const text = visibleText(page);
     const out = new Map();
 
     const add = (raw, rank, context) => {
@@ -64,6 +75,7 @@ export function phonesOnPage(page) {
     return [...out.values()].sort((a, b) => a.rank - b.rank);
 }
 
+const SECTION = /^(about([-_]?us)?|who-we-are|(our[-_]|meet-the[-_])?teams?|(our[-_])?(locations?|offices?))(\.[a-z]+)?$/;
 /** Pages worth trying after the homepage, in the order a human would try them. */
 export function contactLinks(page, limit = 3) {
     const html = visible(page && page.html);
@@ -74,7 +86,10 @@ export function contactLinks(page, limit = 3) {
         let u; try { u = new URL(m[1], page.url); } catch { continue; }
         if (u.origin !== origin) continue;
         const path = u.pathname.toLowerCase();
-        const rank = /contact/.test(path) ? 0 : /about|who-we-are|team|locations?|offices?/.test(path) ? 1 : null;
+        // A whole path segment: /loan-officers/ and /bkf-appoints-...-chief-financial-officer/ are a person's page, and
+        // /teaching-children-about-money/ a blog post, not the office's (First Southern National Bank and BKF, 2026-10-30:
+        // a named loan officer's and a press contact's line went on cards as the company line).
+        const rank = /contact/.test(path) ? 0 : path.split('/').some(seg => SECTION.test(seg)) ? 1 : null;
         if (rank === null) continue;
         scored.push({ href: u.href.split('#')[0], rank });
     }

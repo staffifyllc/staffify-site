@@ -18,8 +18,8 @@ import { orderCallQueue } from '../assets/js/call-queue-order.js';
 import { hubEntriesFrom } from '../api/_daily-report.js';
 import { calledFirst } from '../api/rep-email.js';
 import { findSitePhone as realSitePhone } from '../api/_site-phone.js';
-import { workableListing, workableDiscovery, listingPosting, profileIdentity } from '../api/_hiring-run.js';
-import { FEED_TERMS, jobKey, parseValue } from '../api/_hiring-intent.js';
+import { workableListing, workableDiscovery, listingPosting, profileIdentity, seatTitle, multiCity, boardStates } from '../api/_hiring-run.js';
+import { FEED_TERMS, jobKey, parseValue, ownSite, competitorReason } from '../api/_hiring-intent.js';
 
 const NOW = Date.parse('2026-10-27T18:00:00Z');
 function fakeKv() {
@@ -1679,7 +1679,10 @@ const wkJob = (over = {}) => ({ id: '5ad6368d-4729-4311-9fd4-8db0816c43cf', titl
     description: '<h3><strong>About Us!</strong></h3><p>Apex Pros is a fast-growing residential plumbing, HVAC and electrical company in Dublin, Ohio.</p><p>Answer calls &amp; schedule service visits for our technicians.</p>',
     requirementsSection: '<ul><li>Strong attention to detail</li></ul>', benefitsSection: '<p>Paid&nbsp;time off</p>',
     url: WK_URL, location: { city: 'Dublin', subregion: 'Ohio', countryName: 'United States' }, created: new Date(NOW - 864e5).toISOString(),
-    company: { id: '1a146c24', title: 'Apex Pros Plumbing, Electrical, Heating and Air', website: 'https://apexpros.com/' }, workplace: 'on_site', ...over });
+    company: { id: '1a146c24', title: 'Apex Pros Plumbing, Electrical, Heating and Air', website: 'https://apexpros.com/', url: 'https://jobs.workable.com/company/4dMyQY1udd2nUWbTWRc4vW/jobs-at-apex-pros-plumbing' }, workplace: 'on_site', ...over });
+/** Workable's company page for a fixture company: its open-job count and where those jobs are (real shape, 2026-10-30). */
+const wkCompany = (openRoles = 15, states = ['Ohio']) => ({ openRoles, jobs: states.map(subregion => ({ location: { city: 'X', subregion, countryName: 'United States' } })) });
+const wkCo = (title, website, id) => ({ title, website, url: 'https://jobs.workable.com/company/' + id + '/jobs-at-x' });
 const APEX = { 'https://apexpros.com/': { url: 'https://apexpros.com/', html: '<a href="/contact">Contact</a>', text: 'Apex Pros' }, 'https://apexpros.com/contact': { url: 'https://apexpros.com/contact', html: '', text: 'Dublin office (614) 763-0142' } };
 /** The stub world with every SerpApi call counted, the real site-phone reader, and a Workable search that answers once. */
 function workableWorld(jobs = [wkJob()]) {
@@ -1693,6 +1696,7 @@ function workableWorld(jobs = [wkJob()]) {
         businessProfile: async (c, l, budget) => { serp.profiles++; if (!budget || !await budget.take()) return { error: 'no budget', noBudget: true }; return {}; },
         findSitePhone: realSitePhone, findContact: async () => ({}),
         workableJobs: async q => { asked.push(q); return { jobs: asked.length === 1 ? jobs : [], nextPageToken: null }; },
+        workableCompany: async () => wkCompany(),
     });
     return { ...w, serp, asked };
 }
@@ -1729,9 +1733,9 @@ test('compactListing keeps a date the feed gives and the employer website, so a 
 
 test('a listing that names its own website is proven by it with no Google lookup; a shared host still goes to Google', async () => {
     let lookups = 0;
-    const deps = { businessProfile: async () => { lookups++; return ROYAL; }, searchBudget: { take: async () => true } };
+    const deps = { businessProfile: async () => { lookups++; return ROYAL; }, searchBudget: { take: async () => true }, getPage: async u => { if (!APEX[u]) throw Error('unreachable'); return APEX[u]; } };
     const l = compactListing(workableListing(wkJob(), NOW), NOW);
-    assert.deepEqual(await profileIdentity(listingPosting(l, NOW), deps), { ok: true, how: 'listing_website', website: 'https://apexpros.com/', domain: 'apexpros.com', evidenceUrl: WK_URL });
+    assert.deepEqual(await profileIdentity(listingPosting(l, NOW), deps), { ok: true, how: 'listing_website', website: 'https://apexpros.com/', domain: 'apexpros.com', evidenceUrl: WK_URL, page: APEX['https://apexpros.com/'] });
     assert.equal(lookups, 0, 'businessProfile (SerpApi) is never called');
     const agent = compactListing(workableListing(wkJob({ company: { title: 'Jane Doe State Farm', website: 'https://www.statefarm.com/agent/us/oh/dublin/jane-doe' } }), NOW), NOW);
     await profileIdentity(listingPosting(agent, NOW), deps);
@@ -1755,13 +1759,14 @@ test('a listing waiting for search budget no longer stops the pass: the free lis
 
 test('the free search drops a company posting one title in three cities, reads two pages a title, and never sticks on a bad page', async () => {
     const at = (city, subregion) => ({ city, subregion, countryName: 'United States' });
-    const firstMate = { title: 'First Mate Heating & Cooling', website: 'https://firstmatehvac.com' };
+    const firstMate = wkCo('First Mate Heating & Cooling', 'https://firstmatehvac.com', 'fm1');
     const pages = {
         none: { jobs: [wkJob({ id: 'a1' }), wkJob({ id: 'a2', location: at('Columbus', 'Ohio') })], nextPageToken: 'p2' },
-        p2: { jobs: [wkJob({ id: 'a3', location: at('Akron', 'Ohio') }), wkJob({ id: 'b1', title: 'Receptionist', company: { title: 'Smoker & Company CPA', website: 'https://smokercpa.com' }, location: at('Dayton', 'Ohio') }), wkJob({ id: 'c1', company: firstMate, location: at('Tampa', 'Florida') }), wkJob({ id: 'c2', company: firstMate, location: at('Orlando', 'Florida') }), wkJob({ id: 'x1', location: { city: 'Toronto', subregion: 'Ontario', countryName: 'Canada' } })], nextPageToken: 'p3' },
+        p2: { jobs: [wkJob({ id: 'a3', location: at('Akron', 'Ohio') }), wkJob({ id: 'b1', title: 'Receptionist', company: wkCo('Smoker & Company CPA', 'https://smokercpa.com', 'sm1'), location: at('Dayton', 'Ohio') }), wkJob({ id: 'c1', company: firstMate, location: at('Tampa', 'Florida') }), wkJob({ id: 'c2', company: firstMate, location: at('Orlando', 'Florida') }), wkJob({ id: 'x1', location: { city: 'Toronto', subregion: 'Ontario', countryName: 'Canada' } })], nextPageToken: 'p3' },
     };
     const w = world();
     const asked = [];
+    w.deps.workableCompany = async () => wkCompany();
     w.deps.workableJobs = async q => { asked.push(q); if (q.pageToken === 'old') throw Error('Workable search answered 400'); return asked.length > 2 ? { jobs: [], nextPageToken: null } : pages[q.pageToken || 'none']; };
     const out = await workableDiscovery(w.deps, { now: NOW, maxRequests: 3 });
     assert.deepEqual(asked.map(q => [q.query, q.pageToken || null, q.dayRange]), [[FEED_TERMS[0][1], null, 1], [FEED_TERMS[0][1], 'p2', 1], [FEED_TERMS[1][1], null, 1]], 'two pages of a title, then the next title');
@@ -1772,8 +1777,8 @@ test('the free search drops a company posting one title in three cities, reads t
     assert.ok(pend.every(e => e.kind === 'gjob' && e.provenance.discoveredBy === 'Workable' && !e.provenance.seed));
     assert.deepEqual(parseValue(await w.kv.get(HK.feedCursor)), { term: 2, page: 0, token: null });
     // Already waiting, or seen in the last two weeks: not queued again. Seen longer ago, it is a re-list worth a look.
-    const recent = wkJob({ id: 'd1', title: 'Office Administrator', company: { title: 'Strauss Attorneys', website: 'https://straussattorneys.com' } });
-    const old = wkJob({ id: 'e1', title: 'Office Administrator', company: { title: 'Almstead Tree and Shrub Care', website: 'https://almstead.com' } });
+    const recent = wkJob({ id: 'd1', title: 'Office Administrator', company: wkCo('Strauss Attorneys', 'https://straussattorneys.com', 'st1') });
+    const old = wkJob({ id: 'e1', title: 'Office Administrator', company: wkCo('Almstead Tree and Shrub Care', 'https://almstead.com', 'al1') });
     await w.kv.hset(HK.seen, { [jobKey(workableListing(recent, NOW))]: JSON.stringify({ at: new Date(NOW - 3 * 864e5).toISOString(), verdict: 'excluded' }), [jobKey(workableListing(old, NOW))]: JSON.stringify({ at: new Date(NOW - 20 * 864e5).toISOString(), verdict: 'ready' }) });
     const again = await workableDiscovery({ ...w.deps, workableJobs: async () => ({ jobs: [...pages.p2.jobs.slice(1, 4), recent, old], nextPageToken: null }) }, { now: NOW, maxRequests: 1 });
     assert.deepEqual([again.alreadyWaiting, again.alreadySeen, again.queued], [3, 1, 1]);
@@ -1821,4 +1826,167 @@ test('end to end: a Workable job becomes a pending listing, then a card with the
     // The hourly re-check holds it to the current rules for free and leaves it on the list.
     const out = await refreshReady(w.deps, { limit: 5 });
     assert.equal(out.excluded, 0); assert.equal((await getRecord(w.kv, rec.id)).status, 'ready'); assert.equal(w.serp.profiles, 0);
+});
+
+// ---- the 2026-10-30 dry run on that day's real Workable data: 13 cards and holds, 7 of them wrong ----------------------
+// Paul's rules: small owner-led US businesses hiring for a seat Staffify fills, never a staffing, outsourcing, VA or
+// recruiting firm or a large employer, and a number that is the business's own line, never a stranger's.
+const wkAt = (city, subregion) => ({ city, subregion, countryName: 'United States' });
+const sized = (l, openRoles = 4, states = 1) => compactListing({ ...l, open_roles: openRoles, open_states: states }, NOW);
+/** A Workable listing worked start to finish against these pages, with the real site-phone reader. */
+async function workFree(l, pages, over = {}) {
+    const w = world({ pages, contact: {} });
+    Object.assign(w.deps, { findSitePhone: realSitePhone, businessProfile: async (c, loc, budget) => { w.calls.profiles = (w.calls.profiles || 0) + 1; if (!budget || !await budget.take()) return { error: 'No SerpApi searches left for today; the lookup waits for the next run.', noBudget: true }; return {}; }, searchBudget: { take: async () => false } }, over);
+    const r = await processPosting({ kind: 'gjob', key: jobKey(l), listing: l }, { discoveredBy: 'Workable' }, w.deps, { samples: [] });
+    return { ...w, r };
+}
+
+test('size: Workable\'s own count of open jobs keeps BKF, Serenity, LaBella, REEDS, Perry Homes and LV Petroleum off, and Precoa in 11 states', () => {
+    const l = (company_name, title, location, open_roles, open_states) => ({ ...workableListing(wkJob({ title, company: { title: company_name, website: 'https://example.com' } }), NOW), location, open_roles, open_states });
+    // The counts Workable's company page gave on 2026-10-30.
+    for (const [c, t, loc, n, st] of [['BKF', 'Administrative Assistant', 'Modesto, CA', 333, 1], ['Serenity Mental Health Centers', 'Front Desk Receptionist', 'Phoenix, AZ', 364, 8], ['LaBella Associates', 'Administrative Assistant', 'Glens Falls, NY', 331, 2], ['REEDS Jewelers', 'Customer Service Representative', 'Columbia, SC', 127, 5], ['Perry Homes', 'Content and Social Video Specialist', 'Austin, TX', 116, 2], ['LV Petroleum', 'QSR Development Administrative Assistant', 'Las Vegas, NV', 499, 5]]) {
+        const v = qualifyJob(l(c, t, loc, n, st), NOW);
+        assert.equal(v.reason, 'large_employer', c); assert.match(v.detail, new RegExp(n + ' open roles on their Workable board'), c);
+    }
+    // Precoa: 58 open roles is under the 60 line, but they hire in 11 states at once, a Portland line for a Salt Lake City seat.
+    const precoa = qualifyJob(l('Precoa', 'Appointment Setting Specialist (Remote or Hybrid)', 'Salt Lake City, UT', 58, 11), NOW);
+    assert.equal(precoa.reason, 'large_employer'); assert.match(precoa.detail, /hiring in 11 states at once/);
+    assert.equal(qualifyJob(l('Apex Pros Plumbing, Electrical, Heating and Air', 'Dispatcher', 'Dublin, OH', 15, 1), NOW).ok, true, 'Apex: 15 open roles, all in Ohio');
+    assert.equal(qualifyJob(l('Royal Electric', 'Dispatcher', 'Dallas, TX', 45, 3), NOW).ok, true, 'three states is a regional firm, not a chain');
+    // Where the jobs are, from the company page: Precoa's first page sits in 11 states; a non-US job counts for none.
+    assert.equal(boardStates(['Arizona', 'California', 'Florida', 'Georgia', 'Kentucky', 'Maryland', 'Massachusetts', 'Ohio', 'Oregon', 'Pennsylvania', 'Utah', 'Utah'].map(s => ({ location: wkAt('X', s) }))), 11);
+    assert.equal(boardStates([{ location: { city: 'Berlin', subregion: 'Berlin', countryName: 'Germany' } }, { location: wkAt('Dublin', 'Ohio') }, { location: { countryName: 'United States' } }]), 1);
+    // The count rides on the stored listing, so the hourly re-check (qualifyJob on rec.listing) holds a card to it too.
+    const kept = sized(workableListing(wkJob(), NOW), 333, 1);
+    assert.equal(kept.open_roles, 333); assert.equal(qualifyJob(kept, NOW).reason, 'large_employer'); assert.equal(listingPosting(sized(workableListing(wkJob(), NOW), 15), NOW).openRoles, 15);
+});
+
+test('size: one company page read a company a run, a large one marked seen, and a count that cannot be read admits nobody', async () => {
+    const co = (title, website, id) => wkCo(title, website, id);
+    const jobs = [
+        wkJob({ id: 'apex1' }), wkJob({ id: 'apex2', title: 'Customer Service Representative' }),
+        wkJob({ id: 'bkf1', title: 'Administrative Assistant', company: co('BKF', 'https://www.bkf.com/', 'jkk3H3chHCj5bxY5h6t9EQ'), location: wkAt('Modesto', 'California') }),
+        wkJob({ id: 'ser1', title: 'Front Desk Receptionist', company: co('Serenity Mental Health Centers', 'https://serenitymentalhealthcenters.com/', 'h3yGHYiFcHCJXrasgMwDWe'), location: wkAt('Phoenix', 'Arizona') }),
+        wkJob({ id: 'nol1', title: 'Office Administrator', company: { title: 'No Link Co', website: 'https://nolinkco.com' }, location: wkAt('Tampa', 'Florida') }),
+    ];
+    const w = world();
+    const reads = [];
+    w.deps.workableJobs = async () => ({ jobs, nextPageToken: null });
+    w.deps.workableCompany = async id => { reads.push(id); if (id === 'h3yGHYiFcHCJXrasgMwDWe') throw Error('Workable company page answered 503'); return id === 'jkk3H3chHCj5bxY5h6t9EQ' ? wkCompany(333, ['California']) : wkCompany(15, ['Ohio']); };
+    const out = await workableDiscovery(w.deps, { now: NOW, maxRequests: 1 });
+    assert.deepEqual(reads.sort(), ['4dMyQY1udd2nUWbTWRc4vW', 'h3yGHYiFcHCJXrasgMwDWe', 'jkk3H3chHCj5bxY5h6t9EQ'], 'Apex read once for its two jobs; no link, no read');
+    assert.equal(out.companyReads, 3); assert.equal(out.queued, 2);
+    assert.deepEqual(out.dropped, { large_employer: 1, size_unknown: 2 }, 'BKF too big; Serenity unreadable and No Link Co unknown are never assumed small');
+    const pend = Object.values(await w.kv.hgetall(HK.pending)).map(JSON.parse);
+    assert.deepEqual(pend.map(e => [e.listing.company_name, e.listing.open_roles, e.listing.open_states]), [['Apex Pros Plumbing, Electrical, Heating and Air', 15, 1], ['Apex Pros Plumbing, Electrical, Heating and Air', 15, 1]]);
+    const bkf = parseValue(await w.kv.hget(HK.seen, jobKey(workableListing(jobs[2], NOW))));
+    assert.equal(bkf.reason, 'large_employer'); assert.equal(await w.kv.hget(HK.seen, jobKey(workableListing(jobs[3], NOW))), null, 'an unread size is tried again on a later search');
+    // Next run: BKF is already seen (no second read); Serenity is read again and now answers.
+    reads.length = 0; w.deps.workableCompany = async id => { reads.push(id); return wkCompany(364, ['Arizona', 'Florida', 'Georgia', 'Nevada', 'North Carolina', 'Texas', 'Utah', 'Virginia']); };
+    const again = await workableDiscovery(w.deps, { now: NOW, maxRequests: 1 });
+    assert.deepEqual(reads, ['h3yGHYiFcHCJXrasgMwDWe']); assert.equal(again.alreadySeen, 1); assert.equal(again.dropped.large_employer, 1);
+    // No company reader at all: nothing is queued.
+    const bare = world(); bare.deps.workableJobs = async () => ({ jobs: [wkJob({ id: 'z1' })], nextPageToken: null });
+    const none = await workableDiscovery(bare.deps, { now: NOW, maxRequests: 1 });
+    assert.equal(none.queued, 0); assert.deepEqual(none.dropped, { size_unknown: 1 });
+});
+
+test('staffing or outsourcing: the employer\'s own homepage is read before a card (EngageTech, eBatiz, TOMORROW HIRE, Zirtual)', async () => {
+    // Their homepages on 2026-10-30, as the free path reads them: the title and the visible text.
+    assert.match(competitorReason({ company: '', text: 'Outsourced and Managed SDR Services | EngageTech' }), /Outsourced/, '"Outsourced" now counts, not only "outsource" and "outsourcing"');
+    for (const t of ['Talent Acquisition Recruitment Services eBatiz offers customized staffing solutions, including job boards, applicant tracking', 'TOMORROW HIRE / FOR EMPLOYERS RECRUITING, REBUILT FOR THE FUTURE OF WORK. Direct recruiting, not contract staffing.', '#1 Virtual Assistant Company | Zirtual'])
+        assert.ok(competitorReason({ company: '', text: t }), t);
+    // And not the good employers of that run.
+    for (const t of ['Apex Pros Plumbing, Electrical, Heating &amp; Air | Columbus &amp; Dayton Central Ohio Heating Repair Furnace Installation', 'Smoker &amp; Company LLC | CPA Firm Lancaster County 717-656-7544 About Industries We Serve Our Team Career Opportunities Bookkeeping Business Brokering Consulting', 'First Class HALT | Honda, Acura, Lexus &amp; Toyota Car Repair Service Specials Warranty Financing Locations', 'ICBD THE BUSINESS INCUBATOR Build Something That Matters. ICBD partners with founders who are ready to turn a fledgling business into something more'])
+        assert.equal(competitorReason({ company: '', text: t }), null, t);
+    // EngageTech posted "Vultr - Sales Development Representative" in its client's voice; engagetech.co.uk lands on engagetech.io.
+    const l = sized(workableListing(wkJob({ title: 'Vultr - Sales Development Representative', description: '<p>Vultr is hiring an SDR to book meetings by phone.</p>', company: wkCo('EngageTech', 'https://engagetech.co.uk/', 'eng1'), location: wkAt('Charlotte', 'North Carolina') }), NOW), 26, 2);
+    assert.equal(qualifyJob(l, NOW).ok, true, 'the post alone passes, as it did that day');
+    const pages = { 'https://engagetech.co.uk/': { url: 'https://www.engagetech.io/', title: 'Outsourced and Managed SDR Services | EngageTech', html: '<a href="tel:+12399007772">Call</a><a href="/company/contact">Contact</a>', text: 'Solutions Outsourced SDRs Managed SDRs' } };
+    const { r, kv, calls } = await workFree(l, pages);
+    assert.equal(r.verdict, 'excluded'); assert.equal(r.reason, 'competitor'); assert.match(r.detail, /engagetech\.io/);
+    assert.deepEqual(calls.contact, [], 'no Findymail search on a competitor');
+    assert.equal(parseValue(await kv.hget(HK.companies, companyKey('EngageTech', 'Charlotte, NC'))).verdict, 'excluded');
+});
+
+test('the listing\'s website is read first: its final host is the domain, and a job board, a careers site or an unreadable page is not proof', async () => {
+    // ICBD's listing names icbdholdings.com, which lands on icbd.com: that is the domain every exclusion checks.
+    const icbd = sized(workableListing(wkJob({ title: 'Administrative Assistant - Full-Time', company: wkCo('ICBD', 'https://www.icbdholdings.com/', 'icbd1'), location: wkAt('Bala Cynwyd', 'Pennsylvania') }), NOW), 4, 1);
+    const home = { url: 'https://icbd.com/', title: 'ICBD', html: '<a href="/contact-us/">Contact Us</a>', text: 'ICBD partners with founders' };
+    const id = await profileIdentity(listingPosting(icbd, NOW), { getPage: async u => { if (u === 'https://www.icbdholdings.com/') return home; throw Error('unreachable'); }, businessProfile: async () => { throw Error('not called'); } });
+    assert.equal(id.how, 'listing_website'); assert.equal(id.domain, 'icbd.com'); assert.equal(id.website, 'https://icbd.com/');
+    // PIMCO's "website" was a page on a job board; Qualderm's site refused the read: neither takes the free path.
+    let lookups = 0;
+    const google = { businessProfile: async () => { lookups++; return { error: 'No SerpApi searches left for today; the lookup waits for the next run.', noBudget: true }; }, searchBudget: { take: async () => false } };
+    const pimcoUrl = 'https://community.lgbtgreatcareers.com/careers-partners/lgbt-great-careers-partner-pimco/';
+    const pimco = sized(workableListing(wkJob({ title: 'Account Associate - FIG Insurance Business Development', company: wkCo('PIMCO', pimcoUrl, 'pim1'), location: wkAt('New York', 'New York') }), NOW), 4, 1);
+    const p1 = await profileIdentity(listingPosting(pimco, NOW), { ...google, getPage: async () => ({ url: pimcoUrl, title: 'LGBT Great Careers Partner: PIMCO', html: '<p>PIMCO</p>', text: 'PIMCO' }) });
+    assert.equal(p1.noBudget, true); assert.match(p1.error, /lgbtgreatcareers\.com is a careers site or job board/); assert.equal(lookups, 1, 'Google\'s listing is the proof instead');
+    const qual = sized(workableListing(wkJob({ title: 'Front Office Receptionist', company: wkCo('Qualderm Partners', 'https://www.qualderm.com/', 'q1'), location: wkAt('Scottsdale', 'Arizona') }), NOW), 4, 1);
+    const p2 = await profileIdentity(listingPosting(qual, NOW), { ...google, getPage: async () => { throw Error('Website unavailable'); } });
+    assert.match(p2.error, /qualderm\.com could not be read/); assert.equal(lookups, 2);
+    // Opus 2's website is careers.opus2.com, a careers site of its own: a large employer's habit, out before any read.
+    assert.equal(qualifyJob(workableListing(wkJob({ title: 'Inside Sales Representative - North America', company: wkCo('Opus 2', 'https://careers.opus2.com/', 'op1') }), NOW), NOW).reason, 'large_employer');
+    // The host has to be theirs: a distinctive word of the name, or its initials.
+    assert.equal(ownSite('fsnb.net', 'First Southern National Bank'), null);
+    assert.equal(ownSite('engagetech.io', 'EngageTech'), null); assert.equal(ownSite('apexpros.com', 'Apex Pros Plumbing, Electrical, Heating and Air'), null);
+    assert.equal(ownSite('strausslaw.com', 'Strauss Attorneys PLLC'), null); assert.equal(ownSite('bkf.com', 'BKF'), null);
+    assert.match(ownSite('bar-s.com', 'SIGMA'), /does not carry SIGMA's name/);
+    assert.match(ownSite('community.lgbtgreatcareers.com', 'PIMCO'), /careers site or job board/); assert.match(ownSite('careers.opus2.com', 'Opus 2'), /careers site/);
+    assert.match(ownSite('statefarm.com', 'Don Enga Insurance Agency Inc'), /many businesses share/);
+});
+
+test('one seat in three cities: a title that names its own city or state is still one title (Qualderm, PIMCO)', () => {
+    assert.equal(seatTitle('Front Office Receptionist - Scottsdale AZ', 'Scottsdale, AZ'), 'front office receptionist');
+    assert.equal(seatTitle('Account Associate - FIG Insurance Business Development (New York, NY)', 'New York, NY'), 'account associate - fig insurance business development');
+    assert.equal(seatTitle('Account Associate - FIG Insurance Business Development (Newport Beach, CA)', 'Newport Beach, CA'), 'account associate - fig insurance business development');
+    assert.equal(seatTitle('Airline Customer Service Agent - Los Angeles, CA', 'Los Angeles, CA'), 'airline customer service agent');
+    assert.equal(seatTitle('Receptionist - Scottsdale', 'Scottsdale, AZ'), 'receptionist', 'the job\'s own city with no state');
+    for (const t of ['Administrative Assistant (Remote)', 'Customer Service Rep - CSR', 'Administrative Assistant - HR', 'Administrative Assistant - Full-Time', 'Front Desk Representative - Front Office - Full Time'])
+        assert.equal(seatTitle(t, 'Dallas, TX'), t.toLowerCase(), t);
+    const q = [['Scottsdale', 'Arizona', 'Scottsdale AZ'], ['Hendersonville', 'Tennessee', 'Hendersonville TN'], ['Barrington', 'Illinois', 'Barrington IL']]
+        .map(([c, st, tail], i) => workableListing(wkJob({ id: 'q' + i, title: 'Front Office Receptionist - ' + tail, company: wkCo('Qualderm Partners', 'https://www.qualderm.com/', 'q1'), location: wkAt(c, st) }), NOW));
+    assert.equal(multiCity(q).size, 1, 'Qualderm\'s receptionist in three states is a large employer\'s posting');
+    assert.equal(multiCity(q.slice(0, 2)).size, 0, 'two cities are still two');
+});
+
+test('in-person seats: a bank teller, an airline\'s airport agent and a mall jeweler\'s holiday floor do not pass', () => {
+    assert.equal(roleFamily('Teller/CSR'), null, 'First Southern National Bank, Richmond KY');
+    assert.equal(roleFamily('Airline Customer Service Agent - Los Angeles, CA'), null, 'Pacific Aviation at LAX');
+    for (const t of ['Bank Teller', 'Gate Agent', 'Ticket Agent', 'Ramp Agent', 'Airport Customer Service Agent', 'Baggage Handler']) assert.equal(roleFamily(t), null, t);
+    for (const [t, f] of [['Customer Service Representative', 'support'], ['Airport Shuttle Dispatcher', 'scheduling'], ['CSR', 'support'], ['Customer Service Agent', 'support']]) assert.equal(roleFamily(t), f, t);
+    // REEDS Jewelers, "Seasonal Jewelry Sales Specialist - Columbiana Centre": the duties are the store floor.
+    const reeds = workableListing(wkJob({ title: 'Seasonal Jewelry Sales Specialist - Columbiana Centre', company: wkCo('REEDS Jewelers', 'https://www.reeds.com', 'r1'), location: wkAt('Columbia', 'South Carolina'),
+        description: '<p>As a Seasonal Sales Associate, you\'ll support our positive and productive work environment with tasks like gift bag stocking, gift wrapping, managing tidy displays, maintaining the cleanliness of the store, transactions, and providing the best REEDS customer experience while hosting guests.</p><p>We live and lead through our guiding principles.</p>' }), NOW);
+    assert.equal(qualifyJob(reeds, NOW).reason, 'store_floor_role');
+    assert.equal(postEvidence({ company: 'Gem Shop Online', title: 'Customer Service Representative', text: 'Answer customer emails and calls about online orders and gift wrapping options.', family: 'support' }), null, 'one floor sign is not enough');
+});
+
+test('spend: no number on their own site is research before any Findymail search (PlanetArt); a number goes on to the contact search', async () => {
+    const pa = sized(workableListing(wkJob({ title: 'Office Administrator', company: wkCo('PlanetArt', 'http://www.planetart.com', 'pa1'), location: wkAt('Woodridge', 'Illinois') }), NOW), 21, 2);
+    const pages = { 'http://www.planetart.com': { url: 'https://www.planetart.com/', title: 'PlanetArt', html: '<a href="/contact">Contact</a><a href="/about">About</a><p>Personalized photo products.</p>', text: '' }, 'https://www.planetart.com/contact': { url: 'https://www.planetart.com/contact', html: '<p>Write to us any time.</p>', text: '' }, 'https://www.planetart.com/about': { url: 'https://www.planetart.com/about', html: '<p>Since 2001.</p>', text: '' } };
+    const none = await workFree(pa, pages);
+    assert.equal(none.r.verdict, 'backlog'); assert.equal(none.r.reason, 'no_listed_phone'); assert.deepEqual(none.calls.contact, [], 'not one Findymail credit');
+    const entry = (await allBacklog(none.kv))[0];
+    assert.equal(entry.contact.status, 'not_searched'); assert.equal(entry.company.domain, 'planetart.com');
+    // Apex publishes its line: the card is made and the contact search runs once, on the site's final domain.
+    const apex = await workFree(sized(workableListing(wkJob(), NOW), 15, 1), APEX);
+    assert.equal(apex.r.verdict, 'ready', JSON.stringify(apex.r)); assert.deepEqual(apex.calls.contact, ['apexpros.com']);
+    assert.equal((await allRecords(apex.kv))[0].company.openRoles, 15);
+});
+
+test('the number next to the job\'s city is read from the visible page only, never a CSS decimal beside a class name', async () => {
+    const home = { url: 'https://strausslaw.com/', html: '<p>Hendersonville office: (239) 900-7772</p><style>.hendersonville-hero{font-size:clamp(0.8125rem,0.5982142857rem + 0.3348214286vw,1.25rem)}', text: 'Hendersonville office: (239) 900-7772 .hendersonville-hero{font-size:clamp(0.8125rem,0.5982142857rem + 0.3348214286vw,1.25rem)}' };
+    assert.equal((await localNumber({ website: home.url, city: 'Hendersonville', getPage: async () => home })).phone, '+12399007772');
+    const css = { ...home, html: '<style>.hendersonville-hero{font-size:clamp(0.8125rem,0.5982142857rem + 0.3348214286vw,1.25rem)}' };
+    assert.equal(await localNumber({ website: home.url, city: 'Hendersonville', getPage: async () => css }), null);
+});
+
+test('weekends: on a Monday (UTC) the free search looks back three days, any other day one', async () => {
+    for (const [at, days] of [['2026-11-02T13:15:00Z', 3], ['2026-11-03T13:15:00Z', 1], ['2026-10-30T23:15:00Z', 1]]) {
+        const w = world(); const asked = [];
+        w.deps.workableJobs = async q => { asked.push(q.dayRange); return { jobs: [], nextPageToken: null }; };
+        await workableDiscovery(w.deps, { now: Date.parse(at), maxRequests: 2 });
+        assert.deepEqual(asked, [days, days], at);
+    }
 });

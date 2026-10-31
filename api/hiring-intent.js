@@ -86,6 +86,16 @@ async function workableJobs({ query, dayRange = 1, pageToken } = {}) {
     if (!j || !Array.isArray(j.jobs)) throw Error('Workable search answered without a job list');
     return { jobs: j.jobs, nextPageToken: j.nextPageToken || null };
 }
+// Workable's public page for one company (checked 2026-10-30: { id, title, website, totalSize, jobs: [first 20],
+// nextPageToken }). totalSize is how many jobs it has open; the jobs say where. Free, keyless, one request a company a
+// run. Anything but a 200 with a count throws, so a change on their side is "size unknown", never "small".
+async function workableCompany(id) {
+    const r = await fetch('https://jobs.workable.com/api/v1/companies/' + encodeURIComponent(String(id || '')), { headers: { Accept: 'application/json', 'User-Agent': BROWSER_UA }, signal: AbortSignal.timeout(10000) });
+    if (r.status !== 200) throw Error('Workable company page answered ' + r.status);
+    const j = await r.json();
+    if (!j || j.totalSize == null || !Number.isFinite(Number(j.totalSize))) throw Error('Workable company page answered without a job count');
+    return { openRoles: Number(j.totalSize), jobs: Array.isArray(j.jobs) ? j.jobs : [] };
+}
 // The employer's Google business listing (name, website, phone, address), one search per employer and
 // state, remembered 30 days including a miss, so an employer is never paid for twice.
 async function businessProfile(company, location, budget) {
@@ -146,7 +156,7 @@ async function outreachDomains() {
 }
 
 export function deps() {
-    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, workableJobs, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, optedOutSet: () => optedOutSet({ strict: true }), clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null, quoContacts: quoConfigured() ? quoContactsApi : null };
+    return { kv: redis, getJson, getPage, serpAccount, serpSearch, serpJobs, workableJobs, workableCompany, businessProfile, findymailCredits, findContact, findSitePhone, bookedIdentity: q => bookedIdentity(redis, q), verifyEmail: email => verifyEmail(email, { redis }), isOptedOut, optedOutSet: () => optedOutSet({ strict: true }), clientCheck: q => clientCheck(q), crmContact, crmStop, loadBad, isBad, rr: rrConfigured() ? { account: rrAccount, lookupPerson, checkStatus: rrCheckStatus, searchPeople } : null, quoContacts: quoConfigured() ? quoContactsApi : null };
 }
 
 export default async function handler(req, res) {

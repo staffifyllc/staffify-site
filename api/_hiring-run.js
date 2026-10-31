@@ -6,14 +6,14 @@
 // ones live in api/hiring-intent.js. Paid calls (SerpApi, Findymail) are counted, capped and
 // guarded; a vendor error is recorded as an error and the row stays retryable, never as "none
 // found" (memory: an API error is not absence).
-import { contactLinks, phonesOnPage } from './_site-phone.js';
+import { contactLinks, phonesOnPage, visibleText, PATTERN as PHONE_RUN } from './_site-phone.js';
 import { syncQuoContacts } from './_quo-contacts.js';
 import { KEY as QUEUE_KEY } from './_outreach-queue.js';
 import {
     HIRING_ID, HK, QUERIES, JOB_QUERIES, MAX_AGE_DAYS, parseAts, postingKey, boardKey, idFor, qualifyPosting, qualifyJob, jobKey, companyKey, phoneKey, cityOf, stateOf, jobAgeDays, listingAge, profileMatches, priorityOf, ageDays, jobCurrent,
     boardHomepage, linksToBoard, websiteCandidates, outboundLinks, careersLinks, hostOf, briefFor, firstNameOf, companyExcluded, LARGE_EMPLOYEES, roleFamily,
     parseValue, putRecord, putBacklog, allBacklog, allRecords, getRecord, nextTry, companyThread, domainKey, listingEvidence, remotePost, MAIN_LINE, mainLabel, mainNumbers,
-    ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel, hiringCallReady, tollFree, laneFor, FEED_TERMS,
+    ageBased, leadKey, leadDomain, qualifyLead, leadStatedDate, leadDateLabel, hiringCallReady, tollFree, laneFor, FEED_TERMS, ownSite, competitorReason,
 } from './_hiring-intent.js';
 
 export const SERP_RESERVE = 300;      // searches left in the month that this campaign never touches
@@ -126,7 +126,7 @@ export async function resolveIdentity(posting, { getPage }) {
 // the job's own city is the one to ring first; the listing's number stays as an alternate. Free: the
 // homepage and up to three contact or location pages. Null when no number sits next to the city.
 const TOLL_FREE = /^(800|833|844|855|866|877|888)/;
-const PHONE_RUN = /(?:\+?1[\s.-]?)?\(?([2-9]\d{2})\)?[\s.-]?([2-9]\d{2})[\s.-]?(\d{4})(?!\d)/g;
+// The same number pattern and the same visible text as api/_site-phone.js: never a CSS decimal or a script's digits.
 export async function localNumber({ website, city, getPage }) {
     if (!website || !city) return null;
     let home;
@@ -136,7 +136,7 @@ export async function localNumber({ website, city, getPage }) {
     for (const u of contactLinks(home, 3)) { try { const p = await getPage(u); if (p) pages.push(p); } catch { /* skip */ } }
     const cityRe = new RegExp('\\b' + String(city).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
     for (const p of pages) {
-        const text = String(p.text || '') || String(p.html || '').replace(/<[^>]+>/g, ' ');
+        const text = visibleText(p);
         for (const m of text.matchAll(PHONE_RUN)) {
             const d = m[1] + m[2] + m[3];
             if (TOLL_FREE.test(d)) continue;
@@ -201,7 +201,7 @@ export function listingPosting(l, now = Date.now()) {
         postedAt: l.posted_at || (age == null ? null : new Date(now - age * 864e5).toISOString()),
         url: l.share_link || links[0] || null, applyUrl: links[0] || null,
         workplace: /\b(remote|work from home|anywhere)\b/i.test([l.title, l.location, ...(l.extensions || [])].join(' ')) ? 'remote' : 'onsite',
-        text: l.description || '', openRoles: null,
+        text: l.description || '', openRoles: l.open_roles != null && Number.isFinite(Number(l.open_roles)) ? Number(l.open_roles) : null,
     };
 }
 /** The compact listing kept in the pending queue: what processPosting needs, nothing more. */
@@ -211,7 +211,7 @@ export function compactListing(l, now = Date.now()) {
     const age = jobAgeDays(l.extensions);
     const given = Date.parse(l.posted_at || '');
     const posted = Number.isFinite(given) ? new Date(given).toISOString() : age == null ? null : new Date(now - age * 864e5).toISOString();
-    return { posted_at: posted, found_at: new Date(now).toISOString(), job_id: l.job_id || null, title: l.title, company_name: l.company_name, ...(l.company_website ? { company_website: String(l.company_website).slice(0, 300) } : {}), location: l.location, via: l.via || null, ...(l.feed ? { feed: l.feed } : {}), extensions: (l.extensions || []).slice(0, 6), description: String(l.description || '').slice(0, 3000), apply_options: (l.apply_options || []).slice(0, 5).map(a => ({ title: a.title, link: a.link })), share_link: l.share_link || null };
+    return { posted_at: posted, found_at: new Date(now).toISOString(), job_id: l.job_id || null, title: l.title, company_name: l.company_name, ...(l.company_website ? { company_website: String(l.company_website).slice(0, 300) } : {}), location: l.location, via: l.via || null, ...(l.feed ? { feed: l.feed } : {}), ...(l.open_roles != null ? { open_roles: l.open_roles, open_states: l.open_states } : {}), extensions: (l.extensions || []).slice(0, 6), description: String(l.description || '').slice(0, 3000), apply_options: (l.apply_options || []).slice(0, 5).map(a => ({ title: a.title, link: a.link })), share_link: l.share_link || null };
 }
 
 // ---- free job boards (Workable) -----------------------------------------------------------------
@@ -222,11 +222,13 @@ export function compactListing(l, now = Date.now()) {
 export const FEED_REQUESTS = 8;   // Workable searches a run, its own cap: no SerpApi budget is touched
 export const FEED_PAGES = 2;      // pages a title: past those, a broad search drifts into jobs that only mention the words
 export const FEED_MULTI_CITY = 3; // the same title from one company in this many cities is a large employer's posting
+export const FEED_COMPANY_READS = 20; // company pages a run (Workable's free count of a company's open jobs), one a company
 const textOf = h => strip(String(h || '').replace(/&nbsp;/gi, ' '));
+const US = /^(united\s+states(\s+of\s+america)?|usa?)$/i;
 /** One Workable job as a listing in compactListing's shape, or null when it is not a US job. */
 export function workableListing(j, now = Date.now()) {
     const loc = (j && j.location) || {};
-    if (!j || !j.title || !/^(united\s+states(\s+of\s+america)?|usa?)$/i.test(String(loc.countryName || '').trim())) return null;
+    if (!j || !j.title || !US.test(String(loc.countryName || '').trim())) return null;
     const city = String(loc.city || '').trim(), sub = String(loc.subregion || '').trim();
     const st = sub ? stateOf(', ' + sub) : null;
     // "Dublin, OH" the way Google writes it. A remote job with only a state keeps the state's name, so no city is made up.
@@ -242,33 +244,56 @@ export function workableListing(j, now = Date.now()) {
         apply_options: [], share_link: j.url || null,
     };
 }
-const sameJob = l => companyKey(l.company_name, '') + '|' + String(l.title || '').trim().toLowerCase();
+// "Front Office Receptionist - Scottsdale AZ", "Account Associate (New York, NY)": the place a title names is not the seat,
+// so Qualderm's one receptionist job in three cities is one title, three times (Workable, 2026-10-30).
+const TITLE_TAIL = /\s*(?:\s[-–—|]\s*|\(|,)\s*([^-–—|()]+?)\)?\s*$/;
+/** The seat a title names, without a trailing place: a state code, the job's own city or a state's name. */
+export function seatTitle(title, location) {
+    const t = String(title || '').trim(), m = t.match(TITLE_TAIL);
+    if (!m) return t.toLowerCase();
+    const tail = m[1].trim(), city = cityOf(location);
+    const place = (/(^|[\s,])[A-Z]{2}$/.test(tail) && stateOf(', ' + tail.slice(-2))) || (city && tail.toLowerCase().startsWith(city.toLowerCase())) || (stateOf(tail) && tail.split(/\s+/).length <= 4);
+    return (place ? t.slice(0, m.index) : t).trim().toLowerCase();
+}
+const sameJob = l => companyKey(l.company_name, '') + '|' + seatTitle(l.title, l.location);
 /** Workable lists one job per city: the company-and-title pairs posted in FEED_MULTI_CITY or more cities in one search. */
 export function multiCity(listings) {
     const where = new Map();
     for (const l of listings) { const k = sameJob(l); if (!where.has(k)) where.set(k, new Set()); where.get(k).add(String(l.location || '').toLowerCase()); }
     return new Set([...where].filter(([, s]) => s.size >= FEED_MULTI_CITY).map(([k]) => k));
 }
+/** How many US states a company's open Workable jobs sit in (the page its company endpoint returns). */
+export function boardStates(jobs) {
+    const st = new Set();
+    for (const j of jobs || []) { const loc = (j && j.location) || {}; const s = US.test(String(loc.countryName || '').trim()) && stateOf(', ' + String(loc.subregion || '').trim()); if (s) st.add(s); }
+    return st.size;
+}
+/** The company's Workable id, from its company page link (or a job link that carries one). */
+const boardSlug = j => (String((j && j.company && j.company.url) || '').match(/\/company\/([A-Za-z0-9]+)/) || String((j && j.url) || '').match(/\/company\/([A-Za-z0-9]+)/) || [])[1] || null;
 /**
  * One run's free search: up to FEED_REQUESTS Workable requests, rotating FEED_TERMS on its own cursor, the last day's US
- * postings only. Each job is screened like a Google listing (qualifyJob) and queued as a 'gjob' unless it was seen in the
- * last MAX_AGE_DAYS or already waits. deps.workableJobs({ query, dayRange, pageToken }) -> { jobs, nextPageToken }.
+ * postings only (three days on a Monday). Each job is screened like a Google listing (qualifyJob) and queued as a 'gjob'
+ * unless it was seen in the last MAX_AGE_DAYS or already waits, and only once the employer's size is known.
+ * deps.workableJobs({ query, dayRange, pageToken }) -> { jobs, nextPageToken }; deps.workableCompany(id) -> { openRoles, jobs }.
  */
-export async function workableDiscovery(deps, { now = Date.now(), maxRequests = FEED_REQUESTS, timeLeft = () => true, startedAt = null } = {}) {
+export async function workableDiscovery(deps, { now = Date.now(), maxRequests = FEED_REQUESTS, timeLeft = () => true, startedAt = null, companyReads = FEED_COMPANY_READS } = {}) {
     const { kv } = deps;
-    const out = { requests: 0, fetched: 0, us: 0, passed: 0, queued: 0, alreadySeen: 0, alreadyWaiting: 0, dropped: {}, searches: [] };
+    const out = { requests: 0, fetched: 0, us: 0, passed: 0, queued: 0, alreadySeen: 0, alreadyWaiting: 0, companyReads: 0, dropped: {}, searches: [] };
     const drop = r => { out.dropped[r] = (out.dropped[r] || 0) + 1; };
     let cur;
     try { cur = parseValue(await kv.get(HK.feedCursor)) || {}; } catch { out.cursorError = 'The Workable search position could not be read; no Workable searches this run.'; return out; }
     let term = Number.isInteger(cur.term) && cur.term >= 0 ? cur.term % FEED_TERMS.length : 0;
     let token = typeof cur.token === 'string' && cur.token ? cur.token : null, page = token ? Number(cur.page) || 0 : 0;
+    // The cron runs on weekdays only, so Monday's one-day window missed Friday evening to Sunday (2026-10-30): on a
+    // Monday (UTC) every search looks back three days.
+    const dayRange = new Date(now).getUTCDay() === 1 ? 3 : 1;
     const batches = [];
     for (let i = 0; i < maxRequests && timeLeft(); i++) {
         const [family, query] = FEED_TERMS[term];
         const s = { family, term: query, page };
         let r = null;
         out.requests++;
-        try { r = await deps.workableJobs({ query, dayRange: 1, pageToken: token || undefined }); } catch (e) { s.error = String((e && e.message) || e).slice(0, 80); }
+        try { r = await deps.workableJobs({ query, dayRange, pageToken: token || undefined }); } catch (e) { s.error = String((e && e.message) || e).slice(0, 80); }
         // The next page of this title, or the next title. A failed page moves on too, so a stale token never pins the loop.
         // A title cut off by the run's cap starts again next run, so all its pages are read together (the multi-city rule).
         const next = r && r.nextPageToken && page + 1 < FEED_PAGES ? String(r.nextPageToken) : null;
@@ -280,15 +305,29 @@ export async function workableDiscovery(deps, { now = Date.now(), maxRequests = 
         out.searches.push(s);
         if (!s.error) batches.push({ s, jobs });
     }
+    // How big the employer is (2026-10-30: BKF, Serenity Mental Health Centers and LaBella became cards with 333, 364
+    // and 331 open jobs). Workable's free company page counts a company's open jobs: one read a company a run, after
+    // every other check. A count that cannot be read admits nobody: the job is skipped and met again on a later search.
+    const sizes = new Map();
+    const sizeOf = j => {
+        const id = boardSlug(j);
+        if (!id || !deps.workableCompany) return null;
+        if (!sizes.has(id)) {
+            if (out.companyReads >= companyReads || !timeLeft()) return null;
+            out.companyReads++;
+            sizes.set(id, Promise.resolve().then(() => deps.workableCompany(id)).then(c => (c && c.openRoles != null && Number.isFinite(Number(c.openRoles)) ? { openRoles: Number(c.openRoles), states: boardStates(c.jobs) } : null), () => null));
+        }
+        return sizes.get(id);
+    };
     // One search is one title, however many pages it took this run.
     const byTitle = new Map();
     for (const b of batches) byTitle.set(b.s.term, [...(byTitle.get(b.s.term) || []), b]);
     const keys = new Set();
     for (const [query, bs] of byTitle) {
         const found = [];
-        for (const b of bs) for (const j of b.jobs) { const l = workableListing(j, now); if (l) { out.us++; found.push({ l, s: b.s }); } else drop('outside_us'); }
+        for (const b of bs) for (const j of b.jobs) { const l = workableListing(j, now); if (l) { out.us++; found.push({ l, s: b.s, j }); } else drop('outside_us'); }
         const many = multiCity(found.map(x => x.l));
-        for (const { l, s } of found) {
+        for (const { l, s, j } of found) {
             if (many.has(sameJob(l))) { drop('multi_city'); continue; }
             const v = qualifyJob(l, now);
             if (!v.ok) { drop(v.reason); continue; }
@@ -299,7 +338,18 @@ export async function workableDiscovery(deps, { now = Date.now(), maxRequests = 
             const was = parseValue(await kv.hget(HK.seen, key));
             if (was && Date.parse(was.at) >= now - MAX_AGE_DAYS * 864e5) { out.alreadySeen++; continue; }
             if (await kv.hget(HK.pending, key)) { out.alreadyWaiting++; continue; }
-            await addPending(kv, { kind: 'gjob', key, listing: compactListing(l, now) }, { discoveredBy: 'Workable', searchQuery: query, searchLocation: 'United States', discoveredAt: startedAt || new Date(now).toISOString() }, now);
+            const size = await sizeOf(j);
+            if (!size) { drop('size_unknown'); continue; }
+            // The count rides on the listing, so qualifyJob holds the card to it now and on every re-check.
+            const sized = { ...l, open_roles: size.openRoles, open_states: size.states };
+            const big = qualifyJob(sized, now);
+            if (!big.ok) {
+                drop(big.reason);
+                // Seen, so the next run's searches do not read the same company again for this job.
+                await kv.hset(HK.seen, { [key]: JSON.stringify({ at: new Date(now).toISOString(), verdict: 'excluded', reason: big.reason, detail: big.detail, company: l.company_name, title: l.title, url: l.share_link || null }) });
+                continue;
+            }
+            await addPending(kv, { kind: 'gjob', key, listing: compactListing(sized, now) }, { discoveredBy: 'Workable', searchQuery: query, searchLocation: 'United States', discoveredAt: startedAt || new Date(now).toISOString() }, now);
             out.queued++; s.queued++;
         }
     }
@@ -314,13 +364,26 @@ export async function profileIdentity(posting, deps) {
     // A listing that names the employer's own website (Workable does, on every job) is proof the way a job board's
     // homepage link is (resolveIdentity's board_link): free, no Google lookup. A shared host (a State Farm agent page, a
     // franchise, a social page) names nobody, so that listing still goes to Google's business listing.
+    // Only once the site is read (2026-10-30): the host it lands on is the domain (engagetech.co.uk is engagetech.io), it
+    // has to be theirs (ownSite: PIMCO's "website" was a job board's page), and a site that sells staffing or outsourcing
+    // is a competitor (EngageTech, "Outsourced and Managed SDR Services"). Anything less goes to Google's listing.
     const site = posting.companyWebsite ? (/^https?:\/\//i.test(posting.companyWebsite) ? posting.companyWebsite : 'https://' + posting.companyWebsite) : null;
-    const own = site ? leadDomain(site) : null;
-    if (own && /\.[a-z]{2,}$/i.test(own)) return { ok: true, how: 'listing_website', website: site, domain: own, evidenceUrl: posting.url || null };
+    let refused = null;
+    if (site && leadDomain(site)) {
+        let home = null;
+        try { home = deps.getPage ? await deps.getPage(site) : null; } catch { home = null; }
+        const host = home ? hostOf(home.url || site) : null;
+        refused = home ? ownSite(host, posting.company) : `${hostOf(site)} could not be read`;
+        if (!refused) {
+            const comp = competitorReason({ company: '', text: [home.title, visibleText(home)].join(' ') });
+            if (comp) return { ok: false, competitor: true, unresolved: `Their website, ${host}, ${comp.replace(/^the post /, '')}.` };
+            return { ok: true, how: 'listing_website', website: home.url || site, domain: host, evidenceUrl: posting.url || null, page: home };
+        }
+    }
     let profile;
     try { profile = await deps.businessProfile(posting.company, posting.location, deps.searchBudget); }
     catch (e) { return { error: String((e && e.message) || e).slice(0, 120) }; }
-    if (profile && profile.error) return { error: profile.error, noBudget: !!profile.noBudget };
+    if (profile && profile.error) return { error: (refused ? `Their listed website was not used: ${refused}. ` : '') + profile.error, noBudget: !!profile.noBudget };
     const m = profileMatches(posting.company, profile, posting.location);
     if (!m.ok) return { ok: false, unresolved: m.why, tried: profile && profile.title ? [profile.title] : [] };
     // A hospital or health system has its own recruiting team: Google types the listing itself as one.
@@ -405,6 +468,7 @@ export async function processPosting(p, provenance, deps, report) {
     // A listing that names the employer's own website (Workable) is proven by that website, with no search at all.
     const ident = gj ? await profileIdentity(posting, deps) : await resolveIdentity(posting, deps);
     if (ident.error) return { verdict: 'error', reason: ident.noBudget ? 'no_budget' : 'lookup_unavailable', detail: ident.error };
+    if (ident.competitor) { await kv.hset(HK.companies, { [bk]: JSON.stringify({ verdict: 'excluded', at: checkedAt }) }); await mark('excluded', 'competitor', { detail: ident.unresolved }); return { verdict: 'excluded', reason: 'competitor', detail: ident.unresolved }; }
     if (ident.large) { await kv.hset(HK.companies, { [bk]: JSON.stringify({ verdict: 'large', at: checkedAt }) }); await mark('excluded', 'large_employer', { detail: ident.unresolved }); return { verdict: 'excluded', reason: 'large_employer', detail: ident.unresolved }; }
     if (!ident.ok) return toBacklog('identity_unresolved', ident.unresolved, { missing: gj ? ['business listing', 'phone'] : ['website', 'phone'], identityTried: ident.tried });
     const company = { ...base.company, website: ident.website || null, domain: ident.domain || null, address: ident.address || null, identity: { how: ident.how, evidenceUrl: ident.evidenceUrl, listingName: ident.listingName || null, listingType: ident.listingType || null, checkedAt } };
@@ -445,19 +509,27 @@ export async function processPosting(p, provenance, deps, report) {
     if (byCompany.status === 'possible') return toBacklog('possible_client', byCompany.reason || 'The company name matches an existing client. A person checks before it is called.', { missing: ['client check'] });
     if (byCompany.status !== 'clear') return toBacklog('client_check_unavailable', byCompany.why || 'The client list could not be read, so this is not called yet.', { missing: ['client check'] });
 
-    // The number: from their Google business listing, else published on their own site.
+    // The number: from their Google business listing, else published on their own site. A site already read to prove the
+    // employer (listing_website) is read once: the number search reuses its homepage and every page it opens.
+    const memo = new Map(ident.page ? [[ident.website, Promise.resolve(ident.page)]] : []);
+    const fetchSite = ident.page ? u => { if (!memo.has(u)) memo.set(u, Promise.resolve().then(() => deps.getPage(u))); return memo.get(u); } : deps.getPage;
     let listed = gj && ident.phone ? { phone: ident.phone, alternates: [], sourceUrl: ident.evidenceUrl, context: 'Google business listing for ' + (ident.listingName || posting.company), checkedAt, source: 'Google business listing' } : null;
     if (listed && ident.website && job.city) {
         const loc = await localNumber({ website: ident.website, city: job.city, getPage: deps.getPage }).catch(() => null);
         if (loc && loc.phone !== listed.phone) listed = { phone: loc.phone, alternates: [listed.phone], sourceUrl: loc.sourceUrl, context: loc.context, checkedAt: loc.checkedAt, source: 'business website', local: true };
     }
-    let phone = listed || (ident.website ? await deps.findSitePhone({ website: ident.website, fetchSite: deps.getPage, maxPages: 4 }).catch(() => null) : null);
+    let phone = listed || (ident.website ? await deps.findSitePhone({ website: ident.website, fetchSite, maxPages: 4 }).catch(() => null) : null);
     // A listing proven by its own website (Workable): the number is that site's, free. The line it publishes next to the
     // job's city goes first (PM, 2026-10-28, Damotech), the site's others behind it, and it is marked as read from the site.
     if (gj && ident.how === 'listing_website') {
-        const loc = job.city ? await localNumber({ website: ident.website, city: job.city, getPage: deps.getPage }).catch(() => null) : null;
+        const loc = job.city ? await localNumber({ website: ident.website, city: job.city, getPage: fetchSite }).catch(() => null) : null;
         if (loc) phone = { phone: loc.phone, alternates: [phone && phone.phone, ...((phone && phone.alternates) || [])].filter((n, i, a) => n && n !== loc.phone && a.indexOf(n) === i), sourceUrl: loc.sourceUrl, context: loc.context, checkedAt: loc.checkedAt, source: 'business website', local: true };
         if (phone && phone.phone) phone = { ...phone, siteCheck: { at: checkedAt, result: loc ? 'local_number' : 'site_only' } };
+        // No usable number on their site: research now, before the paid contact search (a Findymail credit for a domain
+        // that never became a card, nine times in the 2026-10-30 dry run). A toll-free line still goes on to a held card.
+        const bad0 = await deps.loadBad(kv, id).catch(() => new Set());
+        if (!(phone && phone.phone && [phone.phone, ...(phone.alternates || [])].some(n => !deps.isBad(bad0, n))))
+            return toBacklog('no_listed_phone', phone && phone.phone ? 'Every listed number was logged as wrong.' : 'No phone number is published on ' + ident.domain + '.', { company, contact: { status: 'not_searched', reason: 'No usable number on their website, so no contact search was paid for.', checkedAt } });
     }
     if (gj && listed && listed.local) phone = { ...listed, siteCheck: { at: checkedAt, result: 'local_number' } };
     else if (gj && listed && ident.website) {
@@ -1403,7 +1475,8 @@ export async function fillResearch(kv, { source, fills, write = false, by, now =
 // ---- a whole run ------------------------------------------------------------------------------
 /**
  * deps additionally: serpSearch(q) -> { links:[...] }, serpAccount() -> { left }, findymailCredits() -> { credits },
- *   workableJobs({ query, dayRange, pageToken }) -> { jobs, nextPageToken } (free; the step is skipped without it)
+ *   workableJobs({ query, dayRange, pageToken }) -> { jobs, nextPageToken } (free; the step is skipped without it),
+ *   workableCompany(id) -> { openRoles, jobs } (free; without it no Workable job is queued: its size is unknown)
  * opts: { maxSearches, maxCandidates, deadlineMs, discover, free, refresh }
  * Order: keep ready cards honest, then work what is already waiting (pending, then due research),
  * then the free Workable search every run, and only then pay for new searches, and only when the pending queue has room.

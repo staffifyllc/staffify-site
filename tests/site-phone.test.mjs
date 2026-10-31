@@ -85,3 +85,36 @@ test('last10 normalises every way a number gets written', () => {
     for (const s of ['+1 (239) 900-7772', '239.900.7772', '12399007772', '2399007772'])
         assert.equal(last10(s), '2399007772');
 });
+
+// ---- the 2026-10-30 Workable dry run --------------------------------------------------------------------------------
+test('a page cut off inside a <style> gives no numbers: CSS decimals are not phone numbers (Strauss Attorneys)', async () => {
+    // strausslaw.com is over 500 KB; the reader stops there, inside an inline <style> that opens at byte 18,083 and never
+    // closes. The reader's own text kept the CSS, and 0.5982142857rem became (598) 214-2857 on a ready card.
+    const css = '.partial_socials li{letter-spacing:.5px;font-size:clamp(0.875rem,0.8446601942rem + 0.1vw,1rem)}h3{font-weight:700;font-size:clamp(0.8125rem,0.5982142857rem + 0.3348214286vw,1.25rem)}.row .inner h1{font-size:clamp(1.375rem, 1.3446601942rem + 1vw, 2rem)}';
+    const html = '<html><head><title>Estate, Probate &amp; Elder Law Attorneys</title><style id="s3-site-styles">' + css.repeat(40);
+    const cut = { url: 'https://strausslaw.com/', html, text: html.replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ') };
+    assert.deepEqual(phonesOnPage(cut), []);
+    assert.equal(await findSitePhone({ website: cut.url, fetchSite: async () => cut }), null);
+    // The same for an unclosed <script>, and for decimals in plain text, with or without a leading digit.
+    assert.deepEqual(phonesOnPage(page('<p>Ratio 0.5982142857, 1.3446601942 and .4082307342</p><script>var a = "(408) 230-7342"')), []);
+    // Real numbers before the cut still count, the all-dots format included.
+    assert.deepEqual(phonesOnPage(page('<a href="tel:+12399007772">Call</a><p>Office 1.408.230.7342</p><style>.x{width:0.5982142857rem}')).map(h => h.digits), ['2399007772', '4082307342']);
+});
+
+test('a custom element named like <svg-icon> is not an <svg>: the tel: link after it is still read', () => {
+    // alexanderwang.com puts <svg-icon> elements before its call link; read as an unclosed <svg>, they hid the rest of the page.
+    assert.deepEqual(phonesOnPage(page(`<svg-icon src='icon-caret-right' style='--icon-size: 10px;'></svg-icon><a href='tel:+12399007772'>call</a>`)).map(h => h.digits), ['2399007772']);
+    assert.deepEqual(phonesOnPage(page('<svg viewBox="0 0 10 10"><text>239-900-1111</text></svg><p>Phone: 239-900-7772</p>')).map(h => h.digits), ['2399007772']);
+});
+
+test('an officer is not an office: a press release and a loan officer\'s page are a person\'s, never the company line (BKF, First Southern)', () => {
+    const links = contactLinks(page(`
+        <a href="/bkf-appoints-andrew-esposito-chief-financial-officer/">BKF appoints a CFO</a>
+        <a href="/loan-officers/">Loan officers</a>
+        <a href="/smart-living/teaching-children-about-money/">Teaching children about money</a>
+        <a href="/offices/">Offices</a>
+        <a href="/aboutus.html">About</a>
+        <a href="/our-team/">Our team</a>
+        <a href="/about/reviews/">Reviews</a>`), 5);
+    assert.deepEqual(links, ['https://example.com/offices/', 'https://example.com/aboutus.html', 'https://example.com/our-team/', 'https://example.com/about/reviews/']);
+});
